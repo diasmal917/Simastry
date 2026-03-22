@@ -149,7 +149,7 @@ struct EducationalSectionsView: View {
                         .padding(.top, 14)
 
                     Text("Your Life Path Number is calculated by reducing your full birth date to a single digit (or master number). Example: Born March 15, 1996 \u{2192} 3+1+5+1+9+9+6 = 34 \u{2192} 3+4 = 7. Life Path 7.")
-                        .font(.system(size: 14, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -179,7 +179,7 @@ struct EducationalSectionsView: View {
                             }
                         } label: {
                             Text("Calculate")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.midnight)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -193,15 +193,15 @@ struct EducationalSectionsView: View {
                     if let result = lifePathResult, let meaning = NumerologyTemplates.lifePathMeanings[result] {
                         VStack(spacing: 8) {
                             Text("\(result)")
-                                .font(.system(size: 48, weight: .bold))
+                                .font(SimastryFont.displayLarge)
                                 .foregroundStyle(SimastryColor.gold)
 
                             Text(meaning.name)
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
                             Text(meaning.description)
-                                .font(.system(size: 14, design: .serif))
+                                .font(SimastryFont.bodyLarge)
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                         }
                         .frame(maxWidth: .infinity)
@@ -276,21 +276,21 @@ struct EducationalSectionsView: View {
                         .padding(.top, 14)
 
                     Text("The Chinese zodiac assigns an animal to each person based on birth year, cycling through 12 animals: Rat, Ox, Tiger, Rabbit, Dragon, Snake, Horse, Goat, Monkey, Rooster, Dog, Pig. Each animal carries distinct personality traits. Unlike Western astrology (based on birth month and the sun\u{2019}s position), Chinese astrology is based on birth year and follows a lunar calendar.")
-                        .font(.system(size: 14, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
 
                     if hasCalculatedChinese, let animal = chineseZodiacResult {
                         VStack(spacing: 8) {
                             Text(animal.emoji)
-                                .font(.system(size: 48))
+                                .font(SimastryFont.displayLarge)
 
                             Text(animal.name)
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
                             Text(animal.trait)
-                                .font(.system(size: 14, design: .serif))
+                                .font(SimastryFont.bodyLarge)
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                         }
                         .frame(maxWidth: .infinity)
@@ -321,7 +321,7 @@ struct EducationalSectionsView: View {
                                 }
                             } label: {
                                 Text("Find My Animal")
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(SimastryFont.titleSmall)
                                     .foregroundStyle(SimastryColor.midnight)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
@@ -403,7 +403,7 @@ struct EducationalSectionsView: View {
                         .padding(.top, 14)
 
                     Text(body)
-                        .font(.system(size: 14, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 14)

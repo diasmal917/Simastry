@@ -73,7 +73,7 @@ struct LandingView: View {
 
                 VStack(spacing: 0) {
                     Text("Simastry")
-                        .font(.system(size: 38, weight: .bold, design: .serif))
+                        .font(SimastryFont.displayLarge)
                         .italic()
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
@@ -232,16 +232,27 @@ struct LandingView: View {
                 }
             } label: {
                 Text("I already have an account")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(.white.opacity(0.75))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Sign in to existing account")
 
-            Text("By continuing, you agree to our Terms & Privacy Policy")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.3))
-                .padding(.top, 2)
+            HStack(spacing: 4) {
+                Text("By continuing, you agree to our")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(.white.opacity(0.3))
+                Link("Terms", destination: AppConfig.termsOfServiceURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(.white.opacity(0.5))
+                Text("&")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(.white.opacity(0.3))
+                Link("Privacy", destination: AppConfig.privacyPolicyURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(.top, 2)
         }
         .padding(.horizontal, 24)
         .padding(.top, 24)

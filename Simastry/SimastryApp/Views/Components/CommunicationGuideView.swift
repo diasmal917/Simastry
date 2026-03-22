@@ -12,7 +12,7 @@ struct CommunicationGuideView: View {
                 animatedSection(index: 0) {
                     HStack(alignment: .center, spacing: 12) {
                         Text(sign.glyph)
-                            .font(.system(size: 32, weight: .semibold, design: .serif))
+                            .font(SimastryFont.displayMedium)
                             .foregroundStyle(sign.color)
                             .frame(width: 48, height: 48)
                             .background(sign.color.opacity(0.14), in: .rect(cornerRadius: 16))

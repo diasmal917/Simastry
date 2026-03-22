@@ -24,6 +24,7 @@ struct UpsellModalView: View {
                 freeTierBenefits
                 tierCards
                 restoreButton
+                subscriptionDisclaimer
             }
             .padding(.horizontal, 20)
             .padding(.top, 28)
@@ -53,11 +54,11 @@ struct UpsellModalView: View {
                 .symbolEffect(.variableColor.iterative, isActive: appeared)
 
             Text("Unlock the Full Cosmos")
-                .font(.system(size: 24, weight: .semibold))
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text("Choose your path among the stars")
-                .font(.system(size: 15))
+                .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .opacity(appeared ? 1 : 0)
@@ -67,7 +68,7 @@ struct UpsellModalView: View {
     private var freeTierBenefits: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("FREE INCLUDES")
-                .font(.system(size: 11, weight: .bold))
+                .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.5)
 
@@ -104,12 +105,12 @@ struct UpsellModalView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("S I M A S T R Y +")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(SimastryFont.overline)
                             .foregroundStyle(SimastryColor.gold)
                             .tracking(2)
 
                         Text(priceText(for: "plus", fallback: "$6.99 / month"))
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(SimastryFont.titleMedium)
                             .foregroundStyle(SimastryColor.offWhite)
                     }
 
@@ -155,12 +156,12 @@ struct UpsellModalView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
                             Text("S I M A S T R Y  P R O")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(SimastryFont.overline)
                                 .foregroundStyle(SimastryColor.gold)
                                 .tracking(2)
 
                             Text("BEST VALUE")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(SimastryFont.captionSmall)
                                 .foregroundStyle(SimastryColor.midnight)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -168,7 +169,7 @@ struct UpsellModalView: View {
                         }
 
                         Text(priceText(for: "pro", fallback: "$14.99 / month"))
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(SimastryFont.titleMedium)
                             .foregroundStyle(SimastryColor.offWhite)
                     }
 
@@ -223,7 +224,7 @@ struct UpsellModalView: View {
 
     private var activeBadge: some View {
         Text("ACTIVE")
-            .font(.system(size: 10, weight: .bold))
+            .font(SimastryFont.captionSmall)
             .foregroundStyle(SimastryColor.midnight)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -235,7 +236,7 @@ struct UpsellModalView: View {
             Task { await viewModel.restorePurchases() }
         }) {
             Text("Restore Purchases")
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .buttonStyle(.plain)
@@ -245,7 +246,7 @@ struct UpsellModalView: View {
 
     private func freeChip(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12, weight: .medium))
+            .font(SimastryFont.labelSmall)
             .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -259,7 +260,7 @@ struct UpsellModalView: View {
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 18)
             Text(text)
-                .font(.system(size: 14))
+                .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.offWhite)
         }
     }
@@ -310,6 +311,32 @@ struct UpsellModalView: View {
         default:
             return false
         }
+    }
+
+    private var subscriptionDisclaimer: some View {
+        VStack(spacing: 8) {
+            Text("Subscriptions auto-renew monthly unless cancelled at least 24 hours before the end of the current period. Your Apple ID account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions in your App Store account settings.")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 16) {
+                Link("Privacy Policy", destination: AppConfig.privacyPolicyURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                Link("Terms of Service", destination: AppConfig.termsOfServiceURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                Link("EULA", destination: AppConfig.eulaURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+        }
+        .padding(.top, 8)
+        .opacity(appeared ? 1 : 0)
     }
 
     private func purchasePackage(_ package: Package, type: String) async {

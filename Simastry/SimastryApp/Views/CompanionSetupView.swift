@@ -55,12 +55,12 @@ struct CompanionSetupView: View {
                 VStack(spacing: 18) {
                     VStack(spacing: 8) {
                         Text("Start with their energy")
-                            .font(.system(size: 23, weight: .semibold))
+                            .font(SimastryFont.titleLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .multilineTextAlignment(.center)
 
                         Text("You can let fate decide or choose each sign yourself.")
-                            .font(.system(size: 14))
+                            .font(SimastryFont.bodySmall)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .multilineTextAlignment(.center)
                     }
@@ -88,11 +88,11 @@ struct CompanionSetupView: View {
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Surprise Me")
-                                    .font(.system(size: 17, weight: .semibold))
+                                    .font(SimastryFont.titleSmall)
                                     .foregroundStyle(SimastryColor.offWhite)
 
                                 Text("We'll generate a balanced cosmic blend instantly.")
-                                    .font(.system(size: 13))
+                                    .font(SimastryFont.labelMedium)
                                     .foregroundStyle(SimastryColor.mutedSilver)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -109,7 +109,7 @@ struct CompanionSetupView: View {
                     .buttonStyle(SpringPressStyle())
 
                     Text("or choose each sign below")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.deepMuted)
                 }
                 .padding(.horizontal, 20)
@@ -155,7 +155,7 @@ struct CompanionSetupView: View {
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Name")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.mutedSilver)
 
                         TextField("Type a name", text: $viewModel.companionName)
@@ -184,7 +184,7 @@ struct CompanionSetupView: View {
                                         viewModel.companionName = name
                                     }) {
                                         Text(name)
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(SimastryFont.labelLarge)
                                             .foregroundStyle(SimastryColor.offWhite)
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 10)
@@ -247,7 +247,7 @@ struct CompanionSetupView: View {
                                 appearanceOrb(for: style)
 
                                 Text(style.displayName)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(SimastryFont.labelLarge)
                                     .foregroundStyle(SimastryColor.offWhite)
                             }
                             .frame(maxWidth: .infinity)
@@ -305,7 +305,7 @@ struct CompanionSetupView: View {
 
     private func stagePill(title: String, isActive: Bool, isComplete: Bool) -> some View {
         Text(title)
-            .font(.system(size: 12, weight: .semibold))
+            .font(SimastryFont.labelSmall)
             .foregroundStyle(isActive || isComplete ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.72))
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -323,11 +323,11 @@ struct CompanionSetupView: View {
 
             VStack(spacing: 4) {
                 Text(viewModel.companionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Your future companion" : viewModel.companionName)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(viewModel.selectedMode.displayName)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.gold)
             }
 
@@ -353,11 +353,11 @@ struct CompanionSetupView: View {
             CelestialRoleIcon(role: role, size: 28)
 
             Text(sign?.glyph ?? "—")
-                .font(.system(size: 15, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text(role.displayName)
-                .font(.system(size: 11, weight: .medium))
+                .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .frame(maxWidth: .infinity)
@@ -431,11 +431,11 @@ struct CompanionSignPicker: View {
                 CelestialRoleIcon(role: role, size: 56)
 
                 Text("Their \(role.displayName) Sign")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(role.accentColor)
 
                 Text(prompt(for: role))
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
@@ -445,7 +445,7 @@ struct CompanionSignPicker: View {
             HStack(spacing: 8) {
                 ForEach(Array(roles.enumerated()), id: \.offset) { index, item in
                     Text(item.displayName)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(index <= step ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.72))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)

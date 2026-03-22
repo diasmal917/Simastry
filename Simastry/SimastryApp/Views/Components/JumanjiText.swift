@@ -13,7 +13,7 @@ struct JumanjiText: View {
         FlowLayout(spacing: 4, lineSpacing: 6) {
             ForEach(Array(words.enumerated()), id: \.offset) { index, word in
                 Text(word)
-                    .font(.system(size: 15, design: .serif))
+                    .font(SimastryFont.bodyLarge)
                     .foregroundStyle(AstropediaColors.text)
                     .opacity(revealedCount > index ? 1 : 0)
                     .offset(y: revealedCount > index ? 0 : 4)

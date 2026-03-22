@@ -39,11 +39,11 @@ struct SignUpView: View {
 
                 VStack(spacing: 8) {
                     Text("Create your account")
-                        .font(.system(size: 28, weight: .bold, design: .serif))
+                        .font(SimastryFont.displayMedium)
                         .foregroundStyle(.white)
 
                     Text("Save your birth chart and unlock your reading")
-                        .font(.system(size: 15))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
                 }
@@ -116,7 +116,7 @@ struct SignUpView: View {
                         .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
                     Text("We never share or sell your data.")
-                        .font(.system(size: 12))
+                        .font(SimastryFont.caption)
                         .foregroundStyle(.white.opacity(0.4))
                 }
                 .padding(.top, 16)
@@ -142,7 +142,7 @@ struct SignUpView: View {
                 .fill(.white.opacity(0.12))
                 .frame(height: 1)
             Text("or")
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(.white.opacity(0.4))
             Rectangle()
                 .fill(.white.opacity(0.12))
@@ -153,7 +153,7 @@ struct SignUpView: View {
     private func authField(title: String, text: Binding<String>, field: Field, isSecure: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(SimastryFont.overline)
                 .foregroundStyle(.white.opacity(0.6))
                 .textCase(.uppercase)
                 .kerning(0.5)

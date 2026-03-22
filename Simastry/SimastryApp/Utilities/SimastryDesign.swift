@@ -87,6 +87,34 @@ extension View {
     }
 }
 
+struct SimastryFont {
+    // Display — large titles, hero text
+    static let displayLarge = Font.system(.largeTitle, design: .serif, weight: .bold)
+    static let displayMedium = Font.system(.title, design: .serif, weight: .bold)
+
+    // Title — section headers, card titles
+    static let titleLarge = Font.system(.title2, weight: .semibold)
+    static let titleMedium = Font.system(.title3, weight: .semibold)
+    static let titleSmall = Font.system(.headline, weight: .semibold)
+
+    // Body — primary content
+    static let bodyLarge = Font.system(.body, design: .serif)
+    static let bodyMedium = Font.system(.body)
+    static let bodySmall = Font.system(.subheadline)
+
+    // Label — UI labels, buttons, metadata
+    static let labelLarge = Font.system(.subheadline, weight: .semibold)
+    static let labelMedium = Font.system(.footnote, weight: .medium)
+    static let labelSmall = Font.system(.caption, weight: .medium)
+
+    // Caption — timestamps, fine print, legal
+    static let caption = Font.system(.caption)
+    static let captionSmall = Font.system(.caption2)
+
+    // Tracking/uppercase labels
+    static let overline = Font.system(.caption2, weight: .medium)
+}
+
 struct SkeletonShimmer: ViewModifier {
     @State private var phase: CGFloat = -1
 

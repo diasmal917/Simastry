@@ -98,7 +98,7 @@ struct SignSelectionView: View {
                 Text(selectedPath == 0
                     ? "Fastest route: choose each sign yourself and reveal your reading right away."
                     : "Your birth details stay private and are only used to estimate your signs and improve your reading.")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -124,16 +124,16 @@ struct SignSelectionView: View {
 
                 VStack(spacing: 6) {
                     Text("Your \(role.displayName) Sign")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(SimastryFont.titleLarge)
                         .foregroundStyle(role.accentColor)
 
                     Text(role.subtitle)
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
 
                 Text(selectionPrompt(for: role))
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
@@ -188,7 +188,7 @@ struct SignSelectionView: View {
             ForEach(Array(roles.enumerated()), id: \.offset) { index, role in
                 VStack(spacing: 8) {
                     Text(role.displayName)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(index <= currentStep ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.75))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -207,7 +207,7 @@ struct SignSelectionView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label {
                     Text("Why birth time matters")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
                 } icon: {
                     Image(systemName: "clock.badge.questionmark")
@@ -215,7 +215,7 @@ struct SignSelectionView: View {
                 }
 
                 Text("Birth time helps estimate your Rising sign. If you don't know it yet, you can still continue and refine it later.")
-                    .font(.system(size: 14))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -246,7 +246,7 @@ struct SignSelectionView: View {
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Text("Optional for now — add it when you're ready for a more refined chart.")
-                        .font(.system(size: 11))
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.deepMuted)
                 }
 
@@ -264,7 +264,7 @@ struct SignSelectionView: View {
                     Text(isBirthTimeUnknown
                         ? "We'll choose a flexible default for now."
                         : "The closer this is, the more accurate your Rising sign will feel.")
-                        .font(.system(size: 11))
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.deepMuted)
                 }
             }
@@ -293,11 +293,11 @@ struct SignSelectionView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(role.accentColor)
 
                     Text(inputSubtitle(for: role))
-                        .font(.system(size: 12))
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
             }

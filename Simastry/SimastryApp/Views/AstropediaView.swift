@@ -1216,7 +1216,7 @@ private struct CommunicationGuideSignCard: View {
     var body: some View {
         VStack(spacing: 10) {
             Text(sign.glyph)
-                .font(.system(size: 32, weight: .semibold, design: .serif))
+                .font(SimastryFont.displayLarge)
                 .foregroundStyle(sign.color)
                 .frame(width: 52, height: 52)
                 .background(sign.color.opacity(isSelected ? 0.22 : 0.12), in: .rect(cornerRadius: 18))

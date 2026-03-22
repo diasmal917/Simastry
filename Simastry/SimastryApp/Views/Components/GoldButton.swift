@@ -19,7 +19,7 @@ struct GoldButton: View {
             action()
         }) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(isEnabled ? .white : SimastryColor.mutedSilver)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -48,7 +48,7 @@ struct SecondaryButton: View {
             action()
         }) {
             Text(title)
-                .font(.system(size: 14, weight: .medium))
+                .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .buttonStyle(.plain)

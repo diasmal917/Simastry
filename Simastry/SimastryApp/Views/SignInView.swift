@@ -39,11 +39,11 @@ struct SignInView: View {
 
                 VStack(spacing: 8) {
                     Text("Welcome back")
-                        .font(.system(size: 28, weight: .bold, design: .serif))
+                        .font(SimastryFont.displayMedium)
                         .foregroundStyle(.white)
 
                     Text("Sign in to your Simastry account")
-                        .font(.system(size: 15))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(.top, 32)
@@ -128,7 +128,7 @@ struct SignInView: View {
                 .fill(.white.opacity(0.12))
                 .frame(height: 1)
             Text("or")
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(.white.opacity(0.4))
             Rectangle()
                 .fill(.white.opacity(0.12))
@@ -139,7 +139,7 @@ struct SignInView: View {
     private func authField(title: String, text: Binding<String>, field: Field, isSecure: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(SimastryFont.overline)
                 .foregroundStyle(.white.opacity(0.6))
                 .textCase(.uppercase)
                 .kerning(0.5)

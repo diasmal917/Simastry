@@ -20,7 +20,7 @@ struct ShareableCardView: View {
         VStack(spacing: 20) {
             HStack {
                 Button("Close") { dismiss() }
-                    .font(.system(size: 15))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                 Spacer()
 
@@ -46,7 +46,7 @@ struct ShareableCardView: View {
                         Image(systemName: "arrow.down.circle.fill")
                         Text("Save")
                     }
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
@@ -59,7 +59,7 @@ struct ShareableCardView: View {
                         Image(systemName: "square.and.arrow.up")
                         Text("Share")
                     }
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.midnight)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
@@ -115,7 +115,7 @@ struct ShareableCardView: View {
 
             VStack(spacing: 0) {
                 Text("S I M A S T R Y")
-                    .font(.system(size: 10, weight: .light))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold)
                     .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
@@ -136,7 +136,7 @@ struct ShareableCardView: View {
                 Spacer()
 
                 Text("simastry.app")
-                    .font(.system(size: 10))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
             }
@@ -149,7 +149,7 @@ struct ShareableCardView: View {
 
             VStack(spacing: 0) {
                 Text("S I M A S T R Y")
-                    .font(.system(size: 10, weight: .light))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold)
                     .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
@@ -164,7 +164,7 @@ struct ShareableCardView: View {
                             }
 
                             Text("\(companion.compatibilityScore)%")
-                                .font(.system(size: 28, weight: .medium))
+                                .font(SimastryFont.titleLarge)
                                 .foregroundStyle(SimastryColor.gold)
 
                             if let compSun = ZodiacSign(rawValue: companion.sunSign) {
@@ -178,7 +178,7 @@ struct ShareableCardView: View {
                                 element1: userSun.element.rawValue,
                                 element2: compSun.element.rawValue
                             ))
-                            .font(.system(size: 12, design: .serif))
+                            .font(SimastryFont.bodyLarge)
                             .foregroundStyle(SimastryColor.amber)
                             .multilineTextAlignment(.center)
                             .lineLimit(3)
@@ -190,7 +190,7 @@ struct ShareableCardView: View {
                 Spacer()
 
                 Text("simastry.app")
-                    .font(.system(size: 10))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
             }
@@ -203,7 +203,7 @@ struct ShareableCardView: View {
 
             VStack(spacing: 0) {
                 Text("S I M A S T R Y")
-                    .font(.system(size: 10, weight: .light))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold)
                     .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
@@ -215,11 +215,11 @@ struct ShareableCardView: View {
                         ZodiacBadgeView(sign: sun, isSelected: true, size: 48)
 
                         Text(sun.displayName)
-                            .font(.system(size: 20, weight: .medium))
+                            .font(SimastryFont.titleMedium)
                             .foregroundStyle(SimastryColor.offWhite)
 
                         Text(AstrologyTemplates.sunSign[sun.rawValue] ?? "")
-                            .font(.system(size: 13, design: .serif))
+                            .font(SimastryFont.bodyLarge)
                             .foregroundStyle(SimastryColor.amber)
                             .multilineTextAlignment(.center)
                             .lineLimit(3)
@@ -230,7 +230,7 @@ struct ShareableCardView: View {
                 Spacer()
 
                 Text("simastry.app")
-                    .font(.system(size: 10))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
             }
@@ -260,10 +260,10 @@ struct ShareableCardView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(role.displayName) in \(sign.displayName) \(sign.glyph)")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(role.accentColor)
                 Text(role.subtitle)
-                    .font(.system(size: 11))
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
             }
 

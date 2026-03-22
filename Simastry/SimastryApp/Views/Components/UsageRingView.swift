@@ -25,10 +25,10 @@ struct UsageRingView: View {
 
             VStack(spacing: 2) {
                 Text("\(used)")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.gold)
                 Text("of \(limit) min")
-                    .font(.system(size: 10))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
         }

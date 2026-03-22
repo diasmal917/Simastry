@@ -107,11 +107,11 @@ struct SimulateView: View {
 
             VStack(spacing: 6) {
                 Text("What Will They Say?")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text("Paste a real conversation and let the stars predict their next text.")
-                    .font(.system(size: 14))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
             }
@@ -130,10 +130,10 @@ struct SimulateView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(SimulationMode.whatWillTheySay.title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
                 Text("Predict their next reply, then test your own alternate message.")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
 
@@ -163,7 +163,7 @@ struct SimulateView: View {
 
                 if conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text("Paste the text conversation here…")
-                        .font(.system(size: 15))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 20)
@@ -208,7 +208,7 @@ struct SimulateView: View {
                             questionText = chip
                         } label: {
                             Text(chip)
-                                .font(.system(size: 13, weight: .medium))
+                                .font(SimastryFont.labelMedium)
                                 .foregroundStyle(questionText == chip ? SimastryColor.midnight : SimastryColor.offWhite)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
@@ -255,11 +255,11 @@ struct SimulateView: View {
                 }
 
                 Text(currentPhaseText)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text("Your simulation is taking shape.")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .frame(maxWidth: .infinity)
@@ -276,7 +276,7 @@ struct SimulateView: View {
                 }
             } label: {
                 Text(SimulationMode.whatWillTheySay.actionTitle)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.mutedSilver)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
@@ -293,7 +293,7 @@ struct SimulateView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Past Simulations")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 Spacer()
@@ -303,7 +303,7 @@ struct SimulateView: View {
                         viewModel.predictionService.clearHistory()
                         loadHistory()
                     }
-                    .font(.system(size: 12, weight: .medium))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.gold)
                     .buttonStyle(.plain)
                 }
@@ -315,10 +315,10 @@ struct SimulateView: View {
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(SimastryColor.risingViolet)
                     Text("No simulations yet")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
                     Text("Your recent predictions will gather here once you ask the stars.")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
                 }
@@ -341,11 +341,11 @@ struct SimulateView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(required ? "Required" : "Optional")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(required ? SimastryColor.gold : SimastryColor.mutedSilver)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -357,7 +357,7 @@ struct SimulateView: View {
                     Button("Clear") {
                         selection.wrappedValue = nil
                     }
-                    .font(.system(size: 12, weight: .medium))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .buttonStyle(.plain)
                 }
@@ -372,7 +372,7 @@ struct SimulateView: View {
                             }
                             .accessibilityLabel("Choose \(sign.displayName) as \(title) sign")
                             Text(sign.displayName)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(SimastryFont.labelSmall)
                                 .foregroundStyle(selection.wrappedValue == sign ? SimastryColor.offWhite : SimastryColor.mutedSilver)
                         }
                         .frame(width: 56)
@@ -400,18 +400,18 @@ struct SimulateView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.historyTitle)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .lineLimit(1)
                         Text(relativeDateString(for: item.createdAt))
-                            .font(.system(size: 12))
+                            .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
 
                     Spacer()
 
                     Text("\(item.confidence)%")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.gold)
                 }
                 .padding(16)
@@ -435,7 +435,7 @@ struct SimulateView: View {
 
     private func sectionLabel(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 15, weight: .semibold))
+            .font(SimastryFont.titleSmall)
             .foregroundStyle(SimastryColor.offWhite)
     }
 

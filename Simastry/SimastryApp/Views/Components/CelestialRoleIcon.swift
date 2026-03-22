@@ -37,15 +37,15 @@ struct SignEntryView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text("\(role.displayName) in \(sign.displayName)")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(role.accentColor)
                     Text(sign.glyph)
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
                 }
 
                 Text(role.subtitle)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 if showDescription {
@@ -57,7 +57,7 @@ struct SignEntryView: View {
                         }
                     }()
                     Text(templates[sign.rawValue] ?? "")
-                        .font(.system(size: 14, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
                         .lineSpacing(2)
                 }

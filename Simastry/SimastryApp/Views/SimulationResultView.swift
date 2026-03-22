@@ -50,7 +50,7 @@ struct SimulationResultView: View {
     private var predictionBubble: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("The stars say they'll text:")
-                .font(.system(size: 13, weight: .medium))
+                .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.4)
                 .textCase(.uppercase)
@@ -74,7 +74,7 @@ struct SimulationResultView: View {
 
                     if let tone = result.tone {
                         Text(tone.displayName)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(accentColor)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
@@ -95,7 +95,7 @@ struct SimulationResultView: View {
     private var breakdownSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Why they'd say this")
-                .font(.system(size: 17, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text(result.astrologicalBreakdown)
@@ -117,13 +117,13 @@ struct SimulationResultView: View {
                     .foregroundStyle(SimastryColor.celestialBlue)
 
                 Text("Communication tip for \(sign.displayName)")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
             }
 
             if let tip = guide?.tips.first {
                 Text(tip)
-                    .font(.system(size: 14, design: .serif))
+                    .font(SimastryFont.bodyLarge)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -131,7 +131,7 @@ struct SimulationResultView: View {
 
             if let avoid = guide?.avoid {
                 Text(avoid)
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.sunCoral.opacity(0.9))
                     .lineLimit(2)
             }
@@ -146,7 +146,7 @@ struct SimulationResultView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text("Read the full \(sign.displayName) guide")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(SimastryFont.labelLarge)
                         Image(systemName: "arrow.right")
                             .font(.system(size: 11, weight: .bold))
                     }
@@ -167,7 +167,7 @@ struct SimulationResultView: View {
     private var whatIfSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("What if I said…")
-                .font(.system(size: 17, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             TextField(
@@ -194,7 +194,7 @@ struct SimulationResultView: View {
                     }
 
                     Text(isRegenerating ? "Re-reading the timeline" : "See New Response")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(SimastryFont.titleSmall)
                 }
                 .foregroundStyle(SimastryColor.midnight)
                 .frame(maxWidth: .infinity)
@@ -216,7 +216,7 @@ struct SimulationResultView: View {
                 .foregroundStyle(SimastryColor.gold)
 
             Text("\(result.confidence)% confidence — based on conversational patterns and astrological alignment")
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
         }

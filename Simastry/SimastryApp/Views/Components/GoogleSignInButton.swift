@@ -21,7 +21,7 @@ struct GoogleSignInButton: View {
                     .frame(width: 20, height: 20)
 
                 Text("Continue with Google")
-                    .font(.system(size: 19, weight: .medium))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(.black.opacity(0.88))
             }
             .frame(maxWidth: .infinity)
@@ -52,7 +52,7 @@ private struct GoogleMarkView: View {
 
     var body: some View {
         Text("G")
-            .font(.system(size: 19, weight: .bold))
+            .font(SimastryFont.titleSmall)
             .foregroundStyle(
                 LinearGradient(
                     colors: googleColors,

@@ -17,24 +17,24 @@ struct OnboardingProgressView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
                 Text(eyebrow.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(SimastryFont.overline)
                     .tracking(1.4)
                     .foregroundStyle(SimastryColor.gold)
 
                 Spacer()
 
                 Text("Step \(step) of \(totalSteps)")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(subtitle)
-                    .font(.system(size: 14))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -60,7 +60,7 @@ struct OnboardingProgressView: View {
             HStack(spacing: 8) {
                 ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
                     Text(label)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(index + 1 <= step ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.75))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)

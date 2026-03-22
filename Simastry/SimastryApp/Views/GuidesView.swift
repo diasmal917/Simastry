@@ -108,7 +108,7 @@ struct GuidesView: View {
                         } label: {
                             VStack(spacing: 6) {
                                 Text(sign.glyph)
-                                    .font(.system(size: 24, weight: .semibold, design: .serif))
+                                    .font(SimastryFont.displayMedium)
                                     .foregroundStyle(sign.color)
                                     .frame(width: 48, height: 48)
                                     .background(sign.color.opacity(selectedSign == sign ? 0.22 : 0.10), in: Circle())
@@ -118,7 +118,7 @@ struct GuidesView: View {
                                     }
 
                                 Text(sign.displayName)
-                                    .font(.system(size: 11, weight: selectedSign == sign ? .bold : .medium))
+                                    .font(SimastryFont.labelSmall)
                                     .foregroundStyle(selectedSign == sign ? sign.color : SimastryColor.mutedSilver)
                             }
                             .frame(width: 62)

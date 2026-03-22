@@ -68,11 +68,11 @@ struct CompanionDetailSheet: View {
             )
 
             Text(companion.name)
-                .font(.system(size: 24, weight: .medium))
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text(companion.mode.replacingOccurrences(of: "_", with: " ").capitalized)
-                .font(.system(size: 13, weight: .light))
+                .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.5)
                 .textCase(.uppercase)
@@ -85,7 +85,7 @@ struct CompanionDetailSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Rituals")
-                    .font(.system(size: 14, weight: .light))
+                    .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.5)
                     .textCase(.uppercase)
@@ -94,7 +94,7 @@ struct CompanionDetailSheet: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 Text(companionPrompt)
-                    .font(.system(size: 15, design: .serif))
+                    .font(SimastryFont.bodyLarge)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -114,7 +114,7 @@ struct CompanionDetailSheet: View {
                         activeRoute = .share
                     } label: {
                         Label("Share Match", systemImage: "square.and.arrow.up")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -150,7 +150,7 @@ struct CompanionDetailSheet: View {
         VStack(spacing: 12) {
             HStack {
                 Text("Why You're Compatible")
-                    .font(.system(size: 14, weight: .light))
+                    .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.5)
                     .textCase(.uppercase)
@@ -170,7 +170,7 @@ struct CompanionDetailSheet: View {
                     let userElement = userSun.element.rawValue
                     let compElement = compSun.element.rawValue
                     Text(AstrologyTemplates.elementPairingText(element1: userElement, element2: compElement))
-                        .font(.system(size: 15, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
                         .lineSpacing(3)
 
@@ -212,11 +212,11 @@ struct CompanionDetailSheet: View {
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(SimastryColor.amber)
                                 Text("Growth Edge")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(SimastryFont.labelLarge)
                                     .foregroundStyle(SimastryColor.amber)
                             }
                             Text(challenge)
-                                .font(.system(size: 13, design: .serif))
+                                .font(SimastryFont.bodyLarge)
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
                                 .lineSpacing(2)
                         }
@@ -239,22 +239,22 @@ struct CompanionDetailSheet: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(tint)
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 HStack(spacing: 4) {
                     Text(yours.glyph)
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                     Text("×")
-                        .font(.system(size: 11))
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                     Text(theirs.glyph)
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                 }
                 .foregroundStyle(tint.opacity(0.8))
             }
             Text(insight)
-                .font(.system(size: 13, design: .serif))
+                .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.75))
                 .lineSpacing(2)
         }
@@ -322,7 +322,7 @@ struct CompanionDetailSheet: View {
         VStack(spacing: 8) {
             HStack {
                 Text("Relationship")
-                    .font(.system(size: 14, weight: .light))
+                    .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.5)
                     .textCase(.uppercase)
@@ -361,10 +361,10 @@ struct CompanionDetailSheet: View {
     private func statItem(value: String, label: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 16, weight: .medium))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.gold)
             Text(label)
-                .font(.system(size: 11))
+                .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .frame(maxWidth: .infinity)

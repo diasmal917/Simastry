@@ -135,16 +135,16 @@ struct HomeView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(greetingText)
-                    .font(.system(size: 14))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 if let name = viewModel.profile?.displayName {
                     Text("Hey, \(name)")
-                        .font(.system(size: 26, weight: .semibold))
+                        .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                 } else {
                     Text("Welcome back")
-                        .font(.system(size: 26, weight: .semibold))
+                        .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                 }
             }
@@ -182,7 +182,7 @@ struct HomeView: View {
                         .foregroundStyle(SimastryColor.celestialBlue)
 
                     Text("Today with \(companionName)")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Spacer()
@@ -193,7 +193,7 @@ struct HomeView: View {
                 }
 
                 Text(todayTip)
-                    .font(.system(size: 16, weight: .medium, design: .serif))
+                    .font(SimastryFont.bodyLarge)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -201,14 +201,14 @@ struct HomeView: View {
 
                 if let approach = guide?.bestApproach {
                     Text(approach)
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .lineLimit(2)
                 }
 
                 HStack(spacing: 6) {
                     Text("Read full guide")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.celestialBlue)
                     Image(systemName: "arrow.right")
                         .font(.system(size: 11, weight: .bold))
@@ -242,17 +242,17 @@ struct HomeView: View {
                             .foregroundStyle(SimastryColor.risingViolet)
 
                         Text("PREDICT REPLY")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(SimastryFont.overline)
                             .foregroundStyle(SimastryColor.risingViolet)
                             .tracking(1.2)
                     }
 
                     Text("What will they say next?")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(SimastryFont.titleMedium)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Text("Paste a conversation and let the stars predict their next text.")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -341,11 +341,11 @@ struct HomeView: View {
                     .background(tint.opacity(0.14), in: .rect(cornerRadius: 12))
 
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(subtitle)
-                    .font(.system(size: 12))
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -379,19 +379,19 @@ struct HomeView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(companion.name)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     HStack(spacing: 6) {
                         Text(level.name)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(SimastryColor.midnight)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(SimastryColor.gold, in: .capsule)
 
                         Text("\(companion.conversationCount) sparks")
-                            .font(.system(size: 12))
+                            .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                 }
@@ -400,10 +400,10 @@ struct HomeView: View {
 
                 VStack(spacing: 2) {
                     Text("\(companion.compatibilityScore)%")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.gold)
                     Text("match")
-                        .font(.system(size: 10))
+                        .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
             }
@@ -421,13 +421,13 @@ struct HomeView: View {
             HStack(spacing: 8) {
                 CelestialRoleIcon(role: .sun, size: 28)
                 Text("Your Energy Today")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
             }
 
             Text(AstrologyTemplates.sunSign[sun.rawValue] ?? "")
-                .font(.system(size: 14, design: .serif))
+                .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
                 .lineSpacing(3)
         }

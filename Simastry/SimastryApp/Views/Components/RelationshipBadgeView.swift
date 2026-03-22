@@ -46,11 +46,11 @@ struct RelationshipBadgeView: View {
                     }
 
                 Text("Level \(level.rawValue)")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(ringColor)
 
                 Text(level.name)
-                    .font(.system(size: 12))
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
 

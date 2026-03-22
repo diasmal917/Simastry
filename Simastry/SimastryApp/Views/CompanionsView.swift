@@ -102,11 +102,11 @@ struct CompanionsView: View {
 
             VStack(spacing: 8) {
                 Text("Your companion is waiting")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(viewModel.hasCompletedSigns ? "Create your first companion to begin" : "Complete your signs to begin")
-                    .font(.system(size: 14))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
             }
@@ -191,11 +191,11 @@ struct CompanionsView: View {
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Create New Companion")
-                                .font(.system(size: 16, weight: .medium))
+                                .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
                             Text("Shape a new soulmate, bestie, or simulation")
-                                .font(.system(size: 13))
+                                .font(SimastryFont.labelMedium)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }
 
@@ -233,17 +233,17 @@ struct CompanionsView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(companion.name)
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Text(companion.mode.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.gold)
                         .tracking(1.4)
                         .textCase(.uppercase)
 
                     Text(companionStatusLine(companion))
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -260,7 +260,7 @@ struct CompanionsView: View {
             }
 
             Text(ritualLine(for: companion))
-                .font(.system(size: 14, design: .serif))
+                .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -275,7 +275,7 @@ struct CompanionsView: View {
                     activeSheet = .detail(companion)
                 } label: {
                     Label("Open Details", systemImage: "chart.xyaxis.line")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                 }
                 .buttonStyle(.plain)
@@ -286,7 +286,7 @@ struct CompanionsView: View {
                     activeSheet = .share(companion)
                 } label: {
                     Label("Share Match", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.gold)
                 }
                 .buttonStyle(.plain)
@@ -359,11 +359,11 @@ struct CompanionsView: View {
                     .background(tint.opacity(0.18), in: .rect(cornerRadius: 12))
 
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(subtitle)
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
@@ -401,11 +401,11 @@ struct CompanionsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         Text(companion.name)
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(SimastryFont.titleSmall)
                             .foregroundStyle(SimastryColor.offWhite)
 
                         Text(level.name)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(SimastryColor.midnight)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
@@ -413,7 +413,7 @@ struct CompanionsView: View {
                     }
 
                     Text(companionStatusLine(companion))
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .lineLimit(2)
 
@@ -436,7 +436,7 @@ struct CompanionsView: View {
                     CompatibilityRingView(score: companion.compatibilityScore, size: 52)
 
                     Text("\(companion.conversationCount) sparks")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
             }
@@ -452,7 +452,7 @@ struct CompanionsView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 11, weight: .semibold))
             Text(title)
-                .font(.system(size: 12, weight: .medium))
+                .font(SimastryFont.labelSmall)
                 .lineLimit(1)
         }
         .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
@@ -463,7 +463,7 @@ struct CompanionsView: View {
 
     private func sectionLabel(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 12, weight: .light))
+            .font(SimastryFont.overline)
             .foregroundStyle(SimastryColor.mutedSilver)
             .tracking(2)
             .textCase(.uppercase)

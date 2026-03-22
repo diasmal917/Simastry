@@ -73,7 +73,7 @@ struct ModeSelectionView: View {
         VStack(alignment: .leading, spacing: 14) {
             Label {
                 Text("Start in under a minute")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
             } icon: {
                 Image(systemName: "sparkles")
@@ -81,7 +81,7 @@ struct ModeSelectionView: View {
             }
 
             Text("Choose the vibe you want, discover your big three, and bring a companion to life.")
-                .font(.system(size: 14))
+                .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -101,7 +101,7 @@ struct ModeSelectionView: View {
 
     private func pill(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 12, weight: .medium))
+            .font(SimastryFont.labelSmall)
             .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -132,14 +132,14 @@ struct ModeSelectionView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(mode.displayName)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Spacer()
 
                     if let badge {
                         Text(badge)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(SimastryColor.midnight)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
@@ -148,11 +148,11 @@ struct ModeSelectionView: View {
                 }
 
                 Text(mode.subtitle)
-                    .font(.system(size: 14))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 Text(modeSupportText(mode))
-                    .font(.system(size: 12))
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.65))
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -10,6 +10,11 @@ nonisolated enum AppConfig {
     static let EXPO_PUBLIC_TEAM_ID: String = Config.EXPO_PUBLIC_TEAM_ID
     static let EXPO_PUBLIC_TOOLKIT_URL: String = Config.EXPO_PUBLIC_TOOLKIT_URL
 
+    // Legal URLs — update these before App Store submission
+    static let privacyPolicyURL = URL(string: "https://simastry.app/privacy")!
+    static let termsOfServiceURL = URL(string: "https://simastry.app/terms")!
+    static let eulaURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+
     static let allValues: [String: String] = [
         "EXPO_PUBLIC_PROJECT_ID": EXPO_PUBLIC_PROJECT_ID,
         "EXPO_PUBLIC_REVENUECAT_API_KEY": EXPO_PUBLIC_REVENUECAT_API_KEY,

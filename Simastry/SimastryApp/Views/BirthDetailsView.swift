@@ -64,7 +64,7 @@ struct BirthDetailsView: View {
                         ProgressView()
                             .tint(SimastryColor.gold)
                         Text("Calculating your birth chart...")
-                            .font(.system(size: 13))
+                            .font(SimastryFont.labelMedium)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                     .padding(.horizontal, 24)
@@ -140,7 +140,7 @@ struct BirthDetailsView: View {
     private var birthdayStep: some View {
         VStack(spacing: 24) {
             Text("What's your birthday?")
-                .font(.system(size: 28, weight: .bold, design: .serif))
+                .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
@@ -156,7 +156,7 @@ struct BirthDetailsView: View {
     private var birthTimeStep: some View {
         VStack(spacing: 24) {
             Text("What time were you born?")
-                .font(.system(size: 28, weight: .bold, design: .serif))
+                .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
@@ -180,7 +180,7 @@ struct BirthDetailsView: View {
                         .foregroundStyle(isBirthTimeUnknown ? SimastryColor.gold : .white.opacity(0.4))
 
                     Text("I don't know my birth time")
-                        .font(.system(size: 15))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(.white.opacity(0.7))
                 }
             }
@@ -192,7 +192,7 @@ struct BirthDetailsView: View {
     private var birthplaceStep: some View {
         VStack(spacing: 24) {
             Text("Where were you born?")
-                .font(.system(size: 28, weight: .bold, design: .serif))
+                .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
@@ -215,7 +215,7 @@ struct BirthDetailsView: View {
                     }
 
                 Text("Optional — helps refine your Rising sign")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
         }
@@ -229,7 +229,7 @@ struct BirthDetailsView: View {
                 .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
             Text("We use this to generate your astrological birth chart. We never share or sell your data.")
-                .font(.system(size: 12))
+                .font(SimastryFont.caption)
                 .foregroundStyle(.white.opacity(0.4))
                 .fixedSize(horizontal: false, vertical: true)
         }

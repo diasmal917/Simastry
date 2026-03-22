@@ -53,7 +53,7 @@ struct ContentView: View {
             SimastryColor.midnight.ignoresSafeArea()
             VStack(spacing: 16) {
                 Text("S I M A S T R Y")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.gold)
                     .tracking(1)
                 ProgressView()

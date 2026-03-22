@@ -109,11 +109,11 @@ struct ProfileView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Simastry")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 Text(viewModel.hasCompletedSigns ? "About You" : "Your Stars Await")
-                    .font(.system(size: 28, weight: .medium))
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
             }
 
@@ -185,16 +185,16 @@ struct ProfileView: View {
                     .frame(width: 48, height: 48)
 
                 Text(icon)
-                    .font(.system(size: 22))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.gold.opacity(0.4))
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
                 Text(subtitle)
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 Rectangle()
@@ -204,7 +204,7 @@ struct ProfileView: View {
                     .padding(.vertical, 2)
 
                 Text(description)
-                    .font(.system(size: 12, design: .serif))
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
             }
 
@@ -222,7 +222,7 @@ struct ProfileView: View {
     private var placeholderCompanionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Your Companion")
-                .font(.system(size: 13, weight: .semibold))
+                .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.mutedSilver)
 
             HStack(spacing: 14) {
@@ -237,10 +237,10 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Not yet created")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.5))
                     Text("Complete your signs first")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
 
@@ -268,7 +268,7 @@ struct ProfileView: View {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 13))
                     Text("Share Your Cosmic DNA")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(SimastryFont.labelMedium)
                 }
                 .foregroundStyle(SimastryColor.gold)
             }
@@ -288,7 +288,7 @@ struct ProfileView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
                 Text("How to Talk to You")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 Button {
@@ -303,7 +303,7 @@ struct ProfileView: View {
 
             if let guide {
                 Text("As a \(sun.displayName), here's what people should know:")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -314,7 +314,7 @@ struct ProfileView: View {
                                 .foregroundStyle(SimastryColor.gold)
                                 .padding(.top, 3)
                             Text(tip)
-                                .font(.system(size: 14, design: .serif))
+                                .font(SimastryFont.bodyLarge)
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
                                 .lineSpacing(2)
                         }
@@ -324,12 +324,12 @@ struct ProfileView: View {
                 // Best approach
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Best Approach")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.gold)
                         .tracking(1)
                         .textCase(.uppercase)
                     Text(guide.bestApproach)
-                        .font(.system(size: 14, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
                         .lineSpacing(2)
                 }
@@ -343,13 +343,13 @@ struct ProfileView: View {
                             .font(.system(size: 11))
                             .foregroundStyle(SimastryColor.amber)
                         Text("What to Avoid")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(SimastryFont.overline)
                             .foregroundStyle(SimastryColor.amber)
                             .tracking(1)
                             .textCase(.uppercase)
                     }
                     Text(guide.avoid)
-                        .font(.system(size: 13, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
                         .lineSpacing(2)
                 }
@@ -388,20 +388,20 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text("\(role.displayName) in \(sign.displayName)")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(SimastryFont.bodySmall)
                             .foregroundStyle(role.accentColor)
                         Text(sign.glyph)
-                            .font(.system(size: 14))
+                            .font(SimastryFont.bodySmall)
                             .foregroundStyle(role.accentColor.opacity(0.7))
                     }
 
                     Text(role.subtitle)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     if isExpanded {
                         Text(templates[sign.rawValue] ?? "")
-                            .font(.system(size: 15, design: .serif))
+                            .font(SimastryFont.bodyLarge)
                             .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
                             .lineSpacing(3)
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -424,7 +424,7 @@ struct ProfileView: View {
 
         return VStack(alignment: .leading, spacing: 12) {
             Text("Your \(companion.mode.replacingOccurrences(of: "_", with: " ").capitalized)")
-                .font(.system(size: 13, weight: .semibold))
+                .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.mutedSilver)
 
             Button(action: {
@@ -443,10 +443,10 @@ struct ProfileView: View {
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(companion.name)
-                                .font(.system(size: 18, weight: .medium))
+                                .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
                             Text(companion.mode.replacingOccurrences(of: "_", with: " ").capitalized)
-                                .font(.system(size: 12))
+                                .font(SimastryFont.caption)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }
 
@@ -497,7 +497,7 @@ struct ProfileView: View {
                             viewModel.showUpsell = true
                         }) {
                             Text(tier == "free" ? "Upgrade" : "Manage Subscription")
-                                .font(.system(size: 14))
+                                .font(SimastryFont.bodySmall)
                                 .foregroundStyle(SimastryColor.gold)
                         }
                         .buttonStyle(.plain)
@@ -544,13 +544,13 @@ struct ProfileView: View {
     private func usagePill(label: String, value: String, subtitle: String, tint: Color) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 18, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(tint)
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.offWhite)
             Text(subtitle)
-                .font(.system(size: 10))
+                .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .frame(maxWidth: .infinity)
@@ -563,7 +563,7 @@ struct ProfileView: View {
             Image(systemName: "infinity")
                 .font(.system(size: 10, weight: .bold))
             Text(text)
-                .font(.system(size: 12, weight: .medium))
+                .font(SimastryFont.labelSmall)
         }
         .foregroundStyle(SimastryColor.gold)
         .padding(.horizontal, 12)
@@ -576,15 +576,15 @@ struct ProfileView: View {
         switch tier {
         case "plus":
             Text("Simastry+")
-                .font(.system(size: 15, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.gold)
         case "pro":
             Text("Simastry Pro")
-                .font(.system(size: 15, weight: .semibold))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.gold)
         default:
             Text("Free")
-                .font(.system(size: 15, weight: .medium))
+                .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
     }
@@ -594,7 +594,7 @@ struct ProfileView: View {
     private var themeToggle: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Appearance")
-                .font(.system(size: 12))
+                .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
 
             Button(action: {
@@ -609,7 +609,7 @@ struct ProfileView: View {
                         .foregroundStyle(SimastryColor.gold)
                         .contentTransition(.symbolEffect(.replace))
                     Text(viewModel.isDarkMode ? "Dark" : "Light")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                 }
                 .padding(.horizontal, 16)
@@ -634,7 +634,7 @@ struct ProfileView: View {
 
             Button(action: { showSignOutConfirmation = true }) {
                 Text("Sign Out")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(.red.opacity(0.8))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -650,7 +650,7 @@ struct ProfileView: View {
                 }
             } label: {
                 Text("Simastry v1.0.0")
-                    .font(.system(size: 11))
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.deepMuted)
             }
             .buttonStyle(.plain)
@@ -661,7 +661,7 @@ struct ProfileView: View {
     private func footerLink(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .buttonStyle(.plain)
@@ -675,17 +675,17 @@ struct ProfileView: View {
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("Simastry")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text("v1.0.0")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(.top, 28)
 
             Text("Simastry is your AI-powered astrology companion. Explore zodiac compatibility, simulate conversations through cosmic archetypes, and get practical communication guidance shaped by your signs.")
-                .font(.system(size: 15, design: .serif))
+                .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -693,11 +693,11 @@ struct ProfileView: View {
 
             VStack(spacing: 8) {
                 Text("Built with SwiftUI")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 Text("Powered by the stars \u{2728}")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.gold.opacity(0.7))
             }
 
@@ -725,6 +725,10 @@ struct ProfileView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .lineSpacing(4)
 
+                Link("Read full policy online", destination: title.contains("Privacy") ? AppConfig.privacyPolicyURL : AppConfig.termsOfServiceURL)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.gold)
+
                 Spacer(minLength: 24)
             }
             .padding(.horizontal, 24)
@@ -743,13 +747,13 @@ struct ProfileView: View {
     private var devMenuSheet: some View {
         VStack(spacing: 20) {
             Text("Developer Menu")
-                .font(.system(size: 18, weight: .medium))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
                 .padding(.top, 20)
 
             VStack(spacing: 12) {
                 Text("Tier Override")
-                    .font(.system(size: 13))
+                    .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
                 HStack(spacing: 12) {
@@ -771,7 +775,7 @@ struct ProfileView: View {
                     activeSheet = nil
                 }
             }
-            .font(.system(size: 14, weight: .medium))
+            .font(SimastryFont.labelLarge)
             .foregroundStyle(SimastryColor.amber)
 
             Button("Clear Companion") {
@@ -782,7 +786,7 @@ struct ProfileView: View {
                     activeSheet = nil
                 }
             }
-            .font(.system(size: 14, weight: .medium))
+            .font(SimastryFont.labelLarge)
             .foregroundStyle(.red.opacity(0.8))
 
             Spacer()
@@ -803,7 +807,7 @@ struct ProfileView: View {
             }
         }) {
             Text(label)
-                .font(.system(size: 13, weight: .medium))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
