@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */; };
 		XX50D61ED0BAE05FA2F8E9XX /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = XX1C9FF110ABBCE8BF456CXX /* Supabase */; };
+		XXAE39F1B2C84D5E91A7B3XX /* SwissEphemeris in Frameworks */ = {isa = PBXBuildFile; productRef = XX7F2E8A4D1B3C6E05F9A2XX /* SwissEphemeris */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +60,7 @@
 			files = (
 				XX50D61ED0BAE05FA2F8E9XX /* Supabase in Frameworks */,
 				XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */,
+				XXAE39F1B2C84D5E91A7B3XX /* SwissEphemeris in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,6 +123,7 @@
 			packageProductDependencies = (
 				XX1C9FF110ABBCE8BF456CXX /* Supabase */,
 				XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */,
+				XX7F2E8A4D1B3C6E05F9A2XX /* SwissEphemeris */,
 			);
 			productName = Simastry;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* Simastry.app */;
@@ -216,6 +219,7 @@
 			packageReferences = (
 				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				XX5B1D3E7A9C2F8401E6D5XX /* XCRemoteSwiftPackageReference "SwissEphemeris" */,
 			);
 		};
 /* End PBXProject section */
@@ -637,6 +641,14 @@
 				minimumVersion = 5.0.0;
 			};
 		};
+		XX5B1D3E7A9C2F8401E6D5XX /* XCRemoteSwiftPackageReference "SwissEphemeris" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/vsmithers1087/SwissEphemeris.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -649,6 +661,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		XX7F2E8A4D1B3C6E05F9A2XX /* SwissEphemeris */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XX5B1D3E7A9C2F8401E6D5XX /* XCRemoteSwiftPackageReference "SwissEphemeris" */;
+			productName = SwissEphemeris;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -114,9 +114,9 @@ struct BirthDetailsView: View {
 
     private var stepSubtitle: String {
         switch currentStep {
-        case 0: return "We'll calculate your Sun sign from this."
-        case 1: return "This helps us estimate your Rising sign. You can always refine it later."
-        case 2: return "Optional — for a more personalized experience."
+        case 0: return "We'll calculate your Sun and Moon signs from this."
+        case 1: return "Combined with your birthday, this determines your Rising sign."
+        case 2: return "Optional — improves the accuracy of your Rising sign placement."
         default: return ""
         }
     }
@@ -234,50 +234,28 @@ struct BirthDetailsView: View {
             viewModel.onboardingBirthTime = isBirthTimeUnknown ? nil : birthTime
             viewModel.onboardingBirthplace = birthplace.isEmpty ? nil : birthplace
 
-            // Sun sign is accurately derived from birthday
-            let sun = ZodiacSign.fromDate(birthday)
-            viewModel.userSunSign = sun
+            // Calculate birth chart using Swiss Ephemeris for accurate placements.
+            // Latitude/longitude are not available from text input alone — for Rising
+            // sign accuracy, we'd need geocoding. For now, pass nil for location
+            // unless we add geocoding later. The user can refine on the sign selection screen.
+            let chartService = BirthChartService()
+            let chart = chartService.calculate(
+                birthday: birthday,
+                birthTime: isBirthTimeUnknown ? nil : birthTime,
+                latitude: nil,
+                longitude: nil
+            )
 
-            // Moon and Rising are estimates — user can refine on the next screen.
-            // If birth time is known, use it to estimate Rising sign from time of day.
-            if !isBirthTimeUnknown {
-                viewModel.userRisingSign = estimateRisingSign(birthday: birthday, birthTime: birthTime)
-            } else {
-                viewModel.userRisingSign = nil // Unknown — user must pick manually
-            }
-            viewModel.userMoonSign = estimateMoonSign(birthday: birthday)
+            viewModel.userSunSign = chart.sunSign
+            viewModel.userMoonSign = chart.moonSign
+            // Rising requires location — set to nil so user picks manually,
+            // or use the calculated value if we had coordinates
+            viewModel.userRisingSign = chart.risingSign
 
             birthplaceFocused = false
             withAnimation(.spring(SimastrySpring.smooth)) {
                 viewModel.currentScreen = .signUp
             }
         }
-    }
-
-    /// Rough Moon sign estimate based on birth date.
-    /// The real Moon moves ~13° per day, cycling all 12 signs in ~28 days.
-    /// This gives a reasonable estimate; users can correct on the sign selection screen.
-    private func estimateMoonSign(birthday: Date) -> ZodiacSign {
-        let calendar = Calendar.current
-        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: birthday) ?? 1
-        let year = calendar.component(.year, from: birthday)
-        // Moon cycle is ~29.5 days. Offset by year to vary across birth years.
-        let lunarOffset = (dayOfYear + year * 13) % 360
-        let signIndex = (lunarOffset / 30) % 12
-        return ZodiacSign.allCases[signIndex]
-    }
-
-    /// Rough Rising sign estimate based on birth time.
-    /// The Rising sign changes roughly every 2 hours, cycling all 12 signs in 24 hours.
-    /// The starting sign depends on the Sun sign (which is on the eastern horizon at ~6am).
-    private func estimateRisingSign(birthday: Date, birthTime: Date) -> ZodiacSign {
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: birthTime)
-        let sunSign = ZodiacSign.fromDate(birthday)
-        let sunIndex = ZodiacSign.allCases.firstIndex(of: sunSign) ?? 0
-        // At ~6am local, the Rising sign ≈ Sun sign. Each 2 hours advances one sign.
-        let risingOffset = ((hour + 18) % 24) / 2 // +18 to normalize: 6am → 0
-        let risingIndex = (sunIndex + risingOffset) % 12
-        return ZodiacSign.allCases[risingIndex]
     }
 }
