@@ -40,6 +40,7 @@ class AppViewModel {
     let supabase = SupabaseService()
     let notificationService = NotificationService()
     let predictionService = PredictionService()
+    private let pendingOnboardingChartKey = "simastry_pending_onboarding_chart"
 
     var hasCompletedSigns: Bool {
         profile?.sunSign != nil && profile?.moonSign != nil && profile?.risingSign != nil
@@ -166,6 +167,7 @@ class AppViewModel {
     func signOut() async {
         try? await supabase.signOut()
         notificationService.clearScheduledNotifications()
+        clearPendingOnboardingChart()
         isAuthenticated = false
         profile = nil
         companions = []
@@ -478,6 +480,9 @@ class AppViewModel {
 
     func navigateAfterAuth() async {
         await loadProfile()
+        if shouldPersistPendingBirthChart {
+            await saveUserSigns()
+        }
         await loadCompanions()
         await checkSubscriptionStatus()
         syncHomeSetupPhase()
@@ -500,6 +505,7 @@ class AppViewModel {
             profile = p
             do {
                 try await supabase.upsertProfile(p)
+                clearPendingOnboardingChart()
             } catch {
                 showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
             }
@@ -511,11 +517,19 @@ class AppViewModel {
             profile = p
             do {
                 try await supabase.upsertProfile(p)
+                clearPendingOnboardingChart()
             } catch {
                 showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
             }
         }
         await setupNotifications()
+    }
+
+    func stageOnboardingBirthChart(_ chart: BirthChartService.BirthChart) {
+        userSunSign = chart.sunSign
+        userMoonSign = chart.moonSign
+        userRisingSign = chart.risingSign
+        persistPendingOnboardingChart()
     }
 
     func createCompanion() async {
@@ -621,10 +635,14 @@ class AppViewModel {
             userSunSign = p.sunSign.flatMap { ZodiacSign(rawValue: $0) }
             userMoonSign = p.moonSign.flatMap { ZodiacSign(rawValue: $0) }
             userRisingSign = p.risingSign.flatMap { ZodiacSign(rawValue: $0) }
+            clearPendingOnboardingChart()
         } else {
-            userSunSign = nil
-            userMoonSign = nil
-            userRisingSign = nil
+            let restored = restorePendingOnboardingChart()
+            if !restored {
+                userSunSign = nil
+                userMoonSign = nil
+                userRisingSign = nil
+            }
         }
     }
 
@@ -642,6 +660,46 @@ class AppViewModel {
         companionName = ""
         companionAppearance = .ethereal
     }
+
+    private var shouldPersistPendingBirthChart: Bool {
+        guard let profile else {
+            return userSunSign != nil && userMoonSign != nil && userRisingSign != nil
+        }
+
+        let isMissingPersistedChart = profile.sunSign == nil || profile.moonSign == nil || profile.risingSign == nil
+        return isMissingPersistedChart
+            && userSunSign != nil
+            && userMoonSign != nil
+            && userRisingSign != nil
+    }
+
+    private func persistPendingOnboardingChart() {
+        let pending = PendingOnboardingChart(
+            sunSign: userSunSign?.rawValue,
+            moonSign: userMoonSign?.rawValue,
+            risingSign: userRisingSign?.rawValue
+        )
+
+        guard let data = try? JSONEncoder().encode(pending) else { return }
+        UserDefaults.standard.set(data, forKey: pendingOnboardingChartKey)
+    }
+
+    @discardableResult
+    private func restorePendingOnboardingChart() -> Bool {
+        guard let data = UserDefaults.standard.data(forKey: pendingOnboardingChartKey),
+              let pending = try? JSONDecoder().decode(PendingOnboardingChart.self, from: data) else {
+            return false
+        }
+
+        userSunSign = pending.sunSign.flatMap { ZodiacSign(rawValue: $0) }
+        userMoonSign = pending.moonSign.flatMap { ZodiacSign(rawValue: $0) }
+        userRisingSign = pending.risingSign.flatMap { ZodiacSign(rawValue: $0) }
+        return userSunSign != nil || userMoonSign != nil || userRisingSign != nil
+    }
+
+    private func clearPendingOnboardingChart() {
+        UserDefaults.standard.removeObject(forKey: pendingOnboardingChartKey)
+    }
 }
 
 nonisolated struct ToastMessage: Identifiable, Sendable {
@@ -649,4 +707,10 @@ nonisolated struct ToastMessage: Identifiable, Sendable {
     let title: String
     let subtitle: String
     let isError: Bool
+}
+
+private struct PendingOnboardingChart: Codable {
+    let sunSign: String?
+    let moonSign: String?
+    let risingSign: String?
 }

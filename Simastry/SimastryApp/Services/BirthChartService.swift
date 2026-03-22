@@ -26,23 +26,25 @@ final class BirthChartService {
     ///   - birthTime: The time of birth (optional — needed for Rising sign).
     ///   - latitude: Birth location latitude (optional — needed for Rising sign).
     ///   - longitude: Birth location longitude (optional — needed for Rising sign).
+    ///   - timeZone: Birth location timezone (optional — used to interpret local birth time correctly).
     /// - Returns: A `BirthChart` with accurate sign placements.
     func calculate(
         birthday: Date,
         birthTime: Date?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        timeZone: TimeZone?
     ) -> BirthChart {
         // Combine birthday date with birth time
-        let chartDate = combinedDate(birthday: birthday, birthTime: birthTime)
+        let chartDate = combinedDate(birthday: birthday, birthTime: birthTime, timeZone: timeZone)
 
         // Sun position
-        let sunCoord = Coordinate<Planet>(planet: .sun, date: chartDate)
+        let sunCoord = Coordinate<Planet>(body: .sun, date: chartDate)
         let sunLongitude = sunCoord.longitude
         let sunSign = signFromLongitude(sunLongitude)
 
         // Moon position
-        let moonCoord = Coordinate<Planet>(planet: .moon, date: chartDate)
+        let moonCoord = Coordinate<Planet>(body: .moon, date: chartDate)
         let moonLongitude = moonCoord.longitude
         let moonSign = signFromLongitude(moonLongitude)
 
@@ -57,7 +59,7 @@ final class BirthChartService {
                 longitude: lon,
                 houseSystem: .placidus
             )
-            let ascLongitude = houses.ascendent.longitude
+            let ascLongitude = houses.ascendent.tropical.value
             risingSign = signFromLongitude(ascLongitude)
             risingDegree = ascLongitude
         }
@@ -75,8 +77,11 @@ final class BirthChartService {
     // MARK: - Private
 
     /// Combine a birthday (date only) with a birth time into a single Date.
-    private func combinedDate(birthday: Date, birthTime: Date?) -> Date {
-        let calendar = Calendar.current
+    private func combinedDate(birthday: Date, birthTime: Date?, timeZone: TimeZone?) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        if let timeZone {
+            calendar.timeZone = timeZone
+        }
         let dateComponents = calendar.dateComponents([.year, .month, .day], from: birthday)
 
         guard let birthTime else {

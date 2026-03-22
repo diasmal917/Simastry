@@ -255,11 +255,13 @@ struct BirthDetailsView: View {
                 // Geocode birthplace to coordinates for Rising sign accuracy
                 var latitude: Double? = nil
                 var longitude: Double? = nil
+                var timeZone: TimeZone? = nil
 
                 if !birthplace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    let coords = await geocodeBirthplace(birthplace)
-                    latitude = coords?.latitude
-                    longitude = coords?.longitude
+                    let location = await geocodeBirthplace(birthplace)
+                    latitude = location?.latitude
+                    longitude = location?.longitude
+                    timeZone = location?.timeZone
                 }
 
                 // Calculate birth chart using Swiss Ephemeris
@@ -268,12 +270,11 @@ struct BirthDetailsView: View {
                     birthday: birthday,
                     birthTime: isBirthTimeUnknown ? nil : birthTime,
                     latitude: latitude,
-                    longitude: longitude
+                    longitude: longitude,
+                    timeZone: timeZone
                 )
 
-                viewModel.userSunSign = chart.sunSign
-                viewModel.userMoonSign = chart.moonSign
-                viewModel.userRisingSign = chart.risingSign
+                viewModel.stageOnboardingBirthChart(chart)
 
                 isCalculating = false
                 withAnimation(.spring(SimastrySpring.smooth)) {
@@ -284,14 +285,29 @@ struct BirthDetailsView: View {
     }
 
     /// Geocode a birthplace string to latitude/longitude using Apple's CLGeocoder.
-    private func geocodeBirthplace(_ place: String) async -> CLLocationCoordinate2D? {
+    private func geocodeBirthplace(_ place: String) async -> GeocodedBirthplace? {
         let geocoder = CLGeocoder()
         do {
             let placemarks = try await geocoder.geocodeAddressString(place)
-            return placemarks.first?.location?.coordinate
+            guard let placemark = placemarks.first,
+                  let coordinate = placemark.location?.coordinate else {
+                return nil
+            }
+
+            return GeocodedBirthplace(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                timeZone: placemark.timeZone
+            )
         } catch {
             // Geocoding failed — Rising sign will be nil, user picks manually
             return nil
         }
     }
+}
+
+private struct GeocodedBirthplace {
+    let latitude: Double
+    let longitude: Double
+    let timeZone: TimeZone?
 }
