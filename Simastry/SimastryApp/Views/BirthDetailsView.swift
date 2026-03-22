@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreLocation
 
 struct BirthDetailsView: View {
     @Bindable var viewModel: AppViewModel
@@ -15,6 +14,7 @@ struct BirthDetailsView: View {
     @State private var birthplace: String = ""
     @State private var appeared: Bool = false
     @FocusState private var birthplaceFocused: Bool
+    private let birthplaceGeocodingService = BirthplaceGeocodingService()
 
     var body: some View {
         ZStack {
@@ -243,7 +243,7 @@ struct BirthDetailsView: View {
             viewModel.onboardingBirthplace = trimmedBirthplace
 
             Task {
-                guard let location = await geocodeBirthplace(trimmedBirthplace) else {
+                guard let location = await birthplaceGeocodingService.resolve(trimmedBirthplace) else {
                     isCalculating = false
                     viewModel.showToast("Couldn't place your birthplace", subtitle: "Use a city and country we can verify for your chart.", isError: true)
                     return
@@ -273,31 +273,4 @@ struct BirthDetailsView: View {
             }
         }
     }
-
-    /// Geocode a birthplace string to latitude/longitude using Apple's CLGeocoder.
-    private func geocodeBirthplace(_ place: String) async -> GeocodedBirthplace? {
-        let geocoder = CLGeocoder()
-        do {
-            let placemarks = try await geocoder.geocodeAddressString(place)
-            guard let placemark = placemarks.first,
-                  let coordinate = placemark.location?.coordinate,
-                  let timeZone = placemark.timeZone else {
-                return nil
-            }
-
-            return GeocodedBirthplace(
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
-                timeZone: timeZone
-            )
-        } catch {
-            return nil
-        }
-    }
-}
-
-private struct GeocodedBirthplace {
-    let latitude: Double
-    let longitude: Double
-    let timeZone: TimeZone
 }

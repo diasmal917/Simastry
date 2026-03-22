@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreLocation
 
 struct SignSelectionView: View {
     @Bindable var viewModel: AppViewModel
@@ -10,6 +9,7 @@ struct SignSelectionView: View {
     @State private var appeared: Bool = false
     @State private var isCalculating: Bool = false
     @FocusState private var focusedField: SignInputField?
+    private let birthplaceGeocodingService = BirthplaceGeocodingService()
 
     private enum SignInputField: Hashable {
         case birthplace
@@ -222,7 +222,7 @@ struct SignSelectionView: View {
         viewModel.onboardingBirthTime = birthTime
         viewModel.onboardingBirthplace = trimmedBirthplace
 
-        let location = await geocodeBirthplace(trimmedBirthplace)
+        let location = await birthplaceGeocodingService.resolve(trimmedBirthplace)
         guard let location else {
             isCalculating = false
             viewModel.showToast("Couldn't place your birthplace", subtitle: "Use a city and country we can verify for your chart.", isError: true)
@@ -253,36 +253,10 @@ struct SignSelectionView: View {
         }
     }
 
-    private func geocodeBirthplace(_ place: String) async -> ResolvedBirthplace? {
-        let geocoder = CLGeocoder()
-        do {
-            let placemarks = try await geocoder.geocodeAddressString(place)
-            guard let placemark = placemarks.first,
-                  let coordinate = placemark.location?.coordinate,
-                  let timeZone = placemark.timeZone else {
-                return nil
-            }
-
-            return ResolvedBirthplace(
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
-                timeZone: timeZone
-            )
-        } catch {
-            return nil
-        }
-    }
-
     private static func defaultBirthTime() -> Date {
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
         components.hour = 12
         components.minute = 0
         return Calendar.current.date(from: components) ?? Date()
     }
-}
-
-private struct ResolvedBirthplace {
-    let latitude: Double
-    let longitude: Double
-    let timeZone: TimeZone
 }
