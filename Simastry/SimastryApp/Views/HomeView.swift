@@ -3,7 +3,9 @@ import SwiftUI
 struct HomeView: View {
     @Bindable var viewModel: AppViewModel
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
+    @State private var isLoading: Bool = true
 
     var body: some View {
         NavigationStack {
@@ -58,12 +60,75 @@ struct HomeView: View {
             .padding(.horizontal, 20)
             .onAppear {
                 guard !appeared else { return }
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
+                if reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
+                        appeared = true
+                    }
                 }
             }
         }
         .scrollIndicators(.hidden)
+        .overlay {
+            if isLoading {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        Spacer().frame(height: 16)
+
+                        // Greeting skeleton
+                        HStack {
+                            VStack(alignment: .leading, spacing: 6) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(SimastryColor.surface)
+                                    .frame(width: 100, height: 14)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(SimastryColor.surface)
+                                    .frame(width: 180, height: 26)
+                            }
+                            Spacer()
+                            Circle()
+                                .fill(SimastryColor.surface)
+                                .frame(width: 48, height: 48)
+                        }
+
+                        // Predict card skeleton
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 120)
+
+                        // Communication card skeleton
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 140)
+
+                        // Grid skeleton
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                            ForEach(0..<4, id: \.self) { _ in
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(SimastryColor.surface)
+                                    .frame(height: 110)
+                            }
+                        }
+
+                        // Companion skeleton
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 80)
+                    }
+                    .padding(.horizontal, 20)
+                    .skeletonShimmer()
+                }
+                .scrollIndicators(.hidden)
+                .transition(.opacity)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(600))
+            withAnimation(.easeOut(duration: 0.3)) {
+                isLoading = false
+            }
+        }
     }
 
     private var greetingSection: some View {
@@ -159,6 +224,7 @@ struct HomeView: View {
             }
         }
         .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Today with \(companionName). \(todayTip)")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
     }
@@ -206,6 +272,7 @@ struct HomeView: View {
             }
         }
         .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Predict their reply. Paste a conversation and let the stars predict their next text.")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
@@ -290,6 +357,7 @@ struct HomeView: View {
             }
         }
         .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("\(title). \(subtitle)")
     }
 
     private func companionCard(_ companion: CompanionData) -> some View {
@@ -343,6 +411,7 @@ struct HomeView: View {
             .simastryGlass(cornerRadius: 20)
         }
         .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("\(companion.name), \(level.name) bond, \(companion.compatibilityScore) percent match")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 16)
     }

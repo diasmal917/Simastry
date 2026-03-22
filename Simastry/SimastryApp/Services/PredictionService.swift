@@ -186,6 +186,10 @@ nonisolated final class PredictionService {
             prompt += "\n- Rising in \(targetRisingSign.displayName): \(risingDescription)"
         }
 
+        if let personality = AstrologyTemplates.companionPersonality[request.targetSunSign.rawValue] {
+            prompt += "\n\nPersonality style: \(personality)"
+        }
+
         prompt += """
 
 
@@ -200,6 +204,7 @@ nonisolated final class PredictionService {
         - Keep it concise and natural
         - The astrological breakdown should be specific, short, and placement-aware
         - Return only the fields requested by the calling schema
+        - Channel their zodiac energy — don't just describe their sign, embody their texting personality
         """
 
         return prompt

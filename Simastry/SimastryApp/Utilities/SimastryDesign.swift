@@ -14,7 +14,7 @@ struct SimastryColor {
     static let gold = Color(red: 212/255, green: 175/255, blue: 55/255)
     static let celestialBlue = Color(red: 74/255, green: 144/255, blue: 217/255)
     static let offWhite = Color(red: 240/255, green: 237/255, blue: 230/255)
-    static let mutedSilver = Color(red: 122/255, green: 133/255, blue: 153/255)
+    static let mutedSilver = Color(red: 148/255, green: 163/255, blue: 184/255)
     static let deepMuted = Color(red: 74/255, green: 85/255, blue: 104/255)
     static let amber = Color(red: 212/255, green: 145/255, blue: 58/255)
     static let sunCoral = Color(red: 232/255, green: 132/255, blue: 90/255)
@@ -84,5 +84,41 @@ extension View {
             self.background(color.opacity(0.1), in: .rect(cornerRadius: cornerRadius))
                 .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
         }
+    }
+}
+
+struct SkeletonShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                LinearGradient(
+                    colors: [.clear, .white.opacity(0.08), .clear],
+                    startPoint: .init(x: phase - 0.5, y: 0.5),
+                    endPoint: .init(x: phase + 0.5, y: 0.5)
+                )
+                .animation(
+                    .linear(duration: 1.5).repeatForever(autoreverses: false),
+                    value: phase
+                )
+            }
+            .onAppear { phase = 2 }
+    }
+}
+
+extension View {
+    func skeletonShimmer() -> some View {
+        modifier(SkeletonShimmer())
+    }
+}
+
+struct ReducedMotionModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    let animation: Animation?
+    let reducedAnimation: Animation?
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? reducedAnimation : animation, value: UUID())
     }
 }

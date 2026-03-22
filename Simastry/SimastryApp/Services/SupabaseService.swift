@@ -6,20 +6,21 @@ nonisolated final class SupabaseService {
 
     private var authRedirectURL: URL {
         let scheme = Bundle.main.bundleIdentifier ?? "app.rork.simastry"
-        return URL(string: "\(scheme)://auth/callback")!
+        guard let url = URL(string: "\(scheme)://auth/callback") else {
+            preconditionFailure("Invalid auth redirect URL")
+        }
+        return url
     }
 
     init() {
-        let url = Config.EXPO_PUBLIC_SUPABASE_URL.isEmpty
-            ? "https://placeholder.supabase.co"
-            : Config.EXPO_PUBLIC_SUPABASE_URL
-        let key = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY.isEmpty
-            ? "placeholder-key"
-            : Config.EXPO_PUBLIC_SUPABASE_ANON_KEY
-        client = SupabaseClient(
-            supabaseURL: URL(string: url)!,
-            supabaseKey: key
-        )
+        let rawURL = Config.EXPO_PUBLIC_SUPABASE_URL
+        let rawKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY
+
+        guard !rawURL.isEmpty, let url = URL(string: rawURL), !rawKey.isEmpty else {
+            preconditionFailure("Supabase URL and anon key must be configured in Config")
+        }
+
+        client = SupabaseClient(supabaseURL: url, supabaseKey: rawKey)
     }
 
     var currentUserId: UUID? {

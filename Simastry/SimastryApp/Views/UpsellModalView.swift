@@ -108,7 +108,7 @@ struct UpsellModalView: View {
                             .foregroundStyle(SimastryColor.gold)
                             .tracking(2)
 
-                        Text(priceText(for: "plus", fallback: "$4.99 / week"))
+                        Text(priceText(for: "plus", fallback: "$6.99 / month"))
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(SimastryColor.offWhite)
                     }
@@ -167,7 +167,7 @@ struct UpsellModalView: View {
                                 .background(SimastryColor.gold, in: .capsule)
                         }
 
-                        Text(priceText(for: "pro", fallback: "$9.99 / week"))
+                        Text(priceText(for: "pro", fallback: "$14.99 / month"))
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(SimastryColor.offWhite)
                     }
@@ -266,7 +266,7 @@ struct UpsellModalView: View {
 
     private func priceText(for tier: String, fallback: String) -> String {
         guard let package = package(for: tier) else { return fallback }
-        return "\(package.storeProduct.localizedPriceString) / week"
+        return "\(package.storeProduct.localizedPriceString) / month"
     }
 
     private func package(for tier: String) -> Package? {

@@ -14,6 +14,7 @@ struct SimulateView: View {
     @State private var progressPhaseIndex: Int = 0
     @State private var history: [PredictionResult] = []
     @State private var selectedResult: PredictionResult?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var phaseTask: Task<Void, Never>?
 
@@ -82,8 +83,12 @@ struct SimulateView: View {
             }
             .task {
                 loadHistory()
-                withAnimation(.spring(SimastrySpring.smooth)) {
+                if reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.spring(SimastrySpring.smooth)) {
+                        appeared = true
+                    }
                 }
             }
             .onDisappear {
@@ -166,6 +171,7 @@ struct SimulateView: View {
                 }
             }
             .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 18)
+            .accessibilityLabel("Paste your conversation")
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
@@ -364,6 +370,7 @@ struct SimulateView: View {
                             ZodiacBadgeView(sign: sign, isSelected: selection.wrappedValue == sign, size: 44) {
                                 selection.wrappedValue = sign
                             }
+                            .accessibilityLabel("Choose \(sign.displayName) as \(title) sign")
                             Text(sign.displayName)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(selection.wrappedValue == sign ? SimastryColor.offWhite : SimastryColor.mutedSilver)

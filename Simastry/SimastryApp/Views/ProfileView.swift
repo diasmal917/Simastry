@@ -273,7 +273,94 @@ struct ProfileView: View {
                 .foregroundStyle(SimastryColor.gold)
             }
             .buttonStyle(.plain)
+
+            // Conversation Guide section
+            conversationGuideSection(sun: sun)
         }
+    }
+
+    private func conversationGuideSection(sun: ZodiacSign) -> some View {
+        let guide = CommunicationTemplates.guides[sun]
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                Text("How to Talk to You")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(SimastryColor.offWhite)
+                Spacer()
+                Button {
+                    activeSheet = .share(.cosmicDNA)
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 13))
+                        .foregroundStyle(SimastryColor.gold)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if let guide {
+                Text("As a \(sun.displayName), here's what people should know:")
+                    .font(.system(size: 13))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(guide.tips.enumerated()), id: \.offset) { _, tip in
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(SimastryColor.gold)
+                                .padding(.top, 3)
+                            Text(tip)
+                                .font(.system(size: 14, design: .serif))
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+                                .lineSpacing(2)
+                        }
+                    }
+                }
+
+                // Best approach
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Best Approach")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .tracking(1)
+                        .textCase(.uppercase)
+                    Text(guide.bestApproach)
+                        .font(.system(size: 14, design: .serif))
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
+                        .lineSpacing(2)
+                }
+                .padding(12)
+                .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 12)
+
+                // What to avoid
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(SimastryColor.amber)
+                        Text("What to Avoid")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SimastryColor.amber)
+                            .tracking(1)
+                            .textCase(.uppercase)
+                    }
+                    Text(guide.avoid)
+                        .font(.system(size: 13, design: .serif))
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
+                        .lineSpacing(2)
+                }
+                .padding(12)
+                .tintedGlass(SimastryColor.amber.opacity(0.06), cornerRadius: 12)
+            }
+        }
+        .padding(18)
+        .simastryGlass(cornerRadius: 20)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 18)
     }
 
     private func signEntry(role: CelestialRole, sign: ZodiacSign, delay: Double) -> some View {

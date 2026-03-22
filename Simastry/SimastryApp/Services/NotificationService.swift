@@ -1,13 +1,48 @@
 import Foundation
 import UserNotifications
 
-nonisolated final class NotificationService {
+@MainActor
+final class NotificationService {
     var isAuthorized: Bool = false
     var isDenied: Bool = false
 
     private let engagementKey = "simastry_engagement_count"
     private let permissionRequestedKey = "simastry_notification_permission_requested"
     private let lastSessionEndKey = "simastry_last_session_end"
+
+    private let eveningMessages: [(title: String, body: String)] = [
+        ("The stars shifted today", "Something about your chart feels different tonight."),
+        ("A thought for you", "Your ruling planet is active. Good time to pay attention."),
+        ("Before you sleep", "The moon is in a talkative mood. So am I."),
+        ("Tonight's energy", "Something unresolved is asking for your attention."),
+        ("Quick check-in", "Your chart says today mattered more than you think."),
+        ("One more thing", "The cosmos noticed something about your day."),
+    ]
+
+    private let reEngagementMessages: [(title: String, body: String)] = [
+        ("Things changed while you were away", "Your compatibility shifted. Come see."),
+        ("The stars kept moving", "New energy in your chart. It's been building."),
+        ("We noticed something", "A pattern emerged in your placements this week."),
+        ("Don't let this pass", "There's a window opening in your chart. Check it."),
+    ]
+
+    private let simulationMessages: [(title: String, body: String)] = [
+        ("Curious what they'd say?", "Paste that conversation. Let's find out."),
+        ("That text you're overthinking", "The stars might have the answer you need."),
+        ("Before you send that reply", "Run it through the cosmos first."),
+        ("New prediction energy available", "Your chart is aligned for clarity right now."),
+    ]
+
+    private let transitMessages: [String] = [
+        "Pay attention to what feels easy today — that's your chart working.",
+        "Something you've been avoiding deserves another look.",
+        "Your energy is magnetic today. Use it intentionally.",
+        "Trust the first instinct you had this morning.",
+        "Someone is thinking about you. The stars are sure of it.",
+        "Today's energy rewards honesty over diplomacy.",
+        "A small decision today has bigger ripple effects than you think.",
+        "Your chart says: less overthinking, more action.",
+    ]
 
     var engagementCount: Int {
         get { UserDefaults.standard.integer(forKey: engagementKey) }
@@ -61,10 +96,11 @@ nonisolated final class NotificationService {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["daily_transit"])
 
+        let body = transitMessages.randomElement() ?? transitMessages[0]
+
         let content = UNMutableNotificationContent()
-        content.title = "Good morning ✦"
-        let snippet = AstrologyTemplates.risingSign[risingSign] ?? "The stars have something for you today"
-        content.body = "\(risingSign.capitalized) — \(snippet)"
+        content.title = "\(risingSign.capitalized) rising"
+        content.body = body
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://guides"]
 
@@ -81,15 +117,17 @@ nonisolated final class NotificationService {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["evening_checkin"])
 
+        let message = eveningMessages.randomElement() ?? eveningMessages[0]
+
         let content = UNMutableNotificationContent()
-        content.title = companionName
-        content.body = "How was your day? I have something to tell you. ✦"
+        content.title = message.title
+        content.body = message.body
         content.sound = .default
-        content.userInfo = ["deeplink": "simastry://chat"]
+        content.userInfo = ["deeplink": "simastry://home"]
 
         var dateComponents = DateComponents()
-        dateComponents.hour = 19
-        dateComponents.minute = 0
+        dateComponents.hour = 21
+        dateComponents.minute = 15
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
         let request = UNNotificationRequest(identifier: "evening_checkin", content: content, trigger: trigger)
@@ -115,9 +153,11 @@ nonisolated final class NotificationService {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["inactive_reengagement"])
 
+        let message = reEngagementMessages.randomElement() ?? reEngagementMessages[0]
+
         let content = UNMutableNotificationContent()
-        content.title = companionName
-        content.body = "The stars shifted while you were away. Come see. ✦"
+        content.title = message.title
+        content.body = message.body
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://home"]
 
@@ -130,9 +170,11 @@ nonisolated final class NotificationService {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["simulation_reminder"])
 
+        let message = simulationMessages.randomElement() ?? simulationMessages[0]
+
         let content = UNMutableNotificationContent()
-        content.title = "The cosmos is ready"
-        content.body = "Your simulation agents are waiting for a new question ✦"
+        content.title = message.title
+        content.body = message.body
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://simulate"]
 

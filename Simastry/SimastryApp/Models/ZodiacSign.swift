@@ -55,6 +55,57 @@ nonisolated enum ZodiacSign: String, CaseIterable, Codable, Identifiable, Sendab
         }
     }
 
+    var modality: String {
+        switch self {
+        case .aries, .cancer, .libra, .capricorn: return "cardinal"
+        case .taurus, .leo, .scorpio, .aquarius: return "fixed"
+        case .gemini, .virgo, .sagittarius, .pisces: return "mutable"
+        }
+    }
+
+    /// Element-based compatibility: same element = high, compatible elements = medium, others = lower
+    static func compatibilityScore(
+        userSun: ZodiacSign, userMoon: ZodiacSign, userRising: ZodiacSign,
+        companionSun: ZodiacSign, companionMoon: ZodiacSign, companionRising: ZodiacSign
+    ) -> Int {
+        var score = 50 // base
+
+        // Element compatibility (fire-air and earth-water are compatible)
+        let compatibleElements: Set<Set<ZodiacElement>> = [[.fire, .air], [.earth, .water]]
+
+        // Sun-Sun (most important, weighted 3x)
+        if userSun.element == companionSun.element {
+            score += 15
+        } else if compatibleElements.contains([userSun.element, companionSun.element]) {
+            score += 9
+        }
+
+        // Moon-Moon (emotional compatibility, weighted 2x)
+        if userMoon.element == companionMoon.element {
+            score += 12
+        } else if compatibleElements.contains([userMoon.element, companionMoon.element]) {
+            score += 7
+        }
+
+        // Rising-Rising
+        if userRising.element == companionRising.element {
+            score += 8
+        } else if compatibleElements.contains([userRising.element, companionRising.element]) {
+            score += 5
+        }
+
+        // Same sign bonus
+        if userSun == companionSun { score += 5 }
+        if userMoon == companionMoon { score += 5 }
+
+        // Modality harmony (same modality can be challenging)
+        if userSun.modality == companionSun.modality && userSun != companionSun {
+            score -= 3
+        }
+
+        return min(max(score, 30), 98)
+    }
+
     static func fromDate(_ date: Date) -> ZodiacSign {
         let calendar = Calendar.current
         let month = calendar.component(.month, from: date)

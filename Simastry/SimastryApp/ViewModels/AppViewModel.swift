@@ -27,7 +27,11 @@ class AppViewModel {
     var onboardingBirthplace: String?
 
     var toastMessage: ToastMessage?
-    var isDarkMode: Bool = true
+    var isDarkMode: Bool = UserDefaults.standard.object(forKey: "simastry_dark_mode") == nil ? true : UserDefaults.standard.bool(forKey: "simastry_dark_mode") {
+        didSet {
+            UserDefaults.standard.set(isDarkMode, forKey: "simastry_dark_mode")
+        }
+    }
     var showUpsell: Bool = false
     var selectedTab: Int = 0
     var pendingDeepLinkURL: URL?
@@ -115,6 +119,11 @@ class AppViewModel {
             return
         }
 
+        guard validateEmail(credentials.email) else {
+            showToast("Invalid email", subtitle: "Enter a valid email address", isError: true)
+            return
+        }
+
         do {
             try await supabase.signInWithEmail(email: credentials.email, password: credentials.password)
             isAuthenticated = true
@@ -128,6 +137,15 @@ class AppViewModel {
     func createAccountWithEmail(email: String, password: String) async {
         guard let credentials = normalizedCredentials(email: email, password: password) else {
             showToast("Missing details", subtitle: "Enter your email and password", isError: true)
+            return
+        }
+
+        guard validateEmail(credentials.email) else {
+            showToast("Invalid email", subtitle: "Enter a valid email address", isError: true)
+            return
+        }
+        if let passwordError = validatePassword(credentials.password) {
+            showToast("Weak password", subtitle: passwordError, isError: true)
             return
         }
 
@@ -204,12 +222,16 @@ class AppViewModel {
         guard let index = companions.firstIndex(where: { $0.id == companion.id }) else { return }
 
         var updated = companions[index]
-        let newScore = min(97, updated.compatibilityScore + Int.random(in: 1...2))
+        let newScore = min(98, updated.compatibilityScore + 1)
         guard newScore > updated.compatibilityScore else { return }
 
         updated.compatibilityScore = newScore
         companions[index] = updated
-        try? await supabase.updateCompanion(updated)
+        do {
+            try await supabase.updateCompanion(updated)
+        } catch {
+            showToast("Couldn't save", subtitle: "Your changes may not be saved. Try again.", isError: true)
+        }
     }
 
     func refreshDashboardData() async {
@@ -242,7 +264,11 @@ class AppViewModel {
         }
 
         companions[index] = updated
-        try? await supabase.updateCompanion(updated)
+        do {
+            try await supabase.updateCompanion(updated)
+        } catch {
+            showToast("Couldn't save", subtitle: "Your changes may not be saved. Try again.", isError: true)
+        }
 
         if newLevel.rawValue > previousLevel.rawValue {
             HapticManager.soulFlash()
@@ -262,7 +288,13 @@ class AppViewModel {
 
     func deleteCompanion(_ companion: CompanionData) async {
         companions.removeAll { $0.id == companion.id }
-        try? await supabase.deleteCompanion(id: companion.id)
+        do {
+            try await supabase.deleteCompanion(id: companion.id)
+        } catch {
+            // Re-add on failure
+            companions.append(companion)
+            showToast("Couldn't remove companion", subtitle: "Try again in a moment", isError: true)
+        }
         if companions.isEmpty {
             homeSetupPhase = .modeSelection
         }
@@ -289,7 +321,13 @@ class AppViewModel {
         if var p = profile, p.tier != newTier {
             p.tier = newTier
             profile = p
-            Task { try? await supabase.upsertProfile(p) }
+            Task {
+                do {
+                    try await supabase.upsertProfile(p)
+                } catch {
+                    showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+                }
+            }
         }
     }
 
@@ -312,7 +350,11 @@ class AppViewModel {
         guard var profile else { return }
         profile.tier = tier
         self.profile = profile
-        try? await supabase.upsertProfile(profile)
+        do {
+            try await supabase.upsertProfile(profile)
+        } catch {
+            showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+        }
         await setupNotifications()
     }
 
@@ -369,7 +411,11 @@ class AppViewModel {
         resetDailyIfNeeded(&p)
         p.dailyMessagesUsed += 1
         profile = p
-        try? await supabase.upsertProfile(p)
+        do {
+            try await supabase.upsertProfile(p)
+        } catch {
+            showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+        }
     }
 
     func consumePrediction() async {
@@ -379,7 +425,11 @@ class AppViewModel {
         resetWeeklyIfNeeded(&p)
         p.weeklyPredictionsUsed += 1
         profile = p
-        try? await supabase.upsertProfile(p)
+        do {
+            try await supabase.upsertProfile(p)
+        } catch {
+            showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+        }
     }
 
     func canAddCompanion() -> Bool {
@@ -448,14 +498,22 @@ class AppViewModel {
             p.moonSign = moon.rawValue
             p.risingSign = rising.rawValue
             profile = p
-            try? await supabase.upsertProfile(p)
+            do {
+                try await supabase.upsertProfile(p)
+            } catch {
+                showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+            }
         } else if let userId = await supabase.currentUserId {
             var p = UserProfile.createDefault(id: userId)
             p.sunSign = sun.rawValue
             p.moonSign = moon.rawValue
             p.risingSign = rising.rawValue
             profile = p
-            try? await supabase.upsertProfile(p)
+            do {
+                try await supabase.upsertProfile(p)
+            } catch {
+                showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+            }
         }
         await setupNotifications()
     }
@@ -470,11 +528,24 @@ class AppViewModel {
             sunSign: sun.rawValue, moonSign: moon.rawValue, risingSign: rising.rawValue,
             appearanceStyle: companionAppearance.rawValue,
             conversationCount: 0, firstConversationAt: nil,
-            compatibilityScore: Int.random(in: 65...98),
+            compatibilityScore: ZodiacSign.compatibilityScore(
+                userSun: userSunSign ?? .aries,
+                userMoon: userMoonSign ?? .aries,
+                userRising: userRisingSign ?? .aries,
+                companionSun: sun,
+                companionMoon: moon,
+                companionRising: rising
+            ),
             companionMemory: nil, relationshipLevel: 1, createdAt: Date()
         )
         companions.append(companion)
-        try? await supabase.insertCompanion(companion)
+        do {
+            try await supabase.insertCompanion(companion)
+        } catch {
+            showToast("Couldn't create companion", subtitle: "Try again in a moment", isError: true)
+            companions.removeAll { $0.id == companion.id }
+            return
+        }
         syncHomeSetupPhase()
         await setupNotifications()
     }
@@ -491,6 +562,18 @@ class AppViewModel {
         let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedEmail.isEmpty, !normalizedPassword.isEmpty else { return nil }
         return (normalizedEmail, normalizedPassword)
+    }
+
+    private func validateEmail(_ email: String) -> Bool {
+        let emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+        return email.wholeMatch(of: emailRegex) != nil
+    }
+
+    private func validatePassword(_ password: String) -> String? {
+        if password.count < 8 {
+            return "Password must be at least 8 characters"
+        }
+        return nil
     }
 
     private func providerErrorSubtitle(for provider: String) -> String {

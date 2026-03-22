@@ -16,6 +16,7 @@ nonisolated private enum CompanionsSheet: Identifiable {
 
 struct CompanionsView: View {
     @Bindable var viewModel: AppViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var activeSheet: CompanionsSheet?
     @State private var pendingDeleteCompanion: CompanionData?
@@ -73,8 +74,12 @@ struct CompanionsView: View {
                 Text("This removes \(pendingDeleteCompanion?.name ?? "this companion") from your circle.")
             }
             .onAppear {
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+                if reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+                        appeared = true
+                    }
                 }
             }
         }
@@ -293,6 +298,7 @@ struct CompanionsView: View {
             RoundedRectangle(cornerRadius: 24)
                 .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 1)
         }
+        .accessibilityLabel("\(companion.name), featured companion")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
     }
@@ -438,6 +444,7 @@ struct CompanionsView: View {
             .simastryGlass(cornerRadius: 20)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(companion.name), \(level.name), \(companion.compatibilityScore) percent compatible, \(companion.conversationCount) sparks")
     }
 
     private func statPill(title: String, systemImage: String) -> some View {

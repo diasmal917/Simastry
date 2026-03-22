@@ -42,6 +42,7 @@ private let onboardingPages: [OnboardingPage] = [
 
 struct LandingView: View {
     @Bindable var viewModel: AppViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var fallingStars: [FallingStar] = []
     @State private var shimmerStars: [ShimmerStar] = ShimmerStar.generate(count: 25)
@@ -198,6 +199,7 @@ struct LandingView: View {
     }
 
     private func startAutoAdvance() {
+        guard !reduceMotion else { return }
         autoAdvanceTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
             Task { @MainActor in
                 withAnimation(.spring(SimastrySpring.smooth)) {
@@ -221,6 +223,7 @@ struct LandingView: View {
                     viewModel.currentScreen = .birthDetails
                 }
             }
+            .accessibilityHint("Begin creating your astrology profile")
 
             Button {
                 HapticManager.buttonPress()
@@ -233,6 +236,7 @@ struct LandingView: View {
                     .foregroundStyle(.white.opacity(0.75))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Sign in to existing account")
 
             Text("By continuing, you agree to our Terms & Privacy Policy")
                 .font(.system(size: 11))
@@ -281,6 +285,7 @@ struct LandingView: View {
     }
 
     private func animateShimmerStars() async {
+        guard !reduceMotion else { return }
         while !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(80))
             for i in shimmerStars.indices {
@@ -339,6 +344,7 @@ struct LandingView: View {
     }
 
     private func startFallingStars() {
+        guard !reduceMotion else { return }
         spawnStar()
         starTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { _ in
             Task { @MainActor in
@@ -363,7 +369,7 @@ struct LandingView: View {
     // MARK: - Motion
 
     private func startMotionUpdates() {
-        guard motionManager.isDeviceMotionAvailable else { return }
+        guard !reduceMotion, motionManager.isDeviceMotionAvailable else { return }
         motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
         motionManager.startDeviceMotionUpdates(to: .main) { motion, _ in
             guard let motion else { return }

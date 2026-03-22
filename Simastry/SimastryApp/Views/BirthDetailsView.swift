@@ -23,8 +23,16 @@ struct BirthDetailsView: View {
                 header
                     .padding(.top, 16)
 
-                stepIndicator
-                    .padding(.top, 20)
+                OnboardingProgressView(
+                    eyebrow: "Your Birth Chart",
+                    title: stepTitle,
+                    subtitle: stepSubtitle,
+                    step: currentStep + 1,
+                    totalSteps: 3,
+                    labels: ["Birthday", "Time", "Place"]
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
 
                 Spacer()
 
@@ -95,16 +103,22 @@ struct BirthDetailsView: View {
         .padding(.horizontal, 12)
     }
 
-    private var stepIndicator: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<3, id: \.self) { index in
-                Capsule()
-                    .fill(index <= currentStep ? SimastryColor.gold : .white.opacity(0.2))
-                    .frame(height: 4)
-                    .animation(.spring(SimastrySpring.snappy), value: currentStep)
-            }
+    private var stepTitle: String {
+        switch currentStep {
+        case 0: return "Your Birthday"
+        case 1: return "Your Birth Time"
+        case 2: return "Your Birthplace"
+        default: return ""
         }
-        .padding(.horizontal, 40)
+    }
+
+    private var stepSubtitle: String {
+        switch currentStep {
+        case 0: return "We need your date of birth to calculate your Sun sign."
+        case 1: return "Your birth time helps determine your Rising sign."
+        case 2: return "Your birthplace refines your full birth chart."
+        default: return ""
+        }
     }
 
     // MARK: - Steps
