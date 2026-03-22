@@ -36,7 +36,12 @@ final class BirthChartService {
         timeZone: TimeZone?
     ) -> BirthChart {
         // Combine birthday date with birth time
-        let chartDate = combinedDate(birthday: birthday, birthTime: birthTime, timeZone: timeZone)
+        let chartDate = Self.combinedDate(
+            birthday: birthday,
+            birthTime: birthTime,
+            selectionTimeZone: .current,
+            birthPlaceTimeZone: timeZone
+        )
 
         // Sun position
         let sunCoord = Coordinate<Planet>(body: .sun, date: chartDate)
@@ -77,26 +82,39 @@ final class BirthChartService {
     // MARK: - Private
 
     /// Combine a birthday (date only) with a birth time into a single Date.
-    private func combinedDate(birthday: Date, birthTime: Date?, timeZone: TimeZone?) -> Date {
-        var calendar = Calendar(identifier: .gregorian)
-        if let timeZone {
-            calendar.timeZone = timeZone
-        }
-        let dateComponents = calendar.dateComponents([.year, .month, .day], from: birthday)
+    nonisolated static func combinedDate(
+        birthday: Date,
+        birthTime: Date?,
+        selectionTimeZone: TimeZone = .current,
+        birthPlaceTimeZone: TimeZone?
+    ) -> Date {
+        var selectionCalendar = Calendar(identifier: .gregorian)
+        selectionCalendar.timeZone = selectionTimeZone
+        let dateComponents = selectionCalendar.dateComponents([.year, .month, .day], from: birthday)
 
         guard let birthTime else {
             // Default to noon if no birth time
-            var components = dateComponents
+            var components = DateComponents()
+            components.year = dateComponents.year
+            components.month = dateComponents.month
+            components.day = dateComponents.day
             components.hour = 12
             components.minute = 0
+            components.timeZone = birthPlaceTimeZone ?? selectionTimeZone
+            let calendar = Calendar(identifier: .gregorian)
             return calendar.date(from: components) ?? birthday
         }
 
-        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: birthTime)
-        var combined = dateComponents
+        let timeComponents = selectionCalendar.dateComponents([.hour, .minute, .second], from: birthTime)
+        var combined = DateComponents()
+        combined.year = dateComponents.year
+        combined.month = dateComponents.month
+        combined.day = dateComponents.day
         combined.hour = timeComponents.hour
         combined.minute = timeComponents.minute
         combined.second = timeComponents.second
+        combined.timeZone = birthPlaceTimeZone ?? selectionTimeZone
+        let calendar = Calendar(identifier: .gregorian)
         return calendar.date(from: combined) ?? birthday
     }
 
