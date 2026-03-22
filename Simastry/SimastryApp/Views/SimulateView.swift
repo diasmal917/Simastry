@@ -473,6 +473,12 @@ struct SimulateView: View {
             return
         }
 
+        guard viewModel.canUsePrediction() else {
+            viewModel.showToast("Predictions used up", subtitle: "You've used all \(viewModel.weeklyPredictionLimit) predictions this week. Upgrade for unlimited.", isError: true)
+            viewModel.showUpsell = true
+            return
+        }
+
         let request = PredictionRequest(
             mode: .whatWillTheySay,
             conversationText: conversationText,
@@ -488,6 +494,7 @@ struct SimulateView: View {
 
         do {
             let result = try await viewModel.predictionService.generatePrediction(request: request, tier: currentTier)
+            await viewModel.consumePrediction()
             stopProgressCycle()
             isGenerating = false
             HapticManager.soulFlash()

@@ -105,9 +105,9 @@ class AppViewModel {
     func signInWithGoogle() async {
         do {
             try await supabase.signInWithGoogle()
-            isAuthenticated = true
-            await navigateAfterAuth()
-            showToast("Welcome back", subtitle: "You're signed in with Google", isError: false)
+            // Don't mark authenticated here — OAuth opens a browser.
+            // The real session is established when the callback URL fires
+            // through handleIncomingURL → handleAuthCallback → checkAuthState.
         } catch {
             showToast("Couldn't sign in", subtitle: providerErrorSubtitle(for: "Google"), isError: true)
         }
@@ -521,6 +521,11 @@ class AppViewModel {
     func createCompanion() async {
         guard let sun = companionSunSign, let moon = companionMoonSign,
               let rising = companionRisingSign, !companionName.isEmpty else { return }
+        guard canAddCompanion() else {
+            showToast("Companion limit reached", subtitle: "Upgrade your plan to add more companions", isError: true)
+            showUpsell = true
+            return
+        }
         let userId = await supabase.currentUserId ?? UUID()
         let companion = CompanionData(
             id: UUID(), userId: userId,

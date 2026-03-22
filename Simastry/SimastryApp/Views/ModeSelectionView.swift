@@ -108,10 +108,20 @@ struct ModeSelectionView: View {
             .background(.white.opacity(0.06), in: .capsule)
     }
 
+    private var isProUser: Bool {
+        let tier = viewModel.profile?.tier ?? "free"
+        return tier == "pro"
+    }
+
     @ViewBuilder
     private func modeCard(mode: CompanionMode, tint: Color, badge: String?, delay: Double) -> some View {
         Button(action: {
             HapticManager.buttonPress()
+            if mode == .simulateAnyone && !isProUser {
+                viewModel.showToast("Pro feature", subtitle: "Simulate Anyone requires Simastry Pro", isError: true)
+                viewModel.showUpsell = true
+                return
+            }
             viewModel.selectedMode = mode
             if viewModel.hasCompletedSigns {
                 viewModel.homeSetupPhase = .companionSetup

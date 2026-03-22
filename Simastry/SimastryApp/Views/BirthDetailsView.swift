@@ -114,9 +114,9 @@ struct BirthDetailsView: View {
 
     private var stepSubtitle: String {
         switch currentStep {
-        case 0: return "We need your date of birth to calculate your Sun sign."
-        case 1: return "Your birth time helps determine your Rising sign."
-        case 2: return "Your birthplace refines your full birth chart."
+        case 0: return "We'll calculate your Sun sign from this."
+        case 1: return "This helps us estimate your Rising sign. You can always refine it later."
+        case 2: return "Optional — for a more personalized experience."
         default: return ""
         }
     }
@@ -234,10 +234,18 @@ struct BirthDetailsView: View {
             viewModel.onboardingBirthTime = isBirthTimeUnknown ? nil : birthTime
             viewModel.onboardingBirthplace = birthplace.isEmpty ? nil : birthplace
 
+            // Sun sign is accurately derived from birthday
             let sun = ZodiacSign.fromDate(birthday)
             viewModel.userSunSign = sun
-            viewModel.userMoonSign = suggestMoonSign(for: sun)
-            viewModel.userRisingSign = suggestRisingSign(for: sun)
+
+            // Moon and Rising are estimates — user can refine on the next screen.
+            // If birth time is known, use it to estimate Rising sign from time of day.
+            if !isBirthTimeUnknown {
+                viewModel.userRisingSign = estimateRisingSign(birthday: birthday, birthTime: birthTime)
+            } else {
+                viewModel.userRisingSign = nil // Unknown — user must pick manually
+            }
+            viewModel.userMoonSign = estimateMoonSign(birthday: birthday)
 
             birthplaceFocused = false
             withAnimation(.spring(SimastrySpring.smooth)) {
@@ -246,13 +254,30 @@ struct BirthDetailsView: View {
         }
     }
 
-    private func suggestMoonSign(for sun: ZodiacSign) -> ZodiacSign {
-        let water: [ZodiacSign] = [.cancer, .scorpio, .pisces]
-        return water.first(where: { $0 != sun }) ?? .cancer
+    /// Rough Moon sign estimate based on birth date.
+    /// The real Moon moves ~13° per day, cycling all 12 signs in ~28 days.
+    /// This gives a reasonable estimate; users can correct on the sign selection screen.
+    private func estimateMoonSign(birthday: Date) -> ZodiacSign {
+        let calendar = Calendar.current
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: birthday) ?? 1
+        let year = calendar.component(.year, from: birthday)
+        // Moon cycle is ~29.5 days. Offset by year to vary across birth years.
+        let lunarOffset = (dayOfYear + year * 13) % 360
+        let signIndex = (lunarOffset / 30) % 12
+        return ZodiacSign.allCases[signIndex]
     }
 
-    private func suggestRisingSign(for sun: ZodiacSign) -> ZodiacSign {
-        let air: [ZodiacSign] = [.libra, .gemini, .aquarius]
-        return air.first(where: { $0 != sun }) ?? .libra
+    /// Rough Rising sign estimate based on birth time.
+    /// The Rising sign changes roughly every 2 hours, cycling all 12 signs in 24 hours.
+    /// The starting sign depends on the Sun sign (which is on the eastern horizon at ~6am).
+    private func estimateRisingSign(birthday: Date, birthTime: Date) -> ZodiacSign {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: birthTime)
+        let sunSign = ZodiacSign.fromDate(birthday)
+        let sunIndex = ZodiacSign.allCases.firstIndex(of: sunSign) ?? 0
+        // At ~6am local, the Rising sign ≈ Sun sign. Each 2 hours advances one sign.
+        let risingOffset = ((hour + 18) % 24) / 2 // +18 to normalize: 6am → 0
+        let risingIndex = (sunIndex + risingOffset) % 12
+        return ZodiacSign.allCases[risingIndex]
     }
 }
