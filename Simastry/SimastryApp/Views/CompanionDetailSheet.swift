@@ -16,6 +16,7 @@ struct CompanionDetailSheet: View {
     @Bindable var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activeRoute: CompanionDetailRoute?
 
     private var companionSun: ZodiacSign? { ZodiacSign(rawValue: companion.sunSign) }
@@ -50,8 +51,12 @@ struct CompanionDetailSheet: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+                    appeared = true
+                }
             }
         }
     }

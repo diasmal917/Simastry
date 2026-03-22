@@ -285,6 +285,7 @@ struct SimulateView: View {
             .buttonStyle(SpringPressStyle())
             .disabled(!canGenerate)
             .opacity(canGenerate ? 1 : 0.45)
+            .accessibilityLabel("Generate prediction")
         }
     }
 

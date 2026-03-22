@@ -15,7 +15,7 @@ struct SimastryColor {
     static let celestialBlue = Color(red: 74/255, green: 144/255, blue: 217/255)
     static let offWhite = Color(red: 240/255, green: 237/255, blue: 230/255)
     static let mutedSilver = Color(red: 148/255, green: 163/255, blue: 184/255)
-    static let deepMuted = Color(red: 74/255, green: 85/255, blue: 104/255)
+    static let deepMuted = Color(red: 120/255, green: 130/255, blue: 150/255)
     static let amber = Color(red: 212/255, green: 145/255, blue: 58/255)
     static let sunCoral = Color(red: 232/255, green: 132/255, blue: 90/255)
     static let moonBlue = Color(red: 74/255, green: 144/255, blue: 217/255)

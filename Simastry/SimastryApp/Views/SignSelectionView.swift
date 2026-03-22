@@ -7,6 +7,7 @@ struct SignSelectionView: View {
     @State private var birthTime: Date = SignSelectionView.defaultBirthTime()
     @State private var showSignReveal: Bool = false
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCalculating: Bool = false
     @FocusState private var focusedField: SignInputField?
     private let birthplaceGeocodingService = BirthplaceGeocodingService()
@@ -28,8 +29,12 @@ struct SignSelectionView: View {
         }
         .onAppear {
             loadExistingBirthDetails()
-            withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+                    appeared = true
+                }
             }
         }
         .toolbar {
@@ -67,7 +72,7 @@ struct SignSelectionView: View {
         }
         .scrollIndicators(.hidden)
         .opacity(appeared ? 1 : 0)
-        .animation(.spring(SimastrySpring.smooth), value: appeared)
+        .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth), value: appeared)
     }
 
     private var chartAccuracyCard: some View {
@@ -248,7 +253,7 @@ struct SignSelectionView: View {
         isCalculating = false
 
         HapticManager.signConfirmed()
-        withAnimation(.spring(SimastrySpring.smooth)) {
+        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
             showSignReveal = true
         }
     }

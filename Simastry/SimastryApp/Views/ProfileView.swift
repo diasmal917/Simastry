@@ -32,6 +32,7 @@ struct ProfileView: View {
     @State private var tapCount: Int = 0
     @State private var expandedRoles: Set<CelestialRole> = []
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activeSheet: ProfileSheet?
 
     var body: some View {
@@ -98,8 +99,12 @@ struct ProfileView: View {
                 }
             }
             .onAppear {
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+                if reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+                        appeared = true
+                    }
                 }
             }
         }
@@ -214,7 +219,7 @@ struct ProfileView: View {
         .simastryGlass(cornerRadius: 16)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 15)
-        .animation(.spring(SimastrySpring.bouncy).delay(delay), value: appeared)
+        .animation(reduceMotion ? .default : .spring(SimastrySpring.bouncy).delay(delay), value: appeared)
     }
 
     // MARK: - Placeholder Companion
@@ -377,7 +382,7 @@ struct ProfileView: View {
         }()
 
         return Button(action: {
-            withAnimation(.spring(SimastrySpring.snappy)) {
+            withAnimation(reduceMotion ? .default : .spring(SimastrySpring.snappy)) {
                 if expandedRoles.contains(role) {
                     expandedRoles.remove(role)
                 } else {
@@ -602,7 +607,7 @@ struct ProfileView: View {
 
             Button(action: {
                 HapticManager.themeToggle()
-                withAnimation(.spring(SimastrySpring.snappy)) {
+                withAnimation(reduceMotion ? .default : .spring(SimastrySpring.snappy)) {
                     viewModel.isDarkMode.toggle()
                 }
             }) {
@@ -620,6 +625,7 @@ struct ProfileView: View {
                 .simastryGlassPill()
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Toggle dark mode")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(appeared ? 1 : 0)

@@ -153,7 +153,7 @@ struct HomeView: View {
 
             if let sun = viewModel.userSunSign {
                 Text(sun.glyph)
-                    .font(.system(size: 28))
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(sun.color)
                     .frame(width: 48, height: 48)
                     .background(sun.color.opacity(0.14), in: Circle())
@@ -188,7 +188,7 @@ struct HomeView: View {
                     Spacer()
 
                     Text(companionSign.glyph)
-                        .font(.system(size: 18))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(companionSign.color)
                 }
 

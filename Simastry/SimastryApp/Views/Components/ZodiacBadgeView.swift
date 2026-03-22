@@ -47,6 +47,7 @@ struct ZodiacBadgeView: View {
 
 struct ZodiacGridView: View {
     @Binding var selectedSign: ZodiacSign?
+    var roleName: String? = nil
     let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
 
     var body: some View {
@@ -56,6 +57,7 @@ struct ZodiacGridView: View {
                     ZodiacBadgeView(sign: sign, isSelected: selectedSign == sign) {
                         selectedSign = sign
                     }
+                    .accessibilityLabel("Select \(sign.displayName) as \(roleName ?? "zodiac") sign")
                     Text(sign.displayName)
                         .font(.caption2)
                         .foregroundStyle(selectedSign == sign ? SimastryColor.offWhite : SimastryColor.mutedSilver)

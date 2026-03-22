@@ -13,6 +13,7 @@ struct BirthDetailsView: View {
     }()
     @State private var birthplace: String = ""
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var birthplaceFocused: Bool
     private let birthplaceGeocodingService = BirthplaceGeocodingService()
 
@@ -78,8 +79,12 @@ struct BirthDetailsView: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+                    appeared = true
+                }
             }
         }
         .toolbar {
@@ -95,11 +100,11 @@ struct BirthDetailsView: View {
             Button {
                 HapticManager.buttonPress()
                 if currentStep > 0 {
-                    withAnimation(.spring(SimastrySpring.smooth)) {
+                    withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                         currentStep -= 1
                     }
                 } else {
-                    withAnimation(.spring(SimastrySpring.smooth)) {
+                    withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                         viewModel.currentScreen = .landing
                     }
                 }
@@ -225,7 +230,7 @@ struct BirthDetailsView: View {
         HapticManager.buttonPress()
         if currentStep < 2 {
             birthplaceFocused = false
-            withAnimation(.spring(SimastrySpring.smooth)) {
+            withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                 currentStep += 1
             }
         } else {
@@ -267,7 +272,7 @@ struct BirthDetailsView: View {
                 viewModel.stageOnboardingBirthChart(chart)
 
                 isCalculating = false
-                withAnimation(.spring(SimastrySpring.smooth)) {
+                withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                     viewModel.currentScreen = .signUp
                 }
             }

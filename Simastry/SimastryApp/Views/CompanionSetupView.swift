@@ -4,6 +4,7 @@ struct CompanionSetupView: View {
     @Bindable var viewModel: AppViewModel
     @State private var setupStep: Int = 0
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isNamingFocused: Bool
 
     var body: some View {
@@ -30,8 +31,12 @@ struct CompanionSetupView: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+                    appeared = true
+                }
             }
         }
         .onChange(of: setupStep) { _, newValue in
@@ -71,7 +76,7 @@ struct CompanionSetupView: View {
                         viewModel.companionMoonSign = signs.1
                         viewModel.companionRisingSign = signs.2
                         HapticManager.signConfirmed()
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                             setupStep = 1
                         }
                     }) {
@@ -115,10 +120,10 @@ struct CompanionSetupView: View {
                 .padding(.horizontal, 20)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 24)
-                .animation(.spring(SimastrySpring.smooth), value: appeared)
+                .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth), value: appeared)
 
                 CompanionSignPicker(viewModel: viewModel) {
-                    withAnimation(.spring(SimastrySpring.smooth)) {
+                    withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                         setupStep = 1
                     }
                 }
@@ -150,7 +155,7 @@ struct CompanionSetupView: View {
                     .padding(.horizontal, 20)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 18)
-                    .animation(.spring(SimastrySpring.smooth).delay(0.05), value: appeared)
+                    .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth).delay(0.05), value: appeared)
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -202,13 +207,13 @@ struct CompanionSetupView: View {
                 VStack(spacing: 12) {
                     GoldButton("Continue", isEnabled: !viewModel.companionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                         isNamingFocused = false
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                             setupStep = 2
                         }
                     }
 
                     SecondaryButton(title: "Back") {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                             setupStep = 0
                         }
                     }
@@ -258,7 +263,7 @@ struct CompanionSetupView: View {
                                     .stroke(viewModel.companionAppearance == style ? SimastryColor.gold : .white.opacity(0.06), lineWidth: viewModel.companionAppearance == style ? 2 : 1)
                             }
                             .scaleEffect(viewModel.companionAppearance == style ? 1.03 : 1.0)
-                            .animation(.spring(SimastrySpring.bouncy), value: viewModel.companionAppearance)
+                            .animation(reduceMotion ? .default : .spring(SimastrySpring.bouncy), value: viewModel.companionAppearance)
                         }
                         .buttonStyle(SpringPressStyle())
                     }
@@ -271,7 +276,7 @@ struct CompanionSetupView: View {
                     }
 
                     SecondaryButton(title: "Back") {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                             setupStep = 1
                         }
                     }
@@ -420,6 +425,7 @@ struct CompanionSignPicker: View {
     @Bindable var viewModel: AppViewModel
     let onComplete: () -> Void
     @State private var step: Int = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let roles: [CelestialRole] = [.sun, .moon, .rising]
 
@@ -455,12 +461,12 @@ struct CompanionSignPicker: View {
             }
             .padding(.horizontal, 20)
 
-            ZodiacGridView(selectedSign: companionBinding(step))
+            ZodiacGridView(selectedSign: companionBinding(step), roleName: role.displayName)
 
             VStack(spacing: 12) {
                 GoldButton(step < 2 ? "Continue" : "Continue to Name", isEnabled: companionBinding(step).wrappedValue != nil) {
                     if step < 2 {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                             step += 1
                         }
                     } else {
@@ -470,7 +476,7 @@ struct CompanionSignPicker: View {
 
                 if step > 0 {
                     SecondaryButton(title: "Back") {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                             step -= 1
                         }
                     }

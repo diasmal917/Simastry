@@ -144,7 +144,7 @@ struct SignUpView: View {
                 .frame(height: 1)
             Text("or")
                 .font(SimastryFont.labelMedium)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.6))
             Rectangle()
                 .fill(.white.opacity(0.12))
                 .frame(height: 1)

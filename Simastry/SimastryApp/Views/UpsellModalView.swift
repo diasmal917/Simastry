@@ -7,6 +7,7 @@ struct UpsellModalView: View {
     @State private var offerings: Offerings?
     @State private var isPurchasing: Bool = false
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTier: String = "plus"
 
     private var isRevenueCatAvailable: Bool {
@@ -40,8 +41,12 @@ struct UpsellModalView: View {
             if isRevenueCatAvailable {
                 offerings = try? await Purchases.shared.offerings()
             }
-            withAnimation(.spring(SimastrySpring.smooth)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    appeared = true
+                }
             }
         }
     }
@@ -145,6 +150,7 @@ struct UpsellModalView: View {
             .simastryGlass(cornerRadius: 20)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Subscribe to Plus plan")
     }
 
     private var proCard: some View {
@@ -203,6 +209,7 @@ struct UpsellModalView: View {
             .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 20)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Subscribe to Pro plan")
     }
 
     @ViewBuilder

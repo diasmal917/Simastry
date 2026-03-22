@@ -61,7 +61,7 @@ struct SimulationResultView: View {
                         .fill(accentColor.opacity(0.2))
                         .frame(width: 38, height: 38)
                     Text(result.targetSunSign?.glyph ?? "✦")
-                        .font(.system(size: 18))
+                        .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
                 }
 

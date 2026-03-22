@@ -3,6 +3,7 @@ import SwiftUI
 struct ModeSelectionView: View {
     @Bindable var viewModel: AppViewModel
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -25,13 +26,13 @@ struct ModeSelectionView: View {
                     .padding(.horizontal, 20)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
-                    .animation(.spring(SimastrySpring.smooth), value: appeared)
+                    .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth), value: appeared)
 
                     valueCard
                         .padding(.horizontal, 20)
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : 24)
-                        .animation(.spring(SimastrySpring.smooth).delay(0.05), value: appeared)
+                        .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth).delay(0.05), value: appeared)
 
                     VStack(spacing: 16) {
                         modeCard(
@@ -63,8 +64,12 @@ struct ModeSelectionView: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+                    appeared = true
+                }
             }
         }
     }
@@ -167,7 +172,7 @@ struct ModeSelectionView: View {
         .buttonStyle(SpringPressStyle())
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 30)
-        .animation(.spring(SimastrySpring.bouncy).delay(delay), value: appeared)
+        .animation(reduceMotion ? .default : .spring(SimastrySpring.bouncy).delay(delay), value: appeared)
     }
 
     private func modeSupportText(_ mode: CompanionMode) -> String {
