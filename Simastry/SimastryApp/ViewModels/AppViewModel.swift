@@ -165,7 +165,11 @@ class AppViewModel {
     }
 
     func signOut() async {
-        try? await supabase.signOut()
+        do {
+            try await supabase.signOut()
+        } catch {
+            showToast("Couldn't sign out cleanly", subtitle: "We'll still clear this device session now.", isError: true)
+        }
         notificationService.clearScheduledNotifications()
         clearPendingOnboardingChart()
         isAuthenticated = false
@@ -244,13 +248,25 @@ class AppViewModel {
         await setupNotifications()
     }
 
+    @discardableResult
     func recordCompanionInteraction(
         with companion: CompanionData,
         title: String = "Spark sent",
         subtitle: String? = nil
-    ) async {
-        guard let index = companions.firstIndex(where: { $0.id == companion.id }) else { return }
+    ) async -> Bool {
+        guard canSendMessage() else {
+            showToast(
+                "Messages used up",
+                subtitle: "You've used all \(dailyMessageLimit) messages today. Upgrade for unlimited sparks.",
+                isError: true
+            )
+            showUpsell = true
+            return false
+        }
 
+        guard let index = companions.firstIndex(where: { $0.id == companion.id }) else { return false }
+
+        let original = companions[index]
         var updated = companions[index]
         let previousLevel = RelationshipLevel(rawValue: updated.relationshipLevel) ?? .stranger
 
@@ -269,8 +285,12 @@ class AppViewModel {
         do {
             try await supabase.updateCompanion(updated)
         } catch {
+            companions[index] = original
             showToast("Couldn't save", subtitle: "Your changes may not be saved. Try again.", isError: true)
+            return false
         }
+
+        await consumeMessage()
 
         if newLevel.rawValue > previousLevel.rawValue {
             HapticManager.soulFlash()
@@ -280,6 +300,7 @@ class AppViewModel {
         }
 
         await setupNotifications()
+        return true
     }
 
     func checkRelationshipLevelUp(for companion: CompanionData) -> Bool {
@@ -407,7 +428,7 @@ class AppViewModel {
     }
 
     func consumeMessage() async {
-        guard var p = profile else { return }
+        guard var p = await trackedProfile() else { return }
         let tier = p.tier
         if tier == "plus" || tier == "pro" { return }
         resetDailyIfNeeded(&p)
@@ -421,7 +442,7 @@ class AppViewModel {
     }
 
     func consumePrediction() async {
-        guard var p = profile else { return }
+        guard var p = await trackedProfile() else { return }
         let tier = p.tier
         if tier == "plus" || tier == "pro" { return }
         resetWeeklyIfNeeded(&p)
@@ -630,7 +651,12 @@ class AppViewModel {
     }
 
     private func loadProfile() async {
-        profile = try? await supabase.fetchProfile()
+        do {
+            profile = try await supabase.fetchProfile()
+        } catch {
+            profile = nil
+            showToast("Couldn't load profile", subtitle: "Some saved details may be unavailable right now.", isError: true)
+        }
         if let p = profile {
             userSunSign = p.sunSign.flatMap { ZodiacSign(rawValue: $0) }
             userMoonSign = p.moonSign.flatMap { ZodiacSign(rawValue: $0) }
@@ -647,7 +673,12 @@ class AppViewModel {
     }
 
     private func loadCompanions() async {
-        companions = (try? await supabase.fetchCompanions()) ?? []
+        do {
+            companions = try await supabase.fetchCompanions()
+        } catch {
+            companions = []
+            showToast("Couldn't load companions", subtitle: "Your circle may be incomplete until the connection returns.", isError: true)
+        }
     }
 
     private func resetSetupState() {
@@ -699,6 +730,20 @@ class AppViewModel {
 
     private func clearPendingOnboardingChart() {
         UserDefaults.standard.removeObject(forKey: pendingOnboardingChartKey)
+    }
+
+    private func trackedProfile() async -> UserProfile? {
+        if let profile {
+            return profile
+        }
+
+        guard let userId = await supabase.currentUserId else {
+            return nil
+        }
+
+        let created = UserProfile.createDefault(id: userId)
+        profile = created
+        return created
     }
 }
 

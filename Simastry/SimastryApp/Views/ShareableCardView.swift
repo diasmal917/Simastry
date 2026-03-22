@@ -106,6 +106,8 @@ struct ShareableCardView: View {
             compatibilityCard
         case .reading:
             readingCard
+        case .conversationGuide:
+            conversationGuideCard
         }
     }
 
@@ -237,6 +239,45 @@ struct ShareableCardView: View {
         }
     }
 
+    private var conversationGuideCard: some View {
+        ZStack {
+            cardBackground
+
+            VStack(spacing: 0) {
+                Text("S I M A S T R Y")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.gold)
+                    .tracking(2)
+                    .padding(.top, isStoryFormat ? 24 : 16)
+
+                Spacer()
+
+                if let sun = viewModel.userSunSign,
+                   let guide = CommunicationTemplates.guides[sun] {
+                    VStack(spacing: isStoryFormat ? 16 : 10) {
+                        ZodiacBadgeView(sign: sun, isSelected: true, size: isStoryFormat ? 48 : 36)
+
+                        Text("How to Talk to a \(sun.displayName)")
+                            .font(SimastryFont.titleMedium)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .multilineTextAlignment(.center)
+
+                        conversationGuideCallout(title: "Best Approach", body: guide.bestApproach, tint: SimastryColor.gold)
+                        conversationGuideCallout(title: "What to Avoid", body: guide.avoid, tint: SimastryColor.amber)
+                    }
+                    .padding(.horizontal, 20)
+                }
+
+                Spacer()
+
+                Text("simastry.app")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.gold.opacity(0.5))
+                    .padding(.bottom, isStoryFormat ? 20 : 12)
+            }
+        }
+    }
+
     private var cardBackground: some View {
         ZStack {
             LinearGradient(
@@ -252,6 +293,24 @@ struct ShareableCardView: View {
             StarfieldView()
                 .opacity(0.6)
         }
+    }
+
+    private func conversationGuideCallout(title: String, body: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(SimastryFont.overline)
+                .foregroundStyle(tint)
+                .tracking(1)
+
+            Text(body)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+                .lineSpacing(2)
+                .lineLimit(isStoryFormat ? 5 : 3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
     }
 
     private func cardSignRow(role: CelestialRole, sign: ZodiacSign) -> some View {

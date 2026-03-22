@@ -38,6 +38,38 @@ struct AppViewModelRegressionTests {
         #expect(viewModel.remainingWeeklyPredictions == 2)
     }
 
+    @Test func freeTierDailyMessageQuotaExhaustsAfterTenthUse() async {
+        let viewModel = AppViewModel()
+        var profile = UserProfile.createDefault(id: UUID())
+        profile.dailyMessagesUsed = 9
+        profile.dailyMessagesResetDate = Date()
+        viewModel.profile = profile
+
+        #expect(viewModel.canSendMessage())
+
+        await viewModel.consumeMessage()
+
+        #expect(viewModel.profile?.dailyMessagesUsed == 10)
+        #expect(viewModel.remainingDailyMessages == 0)
+        #expect(!viewModel.canSendMessage())
+    }
+
+    @Test func staleDailyMessageQuotaResetsBeforeConsumption() async {
+        let viewModel = AppViewModel()
+        var profile = UserProfile.createDefault(id: UUID())
+        profile.dailyMessagesUsed = 10
+        profile.dailyMessagesResetDate = Date(timeIntervalSinceNow: -(2 * 24 * 60 * 60))
+        viewModel.profile = profile
+
+        #expect(viewModel.canSendMessage())
+        #expect(viewModel.remainingDailyMessages == 10)
+
+        await viewModel.consumeMessage()
+
+        #expect(viewModel.profile?.dailyMessagesUsed == 1)
+        #expect(viewModel.remainingDailyMessages == 9)
+    }
+
     @Test func stagingBirthChartPersistsUntilSignOut() async throws {
         UserDefaults.standard.removeObject(forKey: pendingChartKey)
         defer { UserDefaults.standard.removeObject(forKey: pendingChartKey) }

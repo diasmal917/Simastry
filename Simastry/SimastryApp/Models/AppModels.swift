@@ -268,4 +268,5 @@ nonisolated enum ShareableCardType: String, Sendable {
     case cosmicDNA = "cosmic_dna"
     case compatibility
     case reading
+    case conversationGuide = "conversation_guide"
 }

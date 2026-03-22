@@ -26,11 +26,12 @@ struct SignInView: View {
                         }
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(.white.opacity(0.7))
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Back to landing")
 
                     Spacer()
                 }

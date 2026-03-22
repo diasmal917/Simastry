@@ -12,7 +12,6 @@ struct BirthDetailsView: View {
         components.minute = 0
         return Calendar.current.date(from: components) ?? Date()
     }()
-    @State private var isBirthTimeUnknown: Bool = false
     @State private var birthplace: String = ""
     @State private var appeared: Bool = false
     @FocusState private var birthplaceFocused: Bool
@@ -106,11 +105,12 @@ struct BirthDetailsView: View {
                 }
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(.white.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(currentStep > 0 ? "Previous step" : "Back to landing")
 
             Spacer()
         }
@@ -129,8 +129,8 @@ struct BirthDetailsView: View {
     private var stepSubtitle: String {
         switch currentStep {
         case 0: return "We'll calculate your Sun and Moon signs from this."
-        case 1: return "Combined with your birthday, this determines your Rising sign."
-        case 2: return "Optional — improves the accuracy of your Rising sign placement."
+        case 1: return "We need your exact birth time to calculate your Rising sign correctly."
+        case 2: return "We use your birthplace to resolve the chart timezone and location."
         default: return ""
         }
     }
@@ -160,31 +160,16 @@ struct BirthDetailsView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            if !isBirthTimeUnknown {
-                DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .colorScheme(.dark)
-                    .frame(maxHeight: 200)
-                    .transition(.opacity)
-            }
+            DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .colorScheme(.dark)
+                .frame(maxHeight: 200)
 
-            Button {
-                withAnimation(.spring(SimastrySpring.snappy)) {
-                    isBirthTimeUnknown.toggle()
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: isBirthTimeUnknown ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(isBirthTimeUnknown ? SimastryColor.gold : .white.opacity(0.4))
-
-                    Text("I don't know my birth time")
-                        .font(SimastryFont.bodySmall)
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-            }
-            .buttonStyle(.plain)
+            Text("Your Rising sign depends on the exact time and location of birth, so we need both to calculate your full chart.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 24)
     }
@@ -202,7 +187,7 @@ struct BirthDetailsView: View {
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
                     .onSubmit { birthplaceFocused = false }
-                    .font(.system(size: 18, weight: .medium))
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(.white)
                     .tint(.white)
                     .multilineTextAlignment(.center)
@@ -214,7 +199,7 @@ struct BirthDetailsView: View {
                             .stroke(.white.opacity(0.15), lineWidth: 1)
                     }
 
-                Text("Optional — helps refine your Rising sign")
+                Text("Required — used to resolve your chart timezone and Rising sign")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
@@ -225,12 +210,12 @@ struct BirthDetailsView: View {
     private var privacyNote: some View {
         HStack(spacing: 8) {
             Image(systemName: "lock.shield.fill")
-                .font(.system(size: 13))
+                .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
             Text("We use this to generate your astrological birth chart. We never share or sell your data.")
                 .font(SimastryFont.caption)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.68))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 32)
@@ -244,35 +229,40 @@ struct BirthDetailsView: View {
                 currentStep += 1
             }
         } else {
+            let trimmedBirthplace = birthplace.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedBirthplace.isEmpty else {
+                viewModel.showToast("Birthplace required", subtitle: "Enter your birthplace so we can calculate your Rising sign accurately.", isError: true)
+                return
+            }
+
             birthplaceFocused = false
             isCalculating = true
 
             viewModel.onboardingBirthday = birthday
-            viewModel.onboardingBirthTime = isBirthTimeUnknown ? nil : birthTime
-            viewModel.onboardingBirthplace = birthplace.isEmpty ? nil : birthplace
+            viewModel.onboardingBirthTime = birthTime
+            viewModel.onboardingBirthplace = trimmedBirthplace
 
             Task {
-                // Geocode birthplace to coordinates for Rising sign accuracy
-                var latitude: Double? = nil
-                var longitude: Double? = nil
-                var timeZone: TimeZone? = nil
-
-                if !birthplace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    let location = await geocodeBirthplace(birthplace)
-                    latitude = location?.latitude
-                    longitude = location?.longitude
-                    timeZone = location?.timeZone
+                guard let location = await geocodeBirthplace(trimmedBirthplace) else {
+                    isCalculating = false
+                    viewModel.showToast("Couldn't place your birthplace", subtitle: "Use a city and country we can verify for your chart.", isError: true)
+                    return
                 }
 
-                // Calculate birth chart using Swiss Ephemeris
                 let chartService = BirthChartService()
                 let chart = chartService.calculate(
                     birthday: birthday,
-                    birthTime: isBirthTimeUnknown ? nil : birthTime,
-                    latitude: latitude,
-                    longitude: longitude,
-                    timeZone: timeZone
+                    birthTime: birthTime,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    timeZone: location.timeZone
                 )
+
+                guard chart.risingSign != nil else {
+                    isCalculating = false
+                    viewModel.showToast("Couldn't calculate your Rising sign", subtitle: "Double-check your birth time and birthplace, then try again.", isError: true)
+                    return
+                }
 
                 viewModel.stageOnboardingBirthChart(chart)
 
@@ -290,17 +280,17 @@ struct BirthDetailsView: View {
         do {
             let placemarks = try await geocoder.geocodeAddressString(place)
             guard let placemark = placemarks.first,
-                  let coordinate = placemark.location?.coordinate else {
+                  let coordinate = placemark.location?.coordinate,
+                  let timeZone = placemark.timeZone else {
                 return nil
             }
 
             return GeocodedBirthplace(
                 latitude: coordinate.latitude,
                 longitude: coordinate.longitude,
-                timeZone: placemark.timeZone
+                timeZone: timeZone
             )
         } catch {
-            // Geocoding failed — Rising sign will be nil, user picks manually
             return nil
         }
     }
@@ -309,5 +299,5 @@ struct BirthDetailsView: View {
 private struct GeocodedBirthplace {
     let latitude: Double
     let longitude: Double
-    let timeZone: TimeZone?
+    let timeZone: TimeZone
 }

@@ -3,20 +3,29 @@ import Supabase
 
 nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
     case notConfigured
+    case invalidRedirectURL
 
     var errorDescription: String? {
-        "Authentication is not configured yet."
+        switch self {
+        case .notConfigured:
+            "Authentication is not configured yet."
+        case .invalidRedirectURL:
+            "Authentication redirect URL is invalid."
+        }
     }
 }
 
 nonisolated final class SupabaseService {
-    let client: SupabaseClient
-    private let isConfigured: Bool
+    private let client: SupabaseClient?
 
-    private var authRedirectURL: URL {
+    private var isConfigured: Bool {
+        client != nil
+    }
+
+    private func makeAuthRedirectURL() throws -> URL {
         let scheme = Bundle.main.bundleIdentifier ?? "app.rork.simastry"
         guard let url = URL(string: "\(scheme)://auth/callback") else {
-            preconditionFailure("Invalid auth redirect URL")
+            throw SupabaseServiceError.invalidRedirectURL
         }
         return url
     }
@@ -26,37 +35,37 @@ nonisolated final class SupabaseService {
         let rawKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY
 
         guard !rawURL.isEmpty, let url = URL(string: rawURL), !rawKey.isEmpty else {
-            isConfigured = false
-            client = SupabaseClient(
-                supabaseURL: URL(string: "https://example.invalid")!,
-                supabaseKey: "unconfigured"
-            )
+            client = nil
             return
         }
 
-        isConfigured = true
         client = SupabaseClient(supabaseURL: url, supabaseKey: rawKey)
     }
 
     var currentUserId: UUID? {
         get async {
-            guard isConfigured else { return nil }
-            return try? await client.auth.session.user.id
+            guard let client else { return nil }
+            do {
+                return try await client.auth.session.user.id
+            } catch {
+                return nil
+            }
         }
     }
 
     func signInWithApple(idToken: String) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.auth.signInWithIdToken(
             credentials: .init(provider: .apple, idToken: idToken)
         )
     }
 
     func signInWithGoogle() async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
+        let redirectURL = try makeAuthRedirectURL()
         _ = try await client.auth.signInWithOAuth(
             provider: .google,
-            redirectTo: authRedirectURL,
+            redirectTo: redirectURL,
             scopes: "openid email profile https://www.googleapis.com/auth/userinfo.email"
         )
     }
@@ -67,16 +76,17 @@ nonisolated final class SupabaseService {
     }
 
     func handleAuthCallback(_ url: URL) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.auth.session(from: url)
     }
 
     func signUpWithEmail(email: String, password: String) async throws -> Bool {
-        try requireConfiguration()
+        let client = try configuredClient()
+        let redirectURL = try makeAuthRedirectURL()
         let response = try await client.auth.signUp(
             email: email,
             password: password,
-            redirectTo: authRedirectURL
+            redirectTo: redirectURL
         )
         switch response {
         case .session(_):
@@ -87,17 +97,17 @@ nonisolated final class SupabaseService {
     }
 
     func signInWithEmail(email: String, password: String) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.auth.signIn(email: email, password: password)
     }
 
     func signOut() async throws {
-        guard isConfigured else { return }
+        guard let client else { return }
         try await client.auth.signOut()
     }
 
     func isAuthenticated() async -> Bool {
-        guard isConfigured else { return false }
+        guard let client else { return false }
         do {
             _ = try await client.auth.session
             return true
@@ -107,7 +117,7 @@ nonisolated final class SupabaseService {
     }
 
     func fetchProfile() async throws -> UserProfile? {
-        try requireConfiguration()
+        let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
         let profiles: [UserProfile] = try await client
             .from("profiles")
@@ -119,12 +129,12 @@ nonisolated final class SupabaseService {
     }
 
     func upsertProfile(_ profile: UserProfile) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.from("profiles").upsert(profile).execute()
     }
 
     func fetchCompanions() async throws -> [CompanionData] {
-        try requireConfiguration()
+        let client = try configuredClient()
         guard let userId = await currentUserId else { return [] }
         let companions: [CompanionData] = try await client
             .from("companions")
@@ -136,12 +146,12 @@ nonisolated final class SupabaseService {
     }
 
     func insertCompanion(_ companion: CompanionData) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.from("companions").insert(companion).execute()
     }
 
     func updateCompanion(_ companion: CompanionData) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.from("companions")
             .update(companion)
             .eq("id", value: companion.id.uuidString)
@@ -149,7 +159,7 @@ nonisolated final class SupabaseService {
     }
 
     func deleteCompanion(id: UUID) async throws {
-        try requireConfiguration()
+        let client = try configuredClient()
         try await client.from("companions")
             .delete()
             .eq("id", value: id.uuidString)
@@ -157,7 +167,7 @@ nonisolated final class SupabaseService {
     }
 
     func fetchMessages(companionId: UUID) async throws -> [MessageData] {
-        try requireConfiguration()
+        let client = try configuredClient()
         let messages: [MessageData] = try await client
             .from("messages")
             .select()
@@ -167,9 +177,10 @@ nonisolated final class SupabaseService {
         return messages
     }
 
-    private func requireConfiguration() throws {
-        guard isConfigured else {
+    private func configuredClient() throws -> SupabaseClient {
+        guard let client, isConfigured else {
             throw SupabaseServiceError.notConfigured
         }
+        return client
     }
 }

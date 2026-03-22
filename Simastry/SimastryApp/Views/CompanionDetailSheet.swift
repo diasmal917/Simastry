@@ -101,12 +101,14 @@ struct CompanionDetailSheet: View {
                 HStack(spacing: 12) {
                     GoldButton("Send a Spark") {
                         Task {
-                            await viewModel.recordCompanionInteraction(
+                            let didSend = await viewModel.recordCompanionInteraction(
                                 with: companion,
                                 title: "Spark sent",
                                 subtitle: companionPrompt
                             )
-                            dismiss()
+                            if didSend {
+                                dismiss()
+                            }
                         }
                     }
 

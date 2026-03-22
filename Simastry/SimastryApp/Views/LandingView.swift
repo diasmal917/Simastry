@@ -153,13 +153,13 @@ struct LandingView: View {
 
             VStack(spacing: 10) {
                 Text(page.title)
-                    .font(.title3.weight(.semibold))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
 
                 Text(page.subtitle)
-                    .font(.subheadline)
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
@@ -241,16 +241,16 @@ struct LandingView: View {
             HStack(spacing: 4) {
                 Text("By continuing, you agree to our")
                     .font(SimastryFont.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.white.opacity(0.68))
                 Link("Terms", destination: AppConfig.termsOfServiceURL)
                     .font(SimastryFont.labelSmall)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.white.opacity(0.86))
                 Text("&")
                     .font(SimastryFont.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.white.opacity(0.68))
                 Link("Privacy", destination: AppConfig.privacyPolicyURL)
                     .font(SimastryFont.labelSmall)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.white.opacity(0.86))
             }
             .padding(.top, 2)
         }

@@ -26,11 +26,12 @@ struct SignUpView: View {
                         }
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(.white.opacity(0.7))
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Back to birth details")
 
                     Spacer()
                 }
@@ -112,12 +113,12 @@ struct SignUpView: View {
 
                 HStack(spacing: 8) {
                     Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
                     Text("We never share or sell your data.")
                         .font(SimastryFont.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.white.opacity(0.68))
                 }
                 .padding(.top, 16)
                 .padding(.bottom, 50)

@@ -266,13 +266,14 @@ struct ProfileView: View {
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelSmall)
                     Text("Share Your Cosmic DNA")
                         .font(SimastryFont.labelMedium)
                 }
                 .foregroundStyle(SimastryColor.gold)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Share your Cosmic DNA card")
 
             // Conversation Guide section
             conversationGuideSection(sun: sun)
@@ -292,13 +293,15 @@ struct ProfileView: View {
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 Button {
-                    activeSheet = .share(.cosmicDNA)
+                    activeSheet = .share(.conversationGuide)
                 } label: {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.gold)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Share your communication guide")
+                .accessibilityHint("Creates a share card with your best approach and what to avoid")
             }
 
             if let guide {
@@ -671,7 +674,7 @@ struct ProfileView: View {
         VStack(spacing: 24) {
             VStack(spacing: 12) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 36, weight: .semibold))
+                    .font(SimastryFont.displayMedium)
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("Simastry")
@@ -715,12 +718,12 @@ struct ProfileView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text(title)
-                    .font(.title3.weight(.semibold))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
                     .padding(.top, 24)
 
                 Text(body)
-                    .font(.body)
+                    .font(SimastryFont.bodyMedium)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
                     .fixedSize(horizontal: false, vertical: true)
                     .lineSpacing(4)
