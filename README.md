@@ -1,2 +1,0 @@
-# Simastry
-Created by Rork
