@@ -1,8 +1,10 @@
 import SwiftUI
+import CoreLocation
 
 struct BirthDetailsView: View {
     @Bindable var viewModel: AppViewModel
     @State private var currentStep: Int = 0
+    @State private var isCalculating: Bool = false
     @State private var birthday: Date = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
     @State private var birthTime: Date = {
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
@@ -57,11 +59,23 @@ struct BirthDetailsView: View {
                 privacyNote
                     .padding(.bottom, 12)
 
-                GoldButton("Continue") {
-                    advanceStep()
+                if isCalculating {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                            .tint(SimastryColor.gold)
+                        Text("Calculating your birth chart...")
+                            .font(.system(size: 13))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 50)
+                } else {
+                    GoldButton("Continue") {
+                        advanceStep()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 50)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 50)
             }
         }
         .onAppear {
@@ -230,32 +244,54 @@ struct BirthDetailsView: View {
                 currentStep += 1
             }
         } else {
+            birthplaceFocused = false
+            isCalculating = true
+
             viewModel.onboardingBirthday = birthday
             viewModel.onboardingBirthTime = isBirthTimeUnknown ? nil : birthTime
             viewModel.onboardingBirthplace = birthplace.isEmpty ? nil : birthplace
 
-            // Calculate birth chart using Swiss Ephemeris for accurate placements.
-            // Latitude/longitude are not available from text input alone — for Rising
-            // sign accuracy, we'd need geocoding. For now, pass nil for location
-            // unless we add geocoding later. The user can refine on the sign selection screen.
-            let chartService = BirthChartService()
-            let chart = chartService.calculate(
-                birthday: birthday,
-                birthTime: isBirthTimeUnknown ? nil : birthTime,
-                latitude: nil,
-                longitude: nil
-            )
+            Task {
+                // Geocode birthplace to coordinates for Rising sign accuracy
+                var latitude: Double? = nil
+                var longitude: Double? = nil
 
-            viewModel.userSunSign = chart.sunSign
-            viewModel.userMoonSign = chart.moonSign
-            // Rising requires location — set to nil so user picks manually,
-            // or use the calculated value if we had coordinates
-            viewModel.userRisingSign = chart.risingSign
+                if !birthplace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let coords = await geocodeBirthplace(birthplace)
+                    latitude = coords?.latitude
+                    longitude = coords?.longitude
+                }
 
-            birthplaceFocused = false
-            withAnimation(.spring(SimastrySpring.smooth)) {
-                viewModel.currentScreen = .signUp
+                // Calculate birth chart using Swiss Ephemeris
+                let chartService = BirthChartService()
+                let chart = chartService.calculate(
+                    birthday: birthday,
+                    birthTime: isBirthTimeUnknown ? nil : birthTime,
+                    latitude: latitude,
+                    longitude: longitude
+                )
+
+                viewModel.userSunSign = chart.sunSign
+                viewModel.userMoonSign = chart.moonSign
+                viewModel.userRisingSign = chart.risingSign
+
+                isCalculating = false
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    viewModel.currentScreen = .signUp
+                }
             }
+        }
+    }
+
+    /// Geocode a birthplace string to latitude/longitude using Apple's CLGeocoder.
+    private func geocodeBirthplace(_ place: String) async -> CLLocationCoordinate2D? {
+        let geocoder = CLGeocoder()
+        do {
+            let placemarks = try await geocoder.geocodeAddressString(place)
+            return placemarks.first?.location?.coordinate
+        } catch {
+            // Geocoding failed — Rising sign will be nil, user picks manually
+            return nil
         }
     }
 }
