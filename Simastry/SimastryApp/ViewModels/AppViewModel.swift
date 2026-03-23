@@ -118,6 +118,11 @@ class AppViewModel {
         UserDefaults.standard.set(true, forKey: "ageVerified")
     }
 
+    func completeAgeVerification() {
+        verifyAge()
+        currentScreen = .birthDetails
+    }
+
     // MARK: - Third-Party Data Consent
 
     func acceptThirdPartyConsent() {

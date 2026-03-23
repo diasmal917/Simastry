@@ -199,6 +199,7 @@ nonisolated struct MessageData: Codable, Identifiable, Sendable {
 
 nonisolated enum AppScreen: Sendable {
     case landing
+    case ageGate
     case birthDetails
     case signUp
     case signIn

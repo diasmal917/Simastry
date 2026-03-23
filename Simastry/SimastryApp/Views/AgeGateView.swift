@@ -68,7 +68,9 @@ struct AgeGateView: View {
                     VStack(spacing: 14) {
                         GoldButton(localization.string("ageGate.over13")) {
                             HapticManager.buttonPress()
-                            viewModel.verifyAge()
+                            withAnimation(.spring(SimastrySpring.smooth)) {
+                                viewModel.completeAgeVerification()
+                            }
                         }
 
                         Button {

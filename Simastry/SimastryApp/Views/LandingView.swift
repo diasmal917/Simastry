@@ -221,7 +221,11 @@ struct LandingView: View {
         VStack(spacing: 14) {
             GoldButton(localization.string("landing.getStarted")) {
                 withAnimation(.spring(SimastrySpring.smooth)) {
-                    viewModel.currentScreen = .birthDetails
+                    if viewModel.isAgeVerified {
+                        viewModel.currentScreen = .birthDetails
+                    } else {
+                        viewModel.currentScreen = .ageGate
+                    }
                 }
             }
             .accessibilityHint("Begin creating your astrology profile")

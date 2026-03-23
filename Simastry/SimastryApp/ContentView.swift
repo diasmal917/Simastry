@@ -7,27 +7,25 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            if !viewModel.isAgeVerified {
-                AgeGateView(viewModel: viewModel)
-            } else {
-                Group {
-                    switch viewModel.currentScreen {
-                    case .landing:
-                        LandingView(viewModel: viewModel)
-                    case .birthDetails:
-                        BirthDetailsView(viewModel: viewModel)
-                    case .signUp:
-                        SignUpView(viewModel: viewModel)
-                    case .signIn:
-                        SignInView(viewModel: viewModel)
-                    case .loading:
-                        loadingView
-                    case .home:
-                        MainTabView(viewModel: viewModel)
-                    }
+            Group {
+                switch viewModel.currentScreen {
+                case .landing:
+                    LandingView(viewModel: viewModel)
+                case .ageGate:
+                    AgeGateView(viewModel: viewModel)
+                case .birthDetails:
+                    BirthDetailsView(viewModel: viewModel)
+                case .signUp:
+                    SignUpView(viewModel: viewModel)
+                case .signIn:
+                    SignInView(viewModel: viewModel)
+                case .loading:
+                    loadingView
+                case .home:
+                    MainTabView(viewModel: viewModel)
                 }
-                .animation(.spring(SimastrySpring.smooth), value: viewModel.currentScreen == .home)
             }
+            .animation(.spring(SimastrySpring.smooth), value: viewModel.currentScreen == .home)
 
             ToastOverlay(message: $viewModel.toastMessage)
         }

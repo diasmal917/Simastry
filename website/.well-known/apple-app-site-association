@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.simastry.app",
+        "paths": ["/share/*", "/compatibility/*", "/guide/*"]
+      }
+    ]
+  }
+}
