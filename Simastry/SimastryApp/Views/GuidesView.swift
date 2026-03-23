@@ -88,7 +88,7 @@ struct GuidesView: View {
                 .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
-            Text("Practical communication playbooks — less theory, more how to text them, reach them, and not lose the room.")
+            Text(personalizedGuidesIntroText)
                 .font(SimastryFont.bodyMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
@@ -339,5 +339,13 @@ struct GuidesView: View {
             .tintedGlass(accent.opacity(0.12), cornerRadius: 20)
         }
         .buttonStyle(SpringPressStyle())
+    }
+
+    private var personalizedGuidesIntroText: String {
+        if let signKey = viewModel.userSunSign?.rawValue,
+           let personalized = AstrologyTemplates.personalizedEmptyStates[signKey]?["guides"] {
+            return personalized
+        }
+        return "Practical communication playbooks — less theory, more how to text them, reach them, and not lose the room."
     }
 }

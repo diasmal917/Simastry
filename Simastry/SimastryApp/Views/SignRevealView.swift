@@ -39,10 +39,7 @@ struct SignRevealView: View {
 
                 VStack(spacing: 12) {
                     GoldButton("This Is Me") {
-                        Task {
-                            await viewModel.saveUserSigns()
-                            viewModel.homeSetupPhase = .companionSetup
-                        }
+                        viewModel.homeSetupPhase = .onboardingInsight
                     }
 
                     SecondaryButton(title: "Edit Signs") {

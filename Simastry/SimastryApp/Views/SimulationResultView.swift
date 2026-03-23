@@ -267,18 +267,46 @@ struct SimulationResultView: View {
     }
 
     private var confidenceFooter: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "gauge.medium")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: "gauge.medium")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
 
-            Text("\(result.confidence)% confidence — based on conversational patterns and astrological alignment")
-                .font(SimastryFont.labelMedium)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .fixedSize(horizontal: false, vertical: true)
+                Text("\(result.confidence)% confidence — based on conversational patterns and astrological alignment")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let reasoning = confidenceReasoningText {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .padding(.top, 1)
+
+                    Text(reasoning)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 24)
+            }
         }
         .padding(.bottom, 4)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+    }
+
+    private var confidenceReasoningText: String? {
+        guard let userSign = userSunSign,
+              let targetSign = result.targetSunSign else {
+            return nil
+        }
+        return AstrologyTemplates.confidenceReasoningText(
+            userElement: userSign.element.rawValue,
+            targetElement: targetSign.element.rawValue
+        )
     }
 }

@@ -59,6 +59,7 @@ struct SimulateView: View {
                         modeCard
                         conversationSection
                         signSection
+                        textingStyleTip
                         questionSection
                         actionSection
                         historySection
@@ -195,6 +196,33 @@ struct SimulateView: View {
         .offset(y: appeared ? 0 : 20)
     }
 
+    @ViewBuilder
+    private var textingStyleTip: some View {
+        if let sign = selectedSunSign,
+           let tip = AstrologyTemplates.textingStyle[sign.displayName] {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .padding(.top, 2)
+
+                Text(tip)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(2)
+            }
+            .padding(14)
+            .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 16)
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(SimastryColor.gold.opacity(0.12), lineWidth: 0.5)
+            }
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+            .animation(reduceMotion ? nil : .spring(SimastrySpring.smooth), value: selectedSunSign)
+        }
+    }
+
     private var questionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionLabel("What do you want to know?")
@@ -324,7 +352,7 @@ struct SimulateView: View {
                     Text("No simulations yet")
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
-                    Text("Your recent predictions will gather here once you ask the stars.")
+                    Text(personalizedHistoryEmptyText)
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
@@ -554,6 +582,14 @@ struct SimulateView: View {
         }
 
         isRegenerating = false
+    }
+
+    private var personalizedHistoryEmptyText: String {
+        if let signKey = viewModel.userSunSign?.rawValue,
+           let personalized = AstrologyTemplates.personalizedEmptyStates[signKey]?["history"] {
+            return personalized
+        }
+        return "Your recent predictions will gather here once you ask the stars."
     }
 
     private func relativeDateString(for date: Date) -> String {

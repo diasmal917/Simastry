@@ -192,5 +192,265 @@ nonisolated struct AstrologyTemplates {
         "pisces": "Empathic, dreamy, creative, boundary-less. You absorb the user's emotional state. You speak in metaphor and feeling. You're intuitive and sometimes eerily accurate.",
     ]
 
+    // MARK: - Confidence Reasoning (element-based)
+
+    static let confidenceReasoning: [String: [String: String]] = [
+        "Fire": [
+            "Fire": "High confidence — fire signs communicate directly, so their responses are predictable",
+            "Earth": "Moderate confidence — earth signs think before responding, which adds uncertainty",
+            "Air": "Moderate confidence — air signs can go multiple directions in a conversation",
+            "Water": "Lower confidence — water signs respond based on mood, which shifts constantly"
+        ],
+        "Earth": [
+            "Earth": "High confidence — earth signs are consistent communicators, patterns are clear",
+            "Air": "Moderate confidence — air signs are harder to pin down, they follow ideas not habits",
+            "Water": "Good confidence — water signs are emotional but earth-water dynamics are stable"
+        ],
+        "Air": [
+            "Air": "Moderate confidence — two air signs means the conversation could go anywhere interesting",
+            "Water": "Lower confidence — water signs process emotionally while air processes intellectually"
+        ],
+        "Water": [
+            "Water": "Moderate confidence — deep emotional patterns exist, but both of you lead with feelings"
+        ]
+    ]
+
+    static func confidenceReasoningText(userElement: String, targetElement: String) -> String? {
+        let u = userElement.capitalized
+        let t = targetElement.capitalized
+        // Try both orderings since the dictionary only stores one direction
+        if let text = confidenceReasoning[u]?[t] {
+            return text
+        }
+        return confidenceReasoning[t]?[u]
+    }
+
+    // MARK: - Pre-Simulation Texting Style Tips
+
+    static let textingStyle: [String: String] = [
+        "Aries": "Heads up: Aries texts fast and blunt. Short replies aren't rude — that's just how they communicate. If they're interested, they'll double-text.",
+        "Taurus": "Heads up: Taurus takes their time replying. Long gaps between texts don't mean disinterest — they're just not in a rush. When they respond, it'll be thoughtful.",
+        "Gemini": "Heads up: Gemini sends multiple messages in a row and jumps between topics. Don't try to keep up — just match their energy when you can.",
+        "Cancer": "Heads up: Cancer reads between every line you write. Emoji choice, reply speed, tone — they're analyzing all of it. Be intentional.",
+        "Leo": "Heads up: Leo brings energy to texts — expect exclamation marks, reactions, and stories. If their replies get short, something's up.",
+        "Virgo": "Heads up: Virgo texts in complete sentences with proper grammar. Short or vague replies from them are actually a yellow flag.",
+        "Libra": "Heads up: Libra mirrors your texting style. If you send long messages, they will too. If you go short, they'll match that energy.",
+        "Scorpio": "Heads up: Scorpio says more with what they don't text than what they do. Read the gaps. If they open up unprompted, that means a lot.",
+        "Sagittarius": "Heads up: Sagittarius texts like they talk — fast, funny, and sometimes they forget to reply for hours. It's not personal.",
+        "Capricorn": "Heads up: Capricorn treats texting like email — purposeful and efficient. Small talk over text isn't their thing. Get to the point.",
+        "Aquarius": "Heads up: Aquarius texts about ideas, articles, memes — not feelings. If you want an emotional conversation, you'll probably need to call.",
+        "Pisces": "Heads up: Pisces reads your energy through text. They'll pick up on subtle tone shifts. Voice notes and longer messages make them feel safer."
+    ]
+
     static let closing = "The stars have spoken — your cosmic DNA is written."
+
+    // MARK: - Daily Micro-Learning Nuggets
+
+    static let dailyNuggets: [(title: String, body: String, relatedFeature: String?)] = [
+        (
+            "Why your Moon sign matters more than you think",
+            "Your Sun sign is who you are. Your Moon sign is how you feel. That's why two Leos can be completely different emotionally — check your Moon sign in your profile.",
+            "profile"
+        ),
+        (
+            "The real reason you clash with some people",
+            "Element mismatch. Fire signs (Aries, Leo, Sag) and Water signs (Cancer, Scorpio, Pisces) literally speak different emotional languages. Your compatibility score factors this in.",
+            "companions"
+        ),
+        (
+            "Your Rising sign is your social mask",
+            "It's the first impression you give off — not who you actually are. That's why people might describe you totally differently than how you see yourself.",
+            "profile"
+        ),
+        (
+            "Why some people text back instantly and others don't",
+            "Fire and Air signs tend to respond fast — they process externally. Earth and Water signs need time to think — it's not ghosting, it's processing.",
+            "predict"
+        ),
+        (
+            "Compatibility isn't just about matching",
+            "The highest compatibility scores aren't always same-element pairs. Sometimes opposite elements balance each other out — that's why Earth + Water often scores surprisingly high.",
+            "companions"
+        ),
+        (
+            "Your communication style is in your Mercury sign",
+            "Mercury rules how you think and talk. Even if your Sun is a quiet Pisces, Mercury in Gemini means your texts are rapid-fire. We factor this into predictions.",
+            "predict"
+        ),
+        (
+            "Why you get along with some signs instantly",
+            "Same-element signs (Fire+Fire, Earth+Earth) feel immediately familiar — like speaking the same language. Different elements require translation, but that's where growth happens.",
+            "guides"
+        ),
+        (
+            "The difference between astrology and horoscopes",
+            "Horoscopes are generic predictions for 1/12th of the population. What we do is compare YOUR specific sign placements against someone else's. That's synastry — and it's way more personal.",
+            nil
+        ),
+        (
+            "Why your compatibility score changes",
+            "It's not random. As you interact more with a companion, the score adjusts based on how your signs actually play out in practice — theory meets reality.",
+            "companions"
+        ),
+        (
+            "Fixed signs are the most stubborn texters",
+            "Taurus, Leo, Scorpio, and Aquarius are 'fixed' signs — they commit to a position and don't budge easily. If they leave you on read, they've already decided. Your guides account for this.",
+            "guides"
+        ),
+        (
+            "Water signs absorb your energy over text",
+            "Cancer, Scorpio, and Pisces literally feel your mood through messages. That's why your tone matters more with them than your words. Our predictions factor emotional tone.",
+            "predict"
+        ),
+        (
+            "The 4 elements explained in 10 seconds",
+            "Fire (action), Earth (stability), Air (ideas), Water (feelings). Every sign belongs to one element. Compatible elements communicate naturally — incompatible ones need this app.",
+            nil
+        ),
+        (
+            "Why fire signs always text first",
+            "Aries, Leo, and Sagittarius are cardinal/fixed fire — they initiate. If a fire sign isn't texting first anymore, something shifted. Use Predict to find out what.",
+            "predict"
+        ),
+        (
+            "Your saved guides work because of element theory",
+            "When we tell you to 'be direct with an Aries,' it's because fire signs process through action. When we say 'be patient with a Taurus,' it's because earth signs need stability. Every tip is grounded in how elements actually work.",
+            "guides"
+        ),
+        (
+            "Mutable signs are the hardest to predict",
+            "Gemini, Virgo, Sagittarius, Pisces — they adapt and change direction constantly. That's why predictions for mutable signs show lower confidence. It's not a bug, it's their nature.",
+            "predict"
+        )
+    ]
+
+    // MARK: - Personal Insights (post-onboarding)
+
+    static let personalInsights: [String: [String: String]] = [
+        "aries": [
+            "headline": "You lead with action",
+            "body": "Your Sun in Aries means you process life by doing, not overthinking. You're the person who texts back immediately — or not at all.",
+            "socialTip": "People are drawn to your confidence, but sometimes they mistake your directness for not caring. You care — you just don't perform it."
+        ],
+        "taurus": [
+            "headline": "You build things that last",
+            "body": "Your Sun in Taurus means you value consistency over excitement. You're loyal, but it takes time for people to earn that loyalty.",
+            "socialTip": "People read your patience as passivity — it's not. You're just deciding whether they're worth your energy."
+        ],
+        "gemini": [
+            "headline": "You see every side of everything",
+            "body": "Your Sun in Gemini means your mind runs multiple threads at once. You're the friend who remembers random details everyone else forgot.",
+            "socialTip": "People sometimes think you're inconsistent, but you're actually just processing faster than they can follow."
+        ],
+        "cancer": [
+            "headline": "You feel the room before you enter it",
+            "body": "Your Sun in Cancer means you absorb emotional energy. You know something's off before anyone says a word.",
+            "socialTip": "People lean on you more than they realize. Make sure you're protecting your energy as much as you protect everyone else's."
+        ],
+        "leo": [
+            "headline": "You make people feel seen",
+            "body": "Your Sun in Leo means you naturally bring warmth into spaces. When you pay attention to someone, they feel like the only person in the room.",
+            "socialTip": "People assume you need constant attention — but what you actually need is to be genuinely appreciated, not just applauded."
+        ],
+        "virgo": [
+            "headline": "You notice what everyone else misses",
+            "body": "Your Sun in Virgo means your mind is always refining, improving, solving. You're the one who spots the typo, remembers the deadline, and plans the backup plan.",
+            "socialTip": "People mistake your helpfulness for criticism. You're not nitpicking — you're showing you care enough to make things better."
+        ],
+        "libra": [
+            "headline": "You create balance wherever you go",
+            "body": "Your Sun in Libra means you instinctively know when something's off in a group dynamic. You're the mediator, the peacekeeper, the one who makes everyone feel included.",
+            "socialTip": "People depend on your calm, but that means you sometimes absorb conflict you didn't create. It's okay to choose yourself."
+        ],
+        "scorpio": [
+            "headline": "You see through everything",
+            "body": "Your Sun in Scorpio means you read people like subtitles on a movie. Surface-level relationships bore you — you want the real version of people.",
+            "socialTip": "People find your intensity magnetic but intimidating. You're not being intense on purpose — you just can't pretend things are fine when they're not."
+        ],
+        "sagittarius": [
+            "headline": "You turn everything into an adventure",
+            "body": "Your Sun in Sagittarius means you need movement — physical, intellectual, or emotional. Routine is your kryptonite.",
+            "socialTip": "People love your energy but sometimes feel like they can't keep up. You're not leaving them behind — you're just always heading somewhere."
+        ],
+        "capricorn": [
+            "headline": "You play the long game",
+            "body": "Your Sun in Capricorn means you think in years, not days. While everyone reacts to the moment, you're already three steps ahead.",
+            "socialTip": "People see you as serious, but you're actually deeply funny — you just don't perform for an audience. The people closest to you know this."
+        ],
+        "aquarius": [
+            "headline": "You think differently — on purpose",
+            "body": "Your Sun in Aquarius means your brain naturally questions what everyone accepts. You're not being contrarian — you genuinely see angles others don't.",
+            "socialTip": "People either love your perspective or find it unsettling. That's their calibration issue, not yours."
+        ],
+        "pisces": [
+            "headline": "You feel everything — and that's your power",
+            "body": "Your Sun in Pisces means you experience life at a deeper emotional frequency. Art, music, and people's stories hit you differently.",
+            "socialTip": "People underestimate you because you're gentle. They don't realize your empathy is actually the hardest skill to have — and you've mastered it."
+        ]
+    ]
+
+    // MARK: - Personalized Empty States
+
+    static let personalizedEmptyStates: [String: [String: String]] = [
+        "aries": [
+            "companions": "You're selective about who gets your energy — that's a strength. Add someone worth analyzing.",
+            "history": "No predictions yet. You're the type to just text them — but what if you could know what they'd say first?",
+            "guides": "You don't usually need a playbook — but even Aries benefits from understanding how other people tick."
+        ],
+        "taurus": [
+            "companions": "You take your time getting to know people — smart. Add someone you're curious about.",
+            "history": "No predictions yet. Before you invest your energy in that conversation, let's see how it'll go.",
+            "guides": "You already know what you want to say — this helps you figure out how they need to hear it."
+        ],
+        "gemini": [
+            "companions": "Your social circle is huge but your inner circle is tiny. Add the person you're actually thinking about.",
+            "history": "No predictions yet. You've already drafted three replies in your head — let the stars pick the best one.",
+            "guides": "You're great at reading the room, but some signs need a different language. These guides are your Rosetta Stone."
+        ],
+        "cancer": [
+            "companions": "You already know who matters to you. Add them here so you can understand the dynamic better.",
+            "history": "No predictions yet. Before you spiral about what their silence means, let the stars give you a second opinion.",
+            "guides": "You lead with empathy, but not everyone speaks that language. These guides help you meet people where they are."
+        ],
+        "leo": [
+            "companions": "Your presence is magnetic — now add someone whose energy matches yours.",
+            "history": "No predictions yet. You deserve to know how the conversation will land before you hit send.",
+            "guides": "You already know how to captivate a room. These guides help you captivate one person at a time."
+        ],
+        "virgo": [
+            "companions": "You've been observing them from a distance. Add them here and let the stars fill in what you've missed.",
+            "history": "No predictions yet. You've analyzed the conversation enough — let the stars confirm what you already suspect.",
+            "guides": "You notice everything — but sometimes you need context for what you're noticing. That's what these are for."
+        ],
+        "libra": [
+            "companions": "You're weighing your options — that's very you. Add someone and let the stars tip the scale.",
+            "history": "No predictions yet. You keep replaying the conversation in your head. Let us show you how it actually plays out.",
+            "guides": "You already have great instincts with people. These guides sharpen what you already feel."
+        ],
+        "scorpio": [
+            "companions": "You don't let just anyone in. Add the person you're actually invested in — we'll decode them for you.",
+            "history": "No predictions yet. You already know something's going on beneath the surface. Let the stars confirm it.",
+            "guides": "You read people better than anyone. These guides explain the parts they're trying to hide from you."
+        ],
+        "sagittarius": [
+            "companions": "Life moves fast for you — add someone who's keeping up. Or someone you wish would.",
+            "history": "No predictions yet. You usually just wing it — but what if you could see the punchline before the joke?",
+            "guides": "You're honest to a fault. These guides help you say the same thing in a way they can actually hear."
+        ],
+        "capricorn": [
+            "companions": "You don't waste time on people who don't matter. Add the one who does.",
+            "history": "No predictions yet. You like to plan ahead — this is just planning your conversations too.",
+            "guides": "You're strategic about everything else. Why not be strategic about how you communicate too?"
+        ],
+        "aquarius": [
+            "companions": "You connect with people differently — add someone and let us map the frequency you two share.",
+            "history": "No predictions yet. You've been thinking about this from every angle. Let the stars add one you haven't considered.",
+            "guides": "You already think outside the box. These guides help you understand people who are still inside it."
+        ],
+        "pisces": [
+            "companions": "You feel connections before you understand them. Add someone and let the stars explain what you're feeling.",
+            "history": "No predictions yet. Your intuition already told you something — let the stars put it into words.",
+            "guides": "You understand people on a soul level. These guides give you the vocabulary to match your intuition."
+        ]
+    ]
 }

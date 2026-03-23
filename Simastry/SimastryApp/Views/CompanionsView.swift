@@ -105,7 +105,7 @@ struct CompanionsView: View {
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text(viewModel.hasCompletedSigns ? "Create your first companion to begin" : "Complete your signs to begin")
+                Text(personalizedCompanionsEmptyText)
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
@@ -499,6 +499,14 @@ struct CompanionsView: View {
         let sunLine = AstrologyTemplates.sunSign[companion.sunSign] ?? "A vivid personality is beginning to take shape."
         let moonLine = AstrologyTemplates.moonSign[companion.moonSign] ?? "Their emotional world is opening gently."
         return "\(sunLine). \(moonLine)"
+    }
+
+    private var personalizedCompanionsEmptyText: String {
+        if let signKey = viewModel.userSunSign?.rawValue,
+           let personalized = AstrologyTemplates.personalizedEmptyStates[signKey]?["companions"] {
+            return personalized
+        }
+        return viewModel.hasCompletedSigns ? "Create your first companion to begin" : "Complete your signs to begin"
     }
 
     private func sendSpark(to companion: CompanionData) async {

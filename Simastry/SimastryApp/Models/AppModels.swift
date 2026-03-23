@@ -209,6 +209,7 @@ nonisolated enum AppScreen: Sendable {
 nonisolated enum HomeSetupPhase: Sendable {
     case modeSelection
     case signSelection
+    case onboardingInsight
     case companionSetup
     case soulCreation
     case complete

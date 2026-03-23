@@ -19,6 +19,8 @@ struct HomeView: View {
                         ModeSelectionView(viewModel: viewModel)
                     case .signSelection:
                         SignSelectionView(viewModel: viewModel)
+                    case .onboardingInsight:
+                        OnboardingInsightView(viewModel: viewModel)
                     case .companionSetup:
                         CompanionSetupView(viewModel: viewModel)
                     case .soulCreation:
@@ -50,6 +52,8 @@ struct HomeView: View {
                 }
 
                 featureGrid
+
+                didYouKnowCard
 
                 savedGuidesHomeCard
 
@@ -116,6 +120,11 @@ struct HomeView: View {
                                     .frame(height: 110)
                             }
                         }
+
+                        // Did You Know skeleton
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 140)
 
                         // Companion skeleton
                         RoundedRectangle(cornerRadius: 20)
@@ -368,6 +377,72 @@ struct HomeView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(title). \(subtitle)")
+    }
+
+    private var didYouKnowCard: some View {
+        let nuggets = AstrologyTemplates.dailyNuggets
+        let dayIndex = Calendar.current.component(.day, from: Date()) % nuggets.count
+        let nugget = nuggets[dayIndex]
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(SimastryColor.amber)
+
+                Text("Did you know?")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.amber)
+
+                Spacer()
+            }
+
+            Text(nugget.title)
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(nugget.body)
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let feature = nugget.relatedFeature {
+                Button {
+                    HapticManager.buttonPress()
+                    switch feature {
+                    case "profile":
+                        viewModel.selectedTab = 4
+                    case "companions":
+                        viewModel.selectedTab = 1
+                    case "predict":
+                        viewModel.selectedTab = 2
+                    case "guides":
+                        viewModel.selectedTab = 3
+                    default:
+                        break
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Try it")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.amber)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(SimastryColor.amber)
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
+        }
+        .padding(20)
+        .glossyCard(cornerRadius: 22)
+        .accessibilityLabel("Did you know? \(nugget.title). \(nugget.body)")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 15)
+        .animation(reduceMotion ? nil : .spring(SimastrySpring.smooth).delay(0.1), value: appeared)
     }
 
     private func companionCard(_ companion: CompanionData) -> some View {
