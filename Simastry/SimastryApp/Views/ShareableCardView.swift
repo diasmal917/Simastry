@@ -122,6 +122,18 @@ struct ShareableCardView: View {
                     .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
 
+                if viewModel.profileImage != nil || viewModel.userSunSign != nil {
+                    HStack(spacing: 8) {
+                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSignGlyph: viewModel.userSunSign?.glyph)
+                        if let sun = viewModel.userSunSign {
+                            Text(sun.displayName)
+                                .font(SimastryFont.labelSmall)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+
                 Spacer()
 
                 if let sun = viewModel.userSunSign,
@@ -136,6 +148,11 @@ struct ShareableCardView: View {
                 }
 
                 Spacer()
+
+                if !viewModel.socialLinks.isEmpty {
+                    socialLinksRow
+                        .padding(.bottom, 4)
+                }
 
                 Text("simastry.app")
                     .font(SimastryFont.captionSmall)
@@ -250,6 +267,18 @@ struct ShareableCardView: View {
                     .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
 
+                if viewModel.profileImage != nil || viewModel.userSunSign != nil {
+                    HStack(spacing: 8) {
+                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSignGlyph: viewModel.userSunSign?.glyph)
+                        if let sun = viewModel.userSunSign {
+                            Text(sun.displayName)
+                                .font(SimastryFont.labelSmall)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+
                 Spacer()
 
                 if let sun = viewModel.userSunSign,
@@ -270,10 +299,48 @@ struct ShareableCardView: View {
 
                 Spacer()
 
+                if !viewModel.socialLinks.isEmpty {
+                    socialLinksRow
+                        .padding(.bottom, 4)
+                }
+
                 Text("simastry.app")
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
+            }
+        }
+    }
+
+    /// Small row of social icons with usernames for shareable cards
+    private var socialLinksRow: some View {
+        HStack(spacing: 12) {
+            if let ig = viewModel.socialLinks.instagram, !ig.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 8))
+                    Text("@\(ig)")
+                        .font(.system(size: 8))
+                }
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
+            }
+            if let tt = viewModel.socialLinks.tiktok, !tt.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "play.rectangle.fill")
+                        .font(.system(size: 8))
+                    Text("@\(tt)")
+                        .font(.system(size: 8))
+                }
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
+            }
+            if let tw = viewModel.socialLinks.twitter, !tw.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "at")
+                        .font(.system(size: 8))
+                    Text("@\(tw)")
+                        .font(.system(size: 8))
+                }
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
             }
         }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 nonisolated private enum ProfileSheet: Identifiable {
     case companion(CompanionData)
@@ -35,6 +36,7 @@ nonisolated private enum ProfileSheet: Identifiable {
 struct ProfileView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
+    @StateObject private var streakManager = StreakManager.shared
     @State private var showSignOutConfirmation: Bool = false
     @State private var showLanguagePicker: Bool = false
     @State private var tapCount: Int = 0
@@ -44,6 +46,12 @@ struct ProfileView: View {
     @State private var activeSheet: ProfileSheet?
     @State private var referralCodeInput: String = ""
     @State private var showReferralConfirmation: Bool = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showDeletePhotoConfirmation: Bool = false
+    @State private var showDeleteAccountConfirmation: Bool = false
+    @State private var exportFileURL: URL?
+    @State private var showExportShare: Bool = false
+    @State private var showDiscoveryView: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -88,7 +96,11 @@ struct ProfileView: View {
 
                         forAstrologersSection
 
+                        dataExportSection
+
                         footerSection
+
+                        deleteAccountSection
 
                         Spacer().frame(height: SimastrySpacing.tabBarClearance)
                     }
@@ -101,6 +113,14 @@ struct ProfileView: View {
                     Task { await viewModel.signOut() }
                 }
                 Button("Cancel", role: .cancel) {}
+            }
+            .alert("Delete Account", isPresented: $showDeleteAccountConfirmation) {
+                Button("Delete Everything", role: .destructive) {
+                    Task { await viewModel.deleteAccount() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete your account, all companions, guides, and data. This action cannot be undone.")
             }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -282,10 +302,74 @@ struct ProfileView: View {
         .offset(y: appeared ? 0 : 20)
     }
 
+    // MARK: - Streak Section
+
+    private var streakSection: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .scaleEffect(streakManager.isMilestone && !reduceMotion ? 1.1 : 1.0)
+                    .animation(
+                        streakManager.isMilestone && !reduceMotion
+                            ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+                            : .default,
+                        value: streakManager.isMilestone
+                    )
+
+                Text("Your Streak")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Spacer()
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                VStack(spacing: 4) {
+                    Text("\(streakManager.currentStreak)")
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("current")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+
+                VStack(spacing: 4) {
+                    Text("\(streakManager.longestStreak)")
+                        .font(.system(.title2, design: .rounded, weight: .semibold))
+                        .foregroundStyle(SimastryColor.goldDark)
+
+                    Text("longest")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+
+                Spacer()
+            }
+
+            StreakCalendarView(
+                currentStreak: streakManager.currentStreak,
+                lastCheckIn: streakManager.lastCheckIn
+            )
+        }
+        .padding(20)
+        .glossyCard(cornerRadius: 22)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+    }
+
     // MARK: - About You Section
 
     private func aboutYouSection(sun: ZodiacSign, moon: ZodiacSign, rising: ZodiacSign) -> some View {
         VStack(spacing: 24) {
+            profileImageSection
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 12)
+
+            streakSection
+
             signEntry(role: .sun, sign: sun, delay: 0)
             signEntry(role: .moon, sign: moon, delay: 0.15)
             signEntry(role: .rising, sign: rising, delay: 0.3)
@@ -304,8 +388,233 @@ struct ProfileView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Share your Cosmic DNA card")
 
+            // MARK: Social Accounts
+            socialAccountsSection
+
+            // MARK: Find Others Like You
+            discoverySection
+
             // Conversation Guide section
             conversationGuideSection(sun: sun)
+        }
+    }
+
+    // MARK: - Discovery Section
+
+    private var discoverySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Button {
+                showDiscoveryView = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "person.2.wave.2.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [SimastryColor.gold, SimastryColor.goldLight],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Text("Find Others Like You")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(16)
+                .glossyCard()
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Find other Simastry users with compatible signs")
+            .accessibilityHint("Opens discovery to find people with similar or compatible signs")
+            .fullScreenCover(isPresented: $showDiscoveryView) {
+                DiscoveryView(viewModel: viewModel)
+            }
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Visible in Discovery")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text("Make your profile visible to others. You can always browse without being visible.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { viewModel.isDiscoverable },
+                    set: { newValue in
+                        if newValue != viewModel.isDiscoverable {
+                            viewModel.toggleDiscoverability()
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(SimastryColor.gold)
+            }
+            .padding(.horizontal, 4)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Visible in discovery toggle. Make your profile visible to others. You can always browse without being visible. Currently \(viewModel.isDiscoverable ? "on" : "off")")
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 14)
+    }
+
+    // MARK: - Social Accounts Section
+
+    private var socialAccountsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "link.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                Text("Social Accounts")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
+
+            Text("Add your socials so others can find you outside Simastry")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            socialLinkField(
+                icon: "camera.fill",
+                platform: "Instagram",
+                value: Binding(
+                    get: { viewModel.socialLinks.instagram ?? "" },
+                    set: { newValue in
+                        var links = viewModel.socialLinks
+                        links.instagram = newValue.isEmpty ? nil : newValue
+                        viewModel.updateSocialLinks(links)
+                    }
+                )
+            )
+
+            socialLinkField(
+                icon: "play.rectangle.fill",
+                platform: "TikTok",
+                value: Binding(
+                    get: { viewModel.socialLinks.tiktok ?? "" },
+                    set: { newValue in
+                        var links = viewModel.socialLinks
+                        links.tiktok = newValue.isEmpty ? nil : newValue
+                        viewModel.updateSocialLinks(links)
+                    }
+                )
+            )
+
+            socialLinkField(
+                icon: "at",
+                platform: "Twitter/X",
+                value: Binding(
+                    get: { viewModel.socialLinks.twitter ?? "" },
+                    set: { newValue in
+                        var links = viewModel.socialLinks
+                        links.twitter = newValue.isEmpty ? nil : newValue
+                        viewModel.updateSocialLinks(links)
+                    }
+                )
+            )
+        }
+        .padding(18)
+        .glossyCard()
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 14)
+    }
+
+    private func socialLinkField(icon: String, platform: String, value: Binding<String>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 24)
+
+            TextField("@username", text: value)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+        }
+        .padding(12)
+        .simastryGlass(cornerRadius: 12)
+        .accessibilityLabel("\(platform) username")
+    }
+
+    // MARK: - Profile Image Picker
+
+    private var profileImageSection: some View {
+        VStack(spacing: 10) {
+            PhotosPicker(
+                selection: $selectedPhotoItem,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                ProfileImageView(
+                    image: viewModel.profileImage,
+                    size: 100,
+                    showEditBadge: viewModel.profileImage != nil,
+                    sunSignGlyph: viewModel.userSunSign?.glyph
+                )
+            }
+            .buttonStyle(.plain)
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                Task {
+                    await processSelectedPhoto(newItem)
+                }
+            }
+            .contextMenu {
+                if viewModel.profileImage != nil {
+                    Button(role: .destructive) {
+                        showDeletePhotoConfirmation = true
+                    } label: {
+                        Label("Remove Photo", systemImage: "trash")
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Remove Profile Photo",
+                isPresented: $showDeletePhotoConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Remove", role: .destructive) {
+                    viewModel.deleteProfileImage()
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+
+            if viewModel.profileImage == nil {
+                Text("Tap to add a photo")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func processSelectedPhoto(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let originalImage = UIImage(data: data) else { return }
+
+        let resized = resizeImage(originalImage, maxDimension: 400)
+        viewModel.saveProfileImage(resized)
+        selectedPhotoItem = nil
+    }
+
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let maxSide = max(size.width, size.height)
+        guard maxSide > maxDimension else { return image }
+
+        let scale = maxDimension / maxSide
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 
@@ -1088,7 +1397,73 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Data Export
+
+    private var dataExportSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: {
+                if let url = viewModel.exportUserData() {
+                    exportFileURL = url
+                    showExportShare = true
+                }
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(SimastryColor.celestialBlue)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Export My Data")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Text("Download all your data as JSON")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(16)
+                .simastryGlass(cornerRadius: 16)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Export My Data. Download all your data as JSON.")
+            .sheet(isPresented: $showExportShare) {
+                if let url = exportFileURL {
+                    ActivityViewRepresentable(activityItems: [url])
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
+                }
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+
     // MARK: - Footer
+
+    // MARK: - Delete Account
+
+    private var deleteAccountSection: some View {
+        VStack(spacing: 0) {
+            Button(action: { showDeleteAccountConfirmation = true }) {
+                Text("Delete Account")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Delete your account permanently")
+        }
+        .padding(.top, 16)
+        .opacity(appeared ? 1 : 0)
+    }
 
     private var footerSection: some View {
         VStack(spacing: 16) {
@@ -1284,4 +1659,17 @@ struct ProfileView: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+// MARK: - UIActivityViewController Wrapper
+
+private struct ActivityViewRepresentable: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    var applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

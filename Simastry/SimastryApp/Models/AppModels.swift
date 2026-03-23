@@ -370,6 +370,84 @@ nonisolated enum DeepLink: Equatable, Sendable {
     }
 }
 
+// MARK: - Companion Messages (Inbox)
+
+nonisolated struct CompanionMessage: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let companionId: UUID
+    let companionName: String
+    let companionSign: String
+    let content: String
+    let timestamp: Date
+    var isRead: Bool
+
+    init(id: UUID = UUID(), companionId: UUID, companionName: String, companionSign: String, content: String, timestamp: Date = Date(), isRead: Bool = false) {
+        self.id = id
+        self.companionId = companionId
+        self.companionName = companionName
+        self.companionSign = companionSign
+        self.content = content
+        self.timestamp = timestamp
+        self.isRead = isRead
+    }
+}
+
+// MARK: - Social Links
+
+nonisolated struct SocialLinks: Codable, Equatable, Sendable {
+    var instagram: String?  // just the username, not full URL
+    var tiktok: String?
+    var twitter: String?
+
+    var isEmpty: Bool {
+        (instagram ?? "").isEmpty && (tiktok ?? "").isEmpty && (twitter ?? "").isEmpty
+    }
+}
+
+// MARK: - Social Discovery Profile
+
+nonisolated struct SocialProfile: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    var displayName: String
+    var sunSign: String
+    var moonSign: String?
+    var risingSign: String?
+    var bio: String?
+    var socialLinks: SocialLinks?
+    var isVisible: Bool // opt-in to discovery
+    var createdAt: Date
+
+    // Computed
+    var signSummary: String {
+        var parts = ["\u{2600}\u{FE0F} \(sunSign.capitalized)"]
+        if let moon = moonSign { parts.append("\u{1F319} \(moon.capitalized)") }
+        if let rising = risingSign { parts.append("\u{2B06}\u{FE0F} \(rising.capitalized)") }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
+    init(
+        id: UUID = UUID(),
+        displayName: String,
+        sunSign: String,
+        moonSign: String? = nil,
+        risingSign: String? = nil,
+        bio: String? = nil,
+        socialLinks: SocialLinks? = nil,
+        isVisible: Bool = true,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.sunSign = sunSign
+        self.moonSign = moonSign
+        self.risingSign = risingSign
+        self.bio = bio
+        self.socialLinks = socialLinks
+        self.isVisible = isVisible
+        self.createdAt = createdAt
+    }
+}
+
 // MARK: - Saved Communication Guides
 
 nonisolated struct SavedGuide: Identifiable, Codable, Equatable, Sendable {

@@ -17,6 +17,14 @@ class AppViewModel {
     var userMoonSign: ZodiacSign?
     var userRisingSign: ZodiacSign?
 
+    // MARK: - Profile Image (Local Storage)
+    // Extension point: When Supabase Storage is configured, extend
+    // saveProfileImage/loadProfileImage to upload/download from cloud storage.
+    var profileImage: UIImage?
+    var profileImageURL: String?
+    private let profileImageFileName = "profile_image.jpg"
+    private let profileImageURLKey = "simastry_profile_image_url"
+
     var companionSunSign: ZodiacSign?
     var companionMoonSign: ZodiacSign?
     var companionRisingSign: ZodiacSign?
@@ -27,7 +35,40 @@ class AppViewModel {
     var onboardingBirthTime: Date?
     var onboardingBirthplace: String?
 
+    var companionMessages: [CompanionMessage] = []
     var savedGuides: [SavedGuide] = []
+
+    // MARK: - Social Discovery
+    var isDiscoverable: Bool = UserDefaults.standard.bool(forKey: "isDiscoverable") {
+        didSet {
+            UserDefaults.standard.set(isDiscoverable, forKey: "isDiscoverable")
+        }
+    }
+    var discoveredProfiles: [SocialProfile] = []
+    var socialDisplayName: String = UserDefaults.standard.string(forKey: "socialDisplayName") ?? "" {
+        didSet {
+            UserDefaults.standard.set(socialDisplayName, forKey: "socialDisplayName")
+        }
+    }
+    var socialBio: String = UserDefaults.standard.string(forKey: "socialBio") ?? "" {
+        didSet {
+            UserDefaults.standard.set(socialBio, forKey: "socialBio")
+        }
+    }
+    var socialLinks: SocialLinks = {
+        guard let data = UserDefaults.standard.data(forKey: "socialLinks"),
+              let links = try? JSONDecoder().decode(SocialLinks.self, from: data) else {
+            return SocialLinks()
+        }
+        return links
+    }() {
+        didSet {
+            if let data = try? JSONEncoder().encode(socialLinks) {
+                UserDefaults.standard.set(data, forKey: "socialLinks")
+            }
+        }
+    }
+
     var toastMessage: ToastMessage?
     var isDarkMode: Bool = UserDefaults.standard.object(forKey: "simastry_dark_mode") == nil ? true : UserDefaults.standard.bool(forKey: "simastry_dark_mode") {
         didSet {
@@ -56,6 +97,8 @@ class AppViewModel {
     ))
     private let pendingOnboardingChartKey = "simastry_pending_onboarding_chart"
     private let referralInfoKey = "simastry_referral_info"
+    private let companionMessagesKey = "simastry_companion_messages"
+    private let lastMessageGenerationKey = "simastry_last_message_generation"
 
     init() {
         loadReferralInfo()
@@ -221,6 +264,8 @@ class AppViewModel {
         isAuthenticated = false
         profile = nil
         companions = []
+        companionMessages = []
+        UserDefaults.standard.removeObject(forKey: companionMessagesKey)
         showUpsell = false
         selectedTab = 0
         pendingDeepLinkURL = nil
@@ -229,6 +274,63 @@ class AppViewModel {
         resetSetupState()
         homeSetupPhase = .modeSelection
         currentScreen = .landing
+    }
+
+    // MARK: - Account Deletion
+
+    func deleteAccount() async {
+        do {
+            // 1. Delete user data from Supabase
+            if let userId = await supabase.currentUserId {
+                // Delete companions
+                try? await supabase.deleteAllCompanions(for: userId.uuidString)
+                // Delete profile
+                try? await supabase.deleteProfile(for: userId.uuidString)
+            }
+
+            // 2. Clear all local data
+            clearAllLocalData()
+
+            // 3. Delete auth account
+            // Note: Supabase admin API needed for full deletion
+            // For now, sign out and clear everything
+            try? await supabase.signOut()
+
+            // 4. Reset app state
+            isAuthenticated = false
+            profile = nil
+            selectedTab = 0
+            companions = []
+            savedGuides = []
+            companionMessages = []
+            profileImage = nil
+            showUpsell = false
+            pendingDeepLinkURL = nil
+            pendingDeepLink = nil
+            guideFocusSign = nil
+            resetSetupState()
+            homeSetupPhase = .modeSelection
+            notificationService.clearScheduledNotifications()
+            currentScreen = .landing
+
+            showToast("Account deleted successfully", subtitle: "All your data has been removed", isError: false)
+        }
+    }
+
+    private func clearAllLocalData() {
+        // Clear UserDefaults
+        let keys = ["savedGuides", "simastry_companion_messages", "simastry_profile_image_url",
+                    "thirdPartyDataConsent", "isDiscoverable", "simastry_referral_info",
+                    "simastry_dark_mode", "appLanguage", "ageVerified",
+                    "socialDisplayName", "socialBio",
+                    "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount"]
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+
+        // Delete profile image file
+        deleteProfileImage()
+
+        // Clear widget data
+        SharedDefaults.clearAll()
     }
 
     func handleIncomingURL(_ url: URL) async {
@@ -265,12 +367,14 @@ class AppViewModel {
             selectedTab = 0
         case "chat", "companions":
             selectedTab = 1
-        case "simulate":
+        case "messages":
             selectedTab = 2
-        case "guides", "astropedia":
+        case "simulate":
             selectedTab = 3
-        case "profile":
+        case "guides", "astropedia":
             selectedTab = 4
+        case "profile":
+            selectedTab = 5
         case "upsell":
             showUpsell = true
         default:
@@ -295,13 +399,13 @@ class AppViewModel {
             if let sign = ZodiacSign(rawValue: companionSign) {
                 guideFocusSign = sign
             }
-            selectedTab = 3
+            selectedTab = 4
 
         case .guide(let sign):
             if let zodiac = ZodiacSign(rawValue: sign) {
                 guideFocusSign = zodiac
             }
-            selectedTab = 3
+            selectedTab = 4
 
         case .home:
             selectedTab = 0
@@ -331,6 +435,8 @@ class AppViewModel {
         syncHomeSetupPhase()
         await setupNotifications()
         updateWidgetData()
+        loadMessages()
+        generateCompanionMessages()
     }
 
     // MARK: - Widget Data
@@ -620,14 +726,18 @@ class AppViewModel {
         await loadCompanions()
         await checkSubscriptionStatus()
         loadSavedGuides()
+        loadProfileImage()
+        loadMessages()
         syncHomeSetupPhase()
         selectedTab = 0
         currentScreen = .home
         if homeSetupPhase == .complete {
             analytics.track(.onboardingCompleted)
+            ReviewPromptService.shared.recordPositiveAction()
         }
         await setupNotifications()
         updateWidgetData()
+        generateCompanionMessages()
 
         // Resolve any pending deep link from the virality funnel
         if let deepLink = pendingDeepLink {
@@ -711,9 +821,178 @@ class AppViewModel {
             return
         }
         analytics.track(.companionCreated)
+        ReviewPromptService.shared.recordPositiveAction()
         syncHomeSetupPhase()
         await setupNotifications()
         updateWidgetData()
+        generateWelcomeMessage(for: companion)
+    }
+
+    // MARK: - Social Discovery
+
+    func toggleDiscoverability() {
+        isDiscoverable.toggle()
+        if isDiscoverable {
+            createSocialProfile()
+        }
+        // TODO: Supabase integration — when turning off, set is_visible = false in social_profiles table
+        updateSocialProfile()
+    }
+
+    func fetchDiscoverableProfiles() {
+        // TODO: Supabase integration — replace with:
+        // let profiles: [SocialProfile] = try await supabase.client
+        //     .from("social_profiles")
+        //     .select()
+        //     .eq("is_visible", value: true)
+        //     .neq("id", value: currentUserId)
+        //     .execute()
+        //     .value
+        discoveredProfiles = generateMockProfiles()
+    }
+
+    func createSocialProfile() {
+        if socialDisplayName.isEmpty {
+            socialDisplayName = profile?.displayName ?? "Stargazer"
+        }
+        // TODO: Supabase integration — insert into social_profiles table:
+        // let socialProfile = SocialProfile(
+        //     id: profile?.id ?? UUID(),
+        //     displayName: socialDisplayName,
+        //     sunSign: profile?.sunSign ?? "",
+        //     moonSign: profile?.moonSign,
+        //     risingSign: profile?.risingSign,
+        //     bio: socialBio.isEmpty ? nil : socialBio,
+        //     isVisible: true,
+        //     createdAt: Date()
+        // )
+        // try await supabase.client.from("social_profiles").upsert(socialProfile).execute()
+    }
+
+    func updateSocialProfile() {
+        // TODO: Supabase integration — update social_profiles table:
+        // try await supabase.client.from("social_profiles")
+        //     .update(["display_name": socialDisplayName, "bio": socialBio, "is_visible": isDiscoverable])
+        //     .eq("id", value: profile?.id.uuidString ?? "")
+        //     .execute()
+    }
+
+    func updateSocialLinks(_ links: SocialLinks) {
+        socialLinks = links
+        updateSocialProfile()
+    }
+
+    // MARK: - Discovery "Say Hi" Messaging
+
+    func sendDiscoveryMessage(from profile: SocialProfile) {
+        let compatibility = compatibilityWithUser(for: profile)
+        let isSameSign = profile.sunSign == userSunSign?.rawValue
+        let isCompat = isElementCompatible(profile)
+
+        let category: String
+        if isSameSign {
+            category = "same_sign"
+        } else if isCompat {
+            category = "compatible"
+        } else {
+            category = "neutral"
+        }
+
+        let templates = AstrologyTemplates.discoveryIntroMessages[category] ?? []
+        guard !templates.isEmpty else { return }
+
+        let index = abs(profile.id.hashValue) % templates.count
+        let template = templates[index]
+
+        let content: String
+        if category == "same_sign" {
+            let signName = ZodiacSign(rawValue: profile.sunSign)?.displayName ?? profile.sunSign.capitalized
+            content = String(format: template, signName)
+        } else {
+            content = String(format: template, "\(compatibility)")
+        }
+
+        let zodiacSign = ZodiacSign(rawValue: profile.sunSign)
+
+        let message = CompanionMessage(
+            companionId: profile.id,
+            companionName: profile.displayName,
+            companionSign: zodiacSign?.displayName ?? profile.sunSign.capitalized,
+            content: content,
+            timestamp: Date(),
+            isRead: false
+        )
+        companionMessages.insert(message, at: 0)
+        saveMessages()
+        showToast("Message sent to your inbox!", subtitle: "\(profile.displayName) says hi", isError: false)
+    }
+
+    func addCompanionFromDiscovery(_ socialProfile: SocialProfile) async {
+        guard canAddCompanion() else {
+            showToast("Companion limit reached", subtitle: "Upgrade your plan to add more companions", isError: true)
+            showUpsell = true
+            return
+        }
+        guard let sunSign = ZodiacSign(rawValue: socialProfile.sunSign) else { return }
+        let moonSign = socialProfile.moonSign.flatMap { ZodiacSign(rawValue: $0) } ?? .aries
+        let risingSign = socialProfile.risingSign.flatMap { ZodiacSign(rawValue: $0) } ?? .aries
+        companionSunSign = sunSign
+        companionMoonSign = moonSign
+        companionRisingSign = risingSign
+        companionName = socialProfile.displayName
+        selectedMode = .simulateAnyone
+        await createCompanion()
+    }
+
+    func compatibilityWithUser(for socialProfile: SocialProfile) -> Int {
+        guard let userSun = userSunSign,
+              let userMoon = userMoonSign,
+              let userRising = userRisingSign,
+              let companionSun = ZodiacSign(rawValue: socialProfile.sunSign) else { return 50 }
+        let companionMoon = socialProfile.moonSign.flatMap { ZodiacSign(rawValue: $0) } ?? .aries
+        let companionRising = socialProfile.risingSign.flatMap { ZodiacSign(rawValue: $0) } ?? .aries
+        return ZodiacSign.compatibilityScore(
+            userSun: userSun, userMoon: userMoon, userRising: userRising,
+            companionSun: companionSun, companionMoon: companionMoon, companionRising: companionRising
+        )
+    }
+
+    func elementCompatibilityOneLiner(for socialProfile: SocialProfile) -> String {
+        guard let userSun = userSunSign,
+              let companionSun = ZodiacSign(rawValue: socialProfile.sunSign) else {
+            return "A cosmic connection written in the stars"
+        }
+        return AstrologyTemplates.elementPairingText(
+            element1: userSun.element.rawValue,
+            element2: companionSun.element.rawValue
+        )
+    }
+
+    func isElementCompatible(_ socialProfile: SocialProfile) -> Bool {
+        guard let userSun = userSunSign,
+              let companionSun = ZodiacSign(rawValue: socialProfile.sunSign) else { return false }
+        let compatiblePairs: Set<Set<ZodiacElement>> = [
+            [.fire, .air], [.earth, .water], [.fire, .fire],
+            [.earth, .earth], [.air, .air], [.water, .water]
+        ]
+        return compatiblePairs.contains([userSun.element, companionSun.element])
+    }
+
+    private func generateMockProfiles() -> [SocialProfile] {
+        let names = ["Alex", "Jordan", "Sam", "Riley", "Casey", "Morgan", "Taylor", "Quinn", "Avery", "Sage", "River", "Phoenix"]
+        let signs = ZodiacSign.allCases
+        return names.enumerated().map { index, name in
+            SocialProfile(
+                id: UUID(),
+                displayName: name,
+                sunSign: signs[index % signs.count].rawValue,
+                moonSign: signs[(index + 4) % signs.count].rawValue,
+                risingSign: signs[(index + 8) % signs.count].rawValue,
+                bio: nil,
+                isVisible: true,
+                createdAt: Date()
+            )
+        }
     }
 
     // MARK: - Saved Guides
@@ -755,6 +1034,7 @@ class AppViewModel {
         savedGuides.append(guide)
         persistSavedGuides()
         analytics.track(.guideSaved)
+        ReviewPromptService.shared.recordPositiveAction()
         showToast("Guide saved", subtitle: "\(name)'s communication guide is ready", isError: false)
     }
 
@@ -768,6 +1048,107 @@ class AppViewModel {
         guard let index = savedGuides.firstIndex(where: { $0.id == guide.id }) else { return }
         savedGuides[index] = guide
         persistSavedGuides()
+    }
+
+    // MARK: - Companion Messages (Inbox)
+
+    var unreadMessageCount: Int {
+        companionMessages.filter { !$0.isRead }.count
+    }
+
+    func loadMessages() {
+        guard let data = UserDefaults.standard.data(forKey: companionMessagesKey) else { return }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let messages = try? decoder.decode([CompanionMessage].self, from: data) else { return }
+        companionMessages = messages.sorted { $0.timestamp > $1.timestamp }
+    }
+
+    func saveMessages() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(companionMessages) else { return }
+        UserDefaults.standard.set(data, forKey: companionMessagesKey)
+    }
+
+    func markMessageRead(_ message: CompanionMessage) {
+        guard let index = companionMessages.firstIndex(where: { $0.id == message.id }) else { return }
+        companionMessages[index].isRead = true
+        saveMessages()
+    }
+
+    func deleteMessage(_ message: CompanionMessage) {
+        companionMessages.removeAll { $0.id == message.id }
+        saveMessages()
+    }
+
+    func generateCompanionMessages() {
+        let now = Date()
+        let calendar = Calendar.current
+
+        for companion in companions {
+            let signKey = companion.sunSign.capitalized
+            guard let templates = AstrologyTemplates.companionProactiveMessages[signKey], !templates.isEmpty else { continue }
+
+            // Find the most recent message from this companion
+            let lastMessage = companionMessages
+                .filter { $0.companionId == companion.id }
+                .sorted { $0.timestamp > $1.timestamp }
+                .first
+
+            if let last = lastMessage {
+                // At least 6 hours gap
+                let hoursSinceLast = now.timeIntervalSince(last.timestamp) / 3600
+                guard hoursSinceLast >= 6 else { continue }
+
+                // Max 1 message per companion per day
+                if calendar.isDateInToday(last.timestamp) { continue }
+            }
+
+            // Pick a message using a deterministic-ish random based on day + companion id
+            let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
+            let companionHash = companion.id.hashValue
+            let index = abs(dayOfYear &+ companionHash) % templates.count
+            let content = templates[index]
+
+            // Avoid sending the exact same message as last time
+            if lastMessage?.content == content { continue }
+
+            let zodiacSign = ZodiacSign(rawValue: companion.sunSign)
+
+            let message = CompanionMessage(
+                companionId: companion.id,
+                companionName: companion.name,
+                companionSign: zodiacSign?.displayName ?? companion.sunSign.capitalized,
+                content: content,
+                timestamp: now
+            )
+            companionMessages.insert(message, at: 0)
+        }
+
+        saveMessages()
+        UserDefaults.standard.set(now.timeIntervalSince1970, forKey: lastMessageGenerationKey)
+    }
+
+    func generateWelcomeMessage(for companion: CompanionData) {
+        let signKey = companion.sunSign.capitalized
+        let templates = AstrologyTemplates.companionWelcomeMessages[signKey]
+            ?? AstrologyTemplates.companionGreetings[companion.sunSign]
+            ?? ["hey, excited to connect with you!"]
+
+        let index = abs(companion.id.hashValue) % templates.count
+        let content = templates[index]
+        let zodiacSign = ZodiacSign(rawValue: companion.sunSign)
+
+        let message = CompanionMessage(
+            companionId: companion.id,
+            companionName: companion.name,
+            companionSign: zodiacSign?.displayName ?? companion.sunSign.capitalized,
+            content: content,
+            timestamp: Date()
+        )
+        companionMessages.insert(message, at: 0)
+        saveMessages()
     }
 
     // MARK: - Referral Code
@@ -791,6 +1172,49 @@ class AppViewModel {
     private func persistReferralInfo(_ info: ReferralInfo) {
         guard let data = try? JSONEncoder().encode(info) else { return }
         UserDefaults.standard.set(data, forKey: referralInfoKey)
+    }
+
+    // MARK: - Profile Image Management
+
+    func saveProfileImage(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.7) else { return }
+        let url = profileImageFileURL
+        do {
+            try data.write(to: url)
+            profileImage = image
+            profileImageURL = url.absoluteString
+            UserDefaults.standard.set(url.absoluteString, forKey: profileImageURLKey)
+        } catch {
+            showToast("Couldn't save photo", subtitle: "Try again in a moment", isError: true)
+        }
+    }
+
+    func loadProfileImage() {
+        guard let savedURL = UserDefaults.standard.string(forKey: profileImageURLKey),
+              let url = URL(string: savedURL) else { return }
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            // File was removed externally — clear stale reference
+            UserDefaults.standard.removeObject(forKey: profileImageURLKey)
+            return
+        }
+        if let data = try? Data(contentsOf: url),
+           let image = UIImage(data: data) {
+            profileImage = image
+            profileImageURL = savedURL
+        }
+    }
+
+    func deleteProfileImage() {
+        let url = profileImageFileURL
+        try? FileManager.default.removeItem(at: url)
+        profileImage = nil
+        profileImageURL = nil
+        UserDefaults.standard.removeObject(forKey: profileImageURLKey)
+    }
+
+    private var profileImageFileURL: URL {
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return documentsDir.appendingPathComponent(profileImageFileName)
     }
 
     func showToast(_ title: String, subtitle: String, isError: Bool = false) {
@@ -935,6 +1359,62 @@ class AppViewModel {
 
     private func clearPendingOnboardingChart() {
         UserDefaults.standard.removeObject(forKey: pendingOnboardingChartKey)
+    }
+
+    // MARK: - GDPR Data Export
+
+    func exportUserData() -> URL? {
+        var exportData: [String: Any] = [:]
+
+        // Profile
+        if let profile = profile {
+            exportData["profile"] = [
+                "sunSign": profile.sunSign ?? "",
+                "moonSign": profile.moonSign ?? "",
+                "risingSign": profile.risingSign ?? "",
+                "tier": profile.tier
+            ]
+        }
+
+        // Companions (no PII from other users)
+        exportData["companions"] = companions.map { companion in
+            [
+                "name": companion.name,
+                "sunSign": companion.sunSign,
+                "moonSign": companion.moonSign,
+                "risingSign": companion.risingSign,
+                "compatibilityScore": companion.compatibilityScore,
+                "createdAt": ISO8601DateFormatter().string(from: companion.createdAt ?? Date())
+            ] as [String: Any]
+        }
+
+        // Saved guides
+        exportData["savedGuides"] = savedGuides.map { guide in
+            [
+                "name": guide.name,
+                "sunSign": guide.sunSign.rawValue,
+                "category": guide.category.rawValue,
+                "createdAt": ISO8601DateFormatter().string(from: guide.createdAt)
+            ]
+        }
+
+        // Settings
+        exportData["settings"] = [
+            "isDarkMode": isDarkMode,
+            "language": UserDefaults.standard.string(forKey: "appLanguage") ?? "en",
+            "isDiscoverable": isDiscoverable
+        ]
+
+        exportData["exportDate"] = ISO8601DateFormatter().string(from: Date())
+        exportData["appVersion"] = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+
+        // Write to temp JSON file
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: exportData, options: .prettyPrinted) else { return nil }
+
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("simastry_data_export.json")
+        try? jsonData.write(to: tempURL)
+
+        return tempURL
     }
 
     private func trackedProfile() async -> UserProfile? {

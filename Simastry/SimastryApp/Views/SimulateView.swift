@@ -83,7 +83,7 @@ struct SimulateView: View {
                     },
                     onOpenGuide: { sign in
                         viewModel.guideFocusSign = sign
-                        viewModel.selectedTab = 3
+                        viewModel.selectedTab = 4
                     },
                     userSunSign: viewModel.userSunSign
                 )
@@ -560,6 +560,7 @@ struct SimulateView: View {
             isGenerating = false
             HapticManager.soulFlash()
             AnalyticsService.shared.track(.predictionGenerated, key: "targetSign", value: selectedSunSign.displayName)
+            ReviewPromptService.shared.recordPositiveAction()
             loadHistory()
             selectedResult = result
         } catch {

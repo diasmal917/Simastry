@@ -177,6 +177,22 @@ nonisolated final class SupabaseService {
         return messages
     }
 
+    func deleteAllCompanions(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("companions")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
+    func deleteProfile(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("profiles")
+            .delete()
+            .eq("id", value: userId)
+            .execute()
+    }
+
     private func configuredClient() throws -> SupabaseClient {
         guard let client, isConfigured else {
             throw SupabaseServiceError.notConfigured

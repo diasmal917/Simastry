@@ -3,11 +3,13 @@ import SwiftUI
 struct HomeView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
+    @StateObject private var streakManager = StreakManager.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
     @State private var showSavedGuides: Bool = false
+    @State private var showStreakMilestone: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -45,6 +47,8 @@ struct HomeView: View {
 
                 greetingSection
 
+                streakPill
+
                 predictReplyCard
 
                 if let companion = viewModel.primaryCompanion,
@@ -70,13 +74,28 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             .onAppear {
-                AnalyticsService.shared.track(.appOpened)
+                streakManager.recordCheckIn()
+                AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
                 guard !appeared else { return }
                 if reduceMotion {
                     appeared = true
                 } else {
                     withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
                         appeared = true
+                    }
+                }
+                // Show milestone toast after a brief delay
+                if streakManager.streakMessage != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        withAnimation(.spring(SimastrySpring.smooth)) {
+                            showStreakMilestone = true
+                        }
+                        // Auto-dismiss after 4 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                showStreakMilestone = false
+                            }
+                        }
                     }
                 }
             }
@@ -194,7 +213,7 @@ struct HomeView: View {
         return Button {
             HapticManager.buttonPress()
             viewModel.guideFocusSign = companionSign
-            viewModel.selectedTab = 3
+            viewModel.selectedTab = 4
         } label: {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
@@ -253,7 +272,7 @@ struct HomeView: View {
     private var predictReplyCard: some View {
         Button {
             HapticManager.buttonPress()
-            viewModel.selectedTab = 2
+            viewModel.selectedTab = 3
         } label: {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -315,7 +334,7 @@ struct HomeView: View {
                 systemImage: "bubble.left.and.bubble.right.fill",
                 tint: SimastryColor.celestialBlue
             ) {
-                viewModel.selectedTab = 3
+                viewModel.selectedTab = 4
             }
 
             featureGridCard(
@@ -324,7 +343,7 @@ struct HomeView: View {
                 systemImage: "wand.and.stars",
                 tint: SimastryColor.risingViolet
             ) {
-                viewModel.selectedTab = 2
+                viewModel.selectedTab = 3
             }
 
             featureGridCard(
@@ -423,13 +442,13 @@ struct HomeView: View {
                     AnalyticsService.shared.track(.didYouKnowTapped)
                     switch feature {
                     case "profile":
-                        viewModel.selectedTab = 4
+                        viewModel.selectedTab = 5
                     case "companions":
                         viewModel.selectedTab = 1
                     case "predict":
-                        viewModel.selectedTab = 2
-                    case "guides":
                         viewModel.selectedTab = 3
+                    case "guides":
+                        viewModel.selectedTab = 4
                     default:
                         break
                     }
@@ -578,6 +597,54 @@ struct HomeView: View {
         .accessibilityLabel("Saved communication guides. \(viewModel.savedGuides.count) people saved.")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 16)
+    }
+
+    // MARK: - Streak
+
+    private var streakPill: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("\(streakManager.currentStreak)")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text(streakManager.streakEncouragement)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .simastryGlassPill()
+
+            // Milestone toast
+            if showStreakMilestone, let message = streakManager.streakMessage {
+                HStack(spacing: 10) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text(message)
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .goldGlassRect(cornerRadius: 16)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .opacity
+                ))
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 8)
     }
 
     private var greetingText: String {

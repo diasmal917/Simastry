@@ -171,7 +171,7 @@ struct GuidesView: View {
                         systemImage: "wand.and.stars",
                         accent: SimastryColor.risingViolet
                     ) {
-                        viewModel.selectedTab = 2
+                        viewModel.selectedTab = 3
                     }
 
                     nextStepCard(
@@ -191,7 +191,7 @@ struct GuidesView: View {
                         systemImage: "wand.and.stars",
                         accent: SimastryColor.risingViolet
                     ) {
-                        viewModel.selectedTab = 2
+                        viewModel.selectedTab = 3
                     }
 
                     nextStepCard(

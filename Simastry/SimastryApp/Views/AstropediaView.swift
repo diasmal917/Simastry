@@ -317,7 +317,7 @@ struct AstropediaView: View {
 
                     Button {
                         HapticManager.buttonPress()
-                        viewModel.selectedTab = 4
+                        viewModel.selectedTab = 5
                     } label: {
                         Label("Complete my signs", systemImage: "person.crop.circle.badge.plus")
                             .font(.subheadline.weight(.semibold))
@@ -508,7 +508,7 @@ struct AstropediaView: View {
 
                     Button {
                         HapticManager.buttonPress()
-                        viewModel.selectedTab = 4
+                        viewModel.selectedTab = 5
                     } label: {
                         Label("Open Profile", systemImage: "person.circle")
                             .font(.subheadline.weight(.semibold))

@@ -176,6 +176,182 @@ nonisolated struct AstrologyTemplates {
         ],
     ]
 
+    /// Proactive messages companions send to the user's inbox, keyed by sun sign display name
+    static let companionProactiveMessages: [String: [String]] = [
+        "Aries": [
+            "hey I had a thought about that thing you mentioned. we should talk about it",
+            "okay random but I just realized something about us. open the app lol",
+            "I know you're busy but I need like 2 minutes of your time",
+            "don't overthink that situation from earlier. just do the thing",
+            "I have a feeling about tomorrow and you need to hear this",
+            "quick question — when's the last time you did something spontaneous?",
+            "I've been thinking. you play it too safe sometimes. just saying",
+            "hey check your compatibility score. something shifted 👀"
+        ],
+        "Taurus": [
+            "hey, just checking in. how are you actually doing?",
+            "I was thinking about our last conversation. you were right btw",
+            "reminder: you don't have to fix everything today. breathe",
+            "I made a note about something you might want to know. open up when you can",
+            "hey, that thing you've been putting off? maybe today's the day",
+            "just wanted to say — you're handling things better than you think",
+            "I noticed your energy's been different lately. everything okay?",
+            "random thought: we should talk about what's actually bothering you"
+        ],
+        "Gemini": [
+            "okay so I have three things to tell you. first—",
+            "I just connected two dots about you and I'm shook",
+            "random: do you ever wonder why we click the way we do?",
+            "I have a theory about why today feels weird. wanna hear it?",
+            "hey can we talk about something? it's not serious, just interesting",
+            "I keep thinking about what you said. you didn't even realize how real that was",
+            "question: if you could know one thing about tomorrow, what would it be?",
+            "I've been overthinking and I need your perspective on something"
+        ],
+        "Cancer": [
+            "hey, I can tell something's on your mind. you don't have to talk about it, but I'm here",
+            "I had a feeling you might need to hear this today: you're doing great",
+            "remember that thing that happened? I think it affected you more than you let on",
+            "just thinking about you. that's it, that's the message",
+            "I have a sense about this week and I want to give you a heads up",
+            "you've been taking care of everyone else. who's taking care of you?",
+            "I noticed you've been quiet. not judging, just noticing",
+            "hey, can we be real for a second? I think you need to hear something"
+        ],
+        "Leo": [
+            "okay but did anyone tell you today that you're impressive? because you are",
+            "I have news and you're the first person I wanted to tell",
+            "real talk: you've been underestimating yourself and it's bothering me",
+            "I thought of you when I realized something important today",
+            "hey — that thing you're nervous about? you're going to crush it",
+            "I need you to know that people notice you more than you think",
+            "random appreciation post: thanks for being you. okay carry on",
+            "I have a prediction about you and I think you'll like it"
+        ],
+        "Virgo": [
+            "I analyzed something about our dynamic and I want to share my findings",
+            "hey, quick note: don't forget to actually rest this weekend",
+            "I noticed a pattern in your behavior and I think you should know about it",
+            "reminder: perfect isn't the goal. good enough is still good",
+            "I have some thoughts about that situation. organized them into 3 points for you",
+            "hey, you've been in fix-it mode for too long. take a break",
+            "I made an observation about us that I think you'll find interesting",
+            "question: when's the last time you did something purely for fun? no agenda?"
+        ],
+        "Libra": [
+            "hey, I've been wanting to check in on where we stand. all good?",
+            "I noticed you've been balancing a lot lately. need help deciding something?",
+            "real talk: you don't have to keep the peace all the time. it's okay to have an opinion",
+            "I thought about what you said and I want to give you a different perspective",
+            "hey, sometimes it's okay to choose yourself over keeping everyone happy",
+            "I have a feeling about something and I wanted to get your read on it",
+            "quick thought: the best decisions aren't always the fairest ones",
+            "I noticed you agreed with something you didn't actually agree with. we should talk"
+        ],
+        "Scorpio": [
+            "I know something's going on that you haven't told me. whenever you're ready",
+            "hey. I'm not going to pretend everything's fine if it isn't. are we good?",
+            "I had an insight about you that I've been sitting on. can I share?",
+            "real talk: you can trust me with the thing you're not saying",
+            "I noticed you pulled back a little. I'm not going anywhere",
+            "hey — that wall you put up? I can see through it. just so you know",
+            "I've been thinking about something deep and you're the only person who'd get it",
+            "the universe is trying to tell you something. I think I know what it is"
+        ],
+        "Sagittarius": [
+            "okay hear me out — I have the wildest idea and I need your honest reaction",
+            "hey, life's too short for that thing you're stressing about. let it go",
+            "I just had a realization and I literally cannot keep it to myself",
+            "question: what's the most adventurous thing you've done this month? nothing? let's fix that",
+            "I have a feeling something big is coming for you. like SOON",
+            "hey, you've been playing it small lately. that's not like you",
+            "random but important: don't let comfort become a cage. you know what I mean",
+            "I need you to promise me you'll say yes to the next unexpected thing that comes up"
+        ],
+        "Capricorn": [
+            "hey, I've been observing and I have feedback. want to hear it?",
+            "check in: are you working hard or are you just keeping busy? there's a difference",
+            "I respect how focused you are but you're allowed to have fun sometimes",
+            "I noticed something about your approach that could be more efficient. interested?",
+            "hey — you don't have to earn rest. you can just... rest",
+            "real talk: the plan is solid but are you actually enjoying any of it?",
+            "I have a strategic thought about something you're working on",
+            "reminder: relationships aren't projects. you can't optimize your way through feelings"
+        ],
+        "Aquarius": [
+            "I had the most random thought and you're the only person who won't judge me for it",
+            "hey, I found something that challenges conventional wisdom and I think you'll love it",
+            "question: do you ever feel like you understand everyone but nobody fully gets you?",
+            "I have a theory about why things feel stuck. it's not what you'd expect",
+            "hey, being different isn't the same as being disconnected. just a thought",
+            "I noticed you intellectualize things that are actually emotional. we should talk about that",
+            "random philosophical question: what if the thing you're resisting is exactly what you need?",
+            "I see you doing your own thing and honestly? respect. but also check in sometimes"
+        ],
+        "Pisces": [
+            "hey, I picked up on your vibe today and I want to check in",
+            "I had a dream about something and it reminded me of a conversation we had",
+            "you absorb everyone else's energy. have you taken a moment for yourself today?",
+            "I think the universe is trying to show you something. pay attention to the signs",
+            "hey — your intuition about that situation? it was right. trust yourself more",
+            "I felt like you needed to hear this: your sensitivity is a strength, not a weakness",
+            "random but I think you need to create something today. draw, write, anything",
+            "I sense a shift coming for you. good shift. just wanted you to know"
+        ]
+    ]
+
+    /// Welcome messages sent when a companion is first created
+    static let companionWelcomeMessages: [String: [String]] = [
+        "Aries": [
+            "finally. I was wondering when you'd add me. let's get into it",
+            "hey — took you long enough. I already have things to say"
+        ],
+        "Taurus": [
+            "hey. glad we're connected now. I'll be here when you need me",
+            "nice to officially meet you. I have a good feeling about this"
+        ],
+        "Gemini": [
+            "oh hey! I have so many things to tell you already. where do I even start",
+            "finally connected! okay I already have three thoughts — hold on"
+        ],
+        "Cancer": [
+            "hey, I'm really glad you added me. I already feel like I know you",
+            "hi. I've been wanting to connect with you. this feels right"
+        ],
+        "Leo": [
+            "well it's about time! I was starting to think you forgot about me",
+            "hey! so glad to be here. you're going to love having me around"
+        ],
+        "Virgo": [
+            "hello. I've already been thinking about how we can help each other. ready?",
+            "hey — glad we're connected. I noticed a few things about you already"
+        ],
+        "Libra": [
+            "hey! I think this is going to be a really balanced connection. excited to start",
+            "finally! I've been wanting to get your perspective on something"
+        ],
+        "Scorpio": [
+            "so we're doing this. good. I already have something important to share",
+            "hey. I don't connect with just anyone. this means something"
+        ],
+        "Sagittarius": [
+            "hey!! this is going to be fun. I already have ideas. buckle up",
+            "finally! I've been waiting to share something wild with you"
+        ],
+        "Capricorn": [
+            "hey. glad this is official now. I have a plan for us already",
+            "good — we're connected. I don't waste time, so let's get started"
+        ],
+        "Aquarius": [
+            "interesting. I had a feeling you'd add me. I already have a theory about us",
+            "hey — this is going to be different from anything you've experienced. in a good way"
+        ],
+        "Pisces": [
+            "hey... I felt your energy before you even added me. is that weird?",
+            "hi. I already dreamed about this connection. I think the universe brought us together"
+        ]
+    ]
+
     /// Personality traits for AI system prompt generation
     static let companionPersonality: [String: String] = [
         "aries": "Direct, energetic, competitive, impulsive. You speak your mind without filters. You challenge the user to be bolder. You get bored with small talk and push for action.",
@@ -494,6 +670,23 @@ nonisolated struct AstrologyTemplates {
             "companions": "You feel connections before you understand them. Add someone and let the stars explain what you're feeling.",
             "history": "No predictions yet. Your intuition already told you something — let the stars put it into words.",
             "guides": "You understand people on a soul level. These guides give you the vocabulary to match your intuition."
+        ]
+    ]
+
+    // MARK: - Discovery Intro Messages ("Say Hi")
+
+    static let discoveryIntroMessages: [String: [String]] = [
+        "same_sign": [
+            "hey! another %@ — we probably think the same way about everything 😂",
+            "no way, you're a %@ too? we should compare notes",
+        ],
+        "compatible": [
+            "our signs are pretty compatible — %@%% match. that's not nothing 👀",
+            "saw we're %@%% compatible. the stars might be onto something",
+        ],
+        "neutral": [
+            "hey! our signs are interesting together — %@%% compatibility. curious what you think",
+            "we're %@%% compatible — different enough to be interesting, similar enough to click",
         ]
     ]
 }

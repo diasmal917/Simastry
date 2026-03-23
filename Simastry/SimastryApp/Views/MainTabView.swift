@@ -13,15 +13,23 @@ struct MainTabView: View {
                 CompanionsView(viewModel: viewModel)
             }
 
-            Tab("Predict", systemImage: "wand.and.stars", value: 2) {
+            Tab(value: 2) {
+                MessagesView(viewModel: viewModel)
+            } label: {
+                Label("Messages", systemImage: "bubble.left.and.bubble.right.fill")
+                    .environment(\.symbolVariants, .fill)
+            }
+            .badge(viewModel.unreadMessageCount)
+
+            Tab("Predict", systemImage: "wand.and.stars", value: 3) {
                 SimulateView(viewModel: viewModel)
             }
 
-            Tab("Guides", systemImage: "bubble.left.and.bubble.right.fill", value: 3) {
+            Tab("Guides", systemImage: "book.fill", value: 4) {
                 GuidesView(viewModel: viewModel)
             }
 
-            Tab("Profile", systemImage: "person.circle.fill", value: 4) {
+            Tab("Profile", systemImage: "person.circle.fill", value: 5) {
                 ProfileView(viewModel: viewModel)
             }
         }
