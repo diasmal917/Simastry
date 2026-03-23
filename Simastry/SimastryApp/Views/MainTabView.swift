@@ -34,8 +34,13 @@ struct MainTabView: View {
             }
         }
         .tint(SimastryColor.gold)
-        .onChange(of: viewModel.selectedTab) { _, _ in
+        .onChange(of: viewModel.selectedTab) { _, newTab in
             HapticManager.tabChange()
+            if newTab == 2 {
+                Task {
+                    await viewModel.refreshInbox(showErrors: false)
+                }
+            }
         }
     }
 }

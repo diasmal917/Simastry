@@ -19,6 +19,9 @@ struct MessagesView: View {
             .navigationTitle("Messages")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .task {
+                await viewModel.refreshInbox(showErrors: false)
+            }
             .sheet(item: $selectedMessage) { message in
                 MessageDetailSheet(
                     message: message,
@@ -202,6 +205,8 @@ private struct MessageDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var replyText: String = ""
     @State private var isSendingReply: Bool = false
+    @State private var showSafetyOptions: Bool = false
+    @State private var showBlockConfirmation: Bool = false
 
     private var zodiacSign: ZodiacSign? {
         ZodiacSign.allCases.first { $0.displayName == message.companionSign }
@@ -210,6 +215,27 @@ private struct MessageDetailSheet: View {
 
     private var conversationMessages: [CompanionMessage] {
         viewModel.discoveryConversation(with: message.companionId)
+    }
+
+    private var discoverySafetyProfile: SocialProfile {
+        SocialProfile(
+            id: message.companionId,
+            displayName: message.companionName,
+            sunSign: zodiacSign?.rawValue ?? message.companionSign.lowercased(),
+            moonSign: nil,
+            risingSign: nil,
+            bio: nil,
+            isVisible: true
+        )
+    }
+
+    private var reportDetails: String? {
+        let summary = conversationMessages.suffix(4).map { threadMessage in
+            let author = threadMessage.direction == .outgoing ? "Reporter" : threadMessage.companionName
+            return "\(author): \(threadMessage.content)"
+        }
+        guard !summary.isEmpty else { return nil }
+        return summary.joined(separator: "\n")
     }
 
     var body: some View {
@@ -328,6 +354,19 @@ private struct MessageDetailSheet: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if message.source == .discovery {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showSafetyOptions = true
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                        }
+                        .accessibilityLabel("Discovery safety actions")
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
@@ -344,6 +383,37 @@ private struct MessageDetailSheet: View {
             if message.source == .discovery {
                 await viewModel.refreshInbox(showErrors: false)
             }
+        }
+        .confirmationDialog("Discovery Safety", isPresented: $showSafetyOptions, titleVisibility: .visible) {
+            ForEach(DiscoveryReportReason.allCases) { reason in
+                Button("Report \(reason.displayName)") {
+                    Task {
+                        await viewModel.reportDiscoveryProfile(
+                            discoverySafetyProfile,
+                            reason: reason,
+                            details: reportDetails
+                        )
+                    }
+                }
+            }
+
+            Button("Block \(message.companionName)", role: .destructive) {
+                showBlockConfirmation = true
+            }
+
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Block \(message.companionName)?", isPresented: $showBlockConfirmation) {
+            Button("Block Profile", role: .destructive) {
+                Task {
+                    await viewModel.blockDiscoveryProfile(discoverySafetyProfile)
+                    viewModel.deleteMessage(message)
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("They won't appear in discovery and this conversation will stop resurfacing.")
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)

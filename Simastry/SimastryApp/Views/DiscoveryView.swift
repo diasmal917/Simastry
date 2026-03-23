@@ -81,7 +81,7 @@ struct DiscoveryView: View {
                         appeared = true
                     }
                 }
-                if AppConfig.socialDiscoveryEnabled && viewModel.discoveredProfiles.isEmpty {
+                if AppConfig.socialDiscoveryEnabled {
                     Task {
                         await viewModel.fetchDiscoverableProfiles()
                     }

@@ -105,6 +105,7 @@ class AppViewModel {
     private let referralInfoKey = "simastry_referral_info"
     private let companionMessagesKey = "simastry_companion_messages"
     private let lastMessageGenerationKey = "simastry_last_message_generation"
+    private let lastDiscoveryMessageTimestampKey = "simastry_last_discovery_message_timestamp"
 
     init() {
         loadReferralInfo()
@@ -465,6 +466,12 @@ class AppViewModel {
         await setupNotifications()
         updateWidgetData()
         await refreshInbox()
+    }
+
+    func refreshRealtimeSurfaces() async {
+        guard isAuthenticated else { return }
+        await notificationService.checkAuthorizationStatus()
+        await refreshInbox(showErrors: false)
     }
 
     // MARK: - Widget Data
@@ -1108,7 +1115,11 @@ class AppViewModel {
         }
     }
 
-    func reportDiscoveryProfile(_ socialProfile: SocialProfile, reason: DiscoveryReportReason) async {
+    func reportDiscoveryProfile(
+        _ socialProfile: SocialProfile,
+        reason: DiscoveryReportReason,
+        details: String? = nil
+    ) async {
         guard AppConfig.socialDiscoveryEnabled else { return }
         let fallbackCurrentUserId = await supabase.currentUserId
         let currentUserId = profile?.id ?? fallbackCurrentUserId
@@ -1122,7 +1133,7 @@ class AppViewModel {
             reporterId: currentUserId,
             reportedId: socialProfile.id,
             reason: reason.rawValue,
-            details: nil,
+            details: details,
             createdAt: Date()
         )
 
@@ -1164,7 +1175,7 @@ class AppViewModel {
             return
         }
 
-        let previousDiscoveryMessageIDs = Set(discoveryMessages.map(\.id))
+        let previousDiscoveryTimestamp = UserDefaults.standard.object(forKey: lastDiscoveryMessageTimestampKey) as? Date
         let fallbackCurrentUserId = await supabase.currentUserId
         let currentUserId = profile?.id ?? fallbackCurrentUserId
         guard let currentUserId else {
@@ -1179,17 +1190,20 @@ class AppViewModel {
 
             mergeDiscoveryInboxMessages(remoteMessages)
 
-            let newlyArrivedMessages = remoteMessages.filter {
-                $0.direction == .incoming &&
-                !$0.isRead &&
-                !previousDiscoveryMessageIDs.contains($0.id)
+            let newlyArrivedMessages = remoteMessages.filter { message in
+                message.direction == .incoming &&
+                !message.isRead &&
+                (previousDiscoveryTimestamp.map { message.timestamp > $0 } ?? false)
             }
-            if !previousDiscoveryMessageIDs.isEmpty,
-               let newestArrival = newlyArrivedMessages.max(by: { $0.timestamp < $1.timestamp }) {
+            if let newestArrival = newlyArrivedMessages.max(by: { $0.timestamp < $1.timestamp }) {
                 notificationService.scheduleDiscoveryMessageAlert(
                     senderName: newestArrival.companionName,
                     preview: newestArrival.content
                 )
+            }
+
+            if let newestTimestamp = remoteMessages.map(\.timestamp).max() {
+                UserDefaults.standard.set(newestTimestamp, forKey: lastDiscoveryMessageTimestampKey)
             }
         } catch {
             CrashReporter.log(error, context: "loadDiscoveryInboxMessages")
@@ -1369,23 +1383,6 @@ class AppViewModel {
             [.earth, .earth], [.air, .air], [.water, .water]
         ]
         return compatiblePairs.contains([userSun.element, companionSun.element])
-    }
-
-    private func generateMockProfiles() -> [SocialProfile] {
-        let names = ["Alex", "Jordan", "Sam", "Riley", "Casey", "Morgan", "Taylor", "Quinn", "Avery", "Sage", "River", "Phoenix"]
-        let signs = ZodiacSign.allCases
-        return names.enumerated().map { index, name in
-            SocialProfile(
-                id: UUID(),
-                displayName: name,
-                sunSign: signs[index % signs.count].rawValue,
-                moonSign: signs[(index + 4) % signs.count].rawValue,
-                risingSign: signs[(index + 8) % signs.count].rawValue,
-                bio: nil,
-                isVisible: true,
-                createdAt: Date()
-            )
-        }
     }
 
     // MARK: - Saved Guides
@@ -1698,6 +1695,7 @@ class AppViewModel {
         defaults.removeObject(forKey: referralInfoKey)
         defaults.removeObject(forKey: thirdPartyConsentKey)
         defaults.removeObject(forKey: profileImageURLKey)
+        defaults.removeObject(forKey: lastDiscoveryMessageTimestampKey)
 
         deleteProfileImage()
     }

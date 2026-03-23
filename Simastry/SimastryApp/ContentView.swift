@@ -51,6 +51,10 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background {
                 AnalyticsService.shared.endSession()
+            } else if newPhase == .active {
+                Task {
+                    await viewModel.refreshRealtimeSurfaces()
+                }
             }
         }
         .sheet(isPresented: $viewModel.showUpsell) {
