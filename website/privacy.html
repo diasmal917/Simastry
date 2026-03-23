@@ -11,18 +11,29 @@
 </head>
 <body>
 
-  <div class="starfield" aria-hidden="true">
-    <div class="star-layer"></div>
+  <!-- Video Background -->
+  <div class="video-bg" aria-hidden="true">
+    <video autoplay muted loop playsinline>
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4" type="video/mp4">
+    </video>
+    <div class="overlay"></div>
   </div>
 
   <!-- Navigation -->
-  <nav class="nav scrolled">
+  <nav class="nav scrolled" id="nav">
     <div class="nav-inner">
-      <a href="/" class="nav-logo">Sim<span>astry</span></a>
+      <a href="/" class="nav-logo">Simastry</a>
       <ul class="nav-links" id="navLinks">
-        <li><a href="/">Home</a></li>
-        <li><a href="/privacy">Privacy</a></li>
-        <li><a href="/terms">Terms</a></li>
+        <li><a href="/#features">Features</a></li>
+        <li><a href="/#community">Community</a></li>
+        <li><a href="/#how-it-works">How It Works</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="/#trust">For Astrologers</a></li>
+        <li>
+          <a href="https://simastry.com" class="nav-cta">
+            <span class="nav-cta-inner">Download</span>
+          </a>
+        </li>
       </ul>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
         <span></span><span></span><span></span>
@@ -30,110 +41,119 @@
     </div>
   </nav>
 
+  <!-- Legal Content -->
   <section class="legal-page">
     <div class="container">
-      <h1>Privacy Policy</h1>
-      <p class="last-updated">Last updated: March 2026</p>
+      <div class="legal-card">
+        <div class="legal-breadcrumb">
+          <a href="/">Home</a>
+          <span class="sep">/</span>
+          <span>Privacy Policy</span>
+        </div>
 
-      <p>Simastry ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and website (collectively, the "Service").</p>
+        <h1>Privacy Policy</h1>
+        <p class="last-updated">Last updated: March 2026</p>
 
-      <h2>1. Information We Collect</h2>
-      <p>We collect information that you provide directly to us when using Simastry:</p>
-      <ul>
-        <li><strong>Account Information:</strong> Email address used for account creation and authentication.</li>
-        <li><strong>Birth Data:</strong> Birth date, birth time (optional), and birth location. This information is used solely to calculate your astrological sign placements (Sun, Moon, Rising, and other planetary positions).</li>
-        <li><strong>Companion Data:</strong> Names and birth information of people you add to the app. You are responsible for having appropriate permission to enter another person's birth data.</li>
-        <li><strong>Usage Data:</strong> How you interact with the app, including features used and conversation data submitted for predictions. Conversation data is processed in real-time and not stored on our servers.</li>
-      </ul>
+        <p>Simastry ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and website (collectively, the "Service").</p>
 
-      <h2>2. What We Do NOT Do</h2>
-      <p>We believe in being transparent about our data practices. We want to be equally clear about what we do not do:</p>
-      <ul>
-        <li>We do <strong>not sell</strong> your personal data to any third parties.</li>
-        <li>We do <strong>not share</strong> your data with advertisers or ad networks.</li>
-        <li>We do <strong>not run advertisements</strong> in our app.</li>
-        <li>We do <strong>not track</strong> you for advertising purposes across other apps or websites.</li>
-        <li>We do <strong>not use</strong> your birth data for any purpose other than providing you with astrological insights.</li>
-      </ul>
+        <h2>1. Information We Collect</h2>
+        <p>We collect information that you provide directly to us when using Simastry:</p>
+        <ul>
+          <li><strong>Account Information:</strong> Email address used for account creation and authentication.</li>
+          <li><strong>Birth Data:</strong> Birth date, birth time (optional), and birth location. This information is used solely to calculate your astrological sign placements (Sun, Moon, Rising, and other planetary positions).</li>
+          <li><strong>Companion Data:</strong> Names and birth information of people you add to the app. You are responsible for having appropriate permission to enter another person's birth data.</li>
+          <li><strong>Usage Data:</strong> How you interact with the app, including features used and conversation data submitted for predictions. Conversation data is processed in real-time and not stored on our servers.</li>
+        </ul>
 
-      <h2>3. AI Disclosure</h2>
-      <p>Simastry uses artificial intelligence to generate astrological insights, communication predictions, and compatibility analyses. Our AI features are powered by <strong>Claude, developed by Anthropic</strong>. When you use prediction features:</p>
-      <ul>
-        <li>Conversation text you submit is sent to our AI provider for processing.</li>
-        <li>This data is processed in accordance with Anthropic's data usage policies and is not used to train AI models.</li>
-        <li>AI-generated insights are pattern-based and should not be treated as professional advice.</li>
-      </ul>
+        <h2>2. What We Do NOT Do</h2>
+        <p>We believe in being transparent about our data practices. We want to be equally clear about what we do not do:</p>
+        <ul>
+          <li>We do <strong>not sell</strong> your personal data to any third parties.</li>
+          <li>We do <strong>not share</strong> your data with advertisers or ad networks.</li>
+          <li>We do <strong>not run advertisements</strong> in our app.</li>
+          <li>We do <strong>not track</strong> you for advertising purposes across other apps or websites.</li>
+          <li>We do <strong>not use</strong> your birth data for any purpose other than providing you with astrological insights.</li>
+        </ul>
 
-      <h2>4. Third-Party Services</h2>
-      <p>We use the following third-party services to operate Simastry:</p>
-      <ul>
-        <li><strong>Supabase:</strong> Cloud database and authentication. Your account information and birth data are stored securely using Supabase's infrastructure with row-level security policies. <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase Privacy Policy</a></li>
-        <li><strong>RevenueCat:</strong> Subscription management and in-app purchases. RevenueCat processes your purchase transactions but does not have access to your astrological or personal data. <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat Privacy Policy</a></li>
-        <li><strong>Anthropic (Claude AI):</strong> AI-powered insights and predictions. Conversation data is processed per-request and not retained. <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Anthropic Privacy Policy</a></li>
-      </ul>
+        <h2>3. AI Disclosure</h2>
+        <p>Simastry uses artificial intelligence to generate astrological insights, communication predictions, and compatibility analyses. Our AI features are powered by <strong>Claude, developed by Anthropic</strong>. When you use prediction features:</p>
+        <ul>
+          <li>Conversation text you submit is sent to our AI provider for processing.</li>
+          <li>This data is processed in accordance with Anthropic's data usage policies and is not used to train AI models.</li>
+          <li>AI-generated insights are pattern-based and should not be treated as professional advice.</li>
+        </ul>
 
-      <h2>5. How We Use Your Information</h2>
-      <p>We use the information we collect to:</p>
-      <ul>
-        <li>Calculate and display your astrological sign placements.</li>
-        <li>Generate compatibility analyses between you and your companions.</li>
-        <li>Provide AI-powered communication predictions and insights.</li>
-        <li>Create personalized communication guides.</li>
-        <li>Send you relevant notifications about your daily insights (if opted in).</li>
-        <li>Process your subscription and manage your account.</li>
-        <li>Improve and develop new features for the Service.</li>
-      </ul>
+        <h2>4. Third-Party Services</h2>
+        <p>We use the following third-party services to operate Simastry:</p>
+        <ul>
+          <li><strong>Supabase:</strong> Cloud database and authentication. Your account information and birth data are stored securely using Supabase's infrastructure with row-level security policies. <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase Privacy Policy</a></li>
+          <li><strong>RevenueCat:</strong> Subscription management and in-app purchases. RevenueCat processes your purchase transactions but does not have access to your astrological or personal data. <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat Privacy Policy</a></li>
+          <li><strong>Anthropic (Claude AI):</strong> AI-powered insights and predictions. Conversation data is processed per-request and not retained. <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Anthropic Privacy Policy</a></li>
+        </ul>
 
-      <h2>6. Data Security</h2>
-      <p>We implement appropriate technical and organizational security measures to protect your personal information, including:</p>
-      <ul>
-        <li>Encryption of data in transit (TLS/SSL) and at rest.</li>
-        <li>Row-level security policies ensuring users can only access their own data.</li>
-        <li>Regular security reviews and updates.</li>
-        <li>Minimal data collection &mdash; we only collect what is necessary to provide the Service.</li>
-      </ul>
+        <h2>5. How We Use Your Information</h2>
+        <p>We use the information we collect to:</p>
+        <ul>
+          <li>Calculate and display your astrological sign placements.</li>
+          <li>Generate compatibility analyses between you and your companions.</li>
+          <li>Provide AI-powered communication predictions and insights.</li>
+          <li>Create personalized communication guides.</li>
+          <li>Send you relevant notifications about your daily insights (if opted in).</li>
+          <li>Process your subscription and manage your account.</li>
+          <li>Improve and develop new features for the Service.</li>
+        </ul>
 
-      <h2>7. Data Retention and Deletion</h2>
-      <p>We retain your personal data for as long as your account is active or as needed to provide the Service. You may request deletion of your data at any time:</p>
-      <ul>
-        <li><strong>Account deletion:</strong> You can delete your account from within the app settings. This permanently removes all your personal data, birth information, companions, and generated insights.</li>
-        <li><strong>Data export:</strong> You may request a copy of your data by contacting us at <a href="mailto:privacy@simastry.com">privacy@simastry.com</a>.</li>
-        <li><strong>Companion removal:</strong> You can delete individual companion profiles at any time from within the app.</li>
-      </ul>
+        <h2>6. Data Security</h2>
+        <p>We implement appropriate technical and organizational security measures to protect your personal information, including:</p>
+        <ul>
+          <li>Encryption of data in transit (TLS/SSL) and at rest.</li>
+          <li>Row-level security policies ensuring users can only access their own data.</li>
+          <li>Regular security reviews and updates.</li>
+          <li>Minimal data collection &mdash; we only collect what is necessary to provide the Service.</li>
+        </ul>
 
-      <h2>8. Your Rights</h2>
-      <p>Depending on your location, you may have the following rights regarding your personal data:</p>
+        <h2>7. Data Retention and Deletion</h2>
+        <p>We retain your personal data for as long as your account is active or as needed to provide the Service. You may request deletion of your data at any time:</p>
+        <ul>
+          <li><strong>Account deletion:</strong> You can delete your account from within the app settings. This permanently removes all your personal data, birth information, companions, and generated insights.</li>
+          <li><strong>Data export:</strong> You may request a copy of your data by contacting us at <a href="mailto:privacy@simastry.com">privacy@simastry.com</a>.</li>
+          <li><strong>Companion removal:</strong> You can delete individual companion profiles at any time from within the app.</li>
+        </ul>
 
-      <p><strong>GDPR (European Economic Area):</strong></p>
-      <ul>
-        <li>Right to access your personal data.</li>
-        <li>Right to rectification of inaccurate data.</li>
-        <li>Right to erasure ("right to be forgotten").</li>
-        <li>Right to restrict processing.</li>
-        <li>Right to data portability.</li>
-        <li>Right to object to processing.</li>
-      </ul>
+        <h2>8. Your Rights</h2>
+        <p>Depending on your location, you may have the following rights regarding your personal data:</p>
 
-      <p><strong>CCPA (California):</strong></p>
-      <ul>
-        <li>Right to know what personal information we collect, use, and disclose.</li>
-        <li>Right to delete your personal information.</li>
-        <li>Right to opt out of the sale of personal information (we do not sell your data).</li>
-        <li>Right to non-discrimination for exercising your privacy rights.</li>
-      </ul>
+        <p><strong>GDPR (European Economic Area):</strong></p>
+        <ul>
+          <li>Right to access your personal data.</li>
+          <li>Right to rectification of inaccurate data.</li>
+          <li>Right to erasure ("right to be forgotten").</li>
+          <li>Right to restrict processing.</li>
+          <li>Right to data portability.</li>
+          <li>Right to object to processing.</li>
+        </ul>
 
-      <h2>9. Children's Privacy</h2>
-      <p>Simastry is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us at <a href="mailto:privacy@simastry.com">privacy@simastry.com</a>.</p>
+        <p><strong>CCPA (California):</strong></p>
+        <ul>
+          <li>Right to know what personal information we collect, use, and disclose.</li>
+          <li>Right to delete your personal information.</li>
+          <li>Right to opt out of the sale of personal information (we do not sell your data).</li>
+          <li>Right to non-discrimination for exercising your privacy rights.</li>
+        </ul>
 
-      <h2>10. Changes to This Policy</h2>
-      <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new Privacy Policy on this page and updating the "Last updated" date. Your continued use of the Service after any changes constitutes your acceptance of the updated policy.</p>
+        <h2>9. Children's Privacy</h2>
+        <p>Simastry is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us at <a href="mailto:privacy@simastry.com">privacy@simastry.com</a>.</p>
 
-      <h2>11. Contact Us</h2>
-      <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
-      <ul>
-        <li>Email: <a href="mailto:privacy@simastry.com">privacy@simastry.com</a></li>
-        <li>Website: <a href="https://simastry.com">simastry.com</a></li>
-      </ul>
+        <h2>10. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new Privacy Policy on this page and updating the "Last updated" date. Your continued use of the Service after any changes constitutes your acceptance of the updated policy.</p>
+
+        <h2>11. Contact Us</h2>
+        <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
+        <ul>
+          <li>Email: <a href="mailto:privacy@simastry.com">privacy@simastry.com</a></li>
+          <li>Website: <a href="https://simastry.com">simastry.com</a></li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -141,17 +161,35 @@
   <footer class="footer">
     <div class="container">
       <div class="footer-inner">
-        <a href="/" class="footer-logo">Sim<span>astry</span></a>
+        <a href="/" class="footer-logo">Simastry</a>
         <ul class="footer-links">
-          <li><a href="/privacy">Privacy Policy</a></li>
-          <li><a href="/terms">Terms of Service</a></li>
+          <li><a href="/#features">Features</a></li>
+          <li><a href="/#community">Community</a></li>
+          <li><a href="/#how-it-works">How It Works</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#trust">For Astrologers</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
           <li><a href="mailto:hello@simastry.com">Contact</a></li>
         </ul>
+        <div class="footer-social">
+          <a href="https://instagram.com/simastry" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+          <a href="https://tiktok.com/@simastry" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.73a8.19 8.19 0 004.76 1.52V6.8a4.84 4.84 0 01-1-.11z"/></svg>
+          </a>
+          <a href="https://x.com/simastry" aria-label="X (Twitter)" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+        </div>
+        <p class="footer-made">Made with &#10024; by Simastry</p>
         <p class="footer-bottom">&copy; 2026 Simastry. All rights reserved.</p>
       </div>
     </div>
   </footer>
 
+  <!-- JS -->
   <script>
     const navToggle = document.getElementById('navToggle');
     const navLinks = document.getElementById('navLinks');
