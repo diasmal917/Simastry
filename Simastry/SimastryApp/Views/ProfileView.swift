@@ -34,7 +34,9 @@ nonisolated private enum ProfileSheet: Identifiable {
 
 struct ProfileView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var showSignOutConfirmation: Bool = false
+    @State private var showLanguagePicker: Bool = false
     @State private var tapCount: Int = 0
     @State private var expandedRoles: Set<CelestialRole> = []
     @State private var appeared: Bool = false
@@ -75,6 +77,8 @@ struct ProfileView: View {
                         subscriptionSection
 
                         themeToggle
+
+                        languageSelector
 
                         aboutOurApproachSection
 
@@ -621,7 +625,7 @@ struct ProfileView: View {
 
     private var themeToggle: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Appearance")
+            Text(localization.string("profile.appearance"))
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
 
@@ -636,7 +640,7 @@ struct ProfileView: View {
                         .font(.system(size: 14))
                         .foregroundStyle(SimastryColor.gold)
                         .contentTransition(.symbolEffect(.replace))
-                    Text(viewModel.isDarkMode ? "Dark" : "Light")
+                    Text(viewModel.isDarkMode ? localization.string("profile.dark") : localization.string("profile.light"))
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                 }
@@ -645,18 +649,111 @@ struct ProfileView: View {
                 .simastryGlassPill()
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Toggle dark mode")
-            .accessibilityValue(viewModel.isDarkMode ? "Dark mode" : "Light mode")
+            .accessibilityLabel(localization.string("profile.darkMode"))
+            .accessibilityValue(viewModel.isDarkMode ? localization.string("profile.dark") : localization.string("profile.light"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Language Selector
+
+    private var languageSelector: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(localization.string("profile.language"))
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            Button(action: {
+                HapticManager.buttonPress()
+                showLanguagePicker = true
+            }) {
+                HStack(spacing: 10) {
+                    Text(localization.currentLanguage.flag)
+                        .font(.system(size: 16))
+                    Text(localization.currentLanguage.displayName)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .simastryGlassPill()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localization.string("profile.language"))
+            .accessibilityValue(localization.currentLanguage.displayName)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(appeared ? 1 : 0)
+        .sheet(isPresented: $showLanguagePicker) {
+            languagePickerSheet
+        }
+    }
+
+    private var languagePickerSheet: some View {
+        NavigationStack {
+            ZStack {
+                CelestialBackground()
+
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(LocalizationManager.Language.allCases) { language in
+                            Button(action: {
+                                HapticManager.buttonPress()
+                                withAnimation(.spring(SimastrySpring.snappy)) {
+                                    localization.currentLanguage = language
+                                }
+                                showLanguagePicker = false
+                            }) {
+                                HStack(spacing: 14) {
+                                    Text(language.flag)
+                                        .font(.system(size: 24))
+
+                                    Text(language.displayName)
+                                        .font(SimastryFont.titleSmall)
+                                        .foregroundStyle(SimastryColor.offWhite)
+
+                                    Spacer()
+
+                                    if localization.currentLanguage == language {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(SimastryColor.gold)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 16)
+                                .simastryGlass(cornerRadius: 16)
+                            }
+                            .buttonStyle(SpringPressStyle())
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                }
+            }
+            .navigationTitle(localization.string("profile.selectLanguage"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(localization.string("common.cancel")) {
+                        showLanguagePicker = false
+                    }
+                    .foregroundStyle(SimastryColor.gold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     // MARK: - About Our Approach
 
     private var aboutOurApproachSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("About Our Approach")
+            Text(localization.string("profile.aboutApproach"))
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
 
@@ -669,7 +766,7 @@ struct ProfileView: View {
                         .foregroundStyle(SimastryColor.gold)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("How Simastry Works")
+                        Text(localization.string("profile.methodology"))
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                         Text("Methodology, AI disclosure & privacy")
@@ -1002,7 +1099,7 @@ struct ProfileView: View {
             }
 
             Button(action: { showSignOutConfirmation = true }) {
-                Text("Sign Out")
+                Text(localization.string("profile.signOut"))
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(.red.opacity(0.8))
                     .frame(maxWidth: .infinity)

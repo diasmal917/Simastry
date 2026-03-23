@@ -146,6 +146,17 @@ struct CompanionsView: View {
             }
 
             Section {
+                if FeatureTipManager.shared.shouldShow(.companionDetail) {
+                    FeatureTipView(
+                        icon: "chart.bar.fill",
+                        title: "Tap for Details",
+                        message: "Tap any companion to see why you\u{2019}re compatible, with a breakdown of your Sun, Moon, and Rising connections.",
+                        tip: .companionDetail
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                }
+
                 ForEach(viewModel.companions) { companion in
                     companionRow(companion)
                         .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))

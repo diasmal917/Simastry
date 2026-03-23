@@ -264,6 +264,7 @@ struct SimulationResultView: View {
     private var shareResultButton: some View {
         Button {
             HapticManager.buttonPress()
+            AnalyticsService.shared.track(.predictionShared)
             showShareCard = true
         } label: {
             HStack(spacing: 8) {
@@ -278,6 +279,13 @@ struct SimulationResultView: View {
             .goldGlassPill()
         }
         .buttonStyle(SpringPressStyle())
+        .featureTip(
+            icon: "square.and.arrow.up",
+            title: "Share Your Reading",
+            body: "Share your prediction card on Instagram or TikTok \u{2014} your friends will want their own.",
+            tip: .shareCard,
+            delay: 1.0
+        )
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
     }

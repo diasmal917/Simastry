@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AgeGateView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var appeared: Bool = false
     @State private var showUnderageMessage: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -31,11 +32,11 @@ struct AgeGateView: View {
 
                 // Heading
                 VStack(spacing: 12) {
-                    Text("Welcome to Simastry")
+                    Text(localization.string("ageGate.welcome"))
                         .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text("To use Simastry, please confirm your age.")
+                    Text(localization.string("ageGate.confirm"))
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
@@ -52,7 +53,7 @@ struct AgeGateView: View {
                             .font(.system(size: 32))
                             .foregroundStyle(SimastryColor.risingViolet)
 
-                        Text("Simastry is designed for users 13 and older. Please come back when you're old enough!")
+                        Text(localization.string("ageGate.underage"))
                             .font(SimastryFont.bodySmall)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .multilineTextAlignment(.center)
@@ -65,7 +66,7 @@ struct AgeGateView: View {
                 } else {
                     // Buttons
                     VStack(spacing: 14) {
-                        GoldButton("I am 13 or older") {
+                        GoldButton(localization.string("ageGate.over13")) {
                             HapticManager.buttonPress()
                             viewModel.verifyAge()
                         }
@@ -76,7 +77,7 @@ struct AgeGateView: View {
                                 showUnderageMessage = true
                             }
                         } label: {
-                            Text("I am under 13")
+                            Text(localization.string("ageGate.under13"))
                                 .font(SimastryFont.bodySmall)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                                 .frame(maxWidth: .infinity)
@@ -91,7 +92,7 @@ struct AgeGateView: View {
                 }
 
                 // Legal note
-                Text("By continuing, you confirm that you are at least 13 years of age.")
+                Text(localization.string("ageGate.legal"))
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.deepMuted)
                     .multilineTextAlignment(.center)

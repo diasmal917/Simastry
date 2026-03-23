@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
@@ -69,6 +70,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             .onAppear {
+                AnalyticsService.shared.track(.appOpened)
                 guard !appeared else { return }
                 if reduceMotion {
                     appeared = true
@@ -292,6 +294,13 @@ struct HomeView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Predict their reply. Paste a conversation and let the stars predict their next text.")
+        .featureTip(
+            icon: "sparkles",
+            title: "Predict Their Reply",
+            body: "Paste a conversation and we'll predict what they'll say next \u{2014} based on your astrological compatibility.",
+            tip: .predictFeature,
+            delay: 1.0
+        )
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
@@ -390,7 +399,7 @@ struct HomeView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(SimastryColor.amber)
 
-                Text("Did you know?")
+                Text(localization.string("home.didYouKnow"))
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.amber)
 
@@ -411,6 +420,7 @@ struct HomeView: View {
             if let feature = nugget.relatedFeature {
                 Button {
                     HapticManager.buttonPress()
+                    AnalyticsService.shared.track(.didYouKnowTapped)
                     switch feature {
                     case "profile":
                         viewModel.selectedTab = 4
@@ -425,7 +435,7 @@ struct HomeView: View {
                     }
                 } label: {
                     HStack(spacing: 4) {
-                        Text("Try it")
+                        Text(localization.string("home.tryIt"))
                             .font(SimastryFont.labelMedium)
                             .foregroundStyle(SimastryColor.amber)
                         Image(systemName: "arrow.right")
@@ -535,7 +545,7 @@ struct HomeView: View {
                     .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: 14))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Saved Guides")
+                    Text(localization.string("home.savedGuides"))
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
@@ -572,8 +582,8 @@ struct HomeView: View {
 
     private var greetingText: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Good morning" }
-        if hour < 17 { return "Good afternoon" }
-        return "Good evening"
+        if hour < 12 { return localization.string("home.goodMorning") }
+        if hour < 17 { return localization.string("home.goodAfternoon") }
+        return localization.string("home.goodEvening")
     }
 }

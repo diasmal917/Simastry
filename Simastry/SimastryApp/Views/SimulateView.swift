@@ -152,6 +152,13 @@ struct SimulateView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 1)
         }
+        .featureTip(
+            icon: "text.bubble",
+            title: "How It Works",
+            body: "Pick someone's sign, paste your conversation, and get a prediction based on how your signs communicate.",
+            tip: .communicationGuide,
+            delay: 0.8
+        )
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
     }
@@ -511,6 +518,14 @@ struct SimulateView: View {
             return
         }
 
+        // Rate limit check
+        let allowed = await viewModel.predictionRateLimiter.checkLimit()
+        if !allowed {
+            let message = await viewModel.predictionRateLimiter.waitMessage()
+            viewModel.showToast("Rate limit reached", subtitle: message, isError: true)
+            return
+        }
+
         // Content moderation check
         let moderation = ContentModerationService.moderateConversation(conversationText)
         if !moderation.isAllowed {
@@ -539,13 +554,16 @@ struct SimulateView: View {
 
         do {
             let result = try await viewModel.predictionService.generatePrediction(request: request, tier: currentTier)
+            await viewModel.predictionRateLimiter.recordAction()
             await viewModel.consumePrediction()
             stopProgressCycle()
             isGenerating = false
             HapticManager.soulFlash()
+            AnalyticsService.shared.track(.predictionGenerated, key: "targetSign", value: selectedSunSign.displayName)
             loadHistory()
             selectedResult = result
         } catch {
+            CrashReporter.log(error, context: "generatePrediction")
             stopProgressCycle()
             isGenerating = false
             let message = (error as? LocalizedError)?.errorDescription ?? "Try again in a moment."

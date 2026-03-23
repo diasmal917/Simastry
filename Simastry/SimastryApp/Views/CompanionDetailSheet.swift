@@ -51,6 +51,7 @@ struct CompanionDetailSheet: View {
             }
         }
         .onAppear {
+            AnalyticsService.shared.track(.companionDetailViewed)
             if reduceMotion {
                 appeared = true
             } else {

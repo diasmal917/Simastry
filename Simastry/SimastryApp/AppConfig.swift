@@ -10,6 +10,12 @@ nonisolated enum AppConfig {
     static let EXPO_PUBLIC_TEAM_ID: String = Config.EXPO_PUBLIC_TEAM_ID
     static let EXPO_PUBLIC_TOOLKIT_URL: String = Config.EXPO_PUBLIC_TOOLKIT_URL
 
+    // TelemetryDeck (privacy-first analytics)
+    static let telemetryDeckAppID = "" // Add your TelemetryDeck app ID here
+
+    // Rate limiting (API cost protection)
+    static let predictionRateLimit = (perMinute: 3, perHour: 20, perDay: 50)
+
     // Astrology tradition
     static let astrologyTradition = "Western Tropical Synastry"
 

@@ -45,9 +45,15 @@ class AppViewModel {
     var isAgeVerified: Bool = UserDefaults.standard.bool(forKey: "ageVerified")
     var hasAcceptedThirdPartyConsent: Bool = UserDefaults.standard.bool(forKey: "thirdPartyDataConsent")
 
+    let analytics = AnalyticsService.shared
     let supabase = SupabaseService()
     let notificationService = NotificationService()
     let predictionService = PredictionService()
+    let predictionRateLimiter = RateLimiter(config: .init(
+        maxPerMinute: AppConfig.predictionRateLimit.perMinute,
+        maxPerHour: AppConfig.predictionRateLimit.perHour,
+        maxPerDay: AppConfig.predictionRateLimit.perDay
+    ))
     private let pendingOnboardingChartKey = "simastry_pending_onboarding_chart"
     private let referralInfoKey = "simastry_referral_info"
 
@@ -106,6 +112,9 @@ class AppViewModel {
         }
 
         isAuthenticated = true
+        if let userId = await supabase.currentUserId {
+            CrashReporter.setUser(id: userId.uuidString)
+        }
         await navigateAfterAuth()
     }
 
@@ -121,9 +130,11 @@ class AppViewModel {
             do {
                 try await supabase.signInWithApple(idToken: tokenString)
                 isAuthenticated = true
+                analytics.track(.signInApple)
                 await navigateAfterAuth()
                 showToast("Welcome back", subtitle: "You're signed in with Apple", isError: false)
             } catch {
+                CrashReporter.log(error, context: "signInWithApple")
                 showToast("Couldn't sign in", subtitle: providerErrorSubtitle(for: "Apple"), isError: true)
             }
         case .failure:
@@ -134,10 +145,12 @@ class AppViewModel {
     func signInWithGoogle() async {
         do {
             try await supabase.signInWithGoogle()
+            analytics.track(.signInGoogle)
             // Don't mark authenticated here — OAuth opens a browser.
             // The real session is established when the callback URL fires
             // through handleIncomingURL → handleAuthCallback → checkAuthState.
         } catch {
+            CrashReporter.log(error, context: "signInWithGoogle")
             showToast("Couldn't sign in", subtitle: providerErrorSubtitle(for: "Google"), isError: true)
         }
     }
@@ -156,6 +169,7 @@ class AppViewModel {
         do {
             try await supabase.signInWithEmail(email: credentials.email, password: credentials.password)
             isAuthenticated = true
+            analytics.track(.signInEmail)
             await navigateAfterAuth()
             showToast("Welcome back", subtitle: "You're signed in", isError: false)
         } catch {
@@ -182,6 +196,7 @@ class AppViewModel {
             let isAuthenticatedNow = try await supabase.signUpWithEmail(email: credentials.email, password: credentials.password)
             if isAuthenticatedNow {
                 isAuthenticated = true
+                analytics.track(.signUpEmail)
                 await navigateAfterAuth()
                 showToast("Welcome to Simastry", subtitle: "Your account is ready", isError: false)
             } else {
@@ -193,6 +208,7 @@ class AppViewModel {
     }
 
     func signOut() async {
+        analytics.track(.signOut)
         do {
             try await supabase.signOut()
         } catch {
@@ -405,6 +421,7 @@ class AppViewModel {
     }
 
     func deleteCompanion(_ companion: CompanionData) async {
+        analytics.track(.companionDeleted)
         companions.removeAll { $0.id == companion.id }
         do {
             try await supabase.deleteCompanion(id: companion.id)
@@ -606,6 +623,9 @@ class AppViewModel {
         syncHomeSetupPhase()
         selectedTab = 0
         currentScreen = .home
+        if homeSetupPhase == .complete {
+            analytics.track(.onboardingCompleted)
+        }
         await setupNotifications()
         updateWidgetData()
 
@@ -685,10 +705,12 @@ class AppViewModel {
         do {
             try await supabase.insertCompanion(companion)
         } catch {
+            CrashReporter.log(error, context: "createCompanion")
             showToast("Couldn't create companion", subtitle: "Try again in a moment", isError: true)
             companions.removeAll { $0.id == companion.id }
             return
         }
+        analytics.track(.companionCreated)
         syncHomeSetupPhase()
         await setupNotifications()
         updateWidgetData()
@@ -732,10 +754,12 @@ class AppViewModel {
         let guide = SavedGuide(name: name, sunSign: sunSign, category: category, notes: notes)
         savedGuides.append(guide)
         persistSavedGuides()
+        analytics.track(.guideSaved)
         showToast("Guide saved", subtitle: "\(name)'s communication guide is ready", isError: false)
     }
 
     func deleteGuide(_ guide: SavedGuide) {
+        analytics.track(.guideDeleted)
         savedGuides.removeAll { $0.id == guide.id }
         persistSavedGuides()
     }
@@ -833,6 +857,7 @@ class AppViewModel {
         do {
             profile = try await supabase.fetchProfile()
         } catch {
+            CrashReporter.log(error, context: "fetchProfile")
             profile = nil
             showToast("Couldn't load profile", subtitle: "Some saved details may be unavailable right now.", isError: true)
         }
@@ -855,6 +880,7 @@ class AppViewModel {
         do {
             companions = try await supabase.fetchCompanions()
         } catch {
+            CrashReporter.log(error, context: "fetchCompanions")
             companions = []
             showToast("Couldn't load companions", subtitle: "Your circle may be incomplete until the connection returns.", isError: true)
         }

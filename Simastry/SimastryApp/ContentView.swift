@@ -3,6 +3,7 @@ import Foundation
 
 struct ContentView: View {
     @State private var viewModel = AppViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -46,6 +47,11 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .simastryDeepLinkReceived)) { notification in
             guard let url = notification.object as? URL else { return }
             viewModel.handleDeepLink(url)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background {
+                AnalyticsService.shared.endSession()
+            }
         }
         .sheet(isPresented: $viewModel.showUpsell) {
             UpsellModalView(viewModel: viewModel)

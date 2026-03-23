@@ -7,6 +7,9 @@ struct SimastryAppApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
+        // Initialize crash reporting
+        CrashReporter.configure()
+
         // Initialize Swiss Ephemeris for birth chart calculations
         BirthChartService.setup()
 

@@ -38,6 +38,7 @@ struct UpsellModalView: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task {
+            AnalyticsService.shared.track(.upsellShown)
             if isRevenueCatAvailable {
                 offerings = try? await Purchases.shared.offerings()
             }
@@ -48,6 +49,9 @@ struct UpsellModalView: View {
                     appeared = true
                 }
             }
+        }
+        .onDisappear {
+            AnalyticsService.shared.track(.upsellDismissed)
         }
     }
 

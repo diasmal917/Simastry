@@ -290,6 +290,13 @@ struct GuidesView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("My saved communication guides. \(viewModel.savedGuides.count) saved.")
+        .featureTip(
+            icon: "person.2.fill",
+            title: "Save People You Talk To",
+            body: "Save communication guides for your boss, siblings, friends \u{2014} anyone you want to understand better.",
+            tip: .savedGuides,
+            delay: 0.8
+        )
     }
 
     private var selectedGuideSubtitle: String {

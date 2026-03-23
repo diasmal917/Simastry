@@ -42,6 +42,7 @@ private let onboardingPages: [OnboardingPage] = [
 
 struct LandingView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var fallingStars: [FallingStar] = []
@@ -218,7 +219,7 @@ struct LandingView: View {
 
     private var foregroundPanel: some View {
         VStack(spacing: 14) {
-            GoldButton("Get Started") {
+            GoldButton(localization.string("landing.getStarted")) {
                 withAnimation(.spring(SimastrySpring.smooth)) {
                     viewModel.currentScreen = .birthDetails
                 }
@@ -231,7 +232,7 @@ struct LandingView: View {
                     viewModel.currentScreen = .signIn
                 }
             } label: {
-                Text("I already have an account")
+                Text(localization.string("landing.alreadyHaveAccount"))
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(.white.opacity(0.75))
             }
@@ -239,16 +240,16 @@ struct LandingView: View {
             .accessibilityLabel("Sign in to existing account")
 
             HStack(spacing: 4) {
-                Text("By continuing, you agree to our")
+                Text(localization.string("landing.legalPrefix"))
                     .font(SimastryFont.caption)
                     .foregroundStyle(.white.opacity(0.78))
-                Link("Terms", destination: AppConfig.termsOfServiceURL)
+                Link(localization.string("landing.terms"), destination: AppConfig.termsOfServiceURL)
                     .font(SimastryFont.labelSmall)
                     .foregroundStyle(.white.opacity(0.86))
                 Text("&")
                     .font(SimastryFont.caption)
                     .foregroundStyle(.white.opacity(0.78))
-                Link("Privacy", destination: AppConfig.privacyPolicyURL)
+                Link(localization.string("landing.privacy"), destination: AppConfig.privacyPolicyURL)
                     .font(SimastryFont.labelSmall)
                     .foregroundStyle(.white.opacity(0.86))
             }
@@ -257,7 +258,7 @@ struct LandingView: View {
             HStack(spacing: 4) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 9, weight: .medium))
-                Text("Your birth data is never sold or shared")
+                Text(localization.string("landing.privacyBadge"))
                     .font(SimastryFont.captionSmall)
             }
             .foregroundStyle(SimastryColor.mutedSilver)
