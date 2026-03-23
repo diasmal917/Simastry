@@ -1,6 +1,7 @@
 import SwiftUI
 import AuthenticationServices
 import RevenueCat
+import WidgetKit
 
 @MainActor
 @Observable
@@ -26,6 +27,7 @@ class AppViewModel {
     var onboardingBirthTime: Date?
     var onboardingBirthplace: String?
 
+    var savedGuides: [SavedGuide] = []
     var toastMessage: ToastMessage?
     var isDarkMode: Bool = UserDefaults.standard.object(forKey: "simastry_dark_mode") == nil ? true : UserDefaults.standard.bool(forKey: "simastry_dark_mode") {
         didSet {
@@ -35,6 +37,7 @@ class AppViewModel {
     var showUpsell: Bool = false
     var selectedTab: Int = 0
     var pendingDeepLinkURL: URL?
+    var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
 
     let supabase = SupabaseService()
@@ -69,6 +72,7 @@ class AppViewModel {
             showUpsell = false
             selectedTab = 0
             pendingDeepLinkURL = nil
+            pendingDeepLink = nil
             guideFocusSign = nil
             resetSetupState()
             homeSetupPhase = .modeSelection
@@ -172,12 +176,15 @@ class AppViewModel {
         }
         notificationService.clearScheduledNotifications()
         clearPendingOnboardingChart()
+        SharedDefaults.clearAll()
+        WidgetCenter.shared.reloadAllTimelines()
         isAuthenticated = false
         profile = nil
         companions = []
         showUpsell = false
         selectedTab = 0
         pendingDeepLinkURL = nil
+        pendingDeepLink = nil
         guideFocusSign = nil
         resetSetupState()
         homeSetupPhase = .modeSelection
@@ -199,6 +206,13 @@ class AppViewModel {
     }
 
     func handleDeepLink(_ url: URL) {
+        // Try parsing as a virality deep link (compatibility / guide)
+        if let deepLink = DeepLink.from(url: url) {
+            navigateToDeepLink(deepLink)
+            return
+        }
+
+        // Fall back to legacy simple tab-switching links (simastry://home, etc.)
         guard url.scheme == "simastry" else { return }
 
         guard isAuthenticated else {
@@ -224,6 +238,36 @@ class AppViewModel {
         }
     }
 
+    /// Navigates to a parsed `DeepLink`, or stores it as pending when
+    /// the user has not yet authenticated (virality funnel).
+    func navigateToDeepLink(_ deepLink: DeepLink) {
+        guard isAuthenticated else {
+            pendingDeepLink = deepLink
+            pendingDeepLinkURL = deepLink.customSchemeURL
+            return
+        }
+
+        pendingDeepLink = nil
+
+        switch deepLink {
+        case .compatibility(_, let companionSign):
+            // Navigate to the Guides tab and focus on the companion sign
+            if let sign = ZodiacSign(rawValue: companionSign) {
+                guideFocusSign = sign
+            }
+            selectedTab = 3
+
+        case .guide(let sign):
+            if let zodiac = ZodiacSign(rawValue: sign) {
+                guideFocusSign = zodiac
+            }
+            selectedTab = 3
+
+        case .home:
+            selectedTab = 0
+        }
+    }
+
     func updateCompatibilityScore(for companion: CompanionData) async {
         guard let index = companions.firstIndex(where: { $0.id == companion.id }) else { return }
 
@@ -246,6 +290,33 @@ class AppViewModel {
         await checkSubscriptionStatus()
         syncHomeSetupPhase()
         await setupNotifications()
+        updateWidgetData()
+    }
+
+    // MARK: - Widget Data
+
+    func updateWidgetData() {
+        guard let topCompanion = companions.first else {
+            // No companions — clear widget data so it shows empty state
+            SharedDefaults.clearAll()
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+
+        let companionSign = ZodiacSign(rawValue: topCompanion.sunSign)
+        let userSign = userSunSign
+
+        SharedDefaults.writeCompanionData(
+            companionName: topCompanion.name,
+            companionSunSign: topCompanion.sunSign,
+            companionGlyph: companionSign?.glyph ?? "✦",
+            userSunSign: userSign?.rawValue ?? "",
+            userGlyph: userSign?.glyph ?? "✦",
+            compatibilityScore: topCompanion.compatibilityScore,
+            companionId: topCompanion.id.uuidString
+        )
+
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     @discardableResult
@@ -322,6 +393,7 @@ class AppViewModel {
             homeSetupPhase = .modeSelection
         }
         await setupNotifications()
+        updateWidgetData()
     }
 
     func checkSubscriptionStatus() async {
@@ -489,7 +561,7 @@ class AppViewModel {
 
         if let companion = companions.first {
             notificationService.scheduleEveningCheckIn(companionName: companion.name)
-            notificationService.scheduleInactiveReEngagement(companionName: companion.name)
+            notificationService.scheduleInactiveReEngagement(companionName: companion.name, userSign: profile?.sunSign ?? "")
         }
 
         notificationService.scheduleSimulationReminder(companionName: primaryCompanion?.name ?? "")
@@ -506,12 +578,19 @@ class AppViewModel {
         }
         await loadCompanions()
         await checkSubscriptionStatus()
+        loadSavedGuides()
         syncHomeSetupPhase()
         selectedTab = 0
         currentScreen = .home
         await setupNotifications()
+        updateWidgetData()
 
-        if let pendingDeepLinkURL {
+        // Resolve any pending deep link from the virality funnel
+        if let deepLink = pendingDeepLink {
+            self.pendingDeepLink = nil
+            self.pendingDeepLinkURL = nil
+            navigateToDeepLink(deepLink)
+        } else if let pendingDeepLinkURL {
             self.pendingDeepLinkURL = nil
             handleDeepLink(pendingDeepLinkURL)
         }
@@ -588,6 +667,59 @@ class AppViewModel {
         }
         syncHomeSetupPhase()
         await setupNotifications()
+        updateWidgetData()
+    }
+
+    // MARK: - Saved Guides
+
+    private let savedGuidesKey = "savedGuides"
+
+    var savedGuideLimit: Int {
+        switch profile?.tier ?? "free" {
+        case "pro": return .max
+        case "plus": return 10
+        default: return 3
+        }
+    }
+
+    var canAddGuide: Bool {
+        savedGuides.count < savedGuideLimit
+    }
+
+    func loadSavedGuides() {
+        guard let data = UserDefaults.standard.data(forKey: savedGuidesKey),
+              let guides = try? JSONDecoder().decode([SavedGuide].self, from: data) else {
+            return
+        }
+        savedGuides = guides
+    }
+
+    private func persistSavedGuides() {
+        guard let data = try? JSONEncoder().encode(savedGuides) else { return }
+        UserDefaults.standard.set(data, forKey: savedGuidesKey)
+    }
+
+    func addGuide(name: String, sunSign: ZodiacSign, category: GuideCategory, notes: String? = nil) {
+        guard canAddGuide else {
+            showToast("Guide limit reached", subtitle: "Upgrade your plan to save more guides", isError: true)
+            showUpsell = true
+            return
+        }
+        let guide = SavedGuide(name: name, sunSign: sunSign, category: category, notes: notes)
+        savedGuides.append(guide)
+        persistSavedGuides()
+        showToast("Guide saved", subtitle: "\(name)'s communication guide is ready", isError: false)
+    }
+
+    func deleteGuide(_ guide: SavedGuide) {
+        savedGuides.removeAll { $0.id == guide.id }
+        persistSavedGuides()
+    }
+
+    func updateGuide(_ guide: SavedGuide) {
+        guard let index = savedGuides.firstIndex(where: { $0.id == guide.id }) else { return }
+        savedGuides[index] = guide
+        persistSavedGuides()
     }
 
     func showToast(_ title: String, subtitle: String, isError: Bool = false) {

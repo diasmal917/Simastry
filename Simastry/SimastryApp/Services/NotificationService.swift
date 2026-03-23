@@ -11,37 +11,51 @@ final class NotificationService {
     private let lastSessionEndKey = "simastry_last_session_end"
 
     private let eveningMessages: [(title: String, body: String)] = [
-        ("The stars shifted today", "Something about your chart feels different tonight."),
-        ("A thought for you", "Your ruling planet is active. Good time to pay attention."),
-        ("Before you sleep", "The moon is in a talkative mood. So am I."),
-        ("Tonight's energy", "Something unresolved is asking for your attention."),
-        ("Quick check-in", "Your chart says today mattered more than you think."),
-        ("One more thing", "The cosmos noticed something about your day."),
+        ("quick check-in", "hey, how did things go with %@ today? come tell me about it 👀"),
+        ("hey", "your energy's been off today — I have a theory why. come check"),
+        ("quick check-in", "random thought: you and %@ might actually vibe better this week. wanna see why?"),
+        ("hey", "that awkward thing that happened today? yeah, the stars saw it coming 😅"),
+        ("quick check-in", "you've been in your head today. I've got something that might help"),
+        ("hey", "psst — I know something about tomorrow you might want to hear"),
+        ("quick check-in", "not to be dramatic but today was kind of a big deal for you and %@"),
+        ("hey", "before you go to sleep — there's something you should know about tomorrow"),
+        ("quick check-in", "ok so I noticed something between you and %@ today. come see"),
+        ("hey", "real talk: today was harder than it needed to be. I can explain why"),
     ]
 
     private let reEngagementMessages: [(title: String, body: String)] = [
-        ("Things changed while you were away", "Your compatibility shifted. Come see."),
-        ("The stars kept moving", "New energy in your chart. It's been building."),
-        ("We noticed something", "A pattern emerged in your placements this week."),
-        ("Don't let this pass", "There's a window opening in your chart. Check it."),
+        ("still here 👋", "so... you've been ghosting me. bold move for a %@ 😏"),
+        ("still here 👋", "your cosmic compatibility just shifted. thought you'd want to know"),
+        ("hey stranger", "someone in your circle is going through it right now. I can tell you who"),
+        ("still here 👋", "I've been holding onto a prediction for you. it's getting stale"),
+        ("hey stranger", "things moved while you were gone. you might want to catch up"),
+        ("still here 👋", "not gonna lie, I missed you. also your chart looks interesting rn"),
+        ("hey stranger", "a lot changed this week. just saying"),
+        ("still here 👋", "you're missing out on something good. no pressure though"),
     ]
 
     private let simulationMessages: [(title: String, body: String)] = [
-        ("Curious what they'd say?", "Paste that conversation. Let's find out."),
-        ("That text you're overthinking", "The stars might have the answer you need."),
-        ("Before you send that reply", "Run it through the cosmos first."),
-        ("New prediction energy available", "Your chart is aligned for clarity right now."),
+        ("just saying...", "that convo you've been overthinking? I can tell you how it'll go"),
+        ("just saying...", "wondering what they're going to text? I might know 👀"),
+        ("hear me out", "you know that thing you want to say but haven't? let's practice"),
+        ("just saying...", "hot take: you should probably text them first. here's how"),
+        ("hear me out", "before you send that text — let me tell you how they'll react"),
+        ("just saying...", "I know you're composing something in your head rn. let me help"),
+        ("hear me out", "that conversation you keep replaying? I can show you a better version"),
+        ("just saying...", "you're overthinking it. come run it by me first"),
     ]
 
     private let transitMessages: [String] = [
-        "Pay attention to what feels easy today — that's your chart working.",
-        "Something you've been avoiding deserves another look.",
-        "Your energy is magnetic today. Use it intentionally.",
-        "Trust the first instinct you had this morning.",
-        "Someone is thinking about you. The stars are sure of it.",
-        "Today's energy rewards honesty over diplomacy.",
-        "A small decision today has bigger ripple effects than you think.",
-        "Your chart says: less overthinking, more action.",
+        "heads up — today's energy is a little chaotic. don't make big decisions before lunch",
+        "good day to have that conversation you've been avoiding",
+        "your patience might be tested today. deep breaths",
+        "creative energy is high today — say yes to things",
+        "today's vibe: keep it low-key. no drama needed",
+        "something unexpected might come up today. roll with it",
+        "you might feel extra emotional today. that's normal, not a crisis",
+        "great day for reconnecting with someone you haven't talked to in a while",
+        "today's a good day to trust your gut. it's sharper than usual",
+        "fair warning: you might say something you don't mean today. think before you text",
     ]
 
     var engagementCount: Int {
@@ -99,7 +113,7 @@ final class NotificationService {
         let body = transitMessages.randomElement() ?? transitMessages[0]
 
         let content = UNMutableNotificationContent()
-        content.title = "\(risingSign.capitalized) rising"
+        content.title = ["heads up", "daily vibe", "for today"].randomElement() ?? "heads up"
         content.body = body
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://guides"]
@@ -121,7 +135,7 @@ final class NotificationService {
 
         let content = UNMutableNotificationContent()
         content.title = message.title
-        content.body = message.body
+        content.body = String(format: message.body, companionName)
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://home"]
 
@@ -149,15 +163,16 @@ final class NotificationService {
         center.add(request)
     }
 
-    func scheduleInactiveReEngagement(companionName: String) {
+    func scheduleInactiveReEngagement(companionName: String, userSign: String = "") {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["inactive_reengagement"])
 
         let message = reEngagementMessages.randomElement() ?? reEngagementMessages[0]
+        let signLabel = userSign.isEmpty ? "you" : userSign
 
         let content = UNMutableNotificationContent()
         content.title = message.title
-        content.body = message.body
+        content.body = String(format: message.body, signLabel)
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://home"]
 

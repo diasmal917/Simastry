@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 nonisolated enum CompanionMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case simulateAnyone = "simulate_anyone"
@@ -269,4 +270,141 @@ nonisolated enum ShareableCardType: String, Sendable {
     case compatibility
     case reading
     case conversationGuide = "conversation_guide"
+}
+
+// MARK: - Deep Linking
+
+nonisolated enum DeepLink: Equatable, Sendable {
+    case compatibility(userSign: String, companionSign: String)
+    case guide(sign: String)
+    case home
+
+    /// Attempts to parse a `DeepLink` from either a custom-scheme URL
+    /// (`simastry://compatibility/aries/leo`) or a universal link
+    /// (`https://simastry.app/share/compatibility/aries/leo`).
+    static func from(url: URL) -> DeepLink? {
+        let pathComponents: [String]
+
+        if url.scheme == "simastry" {
+            // simastry://compatibility/aries/leo  ->  host = "compatibility", path = "/aries/leo"
+            guard let host = url.host else { return nil }
+            let trailing = url.pathComponents.filter { $0 != "/" }
+            pathComponents = [host] + trailing
+        } else if url.host == "simastry.app" || url.host == "www.simastry.app" {
+            // https://simastry.app/share/compatibility/aries/leo
+            var raw = url.pathComponents.filter { $0 != "/" }
+            // Strip the leading "share" segment used in universal links
+            if raw.first == "share" { raw.removeFirst() }
+            pathComponents = raw
+        } else {
+            return nil
+        }
+
+        guard let action = pathComponents.first else { return nil }
+
+        switch action {
+        case "compatibility":
+            guard pathComponents.count >= 3 else { return nil }
+            let userSign = pathComponents[1].lowercased()
+            let companionSign = pathComponents[2].lowercased()
+            guard ZodiacSign(rawValue: userSign) != nil,
+                  ZodiacSign(rawValue: companionSign) != nil else { return nil }
+            return .compatibility(userSign: userSign, companionSign: companionSign)
+
+        case "guide":
+            guard pathComponents.count >= 2 else { return nil }
+            let sign = pathComponents[1].lowercased()
+            guard ZodiacSign(rawValue: sign) != nil else { return nil }
+            return .guide(sign: sign)
+
+        default:
+            return nil
+        }
+    }
+
+    /// Builds the custom-scheme URL for this deep link.
+    var customSchemeURL: URL {
+        switch self {
+        case .compatibility(let userSign, let companionSign):
+            return URL(string: "simastry://compatibility/\(userSign)/\(companionSign)")!
+        case .guide(let sign):
+            return URL(string: "simastry://guide/\(sign)")!
+        case .home:
+            return URL(string: "simastry://home")!
+        }
+    }
+
+    /// Builds the universal-link URL for this deep link (for sharing).
+    var universalLinkURL: URL {
+        switch self {
+        case .compatibility(let userSign, let companionSign):
+            return URL(string: "https://simastry.app/share/compatibility/\(userSign)/\(companionSign)")!
+        case .guide(let sign):
+            return URL(string: "https://simastry.app/share/guide/\(sign)")!
+        case .home:
+            return URL(string: "https://simastry.app")!
+        }
+    }
+
+    /// Human-readable share text that accompanies the link.
+    var shareText: String {
+        switch self {
+        case .compatibility(let userSign, let companionSign):
+            let u = userSign.capitalized
+            let c = companionSign.capitalized
+            return "See the full \(u) & \(c) cosmic compatibility reading on Simastry \u{2728}"
+        case .guide(let sign):
+            return "Discover how to talk to a \(sign.capitalized) \u{2014} full communication guide on Simastry \u{2728}"
+        case .home:
+            return "Explore your cosmic connections on Simastry \u{2728}"
+        }
+    }
+}
+
+// MARK: - Saved Communication Guides
+
+nonisolated struct SavedGuide: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    var name: String
+    var sunSign: ZodiacSign
+    var category: GuideCategory
+    var createdAt: Date
+    var notes: String?
+
+    init(id: UUID = UUID(), name: String, sunSign: ZodiacSign, category: GuideCategory, createdAt: Date = Date(), notes: String? = nil) {
+        self.id = id
+        self.name = name
+        self.sunSign = sunSign
+        self.category = category
+        self.createdAt = createdAt
+        self.notes = notes
+    }
+}
+
+nonisolated enum GuideCategory: String, Codable, CaseIterable, Sendable {
+    case family = "Family"
+    case work = "Work"
+    case friends = "Friends"
+    case romantic = "Romantic"
+    case other = "Other"
+
+    var icon: String {
+        switch self {
+        case .family: return "house.fill"
+        case .work: return "briefcase.fill"
+        case .friends: return "person.2.fill"
+        case .romantic: return "heart.fill"
+        case .other: return "star.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .family: return Color(red: 194/255, green: 224/255, blue: 168/255)
+        case .work: return Color(red: 74/255, green: 144/255, blue: 217/255)
+        case .friends: return Color(red: 192/255, green: 132/255, blue: 216/255)
+        case .romantic: return Color(red: 232/255, green: 132/255, blue: 90/255)
+        case .other: return Color(red: 212/255, green: 175/255, blue: 55/255)
+        }
+    }
 }

@@ -5,9 +5,11 @@ struct SimulationResultView: View {
     let isRegenerating: Bool
     let onRegenerate: (String) -> Void
     var onOpenGuide: ((ZodiacSign) -> Void)?
+    var userSunSign: ZodiacSign?
 
     @Environment(\.dismiss) private var dismiss
     @State private var alternativeReply: String = ""
+    @State private var showShareCard: Bool = false
 
     private var accentColor: Color {
         result.targetSunSign?.color ?? SimastryColor.risingViolet
@@ -19,6 +21,7 @@ struct SimulationResultView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     predictionBubble
                     breakdownSection
+                    shareResultButton
                     if let sign = result.targetSunSign {
                         guideFollowUpCard(sign: sign)
                     }
@@ -37,6 +40,22 @@ struct SimulationResultView: View {
                         dismiss()
                     }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        HapticManager.buttonPress()
+                        showShareCard = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+                    }
+                }
+            }
+            .sheet(isPresented: $showShareCard) {
+                SimulationShareCardView(
+                    result: result,
+                    userSunSign: userSunSign
+                )
             }
         }
         .presentationDetents([.medium, .large])
@@ -207,6 +226,25 @@ struct SimulationResultView: View {
         }
         .padding(18)
         .simastryGlass(cornerRadius: 20)
+    }
+
+    private var shareResultButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            showShareCard = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Share Result")
+                    .font(SimastryFont.titleSmall)
+            }
+            .foregroundStyle(SimastryColor.midnight)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .goldGlassPill()
+        }
+        .buttonStyle(SpringPressStyle())
     }
 
     private var confidenceFooter: some View {

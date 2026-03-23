@@ -356,7 +356,16 @@ struct ShareableCardView: View {
 
     private func shareCard() {
         guard let image = renderImage() else { return }
-        let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+
+        let deepLink = deepLinkForCard
+        var items: [Any] = [image]
+
+        // Append the share text + universal link so recipients land in the app
+        if let deepLink {
+            items.append("\(deepLink.shareText)\n\(deepLink.universalLinkURL.absoluteString)")
+        }
+
+        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
             var topVC = rootVC
@@ -365,6 +374,29 @@ struct ShareableCardView: View {
             }
             activityVC.popoverPresentationController?.sourceView = topVC.view
             topVC.present(activityVC, animated: true)
+        }
+    }
+
+    /// Builds the appropriate `DeepLink` for the current card type so the
+    /// share sheet includes a URL that routes recipients into the app.
+    private var deepLinkForCard: DeepLink? {
+        switch cardType {
+        case .compatibility:
+            guard let userSun = viewModel.userSunSign,
+                  let comp = resolvedCompanion,
+                  let compSun = ZodiacSign(rawValue: comp.sunSign) else { return nil }
+            return .compatibility(userSign: userSun.rawValue, companionSign: compSun.rawValue)
+
+        case .conversationGuide:
+            guard let sun = viewModel.userSunSign else { return nil }
+            return .guide(sign: sun.rawValue)
+
+        case .reading:
+            guard let sun = viewModel.userSunSign else { return nil }
+            return .guide(sign: sun.rawValue)
+
+        case .cosmicDNA:
+            return .home
         }
     }
 }

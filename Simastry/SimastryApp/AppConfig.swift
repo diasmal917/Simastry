@@ -10,6 +10,11 @@ nonisolated enum AppConfig {
     static let EXPO_PUBLIC_TEAM_ID: String = Config.EXPO_PUBLIC_TEAM_ID
     static let EXPO_PUBLIC_TOOLKIT_URL: String = Config.EXPO_PUBLIC_TOOLKIT_URL
 
+    // Deep linking
+    static let deepLinkScheme = "simastry"
+    static let universalLinkHost = "simastry.app"
+    static let appStoreURL = URL(string: "https://apps.apple.com/app/simastry/id0000000000")! // Replace with real App Store ID
+
     // Legal URLs — update these before App Store submission
     static let privacyPolicyURL = URL(string: "https://simastry.app/privacy")!
     static let termsOfServiceURL = URL(string: "https://simastry.app/terms")!

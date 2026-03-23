@@ -72,14 +72,20 @@ struct SimulateView: View {
             .navigationTitle("Simulate")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selectedResult) { result in
-                SimulationResultView(result: result, isRegenerating: isRegenerating) { alternativeReply in
-                    Task {
-                        await regenerate(from: result, with: alternativeReply)
-                    }
-                } onOpenGuide: { sign in
-                    viewModel.guideFocusSign = sign
-                    viewModel.selectedTab = 3
-                }
+                SimulationResultView(
+                    result: result,
+                    isRegenerating: isRegenerating,
+                    onRegenerate: { alternativeReply in
+                        Task {
+                            await regenerate(from: result, with: alternativeReply)
+                        }
+                    },
+                    onOpenGuide: { sign in
+                        viewModel.guideFocusSign = sign
+                        viewModel.selectedTab = 3
+                    },
+                    userSunSign: viewModel.userSunSign
+                )
             }
             .task {
                 loadHistory()

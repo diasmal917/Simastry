@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
+    @State private var showSavedGuides: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -28,6 +29,9 @@ struct HomeView: View {
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
             }
+            .sheet(isPresented: $showSavedGuides) {
+                SavedGuidesView(viewModel: viewModel)
+            }
         }
     }
 
@@ -46,6 +50,8 @@ struct HomeView: View {
                 }
 
                 featureGrid
+
+                savedGuidesHomeCard
 
                 if let companion = viewModel.primaryCompanion {
                     companionCard(companion)
@@ -435,6 +441,54 @@ struct HomeView: View {
         .simastryGlass(cornerRadius: 20)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
+    }
+
+    private var savedGuidesHomeCard: some View {
+        Button {
+            HapticManager.buttonPress()
+            showSavedGuides = true
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "bookmark.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                    .frame(width: 44, height: 44)
+                    .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Saved Guides")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    if viewModel.savedGuides.isEmpty {
+                        Text("Save guides for people in your life")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    } else {
+                        Text("\(viewModel.savedGuides.count) \(viewModel.savedGuides.count == 1 ? "person" : "people") saved")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                    .symbolRenderingMode(.hierarchical)
+            }
+            .padding(16)
+            .tintedGlass(SimastryColor.celestialBlue.opacity(0.10), cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(SimastryColor.celestialBlue.opacity(0.15), lineWidth: 1)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Saved communication guides. \(viewModel.savedGuides.count) people saved.")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 16)
     }
 
     private var greetingText: String {

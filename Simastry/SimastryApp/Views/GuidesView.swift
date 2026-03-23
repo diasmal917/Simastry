@@ -2,6 +2,7 @@ import SwiftUI
 
 nonisolated private enum GuidesSheet: String, Identifiable, Sendable {
     case astropediaLibrary
+    case savedGuides
 
     var id: String { rawValue }
 }
@@ -23,6 +24,7 @@ struct GuidesView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         headerSection
+                        savedGuidesCard
                         signPickerSection
                         featuredGuideSection
                         nextStepSection
@@ -43,6 +45,8 @@ struct GuidesView: View {
                         .presentationDetents([.medium, .large])
                         .presentationDragIndicator(.visible)
                         .presentationContentInteraction(.scrolls)
+                case .savedGuides:
+                    SavedGuidesView(viewModel: viewModel)
                 }
             }
             .task {
@@ -240,6 +244,52 @@ struct GuidesView: View {
             }
         }
         .buttonStyle(SpringPressStyle())
+    }
+
+    private var savedGuidesCard: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeSheet = .savedGuides
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "bookmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                    .frame(width: 42, height: 42)
+                    .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("My Saved Guides")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    if viewModel.savedGuides.isEmpty {
+                        Text("Save guides for your boss, friends, family and more.")
+                            .font(.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("\(viewModel.savedGuides.count) saved \(viewModel.savedGuides.count == 1 ? "guide" : "guides")")
+                            .font(.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+            }
+            .padding(16)
+            .tintedGlass(SimastryColor.celestialBlue.opacity(0.12), cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(SimastryColor.celestialBlue.opacity(0.15), lineWidth: 1)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("My saved communication guides. \(viewModel.savedGuides.count) saved.")
     }
 
     private var selectedGuideSubtitle: String {
