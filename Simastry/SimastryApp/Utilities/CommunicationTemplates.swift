@@ -140,4 +140,51 @@ nonisolated struct CommunicationTemplates {
             bestApproach: "Compassionate, imaginative, and patient — meet them in their emotional world."
         )
     ]
+
+    // MARK: - Why This Works Reasoning
+
+    static let reasoning: [String: String] = [
+        "Aries": "Aries is a fire sign — they respect people who match their energy and don't beat around the bush",
+        "Taurus": "Taurus is an earth sign — they need to feel safe before they open up, and rushing them triggers their stubborn side",
+        "Gemini": "Gemini is an air sign ruled by Mercury — their mind moves fast, so conversations need to keep up",
+        "Cancer": "Cancer is a water sign ruled by the Moon — their moods shift like tides, and they need to feel emotionally secure before they can be real with you",
+        "Leo": "Leo is a fire sign ruled by the Sun — recognition isn't vanity for them, it's how they know you actually see them",
+        "Virgo": "Virgo is an earth sign ruled by Mercury — they notice everything, so vagueness feels dismissive to them",
+        "Libra": "Libra is an air sign ruled by Venus — conflict physically stresses them, so approach disagreements as 'us vs the problem'",
+        "Scorpio": "Scorpio is a water sign — surface-level conversation bores them, and they can sense when you're not being genuine",
+        "Sagittarius": "Sagittarius is a fire sign ruled by Jupiter — they need room to explore, and feeling trapped is their dealbreaker",
+        "Capricorn": "Capricorn is an earth sign ruled by Saturn — they value competence and follow-through over charm",
+        "Aquarius": "Aquarius is an air sign ruled by Uranus — they think differently on purpose, and trying to 'fix' that pushes them away",
+        "Pisces": "Pisces is a water sign ruled by Neptune — they absorb other people's emotions, so your mood becomes their mood"
+    ]
+
+    static let approachReasoning: [String: String] = [
+        "Aries": "Fire signs process through action, not discussion — leading with confidence shows you speak their language",
+        "Taurus": "Earth signs build trust slowly — consistency proves you're safe, which is their prerequisite for everything",
+        "Gemini": "Mercury-ruled signs live in their heads — keeping things light and curious matches how they naturally connect",
+        "Cancer": "Moon-ruled signs read emotional tone before words — warmth and presence matter more than what you actually say",
+        "Leo": "Sun-ruled signs need to feel like the center of your attention — genuine warmth unlocks their incredible generosity",
+        "Virgo": "Mercury gives Virgo an eye for detail — showing you've thought things through is how you earn their respect",
+        "Libra": "Venus-ruled signs crave beauty in all forms — graceful communication isn't shallow to them, it's essential",
+        "Scorpio": "Water signs feel before they think — authenticity is the only currency that works with them",
+        "Sagittarius": "Jupiter expands everything it touches — Sagittarius needs a partner in curiosity, not a voice of caution",
+        "Capricorn": "Saturn teaches through discipline — Capricorn respects people who show up consistently, not just when it's easy",
+        "Aquarius": "Uranus breaks patterns — Aquarius connects through ideas first, emotions second, and that order matters to them",
+        "Pisces": "Neptune dissolves boundaries — Pisces needs someone who can hold space without trying to fix everything"
+    ]
+
+    static let avoidReasoning: [String: String] = [
+        "Aries": "Being passive triggers their impatience — they'd rather hear a hard truth than deal with indirectness",
+        "Taurus": "Sudden changes threaten their sense of security — they need time to adjust, not ultimatums",
+        "Gemini": "Repetition and rigidity feel like a cage to an air sign — their need for variety isn't flakiness, it's how they're wired",
+        "Cancer": "Dismissing emotions tells a water sign you're not safe — once Cancer retreats into their shell, getting them back out takes real effort",
+        "Leo": "Public criticism wounds their pride at the deepest level — fire signs need their dignity respected, even during disagreements",
+        "Virgo": "Carelessness signals that you don't take them seriously — earth signs show love through effort, and they expect the same",
+        "Libra": "Aggression overwhelms their nervous system — Venus-ruled signs literally feel physical discomfort from conflict",
+        "Scorpio": "Deception is unforgivable to water signs — Scorpio's trust is hard-won and once broken, it rarely repairs",
+        "Sagittarius": "Possessiveness feels suffocating to a fire sign — the tighter you grip, the faster they pull away",
+        "Capricorn": "Flakiness reads as disrespect to Saturn-ruled signs — they measure love by reliability, not grand gestures",
+        "Aquarius": "Trying to make them 'normal' attacks their core identity — Uranus-ruled signs need their uniqueness celebrated, not corrected",
+        "Pisces": "Harshness cuts deeper than you think — Neptune-ruled signs don't have thick skin, and they shouldn't have to"
+    ]
 }

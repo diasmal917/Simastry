@@ -621,20 +621,37 @@ private struct GuideDetailSheet: View {
     }
 
     private func bestApproachSection(_ guideData: CommunicationGuideData) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Best Approach")
-                .font(SimastryFont.labelSmall)
-                .foregroundStyle(SimastryColor.gold.opacity(0.8))
-                .tracking(1.8)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Best Approach")
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.gold.opacity(0.8))
+                    .tracking(1.8)
 
-            Text(personalizeText(guideData.bestApproach))
-                .font(SimastryFont.bodyLarge)
-                .italic()
-                .foregroundStyle(SimastryColor.gold)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(personalizeText(guideData.bestApproach))
+                    .font(SimastryFont.bodyLarge)
+                    .italic()
+                    .foregroundStyle(SimastryColor.gold)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
+            .goldGlassRect(cornerRadius: 22)
+
+            if let approachWhy = CommunicationTemplates.approachReasoning[guide.sunSign.displayName] {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(SimastryColor.gold.opacity(0.5))
+                        .padding(.top, 2)
+                    Text(approachWhy)
+                        .font(SimastryFont.caption)
+                        .italic()
+                        .foregroundStyle(SimastryColor.mutedSilver.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 8)
+            }
         }
-        .padding(18)
-        .goldGlassRect(cornerRadius: 22)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
     }
@@ -662,6 +679,28 @@ private struct GuideDetailSheet: View {
                     }
                 }
             }
+
+            // Why this works for [Name]
+            if let reasoning = CommunicationTemplates.reasoning[guide.sunSign.displayName] {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(SimastryColor.celestialBlue.opacity(0.6))
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Why this works for \(guide.name):")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+                            .tracking(1.0)
+                        Text(reasoning)
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
+                .simastryGlass(cornerRadius: 14)
+            }
         }
         .padding(18)
         .simastryGlass(cornerRadius: 22)
@@ -670,25 +709,42 @@ private struct GuideDetailSheet: View {
     }
 
     private func avoidSection(_ guideData: CommunicationGuideData) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(SimastryColor.sunCoral)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.sunCoral)
 
-                Text("What to Avoid")
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(SimastryColor.sunCoral)
-                    .tracking(1.4)
+                    Text("What to Avoid")
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.sunCoral)
+                        .tracking(1.4)
+                }
+
+                Text(personalizeText(guideData.avoid))
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(18)
+            .tintedGlass(SimastryColor.sunCoral.opacity(0.16), cornerRadius: 22)
 
-            Text(personalizeText(guideData.avoid))
-                .font(SimastryFont.bodyMedium)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
-                .fixedSize(horizontal: false, vertical: true)
+            if let avoidWhy = CommunicationTemplates.avoidReasoning[guide.sunSign.displayName] {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(SimastryColor.sunCoral.opacity(0.5))
+                        .padding(.top, 2)
+                    Text(avoidWhy)
+                        .font(SimastryFont.caption)
+                        .italic()
+                        .foregroundStyle(SimastryColor.mutedSilver.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 8)
+            }
         }
-        .padding(18)
-        .tintedGlass(SimastryColor.sunCoral.opacity(0.16), cornerRadius: 22)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
     }

@@ -59,6 +59,41 @@ nonisolated struct AstrologyTemplates {
         "water_water": "Two oceans merging — emotional depth beyond measure"
     ]
 
+    // MARK: - Element Pairing Insights (for compatibility rows)
+
+    static let elementPairingInsight: [String: [String: String]] = [
+        "Fire": [
+            "Fire": "Two fire signs amplify each other's passion — exciting but can burn hot",
+            "Earth": "Fire warms earth, earth grounds fire — you balance each other's extremes",
+            "Air": "Air feeds fire — you inspire each other, conversations never get boring",
+            "Water": "Fire and water create steam — intense chemistry but handle with care"
+        ],
+        "Earth": [
+            "Fire": "Fire warms earth, earth grounds fire — you balance each other's extremes",
+            "Earth": "Two earth signs build something real — stable but watch for getting stuck in routines",
+            "Air": "Earth grounds air's ideas into reality — different speeds but complementary strengths",
+            "Water": "Earth absorbs water — nurturing and secure, you create a safe space together"
+        ],
+        "Air": [
+            "Fire": "Air feeds fire — you inspire each other, conversations never get boring",
+            "Earth": "Earth grounds air's ideas into reality — different speeds but complementary strengths",
+            "Air": "Two air signs live in ideas — endless conversation but someone needs to make decisions",
+            "Water": "Air and water are different languages — takes effort but the depth is worth it"
+        ],
+        "Water": [
+            "Fire": "Fire and water create steam — intense chemistry but handle with care",
+            "Earth": "Earth absorbs water — nurturing and secure, you create a safe space together",
+            "Air": "Air and water are different languages — takes effort but the depth is worth it",
+            "Water": "Two water signs feel everything together — deeply connected but watch for emotional spiraling"
+        ]
+    ]
+
+    static func elementPairingInsightText(element1: String, element2: String) -> String? {
+        let e1 = element1.capitalized
+        let e2 = element2.capitalized
+        return elementPairingInsight[e1]?[e2]
+    }
+
     static func elementPairingText(element1: String, element2: String) -> String {
         let sorted = [element1, element2].sorted()
         let key = "\(sorted[0])_\(sorted[1])"

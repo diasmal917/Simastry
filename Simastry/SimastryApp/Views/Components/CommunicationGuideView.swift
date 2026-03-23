@@ -30,20 +30,37 @@ struct CommunicationGuideView: View {
                 }
 
                 animatedSection(index: 1) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Best Approach")
-                            .font(SimastryFont.labelSmall)
-                            .foregroundStyle(SimastryColor.gold.opacity(0.8))
-                            .tracking(1.8)
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Best Approach")
+                                .font(SimastryFont.labelSmall)
+                                .foregroundStyle(SimastryColor.gold.opacity(0.8))
+                                .tracking(1.8)
 
-                        Text(guide.bestApproach)
-                            .font(SimastryFont.bodyLarge)
-                            .italic()
-                            .foregroundStyle(SimastryColor.gold)
-                            .fixedSize(horizontal: false, vertical: true)
+                            Text(guide.bestApproach)
+                                .font(SimastryFont.bodyLarge)
+                                .italic()
+                                .foregroundStyle(SimastryColor.gold)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(18)
+                        .goldGlassRect(cornerRadius: 22)
+
+                        if let approachWhy = CommunicationTemplates.approachReasoning[sign.displayName] {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(SimastryColor.gold.opacity(0.5))
+                                    .padding(.top, 2)
+                                Text(approachWhy)
+                                    .font(SimastryFont.caption)
+                                    .italic()
+                                    .foregroundStyle(SimastryColor.mutedSilver.opacity(0.8))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.horizontal, 8)
+                        }
                     }
-                    .padding(18)
-                    .goldGlassRect(cornerRadius: 22)
                 }
 
                 animatedSection(index: 2) {
@@ -69,31 +86,70 @@ struct CommunicationGuideView: View {
                                 }
                             }
                         }
+
+                        // Why this works
+                        if let reasoning = CommunicationTemplates.reasoning[sign.displayName] {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(SimastryColor.celestialBlue.opacity(0.6))
+                                    .padding(.top, 2)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Why this works")
+                                        .font(SimastryFont.captionSmall)
+                                        .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+                                        .tracking(1.0)
+                                    Text(reasoning)
+                                        .font(SimastryFont.caption)
+                                        .foregroundStyle(SimastryColor.mutedSilver)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .padding(12)
+                            .simastryGlass(cornerRadius: 14)
+                        }
                     }
                     .padding(18)
                     .simastryGlass(cornerRadius: 22)
                 }
 
                 animatedSection(index: 3) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(SimastryFont.labelSmall)
-                                .foregroundStyle(SimastryColor.sunCoral)
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(SimastryFont.labelSmall)
+                                    .foregroundStyle(SimastryColor.sunCoral)
 
-                            Text("What to Avoid")
-                                .font(SimastryFont.labelSmall)
-                                .foregroundStyle(SimastryColor.sunCoral)
-                                .tracking(1.4)
+                                Text("What to Avoid")
+                                    .font(SimastryFont.labelSmall)
+                                    .foregroundStyle(SimastryColor.sunCoral)
+                                    .tracking(1.4)
+                            }
+
+                            Text(guide.avoid)
+                                .font(SimastryFont.bodyMedium)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(18)
+                        .tintedGlass(SimastryColor.sunCoral.opacity(0.16), cornerRadius: 22)
 
-                        Text(guide.avoid)
-                            .font(SimastryFont.bodyMedium)
-                            .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
-                            .fixedSize(horizontal: false, vertical: true)
+                        if let avoidWhy = CommunicationTemplates.avoidReasoning[sign.displayName] {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(SimastryColor.sunCoral.opacity(0.5))
+                                    .padding(.top, 2)
+                                Text(avoidWhy)
+                                    .font(SimastryFont.caption)
+                                    .italic()
+                                    .foregroundStyle(SimastryColor.mutedSilver.opacity(0.8))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.horizontal, 8)
+                        }
                     }
-                    .padding(18)
-                    .tintedGlass(SimastryColor.sunCoral.opacity(0.16), cornerRadius: 22)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

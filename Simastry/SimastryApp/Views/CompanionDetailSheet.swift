@@ -268,6 +268,25 @@ struct CompanionDetailSheet: View {
                 .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.75))
                 .lineSpacing(2)
+
+            // Element pairing insight
+            if let pairingInsight = AstrologyTemplates.elementPairingInsightText(
+                element1: yours.element.rawValue,
+                element2: theirs.element.rawValue
+            ) {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(tint.opacity(0.4))
+                        .padding(.top, 2)
+                    Text(pairingInsight)
+                        .font(SimastryFont.caption)
+                        .italic()
+                        .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 2)
+            }
         }
     }
 
