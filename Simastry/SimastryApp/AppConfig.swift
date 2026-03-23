@@ -21,22 +21,23 @@ nonisolated enum AppConfig {
 
     // Deep linking
     static let deepLinkScheme = "simastry"
-    static let universalLinkHost = "simastry.app"
-    static let appStoreURL = URL(string: "https://apps.apple.com/app/simastry/id0000000000")! // Replace with real App Store ID
+    static let universalLinkHost = "simastry.com"
+    static let websiteURL = URL(string: "https://simastry.com")!
+    static let appStoreURL = websiteURL // Replace with the real App Store URL once the listing is live.
     static let socialDiscoveryEnabled =
         !EXPO_PUBLIC_SUPABASE_URL.isEmpty &&
         !EXPO_PUBLIC_SUPABASE_ANON_KEY.isEmpty &&
         Config.EXPO_PUBLIC_SOCIAL_DISCOVERY_ENABLED.lowercased() == "true"
 
     // Legal URLs — update these before App Store submission
-    static let privacyPolicyURL = URL(string: "https://simastry.app/privacy")!
-    static let termsOfServiceURL = URL(string: "https://simastry.app/terms")!
+    static let privacyPolicyURL = URL(string: "https://simastry.com/privacy")!
+    static let termsOfServiceURL = URL(string: "https://simastry.com/terms")!
     static let eulaURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 
     // Astrologer partnership
-    static let astrologerDirectoryURL = URL(string: "https://simastry.app/astrologers")!
-    static let astrologerPartnerURL = URL(string: "https://simastry.app/partners")!
-    static let astrologerContactEmail = "astrologers@simastry.app"
+    static let astrologerDirectoryURL = URL(string: "https://simastry.com/astrologers")!
+    static let astrologerPartnerURL = URL(string: "https://simastry.com/partners")!
+    static let astrologerContactEmail = "astrologers@simastry.com"
 
     static let allValues: [String: String] = [
         "EXPO_PUBLIC_PROJECT_ID": EXPO_PUBLIC_PROJECT_ID,

@@ -282,7 +282,7 @@ struct SimulationShareCardView: View {
     }
 
     private var watermark: some View {
-        Text("simastry.app")
+        Text(AppConfig.universalLinkHost)
             .font(SimastryFont.captionSmall)
             .foregroundStyle(SimastryColor.gold.opacity(0.45))
     }

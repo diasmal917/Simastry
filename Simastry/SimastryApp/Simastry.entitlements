@@ -8,8 +8,8 @@
 	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:simastry.app</string>
-		<string>applinks:www.simastry.app</string>
+		<string>applinks:simastry.com</string>
+		<string>applinks:www.simastry.com</string>
 	</array>
 </dict>
 </plist>

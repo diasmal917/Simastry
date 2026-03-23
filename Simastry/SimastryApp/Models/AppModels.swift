@@ -308,7 +308,7 @@ nonisolated enum DeepLink: Equatable, Sendable {
 
     /// Attempts to parse a `DeepLink` from either a custom-scheme URL
     /// (`simastry://compatibility/aries/leo`) or a universal link
-    /// (`https://simastry.app/share/compatibility/aries/leo`).
+    /// (`https://simastry.com/share/compatibility/aries/leo`).
     static func from(url: URL) -> DeepLink? {
         let pathComponents: [String]
 
@@ -317,8 +317,14 @@ nonisolated enum DeepLink: Equatable, Sendable {
             guard let host = url.host else { return nil }
             let trailing = url.pathComponents.filter { $0 != "/" }
             pathComponents = [host] + trailing
-        } else if url.host == "simastry.app" || url.host == "www.simastry.app" {
-            // https://simastry.app/share/compatibility/aries/leo
+        } else if let host = url.host,
+                  [
+                    AppConfig.universalLinkHost,
+                    "www.\(AppConfig.universalLinkHost)",
+                    "simastry.app",
+                    "www.simastry.app"
+                  ].contains(host) {
+            // https://simastry.com/share/compatibility/aries/leo
             var raw = url.pathComponents.filter { $0 != "/" }
             // Strip the leading "share" segment used in universal links
             if raw.first == "share" { raw.removeFirst() }
@@ -365,11 +371,11 @@ nonisolated enum DeepLink: Equatable, Sendable {
     var universalLinkURL: URL {
         switch self {
         case .compatibility(let userSign, let companionSign):
-            return URL(string: "https://simastry.app/share/compatibility/\(userSign)/\(companionSign)")!
+            return URL(string: "https://\(AppConfig.universalLinkHost)/share/compatibility/\(userSign)/\(companionSign)")!
         case .guide(let sign):
-            return URL(string: "https://simastry.app/share/guide/\(sign)")!
+            return URL(string: "https://\(AppConfig.universalLinkHost)/share/guide/\(sign)")!
         case .home:
-            return URL(string: "https://simastry.app")!
+            return AppConfig.websiteURL
         }
     }
 

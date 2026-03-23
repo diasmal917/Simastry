@@ -154,7 +154,7 @@ struct ShareableCardView: View {
                         .padding(.bottom, 4)
                 }
 
-                Text("simastry.app")
+                Text(AppConfig.universalLinkHost)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
@@ -208,7 +208,7 @@ struct ShareableCardView: View {
 
                 Spacer()
 
-                Text("simastry.app")
+                Text(AppConfig.universalLinkHost)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
@@ -248,7 +248,7 @@ struct ShareableCardView: View {
 
                 Spacer()
 
-                Text("simastry.app")
+                Text(AppConfig.universalLinkHost)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
@@ -304,7 +304,7 @@ struct ShareableCardView: View {
                         .padding(.bottom, 4)
                 }
 
-                Text("simastry.app")
+                Text(AppConfig.universalLinkHost)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)

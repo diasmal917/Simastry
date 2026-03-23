@@ -93,10 +93,10 @@ struct ContentModerationService {
             )
         }
 
-        if trimmed.count > 280 {
+        if trimmed.count > 500 {
             return ModerationResult(
                 isAllowed: false,
-                reason: "Keep discovery messages under 280 characters."
+                reason: "Keep discovery messages under 500 characters."
             )
         }
 
