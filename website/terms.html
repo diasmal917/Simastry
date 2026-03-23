@@ -8,15 +8,13 @@
   <link rel="canonical" href="https://simastry.com/terms">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#10024;</text></svg>">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
   <!-- Video Background -->
-  <div class="video-bg" aria-hidden="true">
-    <video autoplay muted loop playsinline>
-      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4" type="video/mp4">
-    </video>
-    <div class="overlay"></div>
+  <div class="legal-hero-bg" aria-hidden="true">
+    <video id="bgVideo" autoplay muted loop playsinline></video>
   </div>
 
   <!-- Navigation -->
@@ -30,9 +28,7 @@
         <li><a href="/#pricing">Pricing</a></li>
         <li><a href="/#trust">For Astrologers</a></li>
         <li>
-          <a href="https://simastry.com" class="nav-cta">
-            <span class="nav-cta-inner">Download</span>
-          </a>
+          <a href="https://simastry.com" class="nav-cta">Download</a>
         </li>
       </ul>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
@@ -163,41 +159,91 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <div class="footer-inner">
-        <a href="/" class="footer-logo">Simastry</a>
-        <ul class="footer-links">
-          <li><a href="/#features">Features</a></li>
-          <li><a href="/#community">Community</a></li>
-          <li><a href="/#how-it-works">How It Works</a></li>
-          <li><a href="/#pricing">Pricing</a></li>
-          <li><a href="/#trust">For Astrologers</a></li>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="footer-logo">Simastry</a>
+          <p class="footer-tagline">Understand everyone in your life through the stars. Powered by AI, grounded in Western tropical synastry.</p>
+          <div class="footer-social">
+            <a href="https://instagram.com/simastry" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </a>
+            <a href="https://tiktok.com/@simastry" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.73a8.19 8.19 0 004.76 1.52V6.8a4.84 4.84 0 01-1-.11z"/></svg>
+            </a>
+            <a href="https://x.com/simastry" aria-label="X (Twitter)" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <p class="footer-col-title">Product</p>
+          <ul class="footer-col-links">
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/#pricing">Pricing</a></li>
+            <li><a href="/#how-it-works">How It Works</a></li>
+            <li><a href="/#community">Community</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-col-title">Company</p>
+          <ul class="footer-col-links">
+            <li><a href="/#trust">For Astrologers</a></li>
+            <li><a href="mailto:hello@simastry.com">Contact</a></li>
+            <li><a href="mailto:press@simastry.com">Press</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-col-title">Legal</p>
+          <ul class="footer-col-links">
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom-bar">
+        <p class="footer-copyright">&copy; 2026 Simastry. All rights reserved.</p>
+        <ul class="footer-bottom-links">
           <li><a href="/privacy">Privacy</a></li>
           <li><a href="/terms">Terms</a></li>
-          <li><a href="mailto:hello@simastry.com">Contact</a></li>
         </ul>
-        <div class="footer-social">
-          <a href="https://instagram.com/simastry" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-          </a>
-          <a href="https://tiktok.com/@simastry" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.73a8.19 8.19 0 004.76 1.52V6.8a4.84 4.84 0 01-1-.11z"/></svg>
-          </a>
-          <a href="https://x.com/simastry" aria-label="X (Twitter)" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-        </div>
-        <p class="footer-made">Made with &#10024; by Simastry</p>
-        <p class="footer-bottom">&copy; 2026 Simastry. All rights reserved.</p>
       </div>
     </div>
   </footer>
 
   <!-- JS -->
   <script>
-    const navToggle = document.getElementById('navToggle');
-    const navLinks = document.getElementById('navLinks');
-    navToggle.addEventListener('click', () => navLinks.classList.toggle('active'));
-    navLinks.querySelectorAll('a').forEach(l => l.addEventListener('click', () => navLinks.classList.remove('active')));
+    // HLS Video
+    (function() {
+      var video = document.getElementById('bgVideo');
+      var src = 'https://stream.mux.com/9JXDljEVWYwWu01PUkAemafDugK89o01BR6zqJ3aS9u00A.m3u8';
+      if (Hls.isSupported()) {
+        var hls = new Hls({ autoStartLoad: true });
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play(); });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+        video.addEventListener('loadedmetadata', function() { video.play(); });
+      }
+    })();
+
+    // Mobile nav
+    var navToggle = document.getElementById('navToggle');
+    var navLinks = document.getElementById('navLinks');
+    navToggle.addEventListener('click', function() {
+      navLinks.classList.toggle('active');
+      navToggle.classList.toggle('active');
+    });
+    navLinks.querySelectorAll('a').forEach(function(l) {
+      l.addEventListener('click', function() {
+        navLinks.classList.remove('active');
+        navToggle.classList.remove('active');
+      });
+    });
   </script>
 </body>
 </html>
