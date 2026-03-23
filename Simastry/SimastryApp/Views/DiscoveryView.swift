@@ -230,7 +230,7 @@ struct DiscoveryView: View {
 
     private var privacyNote: some View {
         HStack(spacing: 10) {
-            Image(systemName: viewModel.isDiscoverable ? "eye.fill" : "eye.slash.fill")
+            Image(systemName: viewModel.isDiscoverable ? "lock.shield.fill" : "lock.open.fill")
                 .font(.system(size: 14))
                 .foregroundStyle(viewModel.isDiscoverable ? SimastryColor.gold : SimastryColor.celestialBlue)
             Text(viewModel.isDiscoverable
@@ -288,7 +288,7 @@ struct DiscoveryView: View {
                                 }
                             }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SpringPressStyle())
                     .accessibilityLabel("Filter by \(filter.rawValue)")
                     .accessibilityAddTraits(selectedFilter == filter ? .isSelected : [])
                 }
@@ -521,7 +521,7 @@ private struct ProfileDetailSheet: View {
                     .foregroundStyle(SimastryColor.gold)
                 }
             }
-            .confirmationDialog("Profile Actions", isPresented: $showSafetyOptions, titleVisibility: .visible) {
+            .confirmationDialog("Report or Block", isPresented: $showSafetyOptions, titleVisibility: .visible) {
                 ForEach(DiscoveryReportReason.allCases) { reason in
                     Button("Report \(reason.displayName)") {
                         Task {
@@ -545,7 +545,7 @@ private struct ProfileDetailSheet: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("You won't see each other in discovery anymore.")
+                Text("You won't see each other in Simastry anymore. This can't be undone.")
             }
             .alert("Add as Companion?", isPresented: $showAddConfirmation) {
                 Button("Add Companion") {

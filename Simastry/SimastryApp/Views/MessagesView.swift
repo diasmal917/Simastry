@@ -52,6 +52,7 @@ struct MessagesView: View {
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
+                        .accessibilityLabel("Delete message")
                     }
             }
 
@@ -103,6 +104,7 @@ struct MessagesView: View {
                     .background(SimastryColor.gold, in: .capsule)
                 }
                 .buttonStyle(SpringPressStyle())
+                .accessibilityHint("Opens companion setup to add your first companion")
                 .padding(.top, 8)
             }
         }
@@ -116,8 +118,8 @@ private struct MessageRow: View {
     let message: CompanionMessage
 
     private var zodiacSign: ZodiacSign? {
-        ZodiacSign.allCases.first { $0.displayName == message.companionSign }
-            ?? ZodiacSign(rawValue: message.companionSign.lowercased())
+        ZodiacSign(rawValue: message.companionSign.lowercased())
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == message.companionSign.lowercased() }
     }
 
     private var previewText: String {
@@ -194,6 +196,9 @@ private struct MessageRow: View {
         .padding(14)
         .simastryGlass(cornerRadius: 16)
         .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(message.companionName). \(previewText). \(message.timestamp.relativeDescription). \(message.isRead ? "Read" : "Unread")")
+        .accessibilityHint("Double tap to open conversation")
     }
 }
 
@@ -209,8 +214,8 @@ private struct MessageDetailSheet: View {
     @State private var showBlockConfirmation: Bool = false
 
     private var zodiacSign: ZodiacSign? {
-        ZodiacSign.allCases.first { $0.displayName == message.companionSign }
-            ?? ZodiacSign(rawValue: message.companionSign.lowercased())
+        ZodiacSign(rawValue: message.companionSign.lowercased())
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == message.companionSign.lowercased() }
     }
 
     private var conversationMessages: [CompanionMessage] {
@@ -322,6 +327,7 @@ private struct MessageDetailSheet: View {
                                     .background(SimastryColor.gold, in: .capsule)
                                 }
                                 .buttonStyle(SpringPressStyle())
+                                .accessibilityLabel("Reply with a prediction for \(message.companionName)")
 
                                 if let sign = zodiacSign {
                                     Button {
@@ -342,6 +348,7 @@ private struct MessageDetailSheet: View {
                                         .simastryGlassPill()
                                     }
                                     .buttonStyle(SpringPressStyle())
+                                    .accessibilityLabel("View communication guide for \(sign.displayName)")
                                 }
                             }
                         }
@@ -376,6 +383,7 @@ private struct MessageDetailSheet: View {
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
+                    .accessibilityLabel("Close message detail")
                 }
             }
         }
@@ -384,7 +392,7 @@ private struct MessageDetailSheet: View {
                 await viewModel.refreshInbox(showErrors: false)
             }
         }
-        .confirmationDialog("Discovery Safety", isPresented: $showSafetyOptions, titleVisibility: .visible) {
+        .confirmationDialog("Report or Block", isPresented: $showSafetyOptions, titleVisibility: .visible) {
             ForEach(DiscoveryReportReason.allCases) { reason in
                 Button("Report \(reason.displayName)") {
                     Task {
@@ -413,7 +421,7 @@ private struct MessageDetailSheet: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("They won't appear in discovery and this conversation will stop resurfacing.")
+            Text("You won't see each other in Simastry anymore. This can't be undone.")
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
@@ -428,6 +436,19 @@ private struct MessageDetailSheet: View {
                     .foregroundStyle(SimastryColor.gold)
                     .tracking(1)
                     .textCase(.uppercase)
+
+                if conversationMessages.isEmpty {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bubble.left.and.text.bubble.right")
+                            .font(.system(size: 14))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                        Text("Start the conversation — say something!")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                }
 
                 ForEach(conversationMessages) { threadMessage in
                     HStack {
@@ -476,6 +497,16 @@ private struct MessageDetailSheet: View {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(SimastryColor.offWhite.opacity(0.06))
                     )
+                    .accessibilityLabel("Type a reply message")
+                    .onChange(of: replyText) {
+                        if replyText.count > 500 { replyText = String(replyText.prefix(500)) }
+                    }
+
+                if replyText.count > 0 {
+                    Text("\(replyText.count)/500")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.deepMuted)
+                }
 
                 HStack(spacing: 12) {
                     if let sign = zodiacSign {
@@ -496,6 +527,7 @@ private struct MessageDetailSheet: View {
                             .simastryGlassPill()
                         }
                         .buttonStyle(SpringPressStyle())
+                        .accessibilityLabel("View communication guide for \(zodiacSign?.displayName ?? message.companionSign)")
                     }
 
                     Button {
@@ -525,6 +557,7 @@ private struct MessageDetailSheet: View {
                         .background(SimastryColor.gold, in: Capsule())
                     }
                     .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel(isSendingReply ? "Sending reply" : "Send reply")
                     .disabled(isSendingReply || replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
