@@ -41,6 +41,7 @@ class AppViewModel {
     var onboardingBirthplace: String?
 
     var companionMessages: [CompanionMessage] = []
+    var discoveryMessages: [CompanionMessage] = []
     var savedGuides: [SavedGuide] = []
 
     // MARK: - Social Discovery
@@ -300,6 +301,13 @@ class AppViewModel {
                 remoteFailures.append("profile")
                 CrashReporter.log(error, context: "deleteAccountProfile")
             }
+
+            do {
+                try await supabase.deleteSocialProfile(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("social_profile")
+                CrashReporter.log(error, context: "deleteAccountSocialProfile")
+            }
         }
 
         clearAllLocalData()
@@ -450,13 +458,13 @@ class AppViewModel {
 
     func refreshDashboardData() async {
         await loadProfile()
+        await loadSocialProfile()
         await loadCompanions()
         await checkSubscriptionStatus()
         syncHomeSetupPhase()
         await setupNotifications()
         updateWidgetData()
-        loadMessages()
-        generateCompanionMessages()
+        await refreshInbox()
     }
 
     // MARK: - Widget Data
@@ -740,6 +748,7 @@ class AppViewModel {
 
     func navigateAfterAuth() async {
         await loadProfile()
+        await loadSocialProfile()
         if shouldPersistPendingBirthChart {
             await saveUserSigns()
         }
@@ -747,7 +756,7 @@ class AppViewModel {
         await checkSubscriptionStatus()
         loadSavedGuides()
         loadProfileImage()
-        loadMessages()
+        await refreshInbox()
         syncHomeSetupPhase()
         selectedTab = 0
         currentScreen = .home
@@ -757,7 +766,6 @@ class AppViewModel {
         }
         await setupNotifications()
         updateWidgetData()
-        generateCompanionMessages()
 
         // Resolve any pending deep link from the virality funnel
         if let deepLink = pendingDeepLink {
@@ -853,59 +861,85 @@ class AppViewModel {
     func toggleDiscoverability() {
         guard AppConfig.socialDiscoveryEnabled else {
             isDiscoverable = false
-            showToast("Discovery coming soon", subtitle: "We're still finishing the secure profile and messaging backend.", isError: false)
+            showToast("Discovery unavailable", subtitle: "Enable social discovery in your environment before using this feature.", isError: false)
             return
         }
-        isDiscoverable.toggle()
-        if isDiscoverable {
-            createSocialProfile()
+        guard hasCompletedSigns else {
+            isDiscoverable = false
+            showToast("Finish your signs", subtitle: "Complete your birth chart before joining discovery.", isError: true)
+            return
         }
-        // TODO: Supabase integration — when turning off, set is_visible = false in social_profiles table
-        updateSocialProfile()
+
+        let previousValue = isDiscoverable
+        let nextValue = !previousValue
+        isDiscoverable = nextValue
+
+        Task {
+            await persistSocialProfile(
+                isVisible: nextValue,
+                onFailureRestoreVisibility: previousValue,
+                showVisibilityToast: true
+            )
+        }
     }
 
-    func fetchDiscoverableProfiles() {
+    func fetchDiscoverableProfiles() async {
         guard AppConfig.socialDiscoveryEnabled else {
             discoveredProfiles = []
             return
         }
-        // TODO: Supabase integration — replace with:
-        // let profiles: [SocialProfile] = try await supabase.client
-        //     .from("social_profiles")
-        //     .select()
-        //     .eq("is_visible", value: true)
-        //     .neq("id", value: currentUserId)
-        //     .execute()
-        //     .value
-        discoveredProfiles = generateMockProfiles()
+
+        do {
+            let profiles = try await supabase.fetchVisibleSocialProfiles()
+            let blocks = try await supabase.fetchDiscoveryBlocks()
+            let fallbackCurrentUserId = await supabase.currentUserId
+            let currentUserId = profile?.id ?? fallbackCurrentUserId
+
+            let blockedProfileIds = Set(blocks.compactMap { block -> UUID? in
+                guard let currentUserId else { return nil }
+                if block.blockerId == currentUserId { return block.blockedId }
+                if block.blockedId == currentUserId { return block.blockerId }
+                return nil
+            })
+
+            discoveredProfiles = profiles
+                .filter { socialProfile in
+                    socialProfile.isVisible &&
+                    socialProfile.id != currentUserId &&
+                    !blockedProfileIds.contains(socialProfile.id)
+                }
+                .sorted { compatibilityWithUser(for: $0) > compatibilityWithUser(for: $1) }
+        } catch {
+            CrashReporter.log(error, context: "fetchDiscoverableProfiles")
+            discoveredProfiles = []
+            showToast("Couldn't load discovery", subtitle: "Check your connection or try again later.", isError: true)
+        }
     }
 
     func createSocialProfile() {
         guard AppConfig.socialDiscoveryEnabled else { return }
-        if socialDisplayName.isEmpty {
+        if socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             socialDisplayName = profile?.displayName ?? "Stargazer"
         }
-        // TODO: Supabase integration — insert into social_profiles table:
-        // let socialProfile = SocialProfile(
-        //     id: profile?.id ?? UUID(),
-        //     displayName: socialDisplayName,
-        //     sunSign: profile?.sunSign ?? "",
-        //     moonSign: profile?.moonSign,
-        //     risingSign: profile?.risingSign,
-        //     bio: socialBio.isEmpty ? nil : socialBio,
-        //     isVisible: true,
-        //     createdAt: Date()
-        // )
-        // try await supabase.client.from("social_profiles").upsert(socialProfile).execute()
+
+        Task {
+            await persistSocialProfile(
+                isVisible: true,
+                onFailureRestoreVisibility: false,
+                showVisibilityToast: false
+            )
+        }
     }
 
     func updateSocialProfile() {
         guard AppConfig.socialDiscoveryEnabled else { return }
-        // TODO: Supabase integration — update social_profiles table:
-        // try await supabase.client.from("social_profiles")
-        //     .update(["display_name": socialDisplayName, "bio": socialBio, "is_visible": isDiscoverable])
-        //     .eq("id", value: profile?.id.uuidString ?? "")
-        //     .execute()
+        Task {
+            await persistSocialProfile(
+                isVisible: isDiscoverable,
+                onFailureRestoreVisibility: nil,
+                showVisibilityToast: false
+            )
+        }
     }
 
     func updateSocialLinks(_ links: SocialLinks) {
@@ -915,11 +949,29 @@ class AppViewModel {
 
     // MARK: - Discovery "Say Hi" Messaging
 
-    func sendDiscoveryMessage(from profile: SocialProfile) {
+    @discardableResult
+    func sendDiscoveryMessage(from profile: SocialProfile) async -> Bool {
         guard AppConfig.socialDiscoveryEnabled else {
-            showToast("Discovery preview", subtitle: "Cross-user messaging isn't live yet.", isError: false)
-            return
+            showToast("Discovery unavailable", subtitle: "Enable social discovery in your environment before using this feature.", isError: false)
+            return false
         }
+        guard canSendMessage() else {
+            showToast(
+                "Messages used up",
+                subtitle: "You've used all \(dailyMessageLimit) messages today. Upgrade for unlimited sparks.",
+                isError: true
+            )
+            showUpsell = true
+            return false
+        }
+        guard let currentProfile = self.profile else {
+            showToast("Couldn't send intro", subtitle: "Sign in again and try once more.", isError: true)
+            return false
+        }
+        guard let senderPayload = currentDiscoveryMessageSender() else {
+            return false
+        }
+
         let compatibility = compatibilityWithUser(for: profile)
         let isSameSign = profile.sunSign == userSunSign?.rawValue
         let isCompat = isElementCompatible(profile)
@@ -934,7 +986,7 @@ class AppViewModel {
         }
 
         let templates = AstrologyTemplates.discoveryIntroMessages[category] ?? []
-        guard !templates.isEmpty else { return }
+        guard !templates.isEmpty else { return false }
 
         let index = abs(profile.id.hashValue) % templates.count
         let template = templates[index]
@@ -947,19 +999,325 @@ class AppViewModel {
             content = String(format: template, "\(compatibility)")
         }
 
-        let zodiacSign = ZodiacSign(rawValue: profile.sunSign)
-
-        let message = CompanionMessage(
-            companionId: profile.id,
-            companionName: profile.displayName,
-            companionSign: zodiacSign?.displayName ?? profile.sunSign.capitalized,
+        let remoteMessage = DiscoveryMessageData(
+            id: UUID(),
+            senderId: currentProfile.id,
+            recipientId: profile.id,
+            senderDisplayName: senderPayload.displayName,
+            senderSunSign: senderPayload.sunSign,
+            senderMoonSign: senderPayload.moonSign,
+            senderRisingSign: senderPayload.risingSign,
+            recipientDisplayName: profile.displayName,
+            recipientSunSign: profile.sunSign,
+            recipientMoonSign: profile.moonSign,
+            recipientRisingSign: profile.risingSign,
             content: content,
-            timestamp: Date(),
-            isRead: false
+            isRead: false,
+            createdAt: Date()
         )
-        companionMessages.insert(message, at: 0)
-        saveMessages()
-        showToast("Message sent to your inbox!", subtitle: "\(profile.displayName) says hi", isError: false)
+
+        do {
+            try await supabase.sendDiscoveryMessage(remoteMessage)
+            appendLocalDiscoveryMessage(remoteMessage, viewerId: currentProfile.id)
+            await consumeMessage()
+            showToast("Intro sent", subtitle: "\(profile.displayName) will see it in their inbox.", isError: false)
+            return true
+        } catch {
+            CrashReporter.log(error, context: "sendDiscoveryMessage")
+            showToast("Couldn't send intro", subtitle: "Try again in a moment.", isError: true)
+            return false
+        }
+    }
+
+    @discardableResult
+    func sendDiscoveryReply(
+        to companionId: UUID,
+        companionName: String,
+        companionSign: String,
+        content: String
+    ) async -> Bool {
+        guard AppConfig.socialDiscoveryEnabled else {
+            showToast("Discovery unavailable", subtitle: "Enable social discovery in your environment before using this feature.", isError: false)
+            return false
+        }
+        guard canSendMessage() else {
+            showToast(
+                "Messages used up",
+                subtitle: "You've used all \(dailyMessageLimit) messages today. Upgrade for unlimited sparks.",
+                isError: true
+            )
+            showUpsell = true
+            return false
+        }
+        guard let currentProfile = self.profile else {
+            showToast("Couldn't send reply", subtitle: "Sign in again and try once more.", isError: true)
+            return false
+        }
+        guard let senderPayload = currentDiscoveryMessageSender() else {
+            return false
+        }
+
+        let moderation = ContentModerationService.moderateDiscoveryMessage(content)
+        guard moderation.isAllowed else {
+            showToast("Couldn't send reply", subtitle: moderation.reason ?? "Please revise your message and try again.", isError: true)
+            return false
+        }
+
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let recipientSunSign = ZodiacSign.allCases.first { $0.displayName == companionSign }?.rawValue ?? companionSign.lowercased()
+
+        let remoteMessage = DiscoveryMessageData(
+            id: UUID(),
+            senderId: currentProfile.id,
+            recipientId: companionId,
+            senderDisplayName: senderPayload.displayName,
+            senderSunSign: senderPayload.sunSign,
+            senderMoonSign: senderPayload.moonSign,
+            senderRisingSign: senderPayload.risingSign,
+            recipientDisplayName: companionName,
+            recipientSunSign: recipientSunSign,
+            recipientMoonSign: nil,
+            recipientRisingSign: nil,
+            content: trimmedContent,
+            isRead: false,
+            createdAt: Date()
+        )
+
+        do {
+            try await supabase.sendDiscoveryMessage(remoteMessage)
+            appendLocalDiscoveryMessage(remoteMessage, viewerId: currentProfile.id)
+            await consumeMessage()
+            return true
+        } catch {
+            CrashReporter.log(error, context: "sendDiscoveryReply")
+            showToast("Couldn't send reply", subtitle: "Try again in a moment.", isError: true)
+            return false
+        }
+    }
+
+    func blockDiscoveryProfile(_ socialProfile: SocialProfile) async {
+        guard AppConfig.socialDiscoveryEnabled else { return }
+
+        do {
+            try await supabase.blockDiscoveryProfile(blockedId: socialProfile.id)
+            discoveredProfiles.removeAll { $0.id == socialProfile.id }
+            showToast("Profile hidden", subtitle: "\(socialProfile.displayName) won't appear in discovery anymore.", isError: false)
+        } catch {
+            CrashReporter.log(error, context: "blockDiscoveryProfile")
+            showToast("Couldn't block profile", subtitle: "Try again in a moment.", isError: true)
+        }
+    }
+
+    func reportDiscoveryProfile(_ socialProfile: SocialProfile, reason: DiscoveryReportReason) async {
+        guard AppConfig.socialDiscoveryEnabled else { return }
+        let fallbackCurrentUserId = await supabase.currentUserId
+        let currentUserId = profile?.id ?? fallbackCurrentUserId
+        guard let currentUserId else {
+            showToast("Couldn't send report", subtitle: "Sign in again and try once more.", isError: true)
+            return
+        }
+
+        let report = DiscoveryReportData(
+            id: UUID(),
+            reporterId: currentUserId,
+            reportedId: socialProfile.id,
+            reason: reason.rawValue,
+            details: nil,
+            createdAt: Date()
+        )
+
+        do {
+            try await supabase.reportDiscoveryProfile(report)
+            showToast("Report submitted", subtitle: "Thanks for helping keep discovery safe.", isError: false)
+        } catch {
+            CrashReporter.log(error, context: "reportDiscoveryProfile")
+            showToast("Couldn't send report", subtitle: "Try again in a moment.", isError: true)
+        }
+    }
+
+    func loadSocialProfile() async {
+        guard AppConfig.socialDiscoveryEnabled else { return }
+
+        do {
+            if let remoteProfile = try await supabase.fetchCurrentSocialProfile() {
+                socialDisplayName = remoteProfile.displayName
+                socialBio = remoteProfile.bio ?? ""
+                socialLinks = remoteProfile.socialLinks ?? SocialLinks()
+                isDiscoverable = remoteProfile.isVisible
+            } else if socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                socialDisplayName = profile?.displayName ?? ""
+            }
+        } catch {
+            CrashReporter.log(error, context: "loadSocialProfile")
+        }
+    }
+
+    func refreshInbox(showErrors: Bool = false) async {
+        loadMessages()
+        await loadDiscoveryInboxMessages(showErrors: showErrors)
+        generateCompanionMessages()
+    }
+
+    private func loadDiscoveryInboxMessages(showErrors: Bool) async {
+        guard AppConfig.socialDiscoveryEnabled else {
+            mergeDiscoveryInboxMessages([])
+            return
+        }
+
+        let previousDiscoveryMessageIDs = Set(discoveryMessages.map(\.id))
+        let fallbackCurrentUserId = await supabase.currentUserId
+        let currentUserId = profile?.id ?? fallbackCurrentUserId
+        guard let currentUserId else {
+            mergeDiscoveryInboxMessages([])
+            return
+        }
+
+        do {
+            let remoteMessages = try await supabase.fetchDiscoveryMessages()
+                .map { $0.inboxMessage(for: currentUserId) }
+                .sorted { $0.timestamp < $1.timestamp }
+
+            mergeDiscoveryInboxMessages(remoteMessages)
+
+            let newlyArrivedMessages = remoteMessages.filter {
+                $0.direction == .incoming &&
+                !$0.isRead &&
+                !previousDiscoveryMessageIDs.contains($0.id)
+            }
+            if !previousDiscoveryMessageIDs.isEmpty,
+               let newestArrival = newlyArrivedMessages.max(by: { $0.timestamp < $1.timestamp }) {
+                notificationService.scheduleDiscoveryMessageAlert(
+                    senderName: newestArrival.companionName,
+                    preview: newestArrival.content
+                )
+            }
+        } catch {
+            CrashReporter.log(error, context: "loadDiscoveryInboxMessages")
+            mergeDiscoveryInboxMessages([])
+            if showErrors {
+                showToast("Couldn't refresh inbox", subtitle: "Try again in a moment.", isError: true)
+            }
+        }
+    }
+
+    private func mergeDiscoveryInboxMessages(_ remoteMessages: [CompanionMessage]) {
+        discoveryMessages = remoteMessages
+    }
+
+    func discoveryConversation(with companionId: UUID) -> [CompanionMessage] {
+        discoveryMessages
+            .filter { $0.companionId == companionId }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private func appendLocalDiscoveryMessage(_ message: DiscoveryMessageData, viewerId: UUID) {
+        let inboxMessage = message.inboxMessage(for: viewerId)
+        discoveryMessages.removeAll { $0.id == inboxMessage.id }
+        discoveryMessages.append(inboxMessage)
+        discoveryMessages.sort { $0.timestamp < $1.timestamp }
+    }
+
+    private func persistSocialProfile(
+        isVisible: Bool,
+        onFailureRestoreVisibility: Bool?,
+        showVisibilityToast: Bool
+    ) async {
+        guard AppConfig.socialDiscoveryEnabled else { return }
+        guard let socialProfile = buildCurrentSocialProfile(isVisible: isVisible) else {
+            if let onFailureRestoreVisibility {
+                self.isDiscoverable = onFailureRestoreVisibility
+            }
+            return
+        }
+
+        do {
+            try await supabase.upsertSocialProfile(socialProfile)
+            socialDisplayName = socialProfile.displayName
+            isDiscoverable = socialProfile.isVisible
+
+            guard showVisibilityToast else { return }
+            if isVisible {
+                showToast("You're visible", subtitle: "Other compatible Simastry users can now find you.", isError: false)
+            } else {
+                showToast("Browsing privately", subtitle: "Your discovery profile is now hidden from others.", isError: false)
+            }
+        } catch {
+            if let onFailureRestoreVisibility {
+                self.isDiscoverable = onFailureRestoreVisibility
+                showToast("Couldn't update discovery", subtitle: "Try again in a moment.", isError: true)
+            }
+            CrashReporter.log(error, context: "persistSocialProfile")
+        }
+    }
+
+    private func buildCurrentSocialProfile(isVisible: Bool) -> SocialProfile? {
+        guard let currentProfile = profile else {
+            showToast("Couldn't update discovery", subtitle: "Sign in again and try once more.", isError: true)
+            return nil
+        }
+
+        guard let sunSign = currentProfile.sunSign,
+              let moonSign = currentProfile.moonSign,
+              let risingSign = currentProfile.risingSign else {
+            showToast("Finish your signs", subtitle: "Complete your birth chart before joining discovery.", isError: true)
+            return nil
+        }
+
+        let trimmedDisplayName = socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedDisplayName = trimmedDisplayName.isEmpty
+            ? (currentProfile.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Stargazer")
+            : trimmedDisplayName
+
+        guard !resolvedDisplayName.isEmpty, resolvedDisplayName.count <= 32 else {
+            showToast("Invalid display name", subtitle: "Use a name between 1 and 32 characters.", isError: true)
+            return nil
+        }
+
+        let trimmedBio = String(socialBio.trimmingCharacters(in: .whitespacesAndNewlines).prefix(150))
+        if !trimmedBio.isEmpty {
+            let moderation = ContentModerationService.moderatePublicProfileText(trimmedBio)
+            guard moderation.isAllowed else {
+                showToast("Couldn't update profile", subtitle: moderation.reason ?? "Please revise your bio and try again.", isError: true)
+                return nil
+            }
+        }
+
+        return SocialProfile(
+            id: currentProfile.id,
+            displayName: resolvedDisplayName,
+            sunSign: sunSign,
+            moonSign: moonSign,
+            risingSign: risingSign,
+            bio: trimmedBio.isEmpty ? nil : trimmedBio,
+            socialLinks: socialLinks.isEmpty ? nil : socialLinks,
+            isVisible: isVisible,
+            createdAt: Date()
+        )
+    }
+
+    private func currentDiscoveryMessageSender() -> (displayName: String, sunSign: String, moonSign: String?, risingSign: String?)? {
+        guard let currentProfile = profile,
+              let sunSign = currentProfile.sunSign else {
+            showToast("Couldn't send intro", subtitle: "Finish your profile signs first.", isError: true)
+            return nil
+        }
+
+        let displayName = socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedDisplayName = displayName.isEmpty
+            ? (currentProfile.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Stargazer")
+            : displayName
+
+        guard !resolvedDisplayName.isEmpty else {
+            showToast("Add a display name", subtitle: "Set a discovery display name before sending an intro.", isError: true)
+            return nil
+        }
+
+        return (
+            displayName: resolvedDisplayName,
+            sunSign: sunSign,
+            moonSign: currentProfile.moonSign,
+            risingSign: currentProfile.risingSign
+        )
     }
 
     func addCompanionFromDiscovery(_ socialProfile: SocialProfile) async {
@@ -1090,7 +1448,17 @@ class AppViewModel {
     // MARK: - Companion Messages (Inbox)
 
     var unreadMessageCount: Int {
-        companionMessages.filter { !$0.isRead }.count
+        (companionMessages + discoveryMessages).filter { !$0.isRead }.count
+    }
+
+    var inboxMessages: [CompanionMessage] {
+        let discoveryThreads = Dictionary(grouping: discoveryMessages, by: \.companionId)
+            .compactMap { _, messages in
+                messages.max { $0.timestamp < $1.timestamp }
+            }
+
+        return (companionMessages + discoveryThreads)
+            .sorted { $0.timestamp > $1.timestamp }
     }
 
     func loadMessages() {
@@ -1105,7 +1473,14 @@ class AppViewModel {
             companionMessages = []
             return
         }
-        companionMessages = messages.sorted { $0.timestamp > $1.timestamp }
+        companionMessages = messages
+            .map { message in
+                var normalized = message
+                normalized.source = .companion
+                normalized.direction = .incoming
+                return normalized
+            }
+            .sorted { $0.timestamp > $1.timestamp }
     }
 
     func saveMessages() {
@@ -1116,14 +1491,41 @@ class AppViewModel {
     }
 
     func markMessageRead(_ message: CompanionMessage) {
-        guard let index = companionMessages.firstIndex(where: { $0.id == message.id }) else { return }
-        companionMessages[index].isRead = true
-        saveMessages()
+        if message.source == .companion {
+            guard let index = companionMessages.firstIndex(where: { $0.id == message.id }) else { return }
+            companionMessages[index].isRead = true
+            saveMessages()
+        } else {
+            for index in discoveryMessages.indices where discoveryMessages[index].companionId == message.companionId {
+                if discoveryMessages[index].direction == .incoming {
+                    discoveryMessages[index].isRead = true
+                }
+            }
+            Task {
+                do {
+                    try await supabase.markDiscoveryConversationRead(with: message.companionId)
+                } catch {
+                    CrashReporter.log(error, context: "markDiscoveryMessageRead")
+                }
+            }
+        }
     }
 
     func deleteMessage(_ message: CompanionMessage) {
-        companionMessages.removeAll { $0.id == message.id }
-        saveMessages()
+        if message.source == .companion {
+            companionMessages.removeAll { $0.id == message.id }
+            saveMessages()
+        } else {
+            discoveryMessages.removeAll { $0.companionId == message.companionId }
+            Task {
+                do {
+                    try await supabase.deleteDiscoveryConversation(with: message.companionId)
+                } catch {
+                    CrashReporter.log(error, context: "deleteDiscoveryMessage")
+                    showToast("Couldn't delete conversation", subtitle: "It may reappear after your next refresh.", isError: true)
+                }
+            }
+        }
     }
 
     func generateCompanionMessages() {
@@ -1136,7 +1538,7 @@ class AppViewModel {
 
             // Find the most recent message from this companion
             let lastMessage = companionMessages
-                .filter { $0.companionId == companion.id }
+                .filter { $0.source == .companion && $0.companionId == companion.id }
                 .sorted { $0.timestamp > $1.timestamp }
                 .first
 
@@ -1275,6 +1677,7 @@ class AppViewModel {
     private func clearAccountScopedLocalState() {
         savedGuides = []
         companionMessages = []
+        discoveryMessages = []
         discoveredProfiles = []
         isDiscoverable = false
         socialDisplayName = ""

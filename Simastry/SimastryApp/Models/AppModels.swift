@@ -273,6 +273,24 @@ nonisolated enum ShareableCardType: String, Sendable {
     case conversationGuide = "conversation_guide"
 }
 
+nonisolated enum DiscoveryReportReason: String, CaseIterable, Identifiable, Codable, Sendable {
+    case spam
+    case harassment
+    case impersonation = "impersonation"
+    case inappropriateContent = "inappropriate_content"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .spam: "Spam"
+        case .harassment: "Harassment"
+        case .impersonation: "Impersonation"
+        case .inappropriateContent: "Inappropriate Content"
+        }
+    }
+}
+
 // MARK: - Referral Info
 
 nonisolated struct ReferralInfo: Codable, Equatable, Sendable {
@@ -372,6 +390,16 @@ nonisolated enum DeepLink: Equatable, Sendable {
 
 // MARK: - Companion Messages (Inbox)
 
+nonisolated enum InboxMessageSource: String, Codable, Equatable, Sendable {
+    case companion
+    case discovery
+}
+
+nonisolated enum InboxMessageDirection: String, Codable, Equatable, Sendable {
+    case incoming
+    case outgoing
+}
+
 nonisolated struct CompanionMessage: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     let companionId: UUID
@@ -380,8 +408,24 @@ nonisolated struct CompanionMessage: Identifiable, Codable, Equatable, Sendable 
     let content: String
     let timestamp: Date
     var isRead: Bool
+    var source: InboxMessageSource
+    var direction: InboxMessageDirection
 
-    init(id: UUID = UUID(), companionId: UUID, companionName: String, companionSign: String, content: String, timestamp: Date = Date(), isRead: Bool = false) {
+    enum CodingKeys: String, CodingKey {
+        case id, companionId, companionName, companionSign, content, timestamp, isRead, source, direction
+    }
+
+    init(
+        id: UUID = UUID(),
+        companionId: UUID,
+        companionName: String,
+        companionSign: String,
+        content: String,
+        timestamp: Date = Date(),
+        isRead: Bool = false,
+        source: InboxMessageSource = .companion,
+        direction: InboxMessageDirection = .incoming
+    ) {
         self.id = id
         self.companionId = companionId
         self.companionName = companionName
@@ -389,6 +433,34 @@ nonisolated struct CompanionMessage: Identifiable, Codable, Equatable, Sendable 
         self.content = content
         self.timestamp = timestamp
         self.isRead = isRead
+        self.source = source
+        self.direction = direction
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        companionId = try container.decode(UUID.self, forKey: .companionId)
+        companionName = try container.decode(String.self, forKey: .companionName)
+        companionSign = try container.decode(String.self, forKey: .companionSign)
+        content = try container.decode(String.self, forKey: .content)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        isRead = try container.decode(Bool.self, forKey: .isRead)
+        source = try container.decodeIfPresent(InboxMessageSource.self, forKey: .source) ?? .companion
+        direction = try container.decodeIfPresent(InboxMessageDirection.self, forKey: .direction) ?? .incoming
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(companionId, forKey: .companionId)
+        try container.encode(companionName, forKey: .companionName)
+        try container.encode(companionSign, forKey: .companionSign)
+        try container.encode(content, forKey: .content)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(isRead, forKey: .isRead)
+        try container.encode(source, forKey: .source)
+        try container.encode(direction, forKey: .direction)
     }
 }
 
@@ -416,6 +488,18 @@ nonisolated struct SocialProfile: Identifiable, Codable, Equatable, Sendable {
     var socialLinks: SocialLinks?
     var isVisible: Bool // opt-in to discovery
     var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case displayName = "display_name"
+        case sunSign = "sun_sign"
+        case moonSign = "moon_sign"
+        case risingSign = "rising_sign"
+        case bio
+        case socialLinks = "social_links"
+        case isVisible = "is_visible"
+        case createdAt = "created_at"
+    }
 
     // Computed
     var signSummary: String {
@@ -445,6 +529,89 @@ nonisolated struct SocialProfile: Identifiable, Codable, Equatable, Sendable {
         self.socialLinks = socialLinks
         self.isVisible = isVisible
         self.createdAt = createdAt
+    }
+}
+
+nonisolated struct DiscoveryMessageData: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID
+    var senderId: UUID
+    var recipientId: UUID
+    var senderDisplayName: String
+    var senderSunSign: String
+    var senderMoonSign: String?
+    var senderRisingSign: String?
+    var recipientDisplayName: String
+    var recipientSunSign: String
+    var recipientMoonSign: String?
+    var recipientRisingSign: String?
+    var content: String
+    var isRead: Bool
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case senderId = "sender_id"
+        case recipientId = "recipient_id"
+        case senderDisplayName = "sender_display_name"
+        case senderSunSign = "sender_sun_sign"
+        case senderMoonSign = "sender_moon_sign"
+        case senderRisingSign = "sender_rising_sign"
+        case recipientDisplayName = "recipient_display_name"
+        case recipientSunSign = "recipient_sun_sign"
+        case recipientMoonSign = "recipient_moon_sign"
+        case recipientRisingSign = "recipient_rising_sign"
+        case content
+        case isRead = "is_read"
+        case createdAt = "created_at"
+    }
+
+    func inboxMessage(for viewerId: UUID) -> CompanionMessage {
+        let outgoing = senderId == viewerId
+        let counterpartId = outgoing ? recipientId : senderId
+        let counterpartName = outgoing ? recipientDisplayName : senderDisplayName
+        let counterpartSunSign = outgoing ? recipientSunSign : senderSunSign
+
+        return CompanionMessage(
+            id: id,
+            companionId: counterpartId,
+            companionName: counterpartName,
+            companionSign: ZodiacSign(rawValue: counterpartSunSign)?.displayName ?? counterpartSunSign.capitalized,
+            content: content,
+            timestamp: createdAt ?? Date(),
+            isRead: outgoing ? true : isRead,
+            source: .discovery,
+            direction: outgoing ? .outgoing : .incoming
+        )
+    }
+}
+
+nonisolated struct DiscoveryBlockData: Codable, Equatable, Sendable {
+    var blockerId: UUID
+    var blockedId: UUID
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case blockerId = "blocker_id"
+        case blockedId = "blocked_id"
+        case createdAt = "created_at"
+    }
+}
+
+nonisolated struct DiscoveryReportData: Codable, Equatable, Sendable {
+    var id: UUID
+    var reporterId: UUID
+    var reportedId: UUID
+    var reason: String
+    var details: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reporterId = "reporter_id"
+        case reportedId = "reported_id"
+        case reason
+        case details
+        case createdAt = "created_at"
     }
 }
 

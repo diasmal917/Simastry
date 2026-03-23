@@ -54,4 +54,72 @@ struct ContentModerationService {
 
         return ModerationResult(isAllowed: true, reason: nil)
     }
+
+    static func moderatePublicProfileText(_ text: String) -> ModerationResult {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ModerationResult(isAllowed: true, reason: nil)
+        }
+
+        let lowered = trimmed.lowercased()
+
+        for pattern in harmfulPatterns {
+            if lowered.contains(pattern) {
+                return ModerationResult(
+                    isAllowed: false,
+                    reason: "That profile text contains content we can't publish."
+                )
+            }
+        }
+
+        for pattern in sensitiveDataPatterns {
+            if lowered.contains(pattern) {
+                return ModerationResult(
+                    isAllowed: false,
+                    reason: "Please remove private financial or identity details from your public profile."
+                )
+            }
+        }
+
+        return ModerationResult(isAllowed: true, reason: nil)
+    }
+
+    static func moderateDiscoveryMessage(_ text: String) -> ModerationResult {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ModerationResult(
+                isAllowed: false,
+                reason: "Write a message before sending."
+            )
+        }
+
+        if trimmed.count > 280 {
+            return ModerationResult(
+                isAllowed: false,
+                reason: "Keep discovery messages under 280 characters."
+            )
+        }
+
+        let lowered = trimmed.lowercased()
+
+        for pattern in harmfulPatterns {
+            if lowered.contains(pattern) {
+                return ModerationResult(
+                    isAllowed: false,
+                    reason: "That message contains content we can't send in discovery."
+                )
+            }
+        }
+
+        for pattern in sensitiveDataPatterns {
+            if lowered.contains(pattern) {
+                return ModerationResult(
+                    isAllowed: false,
+                    reason: "Please remove financial or identity details before sending."
+                )
+            }
+        }
+
+        return ModerationResult(isAllowed: true, reason: nil)
+    }
 }

@@ -23,7 +23,10 @@ nonisolated enum AppConfig {
     static let deepLinkScheme = "simastry"
     static let universalLinkHost = "simastry.app"
     static let appStoreURL = URL(string: "https://apps.apple.com/app/simastry/id0000000000")! // Replace with real App Store ID
-    static let socialDiscoveryEnabled = false
+    static let socialDiscoveryEnabled =
+        !EXPO_PUBLIC_SUPABASE_URL.isEmpty &&
+        !EXPO_PUBLIC_SUPABASE_ANON_KEY.isEmpty &&
+        Config.EXPO_PUBLIC_SOCIAL_DISCOVERY_ENABLED.lowercased() == "true"
 
     // Legal URLs — update these before App Store submission
     static let privacyPolicyURL = URL(string: "https://simastry.app/privacy")!
@@ -40,6 +43,7 @@ nonisolated enum AppConfig {
         "EXPO_PUBLIC_REVENUECAT_API_KEY": EXPO_PUBLIC_REVENUECAT_API_KEY,
         "EXPO_PUBLIC_RORK_API_BASE_URL": EXPO_PUBLIC_RORK_API_BASE_URL,
         "EXPO_PUBLIC_RORK_AUTH_URL": EXPO_PUBLIC_RORK_AUTH_URL,
+        "EXPO_PUBLIC_SOCIAL_DISCOVERY_ENABLED": Config.EXPO_PUBLIC_SOCIAL_DISCOVERY_ENABLED,
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": EXPO_PUBLIC_SUPABASE_ANON_KEY,
         "EXPO_PUBLIC_SUPABASE_URL": EXPO_PUBLIC_SUPABASE_URL,
         "EXPO_PUBLIC_TEAM_ID": EXPO_PUBLIC_TEAM_ID,

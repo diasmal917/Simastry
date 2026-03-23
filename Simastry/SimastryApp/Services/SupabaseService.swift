@@ -193,6 +193,119 @@ nonisolated final class SupabaseService {
             .execute()
     }
 
+    func fetchCurrentSocialProfile() async throws -> SocialProfile? {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return nil }
+        let profiles: [SocialProfile] = try await client
+            .from("social_profiles")
+            .select()
+            .eq("id", value: userId.uuidString)
+            .execute()
+            .value
+        return profiles.first
+    }
+
+    func upsertSocialProfile(_ profile: SocialProfile) async throws {
+        let client = try configuredClient()
+        try await client.from("social_profiles").upsert(profile).execute()
+    }
+
+    func fetchVisibleSocialProfiles() async throws -> [SocialProfile] {
+        let client = try configuredClient()
+        return try await client
+            .from("social_profiles")
+            .select()
+            .eq("is_visible", value: true)
+            .execute()
+            .value
+    }
+
+    func deleteSocialProfile(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("social_profiles")
+            .delete()
+            .eq("id", value: userId)
+            .execute()
+    }
+
+    func fetchDiscoveryBlocks() async throws -> [DiscoveryBlockData] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+
+        let sentBlocks: [DiscoveryBlockData] = try await client
+            .from("discovery_blocks")
+            .select()
+            .eq("blocker_id", value: userId.uuidString)
+            .execute()
+            .value
+
+        let receivedBlocks: [DiscoveryBlockData] = try await client
+            .from("discovery_blocks")
+            .select()
+            .eq("blocked_id", value: userId.uuidString)
+            .execute()
+            .value
+
+        return sentBlocks + receivedBlocks
+    }
+
+    func blockDiscoveryProfile(blockedId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+
+        let block = DiscoveryBlockData(
+            blockerId: userId,
+            blockedId: blockedId,
+            createdAt: Date()
+        )
+
+        try await client.from("discovery_blocks").upsert(block).execute()
+    }
+
+    func reportDiscoveryProfile(_ report: DiscoveryReportData) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_reports").insert(report).execute()
+    }
+
+    func fetchDiscoveryMessages() async throws -> [DiscoveryMessageData] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        let messages: [DiscoveryMessageData] = try await client
+            .from("discovery_messages")
+            .select()
+            .or("sender_id.eq.\(userId.uuidString),recipient_id.eq.\(userId.uuidString)")
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        return messages
+    }
+
+    func sendDiscoveryMessage(_ message: DiscoveryMessageData) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_messages").insert(message).execute()
+    }
+
+    func markDiscoveryConversationRead(with participantId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+        try await client.from("discovery_messages")
+            .update(["is_read": true])
+            .eq("recipient_id", value: userId.uuidString)
+            .eq("sender_id", value: participantId.uuidString)
+            .execute()
+    }
+
+    func deleteDiscoveryConversation(with participantId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+        try await client.from("discovery_messages")
+            .delete()
+            .or(
+                "and(sender_id.eq.\(userId.uuidString),recipient_id.eq.\(participantId.uuidString)),and(sender_id.eq.\(participantId.uuidString),recipient_id.eq.\(userId.uuidString))"
+            )
+            .execute()
+    }
+
     private func configuredClient() throws -> SupabaseClient {
         guard let client, isConfigured else {
             throw SupabaseServiceError.notConfigured

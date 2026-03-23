@@ -198,6 +198,24 @@ final class NotificationService {
         center.add(request)
     }
 
+    func scheduleDiscoveryMessageAlert(senderName: String, preview: String) {
+        guard isAuthorized else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "\(senderName) sent you a message"
+        content.body = preview
+        content.sound = .default
+        content.userInfo = ["deeplink": "simastry://messages"]
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "discovery_\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
     func cancelInactiveReEngagement() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: ["inactive_reengagement"])

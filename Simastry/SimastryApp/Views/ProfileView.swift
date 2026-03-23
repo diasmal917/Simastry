@@ -388,8 +388,10 @@ struct ProfileView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Share your Cosmic DNA card")
 
-            // MARK: Social Accounts
-            socialAccountsSection
+            if AppConfig.socialDiscoveryEnabled {
+                // MARK: Social Accounts
+                socialAccountsSection
+            }
 
             // MARK: Find Others Like You
             discoverySection

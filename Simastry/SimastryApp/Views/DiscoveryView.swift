@@ -44,6 +44,9 @@ struct DiscoveryView: View {
                             Spacer().frame(height: SimastrySpacing.tabBarClearance)
                         }
                         .padding(.horizontal, 20)
+                        .refreshable {
+                            await viewModel.fetchDiscoverableProfiles()
+                        }
                     } else {
                         comingSoonState
                             .padding(.horizontal, 20)
@@ -79,7 +82,9 @@ struct DiscoveryView: View {
                     }
                 }
                 if AppConfig.socialDiscoveryEnabled && viewModel.discoveredProfiles.isEmpty {
-                    viewModel.fetchDiscoverableProfiles()
+                    Task {
+                        await viewModel.fetchDiscoverableProfiles()
+                    }
                 }
             }
         }
@@ -132,15 +137,16 @@ struct DiscoveryView: View {
 
                 Spacer()
 
-                Toggle("", isOn: $viewModel.isDiscoverable)
+                Toggle("", isOn: Binding(
+                    get: { viewModel.isDiscoverable },
+                    set: { newValue in
+                        if newValue != viewModel.isDiscoverable {
+                            viewModel.toggleDiscoverability()
+                        }
+                    }
+                ))
                     .labelsHidden()
                     .tint(SimastryColor.gold)
-                    .onChange(of: viewModel.isDiscoverable) {
-                        if viewModel.isDiscoverable {
-                            viewModel.createSocialProfile()
-                        }
-                        viewModel.updateSocialProfile()
-                    }
                     .accessibilityLabel("Show my profile in discovery. Currently \(viewModel.isDiscoverable ? "on" : "off")")
             }
         }
@@ -460,6 +466,8 @@ private struct ProfileDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showAddConfirmation = false
     @State private var hasSentHi = false
+    @State private var showSafetyOptions = false
+    @State private var showBlockConfirmation = false
 
     private var compatibility: Int {
         viewModel.compatibilityWithUser(for: profile)
@@ -490,7 +498,21 @@ private struct ProfileDetailSheet: View {
             }
             .navigationTitle(profile.displayName)
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                hasSentHi = !viewModel.discoveryConversation(with: profile.id).isEmpty
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showSafetyOptions = true
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .accessibilityLabel("Profile safety actions")
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
@@ -498,6 +520,32 @@ private struct ProfileDetailSheet: View {
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.gold)
                 }
+            }
+            .confirmationDialog("Profile Actions", isPresented: $showSafetyOptions, titleVisibility: .visible) {
+                ForEach(DiscoveryReportReason.allCases) { reason in
+                    Button("Report \(reason.displayName)") {
+                        Task {
+                            await viewModel.reportDiscoveryProfile(profile, reason: reason)
+                        }
+                    }
+                }
+
+                Button("Block \(profile.displayName)", role: .destructive) {
+                    showBlockConfirmation = true
+                }
+
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert("Block \(profile.displayName)?", isPresented: $showBlockConfirmation) {
+                Button("Block Profile", role: .destructive) {
+                    Task {
+                        await viewModel.blockDiscoveryProfile(profile)
+                        dismiss()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You won't see each other in discovery anymore.")
             }
             .alert("Add as Companion?", isPresented: $showAddConfirmation) {
                 Button("Add Companion") {
@@ -712,15 +760,21 @@ private struct ProfileDetailSheet: View {
 
     private var addCompanionButton: some View {
         VStack(spacing: 12) {
-            // Say Hi button
             Button {
-                viewModel.sendDiscoveryMessage(from: profile)
-                hasSentHi = true
+                if hasSentHi {
+                    dismiss()
+                    viewModel.selectedTab = 2
+                } else {
+                    Task {
+                        let didSend = await viewModel.sendDiscoveryMessage(from: profile)
+                        hasSentHi = didSend
+                    }
+                }
             } label: {
                 HStack(spacing: 10) {
-                    Text("\u{1F44B}")
-                        .font(.system(size: 16))
-                    Text(hasSentHi ? "Message Sent!" : "Say Hi \u{1F44B}")
+                    Image(systemName: hasSentHi ? "bubble.left.and.bubble.right.fill" : "hand.wave.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text(hasSentHi ? "Open Messages" : "Start Chat")
                         .font(SimastryFont.labelLarge)
                 }
                 .foregroundStyle(hasSentHi ? SimastryColor.mutedSilver : SimastryColor.offWhite)
@@ -729,9 +783,8 @@ private struct ProfileDetailSheet: View {
                 .simastryGlassPill()
             }
             .buttonStyle(SpringPressStyle())
-            .disabled(hasSentHi)
-            .accessibilityLabel(hasSentHi ? "Message already sent to \(profile.displayName)" : "Say hi to \(profile.displayName)")
-            .accessibilityHint("Sends an intro message to your Messages inbox")
+            .accessibilityLabel(hasSentHi ? "Open your conversation with \(profile.displayName)" : "Start a chat with \(profile.displayName)")
+            .accessibilityHint(hasSentHi ? "Opens your Messages inbox" : "Sends an intro to start a discovery conversation")
 
             // Add as Companion button
             Button {
