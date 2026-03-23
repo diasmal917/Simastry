@@ -61,7 +61,7 @@ struct HomeView: View {
                     todayEnergyCard(sun: sun)
                 }
 
-                Spacer().frame(height: 80)
+                Spacer().frame(height: SimastrySpacing.tabBarClearance)
             }
             .padding(.horizontal, 20)
             .onAppear {
@@ -142,7 +142,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(greetingText)
                     .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .foregroundStyle(SimastryColor.goldDark)
 
                 if let name = viewModel.profile?.displayName {
                     Text("Hey, \(name)")
@@ -160,9 +160,13 @@ struct HomeView: View {
             if let sun = viewModel.userSunSign {
                 Text(sun.glyph)
                     .font(SimastryFont.titleLarge)
-                    .foregroundStyle(sun.color)
+                    .foregroundStyle(SimastryColor.gold)
                     .frame(width: 48, height: 48)
-                    .background(sun.color.opacity(0.14), in: Circle())
+                    .background(SimastryColor.gold.opacity(0.10), in: Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(SimastryColor.gold.opacity(0.15), lineWidth: 0.5)
+                    )
             }
         }
         .opacity(appeared ? 1 : 0)
@@ -297,7 +301,7 @@ struct HomeView: View {
             }
 
             featureGridCard(
-                title: "Simulate",
+                title: "Predict",
                 subtitle: "Test a reply",
                 systemImage: "wand.and.stars",
                 tint: SimastryColor.risingViolet
@@ -344,7 +348,11 @@ struct HomeView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 40, height: 40)
-                    .background(tint.opacity(0.14), in: .rect(cornerRadius: 12))
+                    .background(tint.opacity(0.10), in: .rect(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(tint.opacity(0.15), lineWidth: 0.5)
+                    )
 
                 Text(title)
                     .font(SimastryFont.titleSmall)
@@ -356,11 +364,7 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
-            .simastryGlass(cornerRadius: 18)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(tint.opacity(0.1), lineWidth: 1)
-            }
+            .glossyCard(cornerRadius: 18)
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(title). \(subtitle)")
@@ -438,7 +442,7 @@ struct HomeView: View {
                 .lineSpacing(3)
         }
         .padding(18)
-        .simastryGlass(cornerRadius: 20)
+        .glossyCard(cornerRadius: 20)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
     }

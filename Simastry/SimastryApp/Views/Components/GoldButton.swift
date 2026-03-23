@@ -11,8 +11,6 @@ struct GoldButton: View {
         self.action = action
     }
 
-    @State private var isPressed: Bool = false
-
     var body: some View {
         Button(action: {
             HapticManager.buttonPress()
@@ -20,21 +18,44 @@ struct GoldButton: View {
         }) {
             Text(title)
                 .font(SimastryFont.titleSmall)
-                .foregroundStyle(isEnabled ? .white : SimastryColor.mutedSilver)
+                .foregroundStyle(isEnabled ? Color(red: 20/255, green: 18/255, blue: 12/255) : SimastryColor.mutedSilver)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .goldGlassPill()
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [SimastryColor.goldDark, SimastryColor.gold, SimastryColor.goldLight],
+                                startPoint: .bottomLeading,
+                                endPoint: .topTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [.white.opacity(0.3), .white.opacity(0.0)],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                        .padding(1)
+                )
+                .clipShape(Capsule())
+                .shadow(color: SimastryColor.gold.opacity(0.25), radius: 12, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GoldButtonStyle())
         .opacity(isEnabled ? 1.0 : 0.4)
         .disabled(!isEnabled)
-        .scaleEffect(isPressed ? 0.96 : 1.0)
-        .animation(.spring(SimastrySpring.snappy), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
+    }
+}
+
+private struct GoldButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
     }
 }
 
@@ -50,6 +71,8 @@ struct SecondaryButton: View {
             Text(title)
                 .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.mutedSilver)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -32,7 +32,7 @@ struct GuidesView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, SimastrySpacing.tabBarClearance)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -85,11 +85,11 @@ struct GuidesView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("How to talk to every sign")
-                .font(.title2.weight(.bold))
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text("Practical communication playbooks — less theory, more how to text them, reach them, and not lose the room.")
-                .font(.subheadline)
+                .font(SimastryFont.bodyMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -98,7 +98,7 @@ struct GuidesView: View {
     private var signPickerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Choose a sign")
-                .font(.headline)
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             ScrollView(.horizontal) {
@@ -142,11 +142,11 @@ struct GuidesView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(selectedSign.displayName)
-                    .font(.title3.weight(.bold))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(selectedSign.color)
 
                 Text(selectedGuideSubtitle)
-                    .font(.subheadline)
+                    .font(SimastryFont.bodyMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
             }
@@ -160,13 +160,13 @@ struct GuidesView: View {
     private var nextStepSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Use this guide")
-                .font(.headline)
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             ViewThatFits {
                 HStack(spacing: 12) {
                     nextStepCard(
-                        title: "Try Simulate",
+                        title: "Try Predict",
                         subtitle: "Test a real conversation with a \(selectedSign.displayName).",
                         systemImage: "wand.and.stars",
                         accent: SimastryColor.risingViolet
@@ -186,7 +186,7 @@ struct GuidesView: View {
 
                 VStack(spacing: 12) {
                     nextStepCard(
-                        title: "Try Simulate",
+                        title: "Try Predict",
                         subtitle: "Test a real conversation with a \(selectedSign.displayName).",
                         systemImage: "wand.and.stars",
                         accent: SimastryColor.risingViolet
@@ -221,11 +221,11 @@ struct GuidesView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Astropedia Library")
-                        .font(.subheadline.weight(.semibold))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Text("Deeper learning — chart reading, compatibility theory, and more.")
-                        .font(.caption)
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -233,7 +233,7 @@ struct GuidesView: View {
                 Spacer(minLength: 0)
 
                 Image(systemName: "arrow.up.right")
-                    .font(.footnote.weight(.bold))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold)
             }
             .padding(16)
@@ -260,17 +260,17 @@ struct GuidesView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("My Saved Guides")
-                        .font(.subheadline.weight(.semibold))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     if viewModel.savedGuides.isEmpty {
                         Text("Save guides for your boss, friends, family and more.")
-                            .font(.caption)
+                            .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text("\(viewModel.savedGuides.count) saved \(viewModel.savedGuides.count == 1 ? "guide" : "guides")")
-                            .font(.caption)
+                            .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                 }
@@ -278,7 +278,7 @@ struct GuidesView: View {
                 Spacer(minLength: 0)
 
                 Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.bold))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.celestialBlue)
             }
             .padding(16)
@@ -326,11 +326,11 @@ struct GuidesView: View {
                     .foregroundStyle(accent)
 
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
             }

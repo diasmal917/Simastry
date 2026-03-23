@@ -10,6 +10,8 @@ struct SimulationResultView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var alternativeReply: String = ""
     @State private var showShareCard: Bool = false
+    @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accentColor: Color {
         result.targetSunSign?.color ?? SimastryColor.risingViolet
@@ -64,6 +66,15 @@ struct SimulationResultView: View {
         .onChange(of: result.id) { _, _ in
             alternativeReply = ""
         }
+        .task {
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+                    appeared = true
+                }
+            }
+        }
     }
 
     private var predictionBubble: some View {
@@ -109,6 +120,8 @@ struct SimulationResultView: View {
                 }
             }
         }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
     }
 
     private var breakdownSection: some View {
@@ -124,6 +137,8 @@ struct SimulationResultView: View {
         }
         .padding(18)
         .goldGlassRect(cornerRadius: 20)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
     }
 
     private func guideFollowUpCard(sign: ZodiacSign) -> some View {
@@ -226,6 +241,8 @@ struct SimulationResultView: View {
         }
         .padding(18)
         .simastryGlass(cornerRadius: 20)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
     }
 
     private var shareResultButton: some View {
@@ -245,6 +262,8 @@ struct SimulationResultView: View {
             .goldGlassPill()
         }
         .buttonStyle(SpringPressStyle())
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
     }
 
     private var confidenceFooter: some View {
@@ -259,5 +278,7 @@ struct SimulationResultView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.bottom, 4)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
     }
 }

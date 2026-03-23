@@ -91,8 +91,8 @@ struct CompanionsView: View {
 
             GlossyOrbView(
                 signColors: [
-                    Color(red: 197/255, green: 189/255, blue: 179/255),
-                    Color(red: 168/255, green: 159/255, blue: 149/255)
+                    SimastryColor.placeholderLight,
+                    SimastryColor.placeholderDark
                 ],
                 state: .idle,
                 size: 90
@@ -205,7 +205,7 @@ struct CompanionsView: View {
                     .simastryGlass(cornerRadius: 18)
                 }
                 .buttonStyle(SpringPressStyle())
-                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 40, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: SimastrySpacing.tabBarClearance, trailing: 20))
                 .listRowBackground(Color.clear)
             }
         }
@@ -251,6 +251,7 @@ struct CompanionsView: View {
                 Spacer(minLength: 12)
 
                 CompatibilityRingView(score: companion.compatibilityScore, size: 68)
+                    .accessibilityLabel("\(companion.compatibilityScore) percent compatible")
             }
 
             HStack(spacing: 10) {
@@ -278,7 +279,7 @@ struct CompanionsView: View {
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SpringPressStyle())
 
                 Spacer()
 
@@ -289,7 +290,7 @@ struct CompanionsView: View {
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.gold)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SpringPressStyle())
             }
         }
         .padding(20)
@@ -322,7 +323,7 @@ struct CompanionsView: View {
                     title: "Pull a Reading",
                     subtitle: ritualLine(for: companion),
                     systemImage: "moon.stars.fill",
-                    tint: SimastryColor.moonBlue
+                    tint: SimastryColor.celestialBlue
                 ) {
                     viewModel.showToast("Tonight's reading", subtitle: ritualLine(for: companion), isError: false)
                 }
@@ -434,6 +435,7 @@ struct CompanionsView: View {
 
                 VStack(alignment: .trailing, spacing: 8) {
                     CompatibilityRingView(score: companion.compatibilityScore, size: 52)
+                        .accessibilityLabel("\(companion.compatibilityScore) percent compatible")
 
                     Text("\(companion.conversationCount) sparks")
                         .font(SimastryFont.labelSmall)
@@ -443,7 +445,7 @@ struct CompanionsView: View {
             .padding(18)
             .simastryGlass(cornerRadius: 20)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(companion.name), \(level.name), \(companion.compatibilityScore) percent compatible, \(companion.conversationCount) sparks")
     }
 

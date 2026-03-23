@@ -166,7 +166,7 @@ struct SavedGuidesView: View {
                     categorySection(category: category, guides: guides)
                 }
 
-                Spacer().frame(height: 80)
+                Spacer().frame(height: SimastrySpacing.tabBarClearance)
             }
             .padding(.horizontal, 20)
         }
@@ -509,7 +509,7 @@ private struct GuideDetailSheet: View {
                         // Action buttons
                         actionsSection
 
-                        Spacer().frame(height: 80)
+                        Spacer().frame(height: SimastrySpacing.tabBarClearance)
                     }
                     .padding(.horizontal, 20)
                 }
@@ -623,12 +623,12 @@ private struct GuideDetailSheet: View {
     private func bestApproachSection(_ guideData: CommunicationGuideData) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Best Approach")
-                .font(.caption.weight(.semibold))
+                .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.gold.opacity(0.8))
                 .tracking(1.8)
 
             Text(personalizeText(guideData.bestApproach))
-                .font(.system(.body, design: .serif, weight: .semibold))
+                .font(SimastryFont.bodyLarge)
                 .italic()
                 .foregroundStyle(SimastryColor.gold)
                 .fixedSize(horizontal: false, vertical: true)
@@ -642,7 +642,7 @@ private struct GuideDetailSheet: View {
     private func tipsSection(_ guideData: CommunicationGuideData) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Communication Tips")
-                .font(.caption.weight(.semibold))
+                .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.8)
 
@@ -650,13 +650,13 @@ private struct GuideDetailSheet: View {
                 ForEach(Array(guideData.tips.enumerated()), id: \.offset) { index, tip in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: index.isMultiple(of: 2) ? "sparkles" : "star.fill")
-                            .font(.caption.weight(.bold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(SimastryColor.gold)
                             .frame(width: 18, height: 18)
                             .padding(.top, 2)
 
                         Text(personalizeText(tip))
-                            .font(.subheadline)
+                            .font(SimastryFont.bodyMedium)
                             .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -673,17 +673,17 @@ private struct GuideDetailSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption.weight(.bold))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.sunCoral)
 
                 Text("What to Avoid")
-                    .font(.caption.weight(.semibold))
+                    .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.sunCoral)
                     .tracking(1.4)
             }
 
             Text(personalizeText(guideData.avoid))
-                .font(.subheadline)
+                .font(SimastryFont.bodyMedium)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -5,8 +5,8 @@ struct CelestialBackground: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    SimastryColor.midnight,
-                    Color(red: 15/255, green: 22/255, blue: 41/255),
+                    SimastryColor.pureBlack,
+                    Color(red: 5/255, green: 7/255, blue: 18/255),
                     SimastryColor.midnight
                 ],
                 startPoint: .top,

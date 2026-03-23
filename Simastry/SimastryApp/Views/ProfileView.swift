@@ -70,7 +70,7 @@ struct ProfileView: View {
 
                         footerSection
 
-                        Spacer().frame(height: 80)
+                        Spacer().frame(height: SimastrySpacing.tabBarClearance)
                     }
                     .padding(.horizontal, 20)
                 }
@@ -131,8 +131,8 @@ struct ProfileView: View {
                         viewModel.userMoonSign?.color ?? SimastryColor.celestialBlue
                     ]
                     : [
-                        Color(red: 197/255, green: 189/255, blue: 179/255),
-                        Color(red: 168/255, green: 159/255, blue: 149/255)
+                        SimastryColor.placeholderLight,
+                        SimastryColor.placeholderDark
                     ],
                 state: .idle,
                 size: 56
@@ -233,8 +233,8 @@ struct ProfileView: View {
             HStack(spacing: 14) {
                 GlossyOrbView(
                     signColors: [
-                        Color(red: 197/255, green: 189/255, blue: 179/255),
-                        Color(red: 168/255, green: 159/255, blue: 149/255)
+                        SimastryColor.placeholderLight,
+                        SimastryColor.placeholderDark
                     ],
                     state: .idle,
                     size: 40
@@ -626,6 +626,7 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Toggle dark mode")
+            .accessibilityValue(viewModel.isDarkMode ? "Dark mode" : "Light mode")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(appeared ? 1 : 0)
@@ -672,6 +673,8 @@ struct ProfileView: View {
             Text(title)
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

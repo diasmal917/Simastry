@@ -55,12 +55,24 @@ struct UpsellModalView: View {
         VStack(spacing: 14) {
             Image(systemName: "sparkles")
                 .font(.system(size: 32, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [SimastryColor.goldLight, SimastryColor.gold],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .symbolEffect(.variableColor.iterative, isActive: appeared)
 
             Text("Unlock the Full Cosmos")
                 .font(SimastryFont.titleLarge)
-                .foregroundStyle(SimastryColor.offWhite)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [SimastryColor.offWhite, SimastryColor.goldLight],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
 
             Text("Choose your path among the stars")
                 .font(SimastryFont.bodySmall)
@@ -143,13 +155,13 @@ struct UpsellModalView: View {
                 }
             }
             .padding(20)
-            .background {
+            .glossyCard(cornerRadius: 20)
+            .overlay {
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(selectedTier == "plus" ? SimastryColor.gold.opacity(0.5) : .clear, lineWidth: 1.5)
+                    .stroke(selectedTier == "plus" ? SimastryColor.gold.opacity(0.4) : .clear, lineWidth: 1)
             }
-            .simastryGlass(cornerRadius: 20)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Subscribe to Plus plan")
     }
 
@@ -168,10 +180,17 @@ struct UpsellModalView: View {
 
                             Text("BEST VALUE")
                                 .font(SimastryFont.captionSmall)
-                                .foregroundStyle(SimastryColor.midnight)
+                                .foregroundStyle(Color(red: 20/255, green: 18/255, blue: 12/255))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(SimastryColor.gold, in: .capsule)
+                                .background(
+                                    LinearGradient(
+                                        colors: [SimastryColor.goldDark, SimastryColor.gold, SimastryColor.goldLight],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ),
+                                    in: .capsule
+                                )
                         }
 
                         Text(priceText(for: "pro", fallback: "$14.99 / month"))
@@ -202,13 +221,27 @@ struct UpsellModalView: View {
                 }
             }
             .padding(20)
-            .background {
+            .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(selectedTier == "pro" ? SimastryColor.gold.opacity(0.5) : .clear, lineWidth: 1.5)
+                    .fill(SimastryColor.gold.opacity(0.04))
+            )
+            .glossyCard(cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                SimastryColor.goldLight.opacity(selectedTier == "pro" ? 0.5 : 0.15),
+                                SimastryColor.gold.opacity(selectedTier == "pro" ? 0.3 : 0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: selectedTier == "pro" ? 1 : 0.5
+                    )
             }
-            .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 20)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Subscribe to Pro plan")
     }
 
@@ -232,10 +265,17 @@ struct UpsellModalView: View {
     private var activeBadge: some View {
         Text("ACTIVE")
             .font(SimastryFont.captionSmall)
-            .foregroundStyle(SimastryColor.midnight)
+            .foregroundStyle(Color(red: 20/255, green: 18/255, blue: 12/255))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(SimastryColor.gold, in: .capsule)
+            .background(
+                LinearGradient(
+                    colors: [SimastryColor.goldDark, SimastryColor.gold, SimastryColor.goldLight],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: .capsule
+            )
     }
 
     private var restoreButton: some View {
@@ -264,7 +304,7 @@ struct UpsellModalView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
+                .foregroundStyle(SimastryColor.goldLight)
                 .frame(width: 18)
             Text(text)
                 .font(SimastryFont.bodySmall)

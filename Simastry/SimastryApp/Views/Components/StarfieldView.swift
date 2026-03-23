@@ -38,8 +38,8 @@ nonisolated struct StarParticle: Sendable {
             StarParticle(
                 x: Double.random(in: 0...1),
                 y: Double.random(in: 0...1),
-                size: Double.random(in: 1...3),
-                opacity: Double.random(in: 0.15...0.6)
+                size: Double.random(in: 0.8...2.5),
+                opacity: Double.random(in: 0.08...0.35)
             )
         }
     }

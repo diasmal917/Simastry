@@ -84,6 +84,7 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var quickActionsSection: some View {
@@ -135,6 +136,7 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var signsSection: some View {
@@ -151,6 +153,7 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 15)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var compatibilitySection: some View {
@@ -184,7 +187,7 @@ struct CompanionDetailSheet: View {
                     // Sun-Sun breakdown
                     compatibilityRow(
                         icon: "sun.max.fill",
-                        tint: Color(red: 232/255, green: 132/255, blue: 90/255),
+                        tint: SimastryColor.sunCoral,
                         title: "Core Identity",
                         yours: userSun,
                         theirs: compSun,
@@ -194,7 +197,7 @@ struct CompanionDetailSheet: View {
                     // Moon-Moon breakdown
                     compatibilityRow(
                         icon: "moon.stars.fill",
-                        tint: Color(red: 74/255, green: 144/255, blue: 217/255),
+                        tint: SimastryColor.celestialBlue,
                         title: "Emotional Bond",
                         yours: userMoon,
                         theirs: compMoon,
@@ -204,7 +207,7 @@ struct CompanionDetailSheet: View {
                     // Rising-Rising breakdown
                     compatibilityRow(
                         icon: "sparkles",
-                        tint: Color(red: 192/255, green: 132/255, blue: 216/255),
+                        tint: SimastryColor.risingViolet,
                         title: "First Impressions",
                         yours: userRising,
                         theirs: compRising,
@@ -237,6 +240,7 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private func compatibilityRow(icon: String, tint: Color, title: String, yours: ZodiacSign, theirs: ZodiacSign, insight: String) -> some View {
@@ -345,6 +349,7 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 25)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var statsSection: some View {
@@ -357,6 +362,7 @@ struct CompanionDetailSheet: View {
         .simastryGlass(cornerRadius: 16)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 30)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var companionPrompt: String {

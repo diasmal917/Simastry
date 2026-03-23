@@ -87,7 +87,7 @@ struct AstropediaView: View {
                 title: "Moon in \(moon.displayName)",
                 subtitle: "Your emotional world",
                 iconName: CelestialRole.moon.iconName,
-                accent: SimastryColor.moonBlue,
+                accent: SimastryColor.celestialBlue,
                 body: AstrologyTemplates.moonSign[moon.rawValue] ?? "Your heart speaks in tides."
             ),
             AstropediaCard(
@@ -928,7 +928,7 @@ struct AstropediaView: View {
                     title: "Inner life",
                     subtitle: "Moon-coded lens",
                     iconName: "moon.fill",
-                    accent: SimastryColor.moonBlue,
+                    accent: SimastryColor.celestialBlue,
                     body: AstrologyTemplates.moonSign[sign.rawValue] ?? "Their emotional life moves in its own rhythm."
                 ),
                 AstropediaCard(
@@ -1036,7 +1036,7 @@ struct AstropediaView: View {
                     title: "How they regulate",
                     subtitle: "What restores them",
                     iconName: "moon.zzz.fill",
-                    accent: SimastryColor.moonBlue,
+                    accent: SimastryColor.celestialBlue,
                     body: regulationStyle(for: sign)
                 ),
                 AstropediaCard(

@@ -65,11 +65,11 @@ struct SimulateView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, SimastrySpacing.tabBarClearance)
                 }
                 .scrollIndicators(.hidden)
             }
-            .navigationTitle("Simulate")
+            .navigationTitle("Predict")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selectedResult) { result in
                 SimulationResultView(
@@ -312,7 +312,7 @@ struct SimulateView: View {
                     }
                     .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.gold)
-                    .buttonStyle(.plain)
+                    .buttonStyle(SpringPressStyle())
                 }
             }
 
@@ -424,11 +424,13 @@ struct SimulateView: View {
                 .padding(16)
                 .simastryGlass(cornerRadius: 18)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SpringPressStyle())
 
             Button(role: .destructive) {
-                viewModel.predictionService.deleteHistoryItem(id: item.id)
-                loadHistory()
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    viewModel.predictionService.deleteHistoryItem(id: item.id)
+                    loadHistory()
+                }
             } label: {
                 Image(systemName: "trash")
                     .font(.system(size: 14, weight: .semibold))
@@ -436,8 +438,9 @@ struct SimulateView: View {
                     .frame(width: 40, height: 40)
                     .simastryGlass(cornerRadius: 14)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SpringPressStyle())
         }
+        .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
     }
 
     private func sectionLabel(_ title: String) -> some View {

@@ -186,11 +186,3 @@ struct ModeSelectionView: View {
         }
     }
 }
-
-struct SpringPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
-    }
-}

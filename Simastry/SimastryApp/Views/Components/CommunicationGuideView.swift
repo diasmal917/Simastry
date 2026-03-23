@@ -19,11 +19,11 @@ struct CommunicationGuideView: View {
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(guide.title)
-                                .font(.title3.weight(.semibold))
+                                .font(SimastryFont.titleMedium)
                                 .foregroundStyle(SimastryColor.offWhite)
 
                             Text("Communication reference")
-                                .font(.caption)
+                                .font(SimastryFont.caption)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }
                     }
@@ -32,12 +32,12 @@ struct CommunicationGuideView: View {
                 animatedSection(index: 1) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Best Approach")
-                            .font(.caption.weight(.semibold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(SimastryColor.gold.opacity(0.8))
                             .tracking(1.8)
 
                         Text(guide.bestApproach)
-                            .font(.system(.body, design: .serif, weight: .semibold))
+                            .font(SimastryFont.bodyLarge)
                             .italic()
                             .foregroundStyle(SimastryColor.gold)
                             .fixedSize(horizontal: false, vertical: true)
@@ -49,7 +49,7 @@ struct CommunicationGuideView: View {
                 animatedSection(index: 2) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Tips")
-                            .font(.caption.weight(.semibold))
+                            .font(SimastryFont.labelSmall)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .tracking(1.8)
 
@@ -57,13 +57,13 @@ struct CommunicationGuideView: View {
                             ForEach(Array(guide.tips.enumerated()), id: \.offset) { index, tip in
                                 HStack(alignment: .top, spacing: 12) {
                                     Image(systemName: index.isMultiple(of: 2) ? "sparkles" : "star.fill")
-                                        .font(.caption.weight(.bold))
+                                        .font(SimastryFont.labelSmall)
                                         .foregroundStyle(SimastryColor.gold)
                                         .frame(width: 18, height: 18)
                                         .padding(.top, 2)
 
                                     Text(tip)
-                                        .font(.subheadline)
+                                        .font(SimastryFont.bodyMedium)
                                         .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -78,17 +78,17 @@ struct CommunicationGuideView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption.weight(.bold))
+                                .font(SimastryFont.labelSmall)
                                 .foregroundStyle(SimastryColor.sunCoral)
 
                             Text("What to Avoid")
-                                .font(.caption.weight(.semibold))
+                                .font(SimastryFont.labelSmall)
                                 .foregroundStyle(SimastryColor.sunCoral)
                                 .tracking(1.4)
                         }
 
                         Text(guide.avoid)
-                            .font(.subheadline)
+                            .font(SimastryFont.bodyMedium)
                             .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
                             .fixedSize(horizontal: false, vertical: true)
                     }
