@@ -16,9 +16,9 @@ struct SimastryColor {
     static let midnight = Color(red: 5/255, green: 5/255, blue: 10/255)
     static let pureBlack = Color.black
     static let surface = Color(red: 12/255, green: 14/255, blue: 22/255)
-    static let gold = Color(red: 212/255, green: 185/255, blue: 135/255)
-    static let goldLight = Color(red: 232/255, green: 215/255, blue: 175/255)
-    static let goldDark = Color(red: 170/255, green: 145/255, blue: 100/255)
+    static let gold = Color(red: 185/255, green: 155/255, blue: 75/255)
+    static let goldLight = Color(red: 215/255, green: 185/255, blue: 105/255)
+    static let goldDark = Color(red: 145/255, green: 120/255, blue: 55/255)
     static let celestialBlue = Color(red: 74/255, green: 144/255, blue: 217/255)
     static let offWhite = Color(red: 240/255, green: 242/255, blue: 245/255)
     static let mutedSilver = Color(red: 148/255, green: 163/255, blue: 184/255)

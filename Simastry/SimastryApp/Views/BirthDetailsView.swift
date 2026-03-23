@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct BirthDetailsView: View {
     @Bindable var viewModel: AppViewModel
@@ -14,6 +15,9 @@ struct BirthDetailsView: View {
     @State private var birthplace: String = ""
     @State private var appeared: Bool = false
     @State private var birthTimeUnknown: Bool = false
+    @State private var showSuggestions: Bool = false
+    @State private var selectedFromSuggestion: Bool = false
+    @StateObject private var locationCompleter = LocationSearchCompleter()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var birthplaceFocused: Bool
     private let birthplaceGeocodingService = BirthplaceGeocodingService()
@@ -162,9 +166,11 @@ struct BirthDetailsView: View {
     private var birthTimeStep: some View {
         VStack(spacing: 24) {
             Text("What time were you born?")
-                .font(SimastryFont.displayMedium)
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
             if !birthTimeUnknown {
                 DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
@@ -193,17 +199,17 @@ struct BirthDetailsView: View {
 
             if birthTimeUnknown {
                 Text("No worries — your Sun and Moon signs will still be accurate. We'll estimate your Rising sign based on your birthday.")
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             Text("Don't know your exact birth time? That's okay — your Sun and Moon signs are still accurate. Rising sign needs birth time for precision, but we'll estimate if needed.")
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                 .multilineTextAlignment(.center)
-                .opacity(birthTimeUnknown ? 0 : 1)
+                .opacity(birthTimeUnknown ? 0 : 0.7)
         }
         .padding(.horizontal, 24)
     }
@@ -232,13 +238,72 @@ struct BirthDetailsView: View {
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(.white.opacity(0.15), lineWidth: 1)
                     }
+                    .onChange(of: birthplace) { _, newValue in
+                        selectedFromSuggestion = false
+                        locationCompleter.search(query: newValue)
+                        let hasSuggestions = newValue.count >= 2
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.snappy)) {
+                            showSuggestions = hasSuggestions
+                        }
+                    }
 
-                Text("Required — used to resolve your chart timezone and Rising sign")
-                    .font(SimastryFont.labelMedium)
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                // Autocomplete suggestions
+                if showSuggestions && !locationCompleter.suggestions.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(locationCompleter.suggestions, id: \.self) { completion in
+                            Button {
+                                selectSuggestion(completion)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(completion.title)
+                                        .font(SimastryFont.bodyMedium)
+                                        .foregroundStyle(SimastryColor.offWhite)
+                                        .lineLimit(1)
+                                    if !completion.subtitle.isEmpty {
+                                        Text(completion.subtitle)
+                                            .font(SimastryFont.caption)
+                                            .foregroundStyle(SimastryColor.mutedSilver)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 16)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            if completion != locationCompleter.suggestions.last {
+                                Divider()
+                                    .background(.white.opacity(0.08))
+                                    .padding(.horizontal, 16)
+                            }
+                        }
+                    }
+                    .simastryGlass(cornerRadius: SimastryRadius.small)
+                    .transition(.opacity.combined(with: .move(edge: .top)).combined(with: .scale(scale: 0.98, anchor: .top)))
+                }
+
+                if !showSuggestions || locationCompleter.suggestions.isEmpty {
+                    Text("Required — used to resolve your chart timezone and Rising sign")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
             }
         }
         .padding(.horizontal, 24)
+    }
+
+    private func selectSuggestion(_ completion: MKLocalSearchCompletion) {
+        let title = completion.title
+        let subtitle = completion.subtitle
+        birthplace = subtitle.isEmpty ? title : "\(title), \(subtitle)"
+        selectedFromSuggestion = true
+        locationCompleter.clear()
+        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.snappy)) {
+            showSuggestions = false
+        }
+        birthplaceFocused = false
     }
 
     private var privacyNote: some View {
@@ -249,7 +314,7 @@ struct BirthDetailsView: View {
 
             Text("We use this to generate your astrological birth chart. We never share or sell your data.")
                 .font(SimastryFont.caption)
-                .foregroundStyle(.white.opacity(0.68))
+                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 32)
@@ -279,7 +344,7 @@ struct BirthDetailsView: View {
             Task {
                 guard let location = await birthplaceGeocodingService.resolve(trimmedBirthplace) else {
                     isCalculating = false
-                    viewModel.showToast("Couldn't place your birthplace", subtitle: "Use a city and country we can verify for your chart.", isError: true)
+                    viewModel.showToast("We couldn't find that location", subtitle: "Try a city name like 'London, UK'", isError: true)
                     return
                 }
 

@@ -57,9 +57,7 @@ struct SignUpView: View {
                 Spacer()
 
                 VStack(spacing: 16) {
-                    SignInWithAppleButton(.continue) { request in
-                        request.requestedScopes = [.fullName, .email]
-                    } onCompletion: { result in
+                    AppleSignInButton(isEnabled: !isAuthenticating) { result in
                         guard !isAuthenticating else { return }
                         isAuthenticating = true
                         Task {
@@ -68,11 +66,6 @@ struct SignUpView: View {
                             isAuthenticating = false
                         }
                     }
-                    .signInWithAppleButtonStyle(.white)
-                    .frame(height: 54)
-                    .clipShape(.rect(cornerRadius: 999))
-                    .disabled(isAuthenticating)
-                    .opacity(isAuthenticating ? 0.72 : 1)
 
                     GoogleSignInButton(isEnabled: !isAuthenticating) {
                         Task {

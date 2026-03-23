@@ -21,13 +21,16 @@ struct GoogleSignInButton: View {
                     .frame(width: 20, height: 20)
 
                 Text("Continue with Google")
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(.black.opacity(0.88))
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(.white)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 54)
-            .background(.white.opacity(0.96), in: .rect(cornerRadius: 999))
-            .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
+            .background(.white.opacity(0.08), in: .rect(cornerRadius: 999))
+            .overlay {
+                RoundedRectangle(cornerRadius: 999)
+                    .stroke(.white.opacity(0.2), lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
         .opacity(isEnabled ? 1 : 0.45)
@@ -52,7 +55,7 @@ private struct GoogleMarkView: View {
 
     var body: some View {
         Text("G")
-            .font(SimastryFont.titleSmall)
+            .font(SimastryFont.labelLarge)
             .foregroundStyle(
                 LinearGradient(
                     colors: googleColors,
