@@ -24,6 +24,11 @@ class AppViewModel {
     var profileImageURL: String?
     private let profileImageFileName = "profile_image.jpg"
     private let profileImageURLKey = "simastry_profile_image_url"
+    private let socialLinksKey = "socialLinks"
+    private let socialDisplayNameKey = "socialDisplayName"
+    private let socialBioKey = "socialBio"
+    private let isDiscoverableKey = "isDiscoverable"
+    private let thirdPartyConsentKey = "thirdPartyDataConsent"
 
     var companionSunSign: ZodiacSign?
     var companionMoonSign: ZodiacSign?
@@ -41,18 +46,18 @@ class AppViewModel {
     // MARK: - Social Discovery
     var isDiscoverable: Bool = UserDefaults.standard.bool(forKey: "isDiscoverable") {
         didSet {
-            UserDefaults.standard.set(isDiscoverable, forKey: "isDiscoverable")
+            UserDefaults.standard.set(isDiscoverable, forKey: isDiscoverableKey)
         }
     }
     var discoveredProfiles: [SocialProfile] = []
     var socialDisplayName: String = UserDefaults.standard.string(forKey: "socialDisplayName") ?? "" {
         didSet {
-            UserDefaults.standard.set(socialDisplayName, forKey: "socialDisplayName")
+            UserDefaults.standard.set(socialDisplayName, forKey: socialDisplayNameKey)
         }
     }
     var socialBio: String = UserDefaults.standard.string(forKey: "socialBio") ?? "" {
         didSet {
-            UserDefaults.standard.set(socialBio, forKey: "socialBio")
+            UserDefaults.standard.set(socialBio, forKey: socialBioKey)
         }
     }
     var socialLinks: SocialLinks = {
@@ -64,7 +69,7 @@ class AppViewModel {
     }() {
         didSet {
             if let data = try? JSONEncoder().encode(socialLinks) {
-                UserDefaults.standard.set(data, forKey: "socialLinks")
+                UserDefaults.standard.set(data, forKey: socialLinksKey)
             }
         }
     }
@@ -115,7 +120,7 @@ class AppViewModel {
 
     func acceptThirdPartyConsent() {
         hasAcceptedThirdPartyConsent = true
-        UserDefaults.standard.set(true, forKey: "thirdPartyDataConsent")
+        UserDefaults.standard.set(true, forKey: thirdPartyConsentKey)
     }
 
     var hasCompletedSigns: Bool {
@@ -147,6 +152,7 @@ class AppViewModel {
             pendingDeepLinkURL = nil
             pendingDeepLink = nil
             guideFocusSign = nil
+            clearAccountScopedLocalState()
             resetSetupState()
             homeSetupPhase = .modeSelection
             notificationService.clearScheduledNotifications()
@@ -259,13 +265,12 @@ class AppViewModel {
         }
         notificationService.clearScheduledNotifications()
         clearPendingOnboardingChart()
+        clearAccountScopedLocalState()
         SharedDefaults.clearAll()
         WidgetCenter.shared.reloadAllTimelines()
         isAuthenticated = false
         profile = nil
         companions = []
-        companionMessages = []
-        UserDefaults.standard.removeObject(forKey: companionMessagesKey)
         showUpsell = false
         selectedTab = 0
         pendingDeepLinkURL = nil
@@ -279,50 +284,65 @@ class AppViewModel {
     // MARK: - Account Deletion
 
     func deleteAccount() async {
-        do {
-            // 1. Delete user data from Supabase
-            if let userId = await supabase.currentUserId {
-                // Delete companions
-                try? await supabase.deleteAllCompanions(for: userId.uuidString)
-                // Delete profile
-                try? await supabase.deleteProfile(for: userId.uuidString)
+        var remoteFailures: [String] = []
+
+        if let userId = await supabase.currentUserId {
+            do {
+                try await supabase.deleteAllCompanions(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("companions")
+                CrashReporter.log(error, context: "deleteAccountCompanions")
             }
 
-            // 2. Clear all local data
-            clearAllLocalData()
+            do {
+                try await supabase.deleteProfile(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("profile")
+                CrashReporter.log(error, context: "deleteAccountProfile")
+            }
+        }
 
-            // 3. Delete auth account
-            // Note: Supabase admin API needed for full deletion
-            // For now, sign out and clear everything
-            try? await supabase.signOut()
+        clearAllLocalData()
 
-            // 4. Reset app state
-            isAuthenticated = false
-            profile = nil
-            selectedTab = 0
-            companions = []
-            savedGuides = []
-            companionMessages = []
-            profileImage = nil
-            showUpsell = false
-            pendingDeepLinkURL = nil
-            pendingDeepLink = nil
-            guideFocusSign = nil
-            resetSetupState()
-            homeSetupPhase = .modeSelection
-            notificationService.clearScheduledNotifications()
-            currentScreen = .landing
+        do {
+            try await supabase.signOut()
+        } catch {
+            remoteFailures.append("session")
+            CrashReporter.log(error, context: "deleteAccountSignOut")
+        }
 
-            showToast("Account deleted successfully", subtitle: "All your data has been removed", isError: false)
+        isAuthenticated = false
+        profile = nil
+        selectedTab = 0
+        companions = []
+        showUpsell = false
+        pendingDeepLinkURL = nil
+        pendingDeepLink = nil
+        guideFocusSign = nil
+        resetSetupState()
+        homeSetupPhase = .modeSelection
+        notificationService.clearScheduledNotifications()
+        currentScreen = .landing
+
+        if remoteFailures.isEmpty {
+            showToast("Data cleared", subtitle: "Your local Simastry data has been removed from this device.", isError: false)
+        } else {
+            showToast(
+                "Local data cleared",
+                subtitle: "Some server cleanup may still need support follow-up. Please contact support if you want the account fully removed.",
+                isError: true
+            )
         }
     }
 
     private func clearAllLocalData() {
+        clearAccountScopedLocalState()
+
         // Clear UserDefaults
         let keys = ["savedGuides", "simastry_companion_messages", "simastry_profile_image_url",
                     "thirdPartyDataConsent", "isDiscoverable", "simastry_referral_info",
                     "simastry_dark_mode", "appLanguage", "ageVerified",
-                    "socialDisplayName", "socialBio",
+                    "socialDisplayName", "socialBio", "socialLinks",
                     "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount"]
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
 
@@ -831,6 +851,11 @@ class AppViewModel {
     // MARK: - Social Discovery
 
     func toggleDiscoverability() {
+        guard AppConfig.socialDiscoveryEnabled else {
+            isDiscoverable = false
+            showToast("Discovery coming soon", subtitle: "We're still finishing the secure profile and messaging backend.", isError: false)
+            return
+        }
         isDiscoverable.toggle()
         if isDiscoverable {
             createSocialProfile()
@@ -840,6 +865,10 @@ class AppViewModel {
     }
 
     func fetchDiscoverableProfiles() {
+        guard AppConfig.socialDiscoveryEnabled else {
+            discoveredProfiles = []
+            return
+        }
         // TODO: Supabase integration — replace with:
         // let profiles: [SocialProfile] = try await supabase.client
         //     .from("social_profiles")
@@ -852,6 +881,7 @@ class AppViewModel {
     }
 
     func createSocialProfile() {
+        guard AppConfig.socialDiscoveryEnabled else { return }
         if socialDisplayName.isEmpty {
             socialDisplayName = profile?.displayName ?? "Stargazer"
         }
@@ -870,6 +900,7 @@ class AppViewModel {
     }
 
     func updateSocialProfile() {
+        guard AppConfig.socialDiscoveryEnabled else { return }
         // TODO: Supabase integration — update social_profiles table:
         // try await supabase.client.from("social_profiles")
         //     .update(["display_name": socialDisplayName, "bio": socialBio, "is_visible": isDiscoverable])
@@ -885,6 +916,10 @@ class AppViewModel {
     // MARK: - Discovery "Say Hi" Messaging
 
     func sendDiscoveryMessage(from profile: SocialProfile) {
+        guard AppConfig.socialDiscoveryEnabled else {
+            showToast("Discovery preview", subtitle: "Cross-user messaging isn't live yet.", isError: false)
+            return
+        }
         let compatibility = compatibilityWithUser(for: profile)
         let isSameSign = profile.sunSign == userSunSign?.rawValue
         let isCompat = isElementCompatible(profile)
@@ -1014,6 +1049,8 @@ class AppViewModel {
     func loadSavedGuides() {
         guard let data = UserDefaults.standard.data(forKey: savedGuidesKey),
               let guides = try? JSONDecoder().decode([SavedGuide].self, from: data) else {
+            UserDefaults.standard.removeObject(forKey: savedGuidesKey)
+            savedGuides = []
             return
         }
         savedGuides = guides
@@ -1057,10 +1094,17 @@ class AppViewModel {
     }
 
     func loadMessages() {
-        guard let data = UserDefaults.standard.data(forKey: companionMessagesKey) else { return }
+        guard let data = UserDefaults.standard.data(forKey: companionMessagesKey) else {
+            companionMessages = []
+            return
+        }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        guard let messages = try? decoder.decode([CompanionMessage].self, from: data) else { return }
+        guard let messages = try? decoder.decode([CompanionMessage].self, from: data) else {
+            UserDefaults.standard.removeObject(forKey: companionMessagesKey)
+            companionMessages = []
+            return
+        }
         companionMessages = messages.sorted { $0.timestamp > $1.timestamp }
     }
 
@@ -1191,16 +1235,27 @@ class AppViewModel {
 
     func loadProfileImage() {
         guard let savedURL = UserDefaults.standard.string(forKey: profileImageURLKey),
-              let url = URL(string: savedURL) else { return }
+              let url = URL(string: savedURL) else {
+            UserDefaults.standard.removeObject(forKey: profileImageURLKey)
+            profileImage = nil
+            profileImageURL = nil
+            return
+        }
         guard FileManager.default.fileExists(atPath: url.path) else {
             // File was removed externally — clear stale reference
             UserDefaults.standard.removeObject(forKey: profileImageURLKey)
+            profileImage = nil
+            profileImageURL = nil
             return
         }
         if let data = try? Data(contentsOf: url),
            let image = UIImage(data: data) {
             profileImage = image
             profileImageURL = savedURL
+        } else {
+            UserDefaults.standard.removeObject(forKey: profileImageURLKey)
+            profileImage = nil
+            profileImageURL = nil
         }
     }
 
@@ -1215,6 +1270,33 @@ class AppViewModel {
     private var profileImageFileURL: URL {
         let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         return documentsDir.appendingPathComponent(profileImageFileName)
+    }
+
+    private func clearAccountScopedLocalState() {
+        savedGuides = []
+        companionMessages = []
+        discoveredProfiles = []
+        isDiscoverable = false
+        socialDisplayName = ""
+        socialBio = ""
+        socialLinks = SocialLinks()
+        referralInfo = nil
+        hasAcceptedThirdPartyConsent = false
+        profileImage = nil
+        profileImageURL = nil
+
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: savedGuidesKey)
+        defaults.removeObject(forKey: companionMessagesKey)
+        defaults.removeObject(forKey: socialLinksKey)
+        defaults.removeObject(forKey: socialDisplayNameKey)
+        defaults.removeObject(forKey: socialBioKey)
+        defaults.removeObject(forKey: isDiscoverableKey)
+        defaults.removeObject(forKey: referralInfoKey)
+        defaults.removeObject(forKey: thirdPartyConsentKey)
+        defaults.removeObject(forKey: profileImageURLKey)
+
+        deleteProfileImage()
     }
 
     func showToast(_ title: String, subtitle: String, isError: Bool = false) {

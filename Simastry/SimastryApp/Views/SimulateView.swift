@@ -578,6 +578,19 @@ struct SimulateView: View {
             return
         }
 
+        let allowed = await viewModel.predictionRateLimiter.checkLimit()
+        if !allowed {
+            let message = await viewModel.predictionRateLimiter.waitMessage()
+            viewModel.showToast("Rate limit reached", subtitle: message, isError: true)
+            return
+        }
+
+        let moderation = ContentModerationService.moderateConversation(alternativeReply)
+        if !moderation.isAllowed {
+            viewModel.showToast("Unable to process", subtitle: moderation.reason ?? "Unable to process this content", isError: true)
+            return
+        }
+
         guard viewModel.canUsePrediction() else {
             viewModel.showToast("Predictions used up", subtitle: "You've used all \(viewModel.weeklyPredictionLimit) predictions this week. Upgrade for unlimited.", isError: true)
             viewModel.showUpsell = true
@@ -598,11 +611,13 @@ struct SimulateView: View {
 
         do {
             let updatedResult = try await viewModel.predictionService.generatePrediction(request: request, tier: currentTier)
+            await viewModel.predictionRateLimiter.recordAction()
             await viewModel.consumePrediction()
             HapticManager.soulFlash()
             loadHistory()
             selectedResult = updatedResult
         } catch {
+            CrashReporter.log(error, context: "regeneratePrediction")
             let message = (error as? LocalizedError)?.errorDescription ?? "Try again in a moment."
             viewModel.showToast("Couldn't redraw the timeline", subtitle: message, isError: true)
         }

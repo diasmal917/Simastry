@@ -114,13 +114,13 @@ struct ProfileView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
-            .alert("Delete Account", isPresented: $showDeleteAccountConfirmation) {
-                Button("Delete Everything", role: .destructive) {
+            .alert("Clear My Data", isPresented: $showDeleteAccountConfirmation) {
+                Button("Clear My Data", role: .destructive) {
                     Task { await viewModel.deleteAccount() }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will permanently delete your account, all companions, guides, and data. This action cannot be undone.")
+                Text("This clears your Simastry data from this device and attempts to remove your server data too. The app will tell you if any server cleanup still needs support follow-up.")
             }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -403,61 +403,83 @@ struct ProfileView: View {
 
     private var discoverySection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Button {
-                showDiscoveryView = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "person.2.wave.2.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [SimastryColor.gold, SimastryColor.goldLight],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+            if AppConfig.socialDiscoveryEnabled {
+                Button {
+                    showDiscoveryView = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.2.wave.2.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [SimastryColor.gold, SimastryColor.goldLight],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                    Text("Find Others Like You")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
+                        Text("Find Others Like You")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .padding(16)
+                    .glossyCard()
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Find other Simastry users with compatible signs")
+                .accessibilityHint("Opens discovery to find people with similar or compatible signs")
+                .fullScreenCover(isPresented: $showDiscoveryView) {
+                    DiscoveryView(viewModel: viewModel)
+                }
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Visible in Discovery")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Text("Make your profile visible to others. You can always browse without being visible.")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.isDiscoverable },
+                        set: { newValue in
+                            if newValue != viewModel.isDiscoverable {
+                                viewModel.toggleDiscoverability()
+                            }
+                        }
+                    ))
+                    .labelsHidden()
+                    .tint(SimastryColor.gold)
+                }
+                .padding(.horizontal, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Visible in discovery toggle. Make your profile visible to others. You can always browse without being visible. Currently \(viewModel.isDiscoverable ? "on" : "off")")
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.2.wave.2.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+                        Text("Discovery Coming Soon")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                    }
+
+                    Text("We're still finishing the secure backend for discovery profiles and cross-user messaging.")
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(16)
                 .glossyCard()
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Discovery coming soon. Secure profile discovery and cross-user messaging are still in development.")
             }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Find other Simastry users with compatible signs")
-            .accessibilityHint("Opens discovery to find people with similar or compatible signs")
-            .fullScreenCover(isPresented: $showDiscoveryView) {
-                DiscoveryView(viewModel: viewModel)
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Visible in Discovery")
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.offWhite)
-                    Text("Make your profile visible to others. You can always browse without being visible.")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                }
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { viewModel.isDiscoverable },
-                    set: { newValue in
-                        if newValue != viewModel.isDiscoverable {
-                            viewModel.toggleDiscoverability()
-                        }
-                    }
-                ))
-                .labelsHidden()
-                .tint(SimastryColor.gold)
-            }
-            .padding(.horizontal, 4)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Visible in discovery toggle. Make your profile visible to others. You can always browse without being visible. Currently \(viewModel.isDiscoverable ? "on" : "off")")
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
@@ -1452,14 +1474,14 @@ struct ProfileView: View {
     private var deleteAccountSection: some View {
         VStack(spacing: 0) {
             Button(action: { showDeleteAccountConfirmation = true }) {
-                Text("Delete Account")
+                Text("Clear My Data")
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Delete your account permanently")
+            .accessibilityLabel("Clear your Simastry data from this device")
         }
         .padding(.top, 16)
         .opacity(appeared ? 1 : 0)

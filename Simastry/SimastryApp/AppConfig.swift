@@ -23,6 +23,7 @@ nonisolated enum AppConfig {
     static let deepLinkScheme = "simastry"
     static let universalLinkHost = "simastry.app"
     static let appStoreURL = URL(string: "https://apps.apple.com/app/simastry/id0000000000")! // Replace with real App Store ID
+    static let socialDiscoveryEnabled = false
 
     // Legal URLs — update these before App Store submission
     static let privacyPolicyURL = URL(string: "https://simastry.app/privacy")!

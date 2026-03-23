@@ -1,5 +1,37 @@
 import AppIntents
 
+enum ZodiacSignShortcutOption: String, CaseIterable, AppEnum {
+    case aries
+    case taurus
+    case gemini
+    case cancer
+    case leo
+    case virgo
+    case libra
+    case scorpio
+    case sagittarius
+    case capricorn
+    case aquarius
+    case pisces
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Zodiac Sign"
+
+    static var caseDisplayRepresentations: [ZodiacSignShortcutOption: DisplayRepresentation] = [
+        .aries: "Aries",
+        .taurus: "Taurus",
+        .gemini: "Gemini",
+        .cancer: "Cancer",
+        .leo: "Leo",
+        .virgo: "Virgo",
+        .libra: "Libra",
+        .scorpio: "Scorpio",
+        .sagittarius: "Sagittarius",
+        .capricorn: "Capricorn",
+        .aquarius: "Aquarius",
+        .pisces: "Pisces"
+    ]
+}
+
 // MARK: - Check Compatibility Shortcut
 struct CheckCompatibilityIntent: AppIntent {
     static var title: LocalizedStringResource = "Check Compatibility"
@@ -22,7 +54,7 @@ struct GetCommunicationTipIntent: AppIntent {
     static var openAppWhenRun: Bool = false
 
     @Parameter(title: "Zodiac Sign")
-    var signName: String
+    var signName: ZodiacSignShortcutOption
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let tips: [String: String] = [
@@ -40,7 +72,7 @@ struct GetCommunicationTipIntent: AppIntent {
             "pisces": "Be gentle with your tone. They absorb emotional energy from your words."
         ]
 
-        let tip = tips[signName.lowercased()] ?? "Open Simastry for personalized communication guides."
+        let tip = tips[signName.rawValue] ?? "Open Simastry for personalized communication guides."
         return .result(dialog: "\(tip)")
     }
 }

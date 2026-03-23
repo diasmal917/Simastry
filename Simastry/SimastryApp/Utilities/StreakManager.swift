@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Tracks daily check-in streaks to drive retention.
 @MainActor

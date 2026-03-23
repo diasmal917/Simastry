@@ -382,10 +382,13 @@ struct SimulationShareCardView: View {
 
     private func shareCard() {
         guard let image = renderImage() else { return }
-        let activityVC = UIActivityViewController(
-            activityItems: [image],
-            applicationActivities: nil
-        )
+
+        var items: [Any] = [image]
+        if let deepLink = shareDeepLink {
+            items.append("\(deepLink.shareText)\n\(deepLink.universalLinkURL.absoluteString)")
+        }
+
+        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
             var topVC = rootVC
@@ -395,5 +398,12 @@ struct SimulationShareCardView: View {
             activityVC.popoverPresentationController?.sourceView = topVC.view
             topVC.present(activityVC, animated: true)
         }
+    }
+
+    private var shareDeepLink: DeepLink? {
+        if let targetSign = result.targetSunSign {
+            return .guide(sign: targetSign.rawValue)
+        }
+        return .home
     }
 }

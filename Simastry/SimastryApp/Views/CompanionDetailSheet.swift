@@ -238,17 +238,17 @@ struct CompanionDetailSheet: View {
                 .padding(16)
                 .simastryGlass(cornerRadius: 16)
             }
+
+            Text("Compatibility scores reflect astrological patterns, not relationship destiny. Every relationship is shaped by the people in it.")
+                .font(SimastryFont.captionSmall)
+                .italic()
+                .foregroundStyle(SimastryColor.deepMuted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
-
-        Text("Compatibility scores reflect astrological patterns, not relationship destiny. Every relationship is shaped by the people in it.")
-            .font(SimastryFont.captionSmall)
-            .italic()
-            .foregroundStyle(SimastryColor.deepMuted)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 8)
     }
 
     private func compatibilityRow(icon: String, tint: Color, title: String, yours: ZodiacSign, theirs: ZodiacSign, insight: String) -> some View {

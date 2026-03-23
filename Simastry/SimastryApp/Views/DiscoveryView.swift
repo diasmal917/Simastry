@@ -27,22 +27,27 @@ struct DiscoveryView: View {
                 CelestialBackground()
 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        Spacer().frame(height: 8)
+                    if AppConfig.socialDiscoveryEnabled {
+                        VStack(spacing: 24) {
+                            Spacer().frame(height: 8)
 
-                        visibilityBanner
-                        privacyNote
+                            visibilityBanner
+                            privacyNote
 
-                        if viewModel.isDiscoverable {
-                            profileEditingSection
+                            if viewModel.isDiscoverable {
+                                profileEditingSection
+                            }
+
+                            filterTabs
+                            profilesList
+
+                            Spacer().frame(height: SimastrySpacing.tabBarClearance)
                         }
-
-                        filterTabs
-                        profilesList
-
-                        Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                        .padding(.horizontal, 20)
+                    } else {
+                        comingSoonState
+                            .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                 }
             }
             .navigationTitle("Find Others Like You")
@@ -73,11 +78,38 @@ struct DiscoveryView: View {
                         appeared = true
                     }
                 }
-                if viewModel.discoveredProfiles.isEmpty {
+                if AppConfig.socialDiscoveryEnabled && viewModel.discoveredProfiles.isEmpty {
                     viewModel.fetchDiscoverableProfiles()
                 }
             }
         }
+    }
+
+    private var comingSoonState: some View {
+        VStack(spacing: 24) {
+            Spacer().frame(height: 32)
+
+            VStack(spacing: 14) {
+                Image(systemName: "person.2.slash.fill")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("Discovery is coming soon")
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text("We're still finishing the secure backend for public profiles and cross-user messaging. You can keep exploring the rest of Simastry while we lock this down.")
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(24)
+            .glossyCard()
+
+            Spacer().frame(height: SimastrySpacing.tabBarClearance)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Visibility Banner

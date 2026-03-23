@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Code-based localization manager for Simastry.
 /// Supports runtime language switching without restart.
