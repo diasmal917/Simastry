@@ -41,6 +41,10 @@ class AppViewModel {
     var guideFocusSign: ZodiacSign?
     var referralInfo: ReferralInfo?
 
+    // MARK: - Safety Gates
+    var isAgeVerified: Bool = UserDefaults.standard.bool(forKey: "ageVerified")
+    var hasAcceptedThirdPartyConsent: Bool = UserDefaults.standard.bool(forKey: "thirdPartyDataConsent")
+
     let supabase = SupabaseService()
     let notificationService = NotificationService()
     let predictionService = PredictionService()
@@ -49,6 +53,20 @@ class AppViewModel {
 
     init() {
         loadReferralInfo()
+    }
+
+    // MARK: - Age Verification
+
+    func verifyAge() {
+        isAgeVerified = true
+        UserDefaults.standard.set(true, forKey: "ageVerified")
+    }
+
+    // MARK: - Third-Party Data Consent
+
+    func acceptThirdPartyConsent() {
+        hasAcceptedThirdPartyConsent = true
+        UserDefaults.standard.set(true, forKey: "thirdPartyDataConsent")
     }
 
     var hasCompletedSigns: Bool {

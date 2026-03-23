@@ -511,6 +511,13 @@ struct SimulateView: View {
             return
         }
 
+        // Content moderation check
+        let moderation = ContentModerationService.moderateConversation(conversationText)
+        if !moderation.isAllowed {
+            viewModel.showToast("Unable to process", subtitle: moderation.reason ?? "Unable to process this content", isError: true)
+            return
+        }
+
         guard viewModel.canUsePrediction() else {
             viewModel.showToast("Predictions used up", subtitle: "You've used all \(viewModel.weeklyPredictionLimit) predictions this week. Upgrade for unlimited.", isError: true)
             viewModel.showUpsell = true

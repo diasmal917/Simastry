@@ -4,6 +4,7 @@ struct CompanionSetupView: View {
     @Bindable var viewModel: AppViewModel
     @State private var setupStep: Int = 0
     @State private var appeared: Bool = false
+    @State private var showThirdPartyConsent: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isNamingFocused: Bool
 
@@ -272,7 +273,11 @@ struct CompanionSetupView: View {
 
                 VStack(spacing: 12) {
                     GoldButton("Bring \(viewModel.companionName.isEmpty ? "Them" : viewModel.companionName) to Life") {
-                        viewModel.homeSetupPhase = .soulCreation
+                        if !viewModel.hasAcceptedThirdPartyConsent {
+                            showThirdPartyConsent = true
+                        } else {
+                            viewModel.homeSetupPhase = .soulCreation
+                        }
                     }
 
                     SecondaryButton(title: "Back") {
@@ -286,6 +291,15 @@ struct CompanionSetupView: View {
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
+        .alert("About Adding People", isPresented: $showThirdPartyConsent) {
+            Button("I Understand") {
+                viewModel.acceptThirdPartyConsent()
+                viewModel.homeSetupPhase = .soulCreation
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("You're about to enter information about another person. Please make sure you have their knowledge or permission to use their birth details in this app. Their data is stored privately and never shared.")
+        }
     }
 
     private func progressHeader(title: String, subtitle: String) -> some View {

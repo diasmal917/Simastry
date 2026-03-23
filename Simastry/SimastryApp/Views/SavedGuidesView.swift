@@ -260,6 +260,7 @@ private struct AddGuideSheet: View {
     @State private var selectedSign: ZodiacSign = .aries
     @State private var selectedCategory: GuideCategory = .friends
     @State private var notes: String = ""
+    @State private var showThirdPartyConsent: Bool = false
     @FocusState private var nameFieldFocused: Bool
 
     var body: some View {
@@ -327,13 +328,11 @@ private struct AddGuideSheet: View {
                         // Save button
                         Button {
                             HapticManager.buttonPress()
-                            viewModel.addGuide(
-                                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                                sunSign: selectedSign,
-                                category: selectedCategory,
-                                notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines)
-                            )
-                            dismiss()
+                            if !viewModel.hasAcceptedThirdPartyConsent {
+                                showThirdPartyConsent = true
+                            } else {
+                                saveGuide()
+                            }
                         } label: {
                             Text("Save Guide")
                                 .font(SimastryFont.labelLarge)
@@ -367,10 +366,29 @@ private struct AddGuideSheet: View {
                 }
             }
             .onAppear { nameFieldFocused = true }
+            .alert("About Adding People", isPresented: $showThirdPartyConsent) {
+                Button("I Understand") {
+                    viewModel.acceptThirdPartyConsent()
+                    saveGuide()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You're about to enter information about another person. Please make sure you have their knowledge or permission to use their birth details in this app. Their data is stored privately and never shared.")
+            }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationBackground { CelestialBackground() }
+    }
+
+    private func saveGuide() {
+        viewModel.addGuide(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            sunSign: selectedSign,
+            category: selectedCategory,
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        dismiss()
     }
 
     private var zodiacGrid: some View {
