@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.com.simastry.app",
+        "appID": "TEAMID.app.rork.simastry",
         "paths": ["/share/*", "/compatibility/*", "/guide/*"]
       }
     ]
