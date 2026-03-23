@@ -17,6 +17,7 @@ struct SimulateView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var phaseTask: Task<Void, Never>?
+    @State private var showTopUpSheet = false
 
     private let suggestionChips: [String] = [
         "Will they reply?",
@@ -72,6 +73,9 @@ struct SimulateView: View {
             }
             .navigationTitle("Predict")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showTopUpSheet) {
+                PredictionTopUpView(viewModel: viewModel)
+            }
             .sheet(item: $selectedResult) { result in
                 SimulationResultView(
                     result: result,
@@ -267,6 +271,23 @@ struct SimulateView: View {
     }
 
     @ViewBuilder
+    private var bonusPredictionBadge: some View {
+        if viewModel.bonusPredictions > 0 {
+            HStack(spacing: 6) {
+                Image(systemName: "scope")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("\(viewModel.bonusPredictions) bonus prediction\(viewModel.bonusPredictions == 1 ? "" : "s")")
+                    .font(SimastryFont.labelSmall)
+            }
+            .foregroundStyle(SimastryColor.gold)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(SimastryColor.gold.opacity(0.12), in: .capsule)
+            .accessibilityLabel("\(viewModel.bonusPredictions) bonus predictions remaining")
+        }
+    }
+
+    @ViewBuilder
     private var actionSection: some View {
         if isGenerating {
             VStack(spacing: 14) {
@@ -311,22 +332,26 @@ struct SimulateView: View {
                     .stroke(SimastryColor.risingViolet.opacity(0.16), lineWidth: 1)
             }
         } else {
-            Button {
-                Task {
-                    await generatePrediction()
+            VStack(spacing: 10) {
+                bonusPredictionBadge
+
+                Button {
+                    Task {
+                        await generatePrediction()
+                    }
+                } label: {
+                    Text(SimulationMode.whatWillTheySay.actionTitle)
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .goldGlassPill()
                 }
-            } label: {
-                Text(SimulationMode.whatWillTheySay.actionTitle)
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.mutedSilver)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .goldGlassPill()
+                .buttonStyle(SpringPressStyle())
+                .disabled(!canGenerate)
+                .opacity(canGenerate ? 1 : 0.45)
+                .accessibilityLabel("Generate prediction")
             }
-            .buttonStyle(SpringPressStyle())
-            .disabled(!canGenerate)
-            .opacity(canGenerate ? 1 : 0.45)
-            .accessibilityLabel("Generate prediction")
         }
     }
 
@@ -533,10 +558,13 @@ struct SimulateView: View {
             return
         }
 
-        guard viewModel.canUsePrediction() else {
-            viewModel.showToast("Predictions used up", subtitle: "You've used all \(viewModel.weeklyPredictionLimit) predictions this week. Upgrade for unlimited.", isError: true)
-            viewModel.showUpsell = true
-            return
+        if !viewModel.canUsePrediction() {
+            if viewModel.hasBonusPredictions {
+                viewModel.bonusPredictions -= 1
+            } else {
+                showTopUpSheet = true
+                return
+            }
         }
 
         let request = PredictionRequest(
@@ -591,10 +619,13 @@ struct SimulateView: View {
             return
         }
 
-        guard viewModel.canUsePrediction() else {
-            viewModel.showToast("Predictions used up", subtitle: "You've used all \(viewModel.weeklyPredictionLimit) predictions this week. Upgrade for unlimited.", isError: true)
-            viewModel.showUpsell = true
-            return
+        if !viewModel.canUsePrediction() {
+            if viewModel.hasBonusPredictions {
+                viewModel.bonusPredictions -= 1
+            } else {
+                showTopUpSheet = true
+                return
+            }
         }
 
         isRegenerating = true

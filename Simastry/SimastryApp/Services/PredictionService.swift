@@ -42,11 +42,11 @@ nonisolated final class PredictionService {
     }
 
     var isConfigured: Bool {
-        predictionEndpoint != nil
+        !Config.ANTHROPIC_API_KEY.isEmpty
     }
 
     func generatePrediction(request: PredictionRequest, tier: String) async throws -> PredictionResult {
-        guard let endpoint = predictionEndpoint else {
+        guard isConfigured else {
             throw PredictionServiceError.serviceUnavailable
         }
 
@@ -54,18 +54,28 @@ nonisolated final class PredictionService {
             throw PredictionServiceError.invalidRequest
         }
 
-        let payload = PredictionProxyRequest(
-            mode: request.mode,
-            tier: tier,
-            systemPrompt: makeSystemPrompt(for: request),
-            userPrompt: makeUserPrompt(for: request)
-        )
+        let systemPrompt = makeSystemPrompt(for: request)
+        let userPrompt = makeUserPrompt(for: request)
 
-        var urlRequest = URLRequest(url: endpoint)
+        // Call Anthropic Claude API directly
+        let anthropicURL = URL(string: "https://api.anthropic.com/v1/messages")!
+        var urlRequest = URLRequest(url: anthropicURL)
         urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = 45
+        urlRequest.timeoutInterval = 60
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.httpBody = try encoder.encode(payload)
+        urlRequest.setValue(Config.ANTHROPIC_API_KEY, forHTTPHeaderField: "x-api-key")
+        urlRequest.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+
+        let anthropicPayload: [String: Any] = [
+            "model": "claude-sonnet-4-6-20250217",
+            "max_tokens": 1024,
+            "system": systemPrompt,
+            "messages": [
+                ["role": "user", "content": userPrompt]
+            ]
+        ]
+
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: anthropicPayload)
 
         let (data, response) = try await session.data(for: urlRequest)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -77,17 +87,18 @@ nonisolated final class PredictionService {
             throw PredictionServiceError.serverError(serverMessage ?? "The prediction request failed. Please try again.")
         }
 
-        let decoded: PredictionProxyResponse
-        do {
-            decoded = try decoder.decode(PredictionProxyResponse.self, from: data)
-        } catch {
+        // Parse Anthropic response
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let content = json["content"] as? [[String: Any]],
+              let firstBlock = content.first,
+              let text = firstBlock["text"] as? String else {
             throw PredictionServiceError.invalidResponse
         }
 
-        let message = decoded.predictedMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-        let breakdown = decoded.astrologicalBreakdown.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Parse the structured response from Claude
+        let parsed = parseClaudeResponse(text)
 
-        guard !message.isEmpty, !breakdown.isEmpty else {
+        guard !parsed.predictedMessage.isEmpty, !parsed.breakdown.isEmpty else {
             throw PredictionServiceError.emptyResponse
         }
 
@@ -99,15 +110,61 @@ nonisolated final class PredictionService {
             targetSunSign: request.targetSunSign,
             targetMoonSign: request.targetMoonSign,
             targetRisingSign: request.targetRisingSign,
-            predictedMessage: message,
-            astrologicalBreakdown: breakdown,
-            confidence: min(max(decoded.confidence, 0), 100),
-            tone: decoded.normalizedTone,
+            predictedMessage: parsed.predictedMessage,
+            astrologicalBreakdown: parsed.breakdown,
+            confidence: min(max(parsed.confidence, 0), 100),
+            tone: parsed.tone,
             createdAt: Date()
         )
 
         save(result)
         return result
+    }
+
+    /// Parse Claude's text response into structured prediction data
+    private func parseClaudeResponse(_ text: String) -> (predictedMessage: String, breakdown: String, confidence: Int, tone: SimulationTone?) {
+        // Try JSON parsing first (if Claude returns structured JSON)
+        if let jsonData = text.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+            let message = json["predicted_message"] as? String ?? ""
+            let breakdown = json["astrological_breakdown"] as? String ?? ""
+            let confidence = json["confidence"] as? Int ?? 75
+            let toneStr = json["tone"] as? String
+            let tone = toneStr.flatMap { SimulationTone(rawValue: $0.lowercased()) }
+            return (message, breakdown, confidence, tone)
+        }
+
+        // Fallback: parse sections from plain text
+        var message = ""
+        var breakdown = ""
+        var confidence = 75
+        var tone: SimulationTone? = nil
+
+        let sections = text.components(separatedBy: "\n\n")
+        if sections.count >= 2 {
+            message = sections[0].trimmingCharacters(in: .whitespacesAndNewlines)
+            breakdown = sections[1...].joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            message = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            breakdown = "Based on the astrological compatibility between these signs."
+        }
+
+        // Extract confidence if mentioned
+        if let range = text.range(of: #"(\d{1,3})%"#, options: .regularExpression) {
+            let numStr = text[range].dropLast()
+            confidence = Int(numStr) ?? 75
+        }
+
+        // Detect tone
+        let lowerText = text.lowercased()
+        if lowerText.contains("playful") || lowerText.contains("flirty") { tone = .playful }
+        else if lowerText.contains("guarded") || lowerText.contains("defensive") { tone = .guarded }
+        else if lowerText.contains("warm") || lowerText.contains("friendly") { tone = .warm }
+        else if lowerText.contains("cold") || lowerText.contains("distant") { tone = .cold }
+        else if lowerText.contains("confident") || lowerText.contains("direct") { tone = .confident }
+        else if lowerText.contains("anxious") || lowerText.contains("nervous") { tone = .anxious }
+
+        return (message, breakdown, confidence, tone)
     }
 
     func loadHistory() -> [PredictionResult] {
@@ -126,21 +183,6 @@ nonisolated final class PredictionService {
 
     func clearHistory() {
         UserDefaults.standard.removeObject(forKey: historyKey)
-    }
-
-    private var predictionEndpoint: URL? {
-        let rawBaseURL = Config.EXPO_PUBLIC_RORK_API_BASE_URL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !rawBaseURL.isEmpty, let baseURL = URL(string: rawBaseURL) else {
-            return nil
-        }
-
-        let apiRoot: URL = baseURL.path.hasSuffix("/api")
-            ? baseURL
-            : baseURL.appendingPathComponent("api")
-
-        return apiRoot
-            .appendingPathComponent("simulate")
-            .appendingPathComponent("predict")
     }
 
     private func save(_ result: PredictionResult) {
@@ -203,8 +245,12 @@ nonisolated final class PredictionService {
         - The predicted message must sound like a real text message
         - Keep it concise and natural
         - The astrological breakdown should be specific, short, and placement-aware
-        - Return only the fields requested by the calling schema
         - Channel their zodiac energy — don't just describe their sign, embody their texting personality
+        - Return your response as valid JSON with exactly these fields:
+          {"predicted_message": "the predicted text message", "astrological_breakdown": "2-3 sentences explaining why based on their signs", "confidence": 75, "tone": "casual"}
+        - tone must be one of: playful, guarded, warm, cold, anxious, confident, flirty, distant
+        - confidence is 0-100 representing how predictable this response is
+        - Return ONLY the JSON object, no other text
         """
 
         return prompt

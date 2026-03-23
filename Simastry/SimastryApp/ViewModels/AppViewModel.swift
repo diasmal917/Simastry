@@ -88,6 +88,25 @@ class AppViewModel {
     var guideFocusSign: ZodiacSign?
     var referralInfo: ReferralInfo?
 
+    // MARK: - Bonus Predictions (consumable top-ups)
+    var bonusPredictions: Int = UserDefaults.standard.integer(forKey: "bonusPredictions") {
+        didSet { UserDefaults.standard.set(bonusPredictions, forKey: "bonusPredictions") }
+    }
+
+    var hasBonusPredictions: Bool { bonusPredictions > 0 }
+
+    func addBonusPredictions(_ count: Int) {
+        bonusPredictions += count
+    }
+
+    func purchasePredictionPack(_ pack: PredictionPack) async {
+        // For now, simulate the purchase locally
+        // TODO: Wire to RevenueCat consumable IAP when products are configured
+        addBonusPredictions(pack.count)
+        showToast("Added \(pack.count) predictions!", subtitle: "Use them anytime", isError: false)
+        analytics.track(.subscriptionStarted, key: "pack", value: pack.rawValue)
+    }
+
     // MARK: - Safety Gates
     var isAgeVerified: Bool = UserDefaults.standard.bool(forKey: "ageVerified")
     var hasAcceptedThirdPartyConsent: Bool = UserDefaults.standard.bool(forKey: "thirdPartyDataConsent")
@@ -357,7 +376,8 @@ class AppViewModel {
                     "thirdPartyDataConsent", "isDiscoverable", "simastry_referral_info",
                     "simastry_dark_mode", "appLanguage", "ageVerified",
                     "socialDisplayName", "socialBio", "socialLinks",
-                    "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount"]
+                    "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount",
+                    "bonusPredictions"]
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
 
         // Delete profile image file
@@ -1681,6 +1701,7 @@ class AppViewModel {
         companionMessages = []
         discoveryMessages = []
         discoveredProfiles = []
+        bonusPredictions = 0
         isDiscoverable = false
         socialDisplayName = ""
         socialBio = ""
@@ -1931,4 +1952,36 @@ private struct PendingOnboardingChart: Codable {
     let sunSign: String?
     let moonSign: String?
     let risingSign: String?
+}
+
+// MARK: - Prediction Pack (Consumable IAP)
+
+enum PredictionPack: String, CaseIterable {
+    case small = "simastry_predictions_5"
+    case medium = "simastry_predictions_15"
+    case large = "simastry_predictions_50"
+
+    var count: Int {
+        switch self {
+        case .small: return 5
+        case .medium: return 15
+        case .large: return 50
+        }
+    }
+
+    var price: String {
+        switch self {
+        case .small: return "$0.99"
+        case .medium: return "$1.99"
+        case .large: return "$4.99"
+        }
+    }
+
+    var savings: String? {
+        switch self {
+        case .small: return nil
+        case .medium: return "Save 33%"
+        case .large: return "Best Value"
+        }
+    }
 }
