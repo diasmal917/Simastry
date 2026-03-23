@@ -39,11 +39,17 @@ class AppViewModel {
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
+    var referralInfo: ReferralInfo?
 
     let supabase = SupabaseService()
     let notificationService = NotificationService()
     let predictionService = PredictionService()
     private let pendingOnboardingChartKey = "simastry_pending_onboarding_chart"
+    private let referralInfoKey = "simastry_referral_info"
+
+    init() {
+        loadReferralInfo()
+    }
 
     var hasCompletedSigns: Bool {
         profile?.sunSign != nil && profile?.moonSign != nil && profile?.risingSign != nil
@@ -720,6 +726,29 @@ class AppViewModel {
         guard let index = savedGuides.firstIndex(where: { $0.id == guide.id }) else { return }
         savedGuides[index] = guide
         persistSavedGuides()
+    }
+
+    // MARK: - Referral Code
+
+    func applyReferralCode(_ code: String) {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let info = ReferralInfo(referralCode: trimmed, referredBy: trimmed, referralDate: Date())
+        referralInfo = info
+        persistReferralInfo(info)
+    }
+
+    private func loadReferralInfo() {
+        guard let data = UserDefaults.standard.data(forKey: referralInfoKey),
+              let info = try? JSONDecoder().decode(ReferralInfo.self, from: data) else {
+            return
+        }
+        referralInfo = info
+    }
+
+    private func persistReferralInfo(_ info: ReferralInfo) {
+        guard let data = try? JSONEncoder().encode(info) else { return }
+        UserDefaults.standard.set(data, forKey: referralInfoKey)
     }
 
     func showToast(_ title: String, subtitle: String, isError: Bool = false) {

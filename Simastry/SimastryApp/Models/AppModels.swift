@@ -273,6 +273,14 @@ nonisolated enum ShareableCardType: String, Sendable {
     case conversationGuide = "conversation_guide"
 }
 
+// MARK: - Referral Info
+
+nonisolated struct ReferralInfo: Codable, Equatable, Sendable {
+    var referralCode: String?
+    var referredBy: String? // astrologer name or code
+    var referralDate: Date?
+}
+
 // MARK: - Deep Linking
 
 nonisolated enum DeepLink: Equatable, Sendable {

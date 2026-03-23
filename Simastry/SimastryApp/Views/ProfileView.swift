@@ -7,6 +7,8 @@ nonisolated private enum ProfileSheet: Identifiable {
     case about
     case privacy
     case terms
+    case methodology
+    case astrologerPartner
 
     var id: String {
         switch self {
@@ -22,6 +24,10 @@ nonisolated private enum ProfileSheet: Identifiable {
             "privacy"
         case .terms:
             "terms"
+        case .methodology:
+            "methodology"
+        case .astrologerPartner:
+            "astrologerPartner"
         }
     }
 }
@@ -34,6 +40,8 @@ struct ProfileView: View {
     @State private var appeared: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activeSheet: ProfileSheet?
+    @State private var referralCodeInput: String = ""
+    @State private var showReferralConfirmation: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -68,6 +76,14 @@ struct ProfileView: View {
 
                         themeToggle
 
+                        aboutOurApproachSection
+
+                        astrologerSection
+
+                        referralCodeSection
+
+                        forAstrologersSection
+
                         footerSection
 
                         Spacer().frame(height: SimastrySpacing.tabBarClearance)
@@ -96,6 +112,10 @@ struct ProfileView: View {
                     legalSheet(title: "Privacy Policy", body: "Simastry collects minimal data to deliver your personalized astrology experience. Your sign placements, companion configurations, and interaction history are stored securely via Supabase and are never shared with third parties.\n\nWe use anonymous analytics to improve app performance. No personal data is sold or used for advertising.\n\nFor the full privacy policy, visit our website.")
                 case .terms:
                     legalSheet(title: "Terms of Service", body: "By using Simastry, you agree to use the app for personal entertainment and self-reflection purposes. Astrology readings and predictions are for entertainment only and should not be used as a substitute for professional advice.\n\nSimastry subscriptions are managed through Apple and can be canceled at any time via your Apple ID settings. Refunds are handled by Apple per their refund policy.\n\nFor the full terms of service, visit our website.")
+                case .methodology:
+                    methodologySheet
+                case .astrologerPartner:
+                    astrologerPartnerSheet
                 }
             }
             .onAppear {
@@ -630,6 +650,345 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - About Our Approach
+
+    private var aboutOurApproachSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("About Our Approach")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            Button(action: {
+                activeSheet = .methodology
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "books.vertical.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("How Simastry Works")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Text("Methodology, AI disclosure & privacy")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(16)
+                .simastryGlass(cornerRadius: 16)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("How Simastry Works. Learn about our methodology, AI disclosure, and privacy commitment.")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    private var methodologySheet: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                VStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("How Simastry Works")
+                        .font(SimastryFont.titleLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text(AppConfig.astrologyTradition)
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(.top, 24)
+
+                ForEach(Array(AstrologyTemplates.methodology.enumerated()), id: \.offset) { _, section in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            Image(systemName: section.icon)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(SimastryColor.gold)
+
+                            Text(section.title)
+                                .font(SimastryFont.titleSmall)
+                                .foregroundStyle(SimastryColor.offWhite)
+                        }
+
+                        Text(section.body)
+                            .font(SimastryFont.bodyLarge)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .simastryGlass(cornerRadius: 16)
+                }
+
+                Spacer(minLength: 24)
+            }
+            .padding(.horizontal, 20)
+        }
+        .presentationBackground {
+            CelestialBackground()
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
+    }
+
+    // MARK: - Work with an Astrologer
+
+    private var astrologerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Work with an Astrologer")
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: "person.crop.circle.badge.checkmark")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .frame(width: 44, height: 44)
+                        .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(SimastryColor.gold.opacity(0.15), lineWidth: 0.5)
+                        )
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Recommended by Astrologers")
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text("Simastry helps you use astrological insights daily. For deeper chart readings, consult a professional astrologer.")
+                            .font(SimastryFont.bodyLarge)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Link(destination: AppConfig.astrologerDirectoryURL) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Find an Astrologer")
+                            .font(SimastryFont.labelLarge)
+                    }
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(SimastryColor.gold.opacity(0.12), in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(SimastryColor.gold.opacity(0.25), lineWidth: 0.5)
+                    )
+                }
+            }
+            .padding(18)
+            .simastryGlass(cornerRadius: 20)
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    // MARK: - Referral Code
+
+    private var referralCodeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Referral Code")
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            if let info = viewModel.referralInfo, let code = info.referralCode, !code.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Referral applied \u{2713}")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.gold)
+                        Text(code)
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .simastryGlass(cornerRadius: 16)
+            } else {
+                HStack(spacing: 12) {
+                    TextField("Enter code", text: $referralCodeInput)
+                        .font(SimastryFont.bodyMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.characters)
+
+                    Button(action: {
+                        guard !referralCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                        viewModel.applyReferralCode(referralCodeInput)
+                        showReferralConfirmation = true
+                        referralCodeInput = ""
+                    }) {
+                        Text("Apply")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.midnight)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(SimastryColor.gold, in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(16)
+                .simastryGlass(cornerRadius: 16)
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    // MARK: - For Astrologers
+
+    private var forAstrologersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: {
+                activeSheet = .astrologerPartner
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "star.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Are you an astrologer?")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Text("Learn about our partner program")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(16)
+                .simastryGlass(cornerRadius: 16)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Are you an astrologer? Learn about our partner program.")
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    private var astrologerPartnerSheet: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                VStack(spacing: 12) {
+                    Image(systemName: "star.circle.fill")
+                        .font(.system(size: 36, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("For Astrologers")
+                        .font(SimastryFont.titleLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                }
+                .padding(.top, 28)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Are you an astrologer?")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("Simastry is the daily practice tool your clients use between sessions. We help them apply the insights from your readings to everyday communication.")
+                        .font(SimastryFont.bodyLarge)
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        partnerBenefitRow(icon: "person.2.fill", text: "Your clients stay engaged with astrology daily")
+                        partnerBenefitRow(icon: "link", text: "Your referral code tracks installs you drive")
+                        partnerBenefitRow(icon: "chart.bar.fill", text: "Build your practice as a distribution partner")
+                    }
+                    .padding(.vertical, 4)
+
+                    Text("Want to partner with us?")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Link(destination: URL(string: "mailto:\(AppConfig.astrologerContactEmail)")!) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(AppConfig.astrologerContactEmail)
+                                .font(SimastryFont.labelLarge)
+                        }
+                        .foregroundStyle(SimastryColor.gold)
+                    }
+                }
+                .padding(20)
+                .goldGlassRect(cornerRadius: 20)
+
+                Link(destination: AppConfig.astrologerPartnerURL) {
+                    HStack(spacing: 8) {
+                        Text("Learn More")
+                            .font(SimastryFont.labelLarge)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(SimastryColor.gold.opacity(0.12), in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(SimastryColor.gold.opacity(0.25), lineWidth: 0.5)
+                    )
+                }
+
+                Spacer(minLength: 24)
+            }
+            .padding(.horizontal, 20)
+        }
+        .presentationBackground {
+            CelestialBackground()
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
+    }
+
+    private func partnerBenefitRow(icon: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 20)
+                .padding(.top, 2)
+
+            Text(text)
+                .font(SimastryFont.bodyLarge)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
+                .lineSpacing(2)
+        }
     }
 
     // MARK: - Footer

@@ -81,6 +81,15 @@ struct OnboardingInsightView: View {
 
                     Spacer().frame(height: 8)
 
+                    // MARK: - Sun Sign Disclaimer
+                    Text("This is your Sun sign's general nature — your Moon and Rising add layers that make you unique.")
+                        .font(SimastryFont.captionSmall)
+                        .italic()
+                        .foregroundStyle(SimastryColor.deepMuted)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                        .opacity(buttonAppeared ? 1 : 0)
+
                     // MARK: - Continue Button
                     GoldButton("Continue to Simastry") {
                         Task {

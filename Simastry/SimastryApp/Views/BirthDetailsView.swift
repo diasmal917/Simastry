@@ -13,6 +13,7 @@ struct BirthDetailsView: View {
     }()
     @State private var birthplace: String = ""
     @State private var appeared: Bool = false
+    @State private var birthTimeUnknown: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var birthplaceFocused: Bool
     private let birthplaceGeocodingService = BirthplaceGeocodingService()
@@ -165,16 +166,44 @@ struct BirthDetailsView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-                .colorScheme(.dark)
-                .frame(maxHeight: 200)
+            if !birthTimeUnknown {
+                DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .colorScheme(.dark)
+                    .frame(maxHeight: 200)
+            }
 
-            Text("Your Rising sign depends on the exact time and location of birth, so we need both to calculate your full chart.")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(.white.opacity(0.7))
+            // "I don't know" toggle
+            Button {
+                withAnimation(.spring(SimastrySpring.snappy)) {
+                    birthTimeUnknown.toggle()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: birthTimeUnknown ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(birthTimeUnknown ? SimastryColor.gold : SimastryColor.mutedSilver)
+                    Text("I don't know my birth time")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(birthTimeUnknown ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if birthTimeUnknown {
+                Text("No worries — your Sun and Moon signs will still be accurate. We'll estimate your Rising sign based on your birthday.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            Text("Don't know your exact birth time? That's okay — your Sun and Moon signs are still accurate. Rising sign needs birth time for precision, but we'll estimate if needed.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
+                .opacity(birthTimeUnknown ? 0 : 1)
         }
         .padding(.horizontal, 24)
     }

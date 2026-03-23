@@ -10,6 +10,9 @@ nonisolated enum AppConfig {
     static let EXPO_PUBLIC_TEAM_ID: String = Config.EXPO_PUBLIC_TEAM_ID
     static let EXPO_PUBLIC_TOOLKIT_URL: String = Config.EXPO_PUBLIC_TOOLKIT_URL
 
+    // Astrology tradition
+    static let astrologyTradition = "Western Tropical Synastry"
+
     // Deep linking
     static let deepLinkScheme = "simastry"
     static let universalLinkHost = "simastry.app"
@@ -19,6 +22,11 @@ nonisolated enum AppConfig {
     static let privacyPolicyURL = URL(string: "https://simastry.app/privacy")!
     static let termsOfServiceURL = URL(string: "https://simastry.app/terms")!
     static let eulaURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+
+    // Astrologer partnership
+    static let astrologerDirectoryURL = URL(string: "https://simastry.app/astrologers")!
+    static let astrologerPartnerURL = URL(string: "https://simastry.app/partners")!
+    static let astrologerContactEmail = "astrologers@simastry.app"
 
     static let allValues: [String: String] = [
         "EXPO_PUBLIC_PROJECT_ID": EXPO_PUBLIC_PROJECT_ID,

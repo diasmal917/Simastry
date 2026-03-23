@@ -151,6 +151,14 @@ struct CommunicationGuideView: View {
                         }
                     }
                 }
+                // Ethical disclaimer
+                Text("These insights are based on sign tendencies. Real people are shaped by experience, culture, and choice — not just their chart.")
+                    .font(SimastryFont.captionSmall)
+                    .italic()
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)

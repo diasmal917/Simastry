@@ -509,6 +509,15 @@ private struct GuideDetailSheet: View {
                         // Action buttons
                         actionsSection
 
+                        // Ethical disclaimer
+                        Text("Remember: \(guide.name) is more than their Sun sign. These are tendencies, not rules. Use them as a starting point, not a script.")
+                            .font(SimastryFont.captionSmall)
+                            .italic()
+                            .foregroundStyle(SimastryColor.deepMuted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                            .padding(.top, 4)
+
                         Spacer().frame(height: SimastrySpacing.tabBarClearance)
                     }
                     .padding(.horizontal, 20)

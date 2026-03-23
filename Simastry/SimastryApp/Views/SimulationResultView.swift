@@ -29,6 +29,16 @@ struct SimulationResultView: View {
                     }
                     whatIfSection
                     confidenceFooter
+
+                    // Real conversation nudge
+                    Text("Now that you know what they might say — go have the real conversation ✨")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 4)
+
+                    aiDisclosureBadge
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -119,6 +129,12 @@ struct SimulationResultView: View {
                         .stroke(accentColor.opacity(0.18), lineWidth: 1)
                 }
             }
+
+            Text("This is a pattern-based prediction, not a guarantee. Real conversations are shaped by context, mood, and history.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
@@ -308,5 +324,20 @@ struct SimulationResultView: View {
             userElement: userSign.element.rawValue,
             targetElement: targetSign.element.rawValue
         )
+    }
+
+    private var aiDisclosureBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "cpu")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(SimastryColor.deepMuted)
+
+            Text("Powered by AI \u{00B7} Based on \(AppConfig.astrologyTradition.lowercased())")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+        .opacity(appeared ? 1 : 0)
     }
 }

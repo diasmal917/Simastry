@@ -253,6 +253,15 @@ struct LandingView: View {
                     .foregroundStyle(.white.opacity(0.86))
             }
             .padding(.top, 2)
+
+            HStack(spacing: 4) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .medium))
+                Text("Your birth data is never sold or shared")
+                    .font(SimastryFont.captionSmall)
+            }
+            .foregroundStyle(SimastryColor.mutedSilver)
+            .padding(.top, 4)
         }
         .padding(.horizontal, 24)
         .padding(.top, 24)

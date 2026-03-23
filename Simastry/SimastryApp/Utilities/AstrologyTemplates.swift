@@ -244,6 +244,49 @@ nonisolated struct AstrologyTemplates {
 
     static let closing = "The stars have spoken — your cosmic DNA is written."
 
+    static let ethicalDisclaimer = "Simastry helps you understand people — not control them. Use these insights with empathy."
+
+    // MARK: - Transparency & Methodology
+
+    struct MethodologySection {
+        let icon: String
+        let title: String
+        let body: String
+    }
+
+    static let methodology: [MethodologySection] = [
+        MethodologySection(
+            icon: "books.vertical.fill",
+            title: "Our Methodology",
+            body: "Simastry uses Western tropical synastry — the study of how two birth charts interact. We don't mix astrological traditions or generate generic horoscopes."
+        ),
+        MethodologySection(
+            icon: "cpu.fill",
+            title: "AI-Powered, Astrology-Grounded",
+            body: "Our predictions and communication guides are powered by AI (Claude by Anthropic), trained on synastry principles. We use AI to simulate conversation patterns based on element compatibility, modality, and sign placements — not to interpret your birth chart. Every insight traces back to a specific astrological relationship between your signs."
+        ),
+        MethodologySection(
+            icon: "person.2.fill",
+            title: "We Don't Replace Astrologers",
+            body: "Simastry is a communication tool, not a chart reading service. We help you apply astrological insights to everyday relationships. For deep chart interpretation, we recommend consulting a professional astrologer."
+        ),
+        MethodologySection(
+            icon: "lock.shield.fill",
+            title: "Your Birth Data Is Sacred",
+            body: "Your birth date, time, and location are deeply personal. We never sell your data to advertisers, share it with third parties, or use it for ad targeting. Your data stays between you and Simastry."
+        ),
+        MethodologySection(
+            icon: "exclamationmark.circle.fill",
+            title: "What We Can't Do",
+            body: "No app can predict the future with certainty. Our predictions show likely communication patterns based on astrological compatibility — not guarantees. People are more than their signs, and every relationship is unique."
+        ),
+        MethodologySection(
+            icon: "heart.circle.fill",
+            title: "Understanding, Not Controlling",
+            body: "Our communication guides are designed to help you understand people better — not manipulate them. We believe empathy starts with understanding how someone processes the world differently than you do."
+        ),
+    ]
+
     // MARK: - Daily Micro-Learning Nuggets
 
     static let dailyNuggets: [(title: String, body: String, relatedFeature: String?)] = [
