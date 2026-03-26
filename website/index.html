@@ -1,37 +1,787 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simastry — Where Astrology Meets Communication</title>
-  <meta name="description" content="The communication app that uses astrology and AI to help you connect better with anyone in your life. Predict replies, get compatibility insights, and learn how to communicate with everyone around you.">
-  <meta name="keywords" content="astrology, communication, compatibility, synastry, zodiac, relationships, horoscope app">
-  <link rel="canonical" href="https://simastry.com/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simastry | Astrology Meets Communication</title>
+    <meta name="description" content="The communication app that uses astrology and AI to help you connect better with anyone in your life. Predict replies, get compatibility insights, and learn how to communicate with everyone around you.">
+    <meta name="keywords" content="astrology, communication, compatibility, synastry, zodiac, relationships, horoscope app">
+    <link rel="canonical" href="https://simastry.com/">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="Simastry — Where Astrology Meets Communication">
-  <meta property="og:description" content="The communication app that uses astrology and AI to help you connect better with anyone in your life.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://simastry.com">
-  <meta property="og:image" content="https://simastry.com/og-image.svg">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Simastry — Where the Stars Teach You How to Connect">
+    <meta property="og:description" content="The communication app that uses astrology and AI to help you connect better with anyone in your life.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://simastry.com">
+    <meta property="og:image" content="https://simastry.com/og-image.svg">
 
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Simastry — Where Astrology Meets Communication">
-  <meta name="twitter:description" content="The communication app that uses astrology and AI to help you connect better with anyone in your life.">
-  <meta name="twitter:image" content="https://simastry.com/og-image.svg">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Simastry — Where the Stars Teach You How to Connect">
+    <meta name="twitter:description" content="The communication app that uses astrology and AI to help you connect better with anyone in your life.">
+    <meta name="twitter:image" content="https://simastry.com/og-image.svg">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#10024;</text></svg>">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#10024;</text></svg>">
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index-mGNTJben.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-C9ydrXtt.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#05050A',
+                        gold: '#B99B4B',
+                        'gold-light': '#D7B969',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    backgroundImage: {
+                        'glass': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                        'glass-strong': 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%)',
+                        'card-gradient': 'linear-gradient(to top, rgba(5,5,10,0.95) 0%, rgba(5,5,10,0.4) 40%, rgba(5,5,10,0.1) 100%)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #05050A;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glass-panel {
+            background: var(--tw-gradient-stops, linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%));
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        #carousel-container {
+            perspective: 2000px;
+            transform-style: preserve-3d;
+        }
+
+        .zodiac-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            transform-origin: center center;
+            will-change: transform, opacity;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .zodiac-img-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .zodiac-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scale(1.15);
+            will-change: transform;
+        }
+
+        .content-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 3rem 2rem;
+            background: linear-gradient(to top, rgba(5,5,10,1) 0%, rgba(5,5,10,0.7) 50%, transparent 100%);
+            z-index: 10;
+        }
+
+        .text-clip {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background-color: currentColor;
+            transition: width linear;
+        }
+
+        @keyframes subtlePulse {
+            0% { box-shadow: 0 0 0 0 rgba(var(--ring-color), 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(var(--ring-color), 0); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--ring-color), 0); }
+        }
+        .thumb-active {
+            animation: subtlePulse 2s infinite;
+        }
+
+        /* Stack opening shimmer */
+        .card-shimmer {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0;
+        }
+    </style>
 </head>
-<body>
-  <div id="root"></div>
+<body class="antialiased selection:bg-gold/30 selection:text-gold-light">
+
+    <canvas id="starfield"></canvas>
+
+    <nav class="fixed top-0 w-full z-50 glass-panel border-b-0 border-white/5 py-4 px-6 md:px-12 flex justify-between items-center transition-all duration-300">
+        <div class="flex items-center gap-2 cursor-pointer">
+            <svg class="w-5 h-5 text-gold" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+            <span class="font-serif italic text-2xl tracking-wide text-white">Simastry</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8 text-sm font-medium text-white/70">
+            <a href="#features" class="hover:text-white transition-colors">Features</a>
+            <a href="#compatibility" class="hover:text-white transition-colors">Compatibility</a>
+            <a href="#download" class="px-5 py-2 rounded-full glass-panel hover:bg-white/10 text-white transition-all duration-300">Download</a>
+        </div>
+    </nav>
+
+    <section class="relative w-full h-screen min-h-[800px] flex flex-col items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
+
+        <div class="text-center z-10 mb-8 max-w-3xl px-4">
+            <h1 class="text-4xl md:text-5xl font-serif font-semibold mb-3 tracking-tight">Meet Your 12 Zodiac AI Companions</h1>
+            <p class="text-sm md:text-base text-white/60 font-sans">(Plus your personal Soulmate Companion, auto-generated from your Sun, Moon & Rising)</p>
+        </div>
+
+        <div id="carousel-container" class="relative w-full max-w-[420px] h-[550px] md:h-[600px] z-10 mx-auto">
+            </div>
+
+        <div class="absolute bottom-8 w-full max-w-5xl px-4 z-20 flex flex-col items-center gap-4">
+            <div id="thumbnails-container" class="flex gap-4 overflow-x-auto hide-scrollbar w-full py-4 px-2 snap-x snap-mandatory justify-start md:justify-center">
+                </div>
+        </div>
+    </section>
+
+    <section id="compatibility" class="py-24 px-6 md:px-12 max-w-7xl mx-auto relative z-10">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-5xl font-serif font-semibold mb-4 text-transparent text-clip bg-gradient-to-r from-white via-gold-light to-white">The Ultimate Communication Guide</h2>
+            <p class="text-lg text-white/60 font-sans max-w-2xl mx-auto">Know What to Say & When to Say It.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="glass-panel rounded-3xl p-8 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-gold/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <h3 class="text-2xl font-serif mb-2 relative z-10">Know What to Say</h3>
+                <p class="text-sm text-white/60 mb-8 relative z-10">Personalized communication playbooks for every zodiac. Master their tone and phrasing.</p>
+
+                <div class="space-y-4 relative z-10">
+                    <div class="bg-black/40 border border-white/5 rounded-2xl p-4 transform transition hover:scale-[1.02]">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-red-400 tracking-wider uppercase">Avoid (Scorpio)</span>
+                            <span class="text-xs text-white/40">10:42 AM</span>
+                        </div>
+                        <p class="text-sm text-white/80 bg-red-500/10 inline-block px-3 py-2 rounded-lg rounded-tl-none">"Why are you acting so distant today?"</p>
+                    </div>
+                    <div class="bg-black/40 border border-white/5 rounded-2xl p-4 transform transition hover:scale-[1.02]">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-green-400 tracking-wider uppercase">Try This Instead</span>
+                            <span class="text-xs text-white/40">10:45 AM</span>
+                        </div>
+                        <p class="text-sm text-white/80 bg-green-500/10 inline-block px-3 py-2 rounded-lg rounded-tl-none">"I'm here when you're ready. Taking my own space to recharge too." ✨</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-8 relative overflow-hidden group">
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                <h3 class="text-2xl font-serif mb-2 relative z-10">Best Time to Text</h3>
+                <p class="text-sm text-white/60 mb-8 relative z-10">Real-time optimal windows based on planetary transits and their natal chart.</p>
+
+                <div class="glass-panel bg-white/5 rounded-2xl p-5 relative z-10">
+                    <div class="flex justify-between items-center mb-4 pb-4 border-b border-white/10">
+                        <span class="text-sm font-medium">This Week's Windows</span>
+                        <span class="text-xs px-2 py-1 bg-gold/20 text-gold-light rounded-full border border-gold/30">Send Now ✦</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-2 rounded-full bg-gold animate-pulse"></div>
+                                <span class="text-white">Today, 8:30 PM</span>
+                            </div>
+                            <span class="text-white/50">Moon trine Venus</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm opacity-50">
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-2 rounded-full bg-white/20"></div>
+                                <span class="text-white">Thu, 10:00 AM</span>
+                            </div>
+                            <span class="text-white/50">Mercury direct</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-3">
+                        <span class="text-red-400">🪐</span>
+                        <div>
+                            <p class="text-xs font-semibold text-red-400">Mercury Retrograde Warning</p>
+                            <p class="text-xs text-red-200/70 mt-1">High chance of miscommunication. Keep texts clear and avoid heavy emotional topics until Friday.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="py-24 px-6 md:px-12 max-w-7xl mx-auto relative z-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <div class="glass-panel p-6 rounded-2xl hover:bg-white/10 transition duration-300">
+                <div class="text-3xl mb-4">🪄✨</div>
+                <h4 class="text-lg font-serif mb-2">Predict Their Reply</h4>
+                <p class="text-sm text-white/50">Draft your message and let Simastry simulate how they will likely respond based on current cosmic weather.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl hover:bg-white/10 transition duration-300">
+                <div class="text-3xl mb-4">💖✨</div>
+                <h4 class="text-lg font-serif mb-2">Cosmic Compatibility</h4>
+                <p class="text-sm text-white/50">Deep dive into synastry charts to understand the magnetic pull or friction between your signs.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl border-gold/30 bg-gold/5 hover:bg-gold/10 transition duration-300">
+                <div class="text-3xl mb-4">👥</div>
+                <h4 class="text-lg font-serif mb-2 text-gold-light">Simulate Any Personality</h4>
+                <p class="text-sm text-white/60">Premium: Customize name, gender, age, cultural background, and relationship context for pinpoint accuracy.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl hover:bg-white/10 transition duration-300">
+                <div class="text-3xl mb-4">🌅</div>
+                <h4 class="text-lg font-serif mb-2">Daily Cosmic Briefing</h4>
+                <p class="text-sm text-white/50">Start your morning with a breakdown of exactly how the stars will affect your social interactions today.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl hover:bg-white/10 transition duration-300">
+                <div class="text-3xl mb-4">🛡️🪐</div>
+                <h4 class="text-lg font-serif mb-2">Retrograde Shield</h4>
+                <p class="text-sm text-white/50">Proactive alerts for retrogrades across all major planets, protecting your relationships from cosmic chaos.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl hover:bg-white/10 transition duration-300">
+                <div class="text-3xl mb-4">♈⭕</div>
+                <h4 class="text-lg font-serif mb-2">Birth Chart Decoder</h4>
+                <p class="text-sm text-white/50">Beyond sun signs—uncover the hidden layers of their Moon, Rising, Venus, and Mars placements.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <section id="download" class="py-24 relative z-10 flex flex-col items-center justify-center border-t border-white/10 mt-12 bg-gradient-to-b from-transparent to-white/5">
+        <h2 class="text-4xl md:text-5xl font-serif mb-6 text-center">Ready to align your connections?</h2>
+        <button class="bg-gold hover:bg-gold-light text-background font-semibold px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-[0_0_30px_rgba(185,155,75,0.3)]">
+            Download Simastry
+        </button>
+    </section>
+
+    <footer class="py-8 text-center border-t border-white/5 relative z-10 bg-background">
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <svg class="w-4 h-4 text-gold" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+            <span class="font-serif italic text-xl text-white">Simastry</span>
+        </div>
+        <p class="text-sm text-white/40 mb-4 tracking-widest uppercase">Where the Stars Teach You How to Connect</p>
+        <p class="text-xs text-white/20">&copy; 2026 Simastry App. All cosmic rights reserved.</p>
+    </footer>
+
+    <script>
+        // Starfield Canvas Logic
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let stars = [];
+
+        function initCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            stars = [];
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 1.5,
+                    vx: Math.floor(Math.random() * 50) - 25,
+                    vy: Math.floor(Math.random() * 50) - 25,
+                    alpha: Math.random()
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < stars.length; i++) {
+                let s = stars[i];
+                ctx.globalAlpha = s.alpha;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, 2 * Math.PI);
+                ctx.fill();
+
+                s.alpha += (Math.random() - 0.5) * 0.05;
+                if(s.alpha < 0.1) s.alpha = 0.1;
+                if(s.alpha > 0.8) s.alpha = 0.8;
+
+                s.x += s.vx / 100;
+                s.y += s.vy / 100;
+
+                if (s.x < 0 || s.x > width) s.vx = -s.vx;
+                if (s.y < 0 || s.y > height) s.vy = -s.vy;
+            }
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+        drawStars();
+
+        // Zodiac Data
+        const zodiacData = [
+            { sign: 'Aries', element: 'Fire', color: '#F19C84', glyph: '♈', bio: 'Direct, passionate, and fast-paced. Expect bold texts, voice notes, and zero hesitation.', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Taurus', element: 'Earth', color: '#D4EDBC', glyph: '♉', bio: 'Grounded and sensual. Prefers thoughtful, comforting messages and hates being rushed.', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Gemini', element: 'Air', color: '#CDB4DB', glyph: '♊', bio: 'Witty, curious, and chaotic. Expect double texts, memes, and shifting conversation topics.', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Cancer', element: 'Water', color: '#A2D2FF', glyph: '♋', bio: 'Deeply intuitive and nurturing. Values emotional check-ins and subtle reassurance.', img: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Leo', element: 'Fire', color: '#F4ACB7', glyph: '♌', bio: 'Warm, theatrical, and generous. Loves hyping you up and receiving enthusiastic validation.', img: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Virgo', element: 'Earth', color: '#BDE0B7', glyph: '♍', bio: 'Analytical and helpful. Communicates with precision, helpful tips, and perfect grammar.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Libra', element: 'Air', color: '#E2C1E8', glyph: '♎', bio: 'Charming, diplomatic, and flirtatious. Thrives on aesthetic shared content and harmony.', img: 'https://images.unsplash.com/photo-1513379733131-47fc74b45fc7?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Scorpio', element: 'Water', color: '#8ECAE6', glyph: '♏', bio: 'Intense and mysterious. Reads between the lines and values absolute loyalty in chat.', img: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Sagittarius', element: 'Fire', color: '#FFC491', glyph: '♐', bio: 'Philosophical and blunt. Texts sporadically, usually about their latest spontaneous adventure.', img: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Capricorn', element: 'Earth', color: '#B8E1B5', glyph: '♑', bio: 'Structured and ambitious. Appreciates straightforward communication and respect for time.', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Aquarius', element: 'Air', color: '#B19CD9', glyph: '♒', bio: 'Eccentric and visionary. Engages in deep debates but might ghost you for a week.', img: 'https://images.unsplash.com/photo-1515041219749-89347f83291a?auto=format&fit=crop&w=800&q=80' },
+            { sign: 'Pisces', element: 'Water', color: '#A8E6CF', glyph: '♓', bio: 'Dreamy and empathetic. Expect poetry, shared Spotify playlists, and deeply emotional bonds.', img: 'https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?auto=format&fit=crop&w=800&q=80' }
+        ];
+
+        // Generate DOM
+        const container = document.getElementById('carousel-container');
+        const thumbsContainer = document.getElementById('thumbnails-container');
+
+        zodiacData.forEach((data, index) => {
+            const card = document.createElement('div');
+            card.className = `zodiac-card card-${index} glass-panel shadow-2xl`;
+            card.innerHTML = `
+                <div class="zodiac-img-container">
+                    <img src="${data.img}" alt="${data.sign}" class="zodiac-img img-${index}">
+                </div>
+                <div class="card-shimmer shimmer-${index}"></div>
+                <div class="content-overlay overlay-${index}">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs font-semibold px-2 py-1 rounded border" style="color: ${data.color}; border-color: ${data.color}40; background: ${data.color}10;">${data.element}</span>
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs" style="background-color: ${data.color}; color: #000;">${data.glyph}</div>
+                    </div>
+                    <h2 class="text-4xl font-serif font-bold mb-3 text-white tracking-wide" style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">${data.sign}</h2>
+                    <p class="text-sm text-white/90 leading-relaxed font-sans">${data.bio}</p>
+                </div>
+            `;
+            container.appendChild(card);
+
+            const thumb = document.createElement('div');
+            thumb.className = `relative flex-shrink-0 cursor-pointer snap-center group`;
+            thumb.onclick = () => goToSlide(index);
+            thumb.innerHTML = `
+                <div class="thumb-ring w-14 h-14 rounded-full border-2 border-transparent p-0.5 transition-all duration-300" id="thumb-ring-${index}" style="--ring-color: ${hexToRgb(data.color)}">
+                    <img src="${data.img}" class="w-full h-full rounded-full object-cover filter grayscale opacity-50 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100" id="thumb-img-${index}">
+                </div>
+                <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-1 bg-white/10 rounded overflow-hidden">
+                    <div class="progress-bar-fill" id="progress-${index}" style="color: ${data.color}"></div>
+                </div>
+            `;
+            thumbsContainer.appendChild(thumb);
+        });
+
+        function hexToRgb(hex) {
+            let r = parseInt(hex.slice(1, 3), 16),
+                g = parseInt(hex.slice(3, 5), 16),
+                b = parseInt(hex.slice(5, 7), 16);
+            return `${r}, ${g}, ${b}`;
+        }
+
+        let currentIndex = -1;
+        let timer;
+        const duration = 6000;
+        let isAnimating = false;
+        let hasPlayedIntro = false;
+
+        // ─── TIMED STACK OPENING INTRO ───
+        // All 12 cards start as a compact, slightly overlapping tilted stack in center.
+        // They fan out sequentially with staggered timing, each with personality-based motion.
+        function playStackIntro() {
+            hasPlayedIntro = true;
+            const allCards = document.querySelectorAll('.zodiac-card');
+            const total = zodiacData.length;
+
+            // Phase 1: Show all cards as a tight stack (visible but stacked)
+            allCards.forEach((card, i) => {
+                const stackOffset = (total - 1 - i) * 3; // slight y offset per card
+                const stackRotation = (total - 1 - i) * 1.5 - (total * 0.75); // slight tilt spread
+                gsap.set(card, {
+                    visibility: 'visible',
+                    opacity: 0.85,
+                    y: stackOffset,
+                    x: 0,
+                    z: -i * 8,
+                    rotationY: stackRotation,
+                    rotationX: 2,
+                    rotationZ: stackRotation * 0.3,
+                    scale: 0.72,
+                    zIndex: total - i,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+                });
+                // Hide overlays during stack
+                const overlay = card.querySelector('.content-overlay');
+                if (overlay) gsap.set(overlay.children, { opacity: 0, y: 20 });
+            });
+
+            // Phase 2: Brief pause to show the stack, then open sequentially
+            const masterTL = gsap.timeline({
+                delay: 0.6,
+                onComplete: () => {
+                    // After intro, transition to first card view
+                    setTimeout(() => {
+                        // Hide all cards except first
+                        allCards.forEach((card, i) => {
+                            if (i !== 0) {
+                                gsap.to(card, {
+                                    opacity: 0,
+                                    scale: 0.8,
+                                    z: -200,
+                                    duration: 0.6,
+                                    ease: 'power2.in',
+                                    onComplete: () => {
+                                        gsap.set(card, { visibility: 'hidden' });
+                                    }
+                                });
+                            }
+                        });
+                        // Set card 0 as active
+                        currentIndex = 0;
+                        const data0 = zodiacData[0];
+                        const card0 = allCards[0];
+                        const overlay0 = card0.querySelector('.content-overlay');
+
+                        gsap.to(card0, {
+                            x: 0, y: 0, z: 0,
+                            rotationX: 0, rotationY: 0, rotationZ: 0,
+                            scale: 1, opacity: 1,
+                            zIndex: 10,
+                            boxShadow: `0px 30px 60px rgba(${hexToRgb(data0.color)}, 0.15)`,
+                            duration: 1.2,
+                            ease: 'power3.out'
+                        });
+
+                        // Ken Burns zoom on image
+                        gsap.to(card0.querySelector('.zodiac-img'), {
+                            scale: 1, duration: 6, ease: 'none'
+                        });
+
+                        // Fade in overlay text
+                        gsap.to(overlay0.children, {
+                            y: 0, opacity: 1,
+                            stagger: 0.15, duration: 0.8,
+                            ease: 'power3.out', delay: 0.4
+                        });
+
+                        // Activate thumbnail
+                        activateThumb(0);
+                        startProgressBar(0);
+                        resetTimer();
+                    }, 800);
+                }
+            });
+
+            // Stagger each card's "opening" animation
+            allCards.forEach((card, i) => {
+                const data = zodiacData[i];
+                const staggerDelay = i * 0.45; // ~450ms between each card
+                const shimmer = card.querySelector('.card-shimmer');
+
+                // Personality-based opening parameters
+                let openY = -60, openX = 0, openRotY = 0, openRotX = 0, openScale = 1.05;
+                let openEase = 'power4.out';
+                let extraRotZ = 0;
+
+                if (data.element === 'Fire') {
+                    // Aries/Leo/Sag: explosive burst upward
+                    openY = -120;
+                    openScale = 1.12;
+                    openEase = 'back.out(1.7)';
+                    openRotX = -8;
+                } else if (data.element === 'Earth') {
+                    // Taurus/Virgo/Cap: slow, grounded rise
+                    openY = -35;
+                    openScale = 1.02;
+                    openEase = 'power2.out';
+                    openRotX = -3;
+                } else if (data.element === 'Air') {
+                    // Gemini/Libra/Aquarius: light flutter / split feel
+                    openY = -70;
+                    openX = (i % 2 === 0 ? 15 : -15);
+                    openScale = 1.06;
+                    openEase = 'circ.out';
+                    extraRotZ = (i % 2 === 0 ? 3 : -3);
+                } else if (data.element === 'Water') {
+                    // Cancer/Scorpio/Pisces: fluid wave motion
+                    openY = -55;
+                    openX = Math.sin(i * 0.8) * 20;
+                    openScale = 1.04;
+                    openEase = 'sine.out';
+                    openRotY = 8;
+                    openRotX = -5;
+                }
+
+                // The opening motion
+                masterTL.to(card, {
+                    y: openY,
+                    x: openX,
+                    rotationY: openRotY,
+                    rotationX: openRotX,
+                    rotationZ: extraRotZ,
+                    scale: openScale,
+                    opacity: 1,
+                    z: i * 15,
+                    boxShadow: `0px 20px 50px rgba(${hexToRgb(data.color)}, 0.25)`,
+                    duration: 0.9,
+                    ease: openEase,
+                }, staggerDelay);
+
+                // Shimmer sweep on each card as it opens
+                if (shimmer) {
+                    masterTL.fromTo(shimmer,
+                        { opacity: 0, x: '-100%' },
+                        { opacity: 1, x: '100%', duration: 0.6, ease: 'power2.inOut' },
+                        staggerDelay + 0.1
+                    );
+                    masterTL.set(shimmer, { opacity: 0 }, staggerDelay + 0.7);
+                }
+
+                // Settle back slightly after the burst
+                masterTL.to(card, {
+                    y: openY * 0.3,
+                    x: openX * 0.5,
+                    rotationZ: extraRotZ * 0.5,
+                    scale: openScale - 0.02,
+                    duration: 0.5,
+                    ease: 'power1.inOut',
+                }, staggerDelay + 0.9);
+            });
+
+            // Phase 3: After all cards have opened, collapse them back to a neat fan
+            const collapseStart = total * 0.45 + 1.5;
+            allCards.forEach((card, i) => {
+                const fanAngle = (i - (total - 1) / 2) * 4;
+                masterTL.to(card, {
+                    y: 0,
+                    x: 0,
+                    z: -i * 5,
+                    rotationY: fanAngle,
+                    rotationX: 0,
+                    rotationZ: fanAngle * 0.15,
+                    scale: 0.75,
+                    opacity: 0.9,
+                    duration: 0.8,
+                    ease: 'power3.inOut'
+                }, collapseStart);
+            });
+        }
+
+        function activateThumb(index) {
+            const data = zodiacData[index];
+            // Deactivate all
+            zodiacData.forEach((_, i) => {
+                document.getElementById(`thumb-img-${i}`).classList.add('grayscale', 'opacity-50');
+                document.getElementById(`thumb-ring-${i}`).style.borderColor = 'transparent';
+                document.getElementById(`thumb-ring-${i}`).classList.remove('thumb-active');
+            });
+            // Activate current
+            const activeImg = document.getElementById(`thumb-img-${index}`);
+            const activeRing = document.getElementById(`thumb-ring-${index}`);
+            activeImg.classList.remove('grayscale', 'opacity-50');
+            activeRing.style.borderColor = data.color;
+            activeRing.classList.add('thumb-active');
+            activeRing.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+
+        function startProgressBar(index) {
+            document.querySelectorAll('.progress-bar-fill').forEach(el => {
+                el.style.transition = 'none';
+                el.style.width = '0%';
+            });
+            setTimeout(() => {
+                const prog = document.getElementById(`progress-${index}`);
+                prog.style.transition = `width ${duration}ms linear`;
+                prog.style.width = '100%';
+            }, 50);
+        }
+
+        function goToSlide(index) {
+            if (isAnimating || index === currentIndex) return;
+            if (!hasPlayedIntro) return; // Don't allow manual nav during intro
+            isAnimating = true;
+
+            const prevIndex = currentIndex;
+            currentIndex = index;
+            const currentData = zodiacData[currentIndex];
+
+            // Reset progress bars
+            startProgressBar(currentIndex);
+
+            // Update thumbnails
+            activateThumb(currentIndex);
+
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    isAnimating = false;
+                    resetTimer();
+                }
+            });
+
+            const newCard = document.querySelector(`.card-${currentIndex}`);
+            const newImg = document.querySelector(`.img-${currentIndex}`);
+            const newOverlay = document.querySelector(`.overlay-${currentIndex}`);
+            const newShimmer = document.querySelector(`.shimmer-${currentIndex}`);
+
+            // Personality-based entrance parameters
+            let enterY = 100, enterRotX = -15, enterRotY = 10, enterScale = 0.9;
+            let personalityEase = 'power4.out';
+
+            if (currentData.element === 'Fire') {
+                personalityEase = 'back.out(1.2)';
+                enterY = 150;
+                enterRotX = -20;
+                enterScale = 0.85;
+            } else if (currentData.element === 'Water') {
+                personalityEase = 'sine.out';
+                enterRotX = -25;
+                enterRotY = 15;
+            } else if (currentData.element === 'Air') {
+                personalityEase = 'circ.out';
+                enterY = -60;
+                enterRotY = -12;
+            } else if (currentData.element === 'Earth') {
+                personalityEase = 'power2.out';
+                enterY = 50;
+                enterScale = 0.8;
+            }
+
+            // Set initial state for incoming card
+            gsap.set(newCard, {
+                zIndex: 10,
+                visibility: 'visible',
+                opacity: 0,
+                y: enterY,
+                z: -300,
+                rotationX: enterRotX,
+                rotationY: enterRotY,
+                scale: enterScale,
+                boxShadow: '0px 0px 0px rgba(0,0,0,0)'
+            });
+            gsap.set(newImg, { scale: 1.15 });
+            gsap.set(newOverlay.children, { y: 20, opacity: 0 });
+
+            // Animate out old card
+            if (prevIndex !== -1) {
+                const oldCard = document.querySelector(`.card-${prevIndex}`);
+                tl.to(oldCard, {
+                    z: -500,
+                    y: -50,
+                    rotationX: 10,
+                    opacity: 0,
+                    duration: 1.5,
+                    ease: 'power3.inOut'
+                }, 0);
+                gsap.set(oldCard, { zIndex: 1, visibility: 'hidden', delay: 1.5 });
+            }
+
+            // Animate in new card with personality easing
+            tl.to(newCard, {
+                y: 0,
+                z: 0,
+                rotationX: 0,
+                rotationY: 0,
+                scale: 1,
+                opacity: 1,
+                boxShadow: `0px 30px 60px rgba(${hexToRgb(currentData.color)}, 0.15)`,
+                duration: 2,
+                ease: personalityEase
+            }, 0.2);
+
+            // Shimmer sweep on card entrance
+            if (newShimmer) {
+                tl.fromTo(newShimmer,
+                    { opacity: 0, x: '-100%' },
+                    { opacity: 0.8, x: '100%', duration: 0.7, ease: 'power2.inOut' },
+                    0.4
+                );
+                tl.set(newShimmer, { opacity: 0 }, 1.2);
+            }
+
+            // Ken Burns slow zoom-out on image
+            tl.to(newImg, {
+                scale: 1,
+                duration: 6,
+                ease: 'none'
+            }, 0);
+
+            // Text overlays fade/slide up
+            tl.to(newOverlay.children, {
+                y: 0,
+                opacity: 1,
+                stagger: 0.15,
+                duration: 1,
+                ease: 'power3.out'
+            }, 1.2);
+        }
+
+        function nextSlide() {
+            let next = currentIndex + 1;
+            if (next >= zodiacData.length) next = 0;
+            goToSlide(next);
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            timer = setInterval(nextSlide, duration);
+        }
+
+        // Launch the stack intro
+        setTimeout(() => {
+            playStackIntro();
+        }, 500);
+
+    </script>
 </body>
 </html>
