@@ -1,7 +1,5 @@
 {
-  "buildCommand": "cd website && npm install && npm run build",
-  "outputDirectory": "website/dist",
-  "framework": null,
+  "outputDirectory": "website",
   "cleanUrls": true,
   "redirects": [
     {
