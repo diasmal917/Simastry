@@ -6,7 +6,7 @@ android/
 ios/
 babel.config.js
 metro.config.js
-/package.json
+!/package.json
 /package-lock.json
 tsconfig.json
 app.json
