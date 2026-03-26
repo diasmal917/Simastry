@@ -1,8 +1,0 @@
-{
-  "name": "simastry-root",
-  "private": true,
-  "scripts": {
-    "build": "cd website && npm install && npm run build",
-    "dev": "cd website && npm run dev"
-  }
-}
