@@ -230,8 +230,8 @@ const featuredCompanions = [
     trait: "direct heat",
     cardPosition: "center center",
     backdropPosition: "center 10%",
-    mobileBackdropPosition: "42% 80%",
-    mobileBackdropSize: "auto 86%"
+    mobileBackdropPosition: "38% 84%",
+    mobileBackdropSize: "auto 84%"
   },
   {
     sign: "libra",
@@ -255,8 +255,8 @@ const featuredCompanions = [
     trait: "harmonic tension",
     cardPosition: "center center",
     backdropPosition: "center 14%",
-    mobileBackdropPosition: "42% 78%",
-    mobileBackdropSize: "auto 82%"
+    mobileBackdropPosition: "38% 82%",
+    mobileBackdropSize: "auto 80%"
   },
   {
     sign: "scorpio",
@@ -280,8 +280,8 @@ const featuredCompanions = [
     trait: "private intensity",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "42% 78%",
-    mobileBackdropSize: "auto 84%"
+    mobileBackdropPosition: "38% 82%",
+    mobileBackdropSize: "auto 82%"
   },
   {
     sign: "aquarius",
@@ -305,8 +305,10 @@ const featuredCompanions = [
     trait: "future frequency",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "42% 80%",
-    mobileBackdropSize: "auto 82%"
+    mobileBackdropPosition: "14% 70%",
+    mobileBackdropSize: "auto 70%",
+    mobileBackdropFill: "#4b4d3f",
+    mobileBackdropFilter: "saturate(1.08) contrast(0.96) brightness(1.2)"
   },
   {
     sign: "sagittarius",
@@ -330,8 +332,10 @@ const featuredCompanions = [
     trait: "open horizon",
     cardPosition: "center 12%",
     backdropPosition: "center 8%",
-    mobileBackdropPosition: "42% 80%",
-    mobileBackdropSize: "auto 86%",
+    mobileBackdropPosition: "-34% 68%",
+    mobileBackdropSize: "auto 84%",
+    mobileBackdropFill: "#9d8358",
+    mobileBackdropFilter: "saturate(1.1) contrast(0.97) brightness(1.24)",
     backdropSize: "cover"
   }
 ].map((item) => ({
@@ -631,6 +635,11 @@ function setBackdropStyles(layer, item) {
   layer.style.setProperty(
     "--backdrop-size-mobile",
     item.mobileBackdropSize ?? item.backdropSize ?? "auto 72%"
+  );
+  layer.style.setProperty("--backdrop-fill-mobile", item.mobileBackdropFill ?? "transparent");
+  layer.style.setProperty(
+    "--backdrop-filter-mobile",
+    item.mobileBackdropFilter ?? "saturate(1.04) contrast(0.94) brightness(1.14)"
   );
   layer.dataset.index = String(activeIndex);
 }
