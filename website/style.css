@@ -1947,41 +1947,45 @@ main > section[id] {
 
   .hero-backdrop {
     background-position: center center, var(--backdrop-position-mobile, var(--backdrop-position, center center));
-    background-size: cover, cover;
+    background-size: cover, var(--backdrop-size-mobile, var(--backdrop-size, cover));
     transform: translate3d(0, 0, 0) scale(1.01);
   }
 
   .hero-scrim {
     background:
-      linear-gradient(180deg, rgba(5, 5, 7, 0.58) 0%, rgba(5, 5, 7, 0.2) 22%, rgba(5, 5, 7, 0.42) 100%),
-      radial-gradient(circle at 76% 14%, rgba(207, 171, 114, 0.12), transparent 22%);
+      linear-gradient(180deg, rgba(5, 5, 7, 0.58) 0%, rgba(5, 5, 7, 0.16) 24%, rgba(5, 5, 7, 0.42) 100%),
+      linear-gradient(90deg, rgba(5, 5, 7, 0.72) 0%, rgba(5, 5, 7, 0.46) 34%, rgba(5, 5, 7, 0.14) 74%, rgba(5, 5, 7, 0.04) 100%),
+      radial-gradient(circle at 76% 12%, rgba(207, 171, 114, 0.12), transparent 22%);
   }
 
   .hero-inner {
     width: min(100%, calc(100vw - 24px));
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 10px;
     min-height: 100svh;
-    padding: 76px 0 18px;
-    align-content: start;
+    padding: 84px 0 16px;
   }
 
   .hero-copy {
-    max-width: min(100%, 320px);
+    max-width: min(100%, 276px);
     min-height: auto;
     padding-bottom: 0;
+    margin-top: auto;
   }
 
   .hero-eyebrow {
     margin-bottom: 8px;
-    font-size: clamp(1.32rem, 5.4vw, 1.7rem);
+    font-size: clamp(1.16rem, 4.8vw, 1.46rem);
     letter-spacing: 0.15em;
   }
 
   .hero-headline {
     max-width: 8.4ch;
     min-height: 0;
-    font-size: clamp(1.82rem, 9vw, 2.46rem);
-    line-height: 0.88;
+    font-size: clamp(1.62rem, 7.5vw, 2.06rem);
+    line-height: 0.9;
   }
 
   .hero-headline,
@@ -1995,26 +1999,26 @@ main > section[id] {
     min-height: auto;
     padding: 0;
     margin-right: 0;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   .hero-description {
     margin-top: 12px;
-    max-width: 28ch;
+    max-width: 24ch;
     min-height: 0;
-    font-size: 0.94rem;
-    line-height: 1.48;
+    font-size: 0.88rem;
+    line-height: 1.4;
   }
 
   .hero-points {
     gap: 8px;
-    margin-top: 14px;
+    margin-top: 12px;
     min-height: 0;
   }
 
   .hero-point {
-    font-size: 0.82rem;
-    line-height: 1.34;
+    font-size: 0.78rem;
+    line-height: 1.3;
   }
 
   .hero-point:nth-child(n + 2) {
@@ -2023,13 +2027,13 @@ main > section[id] {
 
   .hero-actions {
     gap: 9px;
-    margin-top: 16px;
+    margin-top: 14px;
   }
 
   .hero-stage__cluster {
     display: flex;
     align-items: flex-end;
-    gap: 12px;
+    gap: 8px;
     min-height: 0;
     width: 100vw;
     margin-left: calc(50% - 50vw);
@@ -2049,10 +2053,10 @@ main > section[id] {
   .hero-card {
     position: relative;
     inset: auto;
-    flex: 0 0 min(46vw, 196px);
-    width: min(46vw, 196px);
+    flex: 0 0 min(30.5vw, 132px);
+    width: min(30.5vw, 132px);
     min-width: 0;
-    border-radius: 26px;
+    border-radius: 22px;
     aspect-ratio: 0.7;
     scroll-snap-align: start;
     transform: none !important;
@@ -2071,27 +2075,33 @@ main > section[id] {
   }
 
   .hero-card__body {
-    inset: auto 13px 13px;
-    gap: 7px;
+    inset: auto 10px 10px;
+    gap: 6px;
   }
 
   .hero-card__title {
-    font-size: clamp(1.38rem, 6vw, 1.82rem);
+    font-size: clamp(1.05rem, 4.9vw, 1.36rem);
   }
 
   .hero-card__trait {
-    min-height: 30px;
-    padding: 6px 10px;
-    font-size: 0.54rem;
+    min-height: 24px;
+    padding: 4px 8px;
+    font-size: 0.44rem;
+    letter-spacing: 0.09em;
   }
 
   .hero-card.is-pending .hero-card__trait {
-    min-height: 32px;
-    font-size: 0.54rem;
+    min-height: 24px;
+    font-size: 0.44rem;
   }
 
   .hero-card__glyph {
-    font-size: 1.72rem;
+    font-size: 1.28rem;
+  }
+
+  .hero-card__meta {
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
   }
 
   .app-store-badge {
@@ -2115,7 +2125,7 @@ main > section[id] {
 
   .hero-stage__footer {
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 8px;
     padding: 0 12px;
   }
 
@@ -2193,21 +2203,21 @@ main > section[id] {
 
 @media (max-width: 760px) and (max-height: 780px) {
   .hero-inner {
-    gap: 12px;
-    padding-top: 74px;
+    gap: 8px;
+    padding-top: 80px;
   }
 
   .hero-copy {
-    max-width: min(100%, 300px);
+    max-width: min(100%, 252px);
   }
 
   .hero-description {
-    font-size: 0.9rem;
-    line-height: 1.42;
+    font-size: 0.82rem;
+    line-height: 1.34;
   }
 
   .hero-points {
-    margin-top: 12px;
+    margin-top: 10px;
   }
 
   .hero-point:nth-child(n + 1) {
@@ -2215,7 +2225,7 @@ main > section[id] {
   }
 
   .hero-actions {
-    margin-top: 14px;
+    margin-top: 12px;
   }
 
   .hero-stage {
@@ -2223,8 +2233,8 @@ main > section[id] {
   }
 
   .hero-card {
-    flex-basis: min(43vw, 182px);
-    width: min(43vw, 182px);
+    flex-basis: min(29vw, 124px);
+    width: min(29vw, 124px);
   }
 }
 

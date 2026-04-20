@@ -230,7 +230,8 @@ const featuredCompanions = [
     trait: "direct heat",
     cardPosition: "center center",
     backdropPosition: "center 10%",
-    mobileBackdropPosition: "58% 4%"
+    mobileBackdropPosition: "42% 80%",
+    mobileBackdropSize: "auto 86%"
   },
   {
     sign: "libra",
@@ -254,7 +255,8 @@ const featuredCompanions = [
     trait: "harmonic tension",
     cardPosition: "center center",
     backdropPosition: "center 14%",
-    mobileBackdropPosition: "58% 10%"
+    mobileBackdropPosition: "42% 78%",
+    mobileBackdropSize: "auto 82%"
   },
   {
     sign: "scorpio",
@@ -278,7 +280,8 @@ const featuredCompanions = [
     trait: "private intensity",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "58% 4%"
+    mobileBackdropPosition: "42% 78%",
+    mobileBackdropSize: "auto 84%"
   },
   {
     sign: "aquarius",
@@ -302,7 +305,8 @@ const featuredCompanions = [
     trait: "future frequency",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "58% 4%"
+    mobileBackdropPosition: "42% 80%",
+    mobileBackdropSize: "auto 82%"
   },
   {
     sign: "sagittarius",
@@ -326,7 +330,8 @@ const featuredCompanions = [
     trait: "open horizon",
     cardPosition: "center 12%",
     backdropPosition: "center 8%",
-    mobileBackdropPosition: "52% 4%",
+    mobileBackdropPosition: "42% 80%",
+    mobileBackdropSize: "auto 86%",
     backdropSize: "cover"
   }
 ].map((item) => ({
@@ -623,6 +628,10 @@ function setBackdropStyles(layer, item) {
   layer.style.setProperty("--backdrop-position", item.backdropPosition);
   layer.style.setProperty("--backdrop-position-mobile", item.mobileBackdropPosition ?? item.backdropPosition);
   layer.style.setProperty("--backdrop-size", item.backdropSize ?? "auto 100%");
+  layer.style.setProperty(
+    "--backdrop-size-mobile",
+    item.mobileBackdropSize ?? item.backdropSize ?? "auto 72%"
+  );
   layer.dataset.index = String(activeIndex);
 }
 
