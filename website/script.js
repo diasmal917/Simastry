@@ -213,80 +213,120 @@ const featuredCompanions = [
     archetype: "The first move",
     image: "assets/hero-cast/card-1.png",
     headline: "Meet the sign before you text back.",
+    mobileHeadline: "Meet the sign before you text back.",
     description:
       "Aries enters hot, fast, and decisive. Simastry reads the impulse, the ego, and the chemistry before the next message lands.",
+    mobileDescription:
+      "Aries moves fast. Simastry reads the impulse, chemistry, and timing before the next text lands.",
     points: [
       "Predict their likely reply from real conversation tension",
       "See when bold honesty wins and when it escalates",
       "Read confidence, withdrawal, and timing in one pass"
     ],
+    mobilePoints: [
+      "Predict the likely reply",
+      "Read confidence, hesitation, and timing"
+    ],
     trait: "direct heat",
     cardPosition: "center center",
-    backdropPosition: "center 10%"
+    backdropPosition: "center 10%",
+    mobileBackdropPosition: "58% 4%"
   },
   {
     sign: "libra",
     archetype: "The graceful negotiator",
     image: "assets/hero-cast/card-2.png",
     headline: "See the chemistry without flattening the nuance.",
+    mobileHeadline: "See the chemistry without losing the nuance.",
     description:
       "Libra cares about tone, reciprocity, and the feeling between the lines. Simastry turns that social balancing act into something readable.",
+    mobileDescription:
+      "Libra tracks tone and reciprocity. Simastry turns mixed signals into something you can actually read.",
     points: [
       "Decode mixed signals without reducing them to a score",
       "See what phrasing keeps the bond elegant instead of tense",
       "Translate attraction, politeness, and indecision"
     ],
+    mobilePoints: [
+      "Decode mixed signals without flattening them",
+      "See which phrasing keeps the bond balanced"
+    ],
     trait: "harmonic tension",
     cardPosition: "center center",
-    backdropPosition: "center 14%"
+    backdropPosition: "center 14%",
+    mobileBackdropPosition: "58% 10%"
   },
   {
     sign: "scorpio",
     archetype: "The hidden current",
     image: "assets/hero-cast/card-3.png",
     headline: "Read the motive beneath the reply.",
+    mobileHeadline: "Read the motive beneath the reply.",
     description:
       "Scorpio is rarely surface-level. Simastry looks for emotional leverage, trust, and what is being withheld as much as what is being said.",
+    mobileDescription:
+      "Scorpio is never surface-level. Simastry reads motive, trust, and the feeling underneath the line.",
     points: [
       "Track intensity, testing, and emotional risk",
       "See how secrecy and desire change the tone of a thread",
       "Know when depth connects and when it corners"
     ],
+    mobilePoints: [
+      "Track intensity and emotional risk",
+      "See what is felt but not said"
+    ],
     trait: "private intensity",
     cardPosition: "center center",
-    backdropPosition: "center 12%"
+    backdropPosition: "center 12%",
+    mobileBackdropPosition: "58% 4%"
   },
   {
     sign: "aquarius",
     archetype: "The signal ahead",
     image: "assets/hero-cast/card-5.png",
     headline: "Conversation-first astrology for people who think in systems.",
+    mobileHeadline: "See the pattern before you chase the outcome.",
     description:
       "Aquarius pulls back to see the pattern. Simastry makes compatibility feel strategic, modern, and sharp without losing emotional texture.",
+    mobileDescription:
+      "Aquarius spots the pattern before the confession. Simastry makes the emotional logic legible.",
     points: [
       "Read detachment, originality, and cognitive chemistry",
       "See where a connection feels magnetic or misaligned",
       "Understand the pattern before you chase the outcome"
     ],
+    mobilePoints: [
+      "Read detachment and cognitive chemistry",
+      "See whether the bond is magnetic or misaligned"
+    ],
     trait: "future frequency",
     cardPosition: "center center",
-    backdropPosition: "center 12%"
+    backdropPosition: "center 12%",
+    mobileBackdropPosition: "58% 4%"
   },
   {
     sign: "sagittarius",
     archetype: "The open horizon",
     image: "assets/hero-cast/card-6.png",
     headline: "Keep the chemistry light without losing the signal.",
+    mobileHeadline: "Keep the chemistry light and the signal clear.",
     description:
       "Sagittarius brings candor, flirtation, and motion. Simastry reads the openness, the pull for freedom, and the difference between distance and disinterest.",
+    mobileDescription:
+      "Sagittarius wants honesty with room to breathe. Simastry reads freedom, spark, and distance.",
     points: [
       "Read honesty, restlessness, and momentum in one pass",
       "See when space keeps the spark alive and when it weakens the bond",
       "Understand flirtation, freedom, and timing together"
     ],
+    mobilePoints: [
+      "Read honesty, freedom, and momentum",
+      "See when space helps and when it hurts"
+    ],
     trait: "open horizon",
     cardPosition: "center 12%",
     backdropPosition: "center 8%",
+    mobileBackdropPosition: "52% 4%",
     backdropSize: "cover"
   }
 ].map((item) => ({
@@ -448,6 +488,7 @@ let activeIndex = 0;
 let autoplayId = null;
 let activeBackdropLayer = heroBackdropCurrent;
 let heroInView = true;
+let heroUsesCompactLayout = window.innerWidth <= 760;
 
 [...new Set(signProfiles.map((sign) => sign.image))].forEach((image) => {
   const preload = new Image();
@@ -549,7 +590,7 @@ function computeCompatibility() {
 }
 
 function windowedCompanions() {
-  const visibleCount = window.innerWidth <= 760 ? 2 : 3;
+  const visibleCount = 3;
 
   return Array.from({ length: visibleCount }, (_, offset) => {
     const index = (activeIndex + offset + 1) % featuredCompanions.length;
@@ -562,11 +603,17 @@ function windowedCompanions() {
 
 function renderHeroCopy() {
   const active = featuredCompanions[activeIndex];
-  heroEyebrow.textContent = active.name;
-  heroHeadline.textContent = active.headline;
-  heroDescription.textContent = active.description;
+  const compactLayout = window.innerWidth <= 760;
+  const headline = compactLayout && active.mobileHeadline ? active.mobileHeadline : active.headline;
+  const description =
+    compactLayout && active.mobileDescription ? active.mobileDescription : active.description;
+  const points = compactLayout ? active.mobilePoints ?? active.points.slice(0, 2) : active.points;
 
-  heroPoints.innerHTML = active.points
+  heroEyebrow.textContent = active.name;
+  heroHeadline.textContent = headline;
+  heroDescription.textContent = description;
+
+  heroPoints.innerHTML = points
     .map((point) => `<span class="hero-point">${point}</span>`)
     .join("");
 }
@@ -574,6 +621,7 @@ function renderHeroCopy() {
 function setBackdropStyles(layer, item) {
   layer.style.setProperty("--backdrop-image", `url("${item.image}")`);
   layer.style.setProperty("--backdrop-position", item.backdropPosition);
+  layer.style.setProperty("--backdrop-position-mobile", item.mobileBackdropPosition ?? item.backdropPosition);
   layer.style.setProperty("--backdrop-size", item.backdropSize ?? "auto 100%");
   layer.dataset.index = String(activeIndex);
 }
@@ -1173,6 +1221,26 @@ function bindHeroVisibility() {
   syncHeroMotionState();
 }
 
+function bindHeroResize() {
+  let resizeFrame = null;
+
+  window.addEventListener("resize", () => {
+    if (resizeFrame) {
+      window.cancelAnimationFrame(resizeFrame);
+    }
+
+    resizeFrame = window.requestAnimationFrame(() => {
+      resizeFrame = null;
+      const nextCompactLayout = window.innerWidth <= 760;
+
+      if (nextCompactLayout === heroUsesCompactLayout) return;
+
+      heroUsesCompactLayout = nextCompactLayout;
+      updateHero({ immediate: true });
+    });
+  });
+}
+
 function bindParallax() {
   if (reduceMotion) return;
 
@@ -1347,6 +1415,7 @@ renderAstropediaResults();
 renderCompanionGrid();
 bindHeroControls();
 bindHeroVisibility();
+bindHeroResize();
 bindParallax();
 bindSectionReveal();
 bindBuilderInputs();
