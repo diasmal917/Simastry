@@ -191,7 +191,7 @@ const signProfiles = [
     name: "Pisces",
     glyph: "♓",
     accent: "#7d88ff",
-    image: "assets/editorial/pisces.png",
+    image: "assets/hero-cast/card-7.png",
     element: "water",
     modality: "mutable",
     descriptor: "tender drift, dream logic, softness",
@@ -230,8 +230,8 @@ const featuredCompanions = [
     trait: "direct heat",
     cardPosition: "center center",
     backdropPosition: "center 10%",
-    mobileBackdropPosition: "38% 84%",
-    mobileBackdropSize: "auto 84%"
+    mobileBackdropPosition: "66% 22%",
+    mobileBackdropScale: 1.08
   },
   {
     sign: "libra",
@@ -255,8 +255,8 @@ const featuredCompanions = [
     trait: "harmonic tension",
     cardPosition: "center center",
     backdropPosition: "center 14%",
-    mobileBackdropPosition: "38% 82%",
-    mobileBackdropSize: "auto 80%"
+    mobileBackdropPosition: "68% 18%",
+    mobileBackdropScale: 1.12
   },
   {
     sign: "scorpio",
@@ -280,8 +280,35 @@ const featuredCompanions = [
     trait: "private intensity",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "38% 82%",
-    mobileBackdropSize: "auto 82%"
+    mobileBackdropPosition: "66% 18%",
+    mobileBackdropScale: 1.06
+  },
+  {
+    sign: "pisces",
+    archetype: "The lucid veil",
+    image: "assets/hero-cast/card-7.png",
+    headline: "Let the softness stay clear, not vague.",
+    mobileHeadline: "Keep the softness, lose the blur.",
+    description:
+      "Pisces feels the emotional weather before the explanation lands. Simastry reads longing, tenderness, and the line between intuition and projection.",
+    mobileDescription:
+      "Pisces blurs feeling and fantasy fast. Simastry reads softness, longing, and where the signal starts to dissolve.",
+    points: [
+      "Read tenderness, projection, and emotional drift in one pass",
+      "See when the bond is intuitive and when it turns foggy",
+      "Keep nuance without losing the line of the conversation"
+    ],
+    mobilePoints: [
+      "Read tenderness and projection",
+      "See when intuition turns into drift"
+    ],
+    trait: "velvet drift",
+    cardPosition: "72% center",
+    backdropPosition: "center center",
+    mobileBackdropPosition: "54% 18%",
+    mobileBackdropScale: 1.03,
+    mobileBackdropFilter: "saturate(1.03) contrast(0.95) brightness(1.12)",
+    backdropSize: "cover"
   },
   {
     sign: "aquarius",
@@ -305,10 +332,9 @@ const featuredCompanions = [
     trait: "future frequency",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "14% 70%",
-    mobileBackdropSize: "auto 70%",
-    mobileBackdropFill: "#4b4d3f",
-    mobileBackdropFilter: "saturate(1.08) contrast(0.96) brightness(1.2)"
+    mobileBackdropPosition: "58% 18%",
+    mobileBackdropScale: 1.01,
+    mobileBackdropFilter: "saturate(1.02) contrast(0.96) brightness(1.08)"
   },
   {
     sign: "sagittarius",
@@ -332,10 +358,9 @@ const featuredCompanions = [
     trait: "open horizon",
     cardPosition: "center 12%",
     backdropPosition: "center 8%",
-    mobileBackdropPosition: "-34% 68%",
-    mobileBackdropSize: "auto 84%",
-    mobileBackdropFill: "#9d8358",
-    mobileBackdropFilter: "saturate(1.1) contrast(0.97) brightness(1.24)",
+    mobileBackdropPosition: "64% 16%",
+    mobileBackdropScale: 1.05,
+    mobileBackdropFilter: "saturate(1.08) contrast(0.96) brightness(1.16)",
     backdropSize: "cover"
   }
 ].map((item) => ({
@@ -499,6 +524,16 @@ let activeBackdropLayer = heroBackdropCurrent;
 let heroInView = true;
 let heroUsesCompactLayout = window.innerWidth <= 760;
 
+const heroSlideParam = new URLSearchParams(window.location.search).get("slide");
+if (heroSlideParam) {
+  const requestedIndex = featuredCompanions.findIndex(
+    (item) => item.sign === heroSlideParam.toLowerCase()
+  );
+  if (requestedIndex >= 0) {
+    activeIndex = requestedIndex;
+  }
+}
+
 [...new Set(signProfiles.map((sign) => sign.image))].forEach((image) => {
   const preload = new Image();
   preload.src = image;
@@ -636,10 +671,10 @@ function setBackdropStyles(layer, item) {
     "--backdrop-size-mobile",
     item.mobileBackdropSize ?? item.backdropSize ?? "auto 72%"
   );
-  layer.style.setProperty("--backdrop-fill-mobile", item.mobileBackdropFill ?? "transparent");
+  layer.style.setProperty("--backdrop-scale-mobile", String(item.mobileBackdropScale ?? 1.04));
   layer.style.setProperty(
     "--backdrop-filter-mobile",
-    item.mobileBackdropFilter ?? "saturate(1.04) contrast(0.94) brightness(1.14)"
+    item.mobileBackdropFilter ?? "saturate(1.02) contrast(0.96) brightness(1.08)"
   );
   layer.dataset.index = String(activeIndex);
 }
@@ -735,6 +770,9 @@ function updateProgressCount() {
 }
 
 function updateHero(options = {}) {
+  if (hero) {
+    hero.style.setProperty("--hero-accent", featuredCompanions[activeIndex].accent);
+  }
   updateBackdrop(options);
   renderHeroCopy();
   renderHeroCards();
