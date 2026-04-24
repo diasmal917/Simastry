@@ -4,7 +4,7 @@ const signProfiles = [
     name: "Aries",
     glyph: "♈",
     accent: "#f08f6a",
-    image: "assets/hero-cast/card-1.png",
+    image: "assets/hero-cast/card-1.webp",
     element: "fire",
     modality: "cardinal",
     descriptor: "fast instinct, brave timing",
@@ -106,7 +106,7 @@ const signProfiles = [
     name: "Libra",
     glyph: "♎",
     accent: "#d9b779",
-    image: "assets/hero-cast/card-2.png",
+    image: "assets/hero-cast/card-2.webp",
     element: "air",
     modality: "cardinal",
     descriptor: "magnetism, style, social calibration",
@@ -123,7 +123,7 @@ const signProfiles = [
     name: "Scorpio",
     glyph: "♏",
     accent: "#8f5cff",
-    image: "assets/hero-cast/card-3.png",
+    image: "assets/hero-cast/card-scorpio-v3.webp",
     element: "water",
     modality: "fixed",
     descriptor: "private gravity, emotional leverage",
@@ -140,7 +140,7 @@ const signProfiles = [
     name: "Sagittarius",
     glyph: "♐",
     accent: "#ff8f74",
-    image: "assets/hero-cast/card-6.png",
+    image: "assets/hero-cast/card-6.webp",
     element: "fire",
     modality: "mutable",
     descriptor: "candor, motion, restless fire",
@@ -174,7 +174,7 @@ const signProfiles = [
     name: "Aquarius",
     glyph: "♒",
     accent: "#66c4ff",
-    image: "assets/hero-cast/card-5.png",
+    image: "assets/hero-cast/card-5.webp",
     element: "air",
     modality: "fixed",
     descriptor: "distance, insight, future logic",
@@ -191,7 +191,7 @@ const signProfiles = [
     name: "Pisces",
     glyph: "♓",
     accent: "#7d88ff",
-    image: "assets/hero-cast/card-7.png",
+    image: "assets/hero-cast/card-7.webp",
     element: "water",
     modality: "mutable",
     descriptor: "tender drift, dream logic, softness",
@@ -211,7 +211,7 @@ const featuredCompanions = [
   {
     sign: "aries",
     archetype: "The first move",
-    image: "assets/hero-cast/card-1.png",
+    image: "assets/hero-cast/card-1.webp",
     headline: "Meet the sign before you text back.",
     mobileHeadline: "Meet the sign before you text back.",
     description:
@@ -230,13 +230,13 @@ const featuredCompanions = [
     trait: "direct heat",
     cardPosition: "center center",
     backdropPosition: "center 10%",
-    mobileBackdropPosition: "66% 22%",
-    mobileBackdropScale: 1.08
+    mobileBackdropPosition: "58% 30%",
+    mobileBackdropScale: 1.03
   },
   {
     sign: "libra",
     archetype: "The graceful negotiator",
-    image: "assets/hero-cast/card-2.png",
+    image: "assets/hero-cast/card-2.webp",
     headline: "See the chemistry without flattening the nuance.",
     mobileHeadline: "See the chemistry without losing the nuance.",
     description:
@@ -255,13 +255,14 @@ const featuredCompanions = [
     trait: "harmonic tension",
     cardPosition: "center center",
     backdropPosition: "center 14%",
-    mobileBackdropPosition: "68% 18%",
-    mobileBackdropScale: 1.12
+    mobileBackdropPosition: "62% 24%",
+    mobileBackdropScale: 1.08
   },
   {
     sign: "scorpio",
     archetype: "The hidden current",
-    image: "assets/hero-cast/card-3.png",
+    image: "assets/hero-cast/card-scorpio-v3.webp",
+    backdropImage: "assets/hero-cast/card-scorpio-v3.webp",
     headline: "Read the motive beneath the reply.",
     mobileHeadline: "Read the motive beneath the reply.",
     description:
@@ -278,15 +279,17 @@ const featuredCompanions = [
       "See what is felt but not said"
     ],
     trait: "private intensity",
-    cardPosition: "center center",
-    backdropPosition: "center 12%",
-    mobileBackdropPosition: "66% 18%",
-    mobileBackdropScale: 1.06
+    cardPosition: "38% center",
+    backdropPosition: "42% center",
+    mobileBackdropPosition: "40% 30%",
+    mobileBackdropScale: 1.03,
+    mobileBackdropFilter: "saturate(1.03) contrast(0.97) brightness(1.08)",
+    backdropSize: "cover"
   },
   {
     sign: "pisces",
     archetype: "The lucid veil",
-    image: "assets/hero-cast/card-7.png",
+    image: "assets/hero-cast/card-7.webp",
     headline: "Let the softness stay clear, not vague.",
     mobileHeadline: "Keep the softness, lose the blur.",
     description:
@@ -305,7 +308,7 @@ const featuredCompanions = [
     trait: "velvet drift",
     cardPosition: "72% center",
     backdropPosition: "center center",
-    mobileBackdropPosition: "54% 18%",
+    mobileBackdropPosition: "50% 22%",
     mobileBackdropScale: 1.03,
     mobileBackdropFilter: "saturate(1.03) contrast(0.95) brightness(1.12)",
     backdropSize: "cover"
@@ -313,7 +316,7 @@ const featuredCompanions = [
   {
     sign: "aquarius",
     archetype: "The signal ahead",
-    image: "assets/hero-cast/card-5.png",
+    image: "assets/hero-cast/card-5.webp",
     headline: "Conversation-first astrology for people who think in systems.",
     mobileHeadline: "See the pattern before you chase the outcome.",
     description:
@@ -332,14 +335,14 @@ const featuredCompanions = [
     trait: "future frequency",
     cardPosition: "center center",
     backdropPosition: "center 12%",
-    mobileBackdropPosition: "58% 18%",
+    mobileBackdropPosition: "48% 32%",
     mobileBackdropScale: 1.01,
     mobileBackdropFilter: "saturate(1.02) contrast(0.96) brightness(1.08)"
   },
   {
     sign: "sagittarius",
     archetype: "The open horizon",
-    image: "assets/hero-cast/card-6.png",
+    image: "assets/hero-cast/card-6.webp",
     headline: "Keep the chemistry light without losing the signal.",
     mobileHeadline: "Keep the chemistry light and the signal clear.",
     description:
@@ -358,9 +361,9 @@ const featuredCompanions = [
     trait: "open horizon",
     cardPosition: "center 12%",
     backdropPosition: "center 8%",
-    mobileBackdropPosition: "64% 16%",
-    mobileBackdropScale: 1.05,
-    mobileBackdropFilter: "saturate(1.08) contrast(0.96) brightness(1.16)",
+    mobileBackdropPosition: "50% 26%",
+    mobileBackdropScale: 1.03,
+    mobileBackdropFilter: "saturate(1.08) contrast(0.96) brightness(1.18)",
     backdropSize: "cover"
   }
 ].map((item) => ({
@@ -534,7 +537,10 @@ if (heroSlideParam) {
   }
 }
 
-[...new Set(signProfiles.map((sign) => sign.image))].forEach((image) => {
+[...new Set([
+  ...signProfiles.map((sign) => sign.image),
+  ...featuredCompanions.flatMap((item) => [item.image, item.backdropImage].filter(Boolean))
+])].forEach((image) => {
   const preload = new Image();
   preload.src = image;
 });
@@ -663,7 +669,7 @@ function renderHeroCopy() {
 }
 
 function setBackdropStyles(layer, item) {
-  layer.style.setProperty("--backdrop-image", `url("${item.image}")`);
+  layer.style.setProperty("--backdrop-image", `url("${item.backdropImage ?? item.image}")`);
   layer.style.setProperty("--backdrop-position", item.backdropPosition);
   layer.style.setProperty("--backdrop-position-mobile", item.mobileBackdropPosition ?? item.backdropPosition);
   layer.style.setProperty("--backdrop-size", item.backdropSize ?? "auto 100%");
