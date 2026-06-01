@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Simastry Prototype",
+    "slug": "simastry-prototype",
+    "scheme": "simastry-prototype",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
