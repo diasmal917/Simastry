@@ -5,6 +5,7 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
     case invalidRequest
     case invalidResponse
     case emptyResponse
+    case blockedByPrivacy(String)
     case serverError(String)
 
     var errorDescription: String? {
@@ -17,6 +18,8 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
             "The stars answered in an unexpected format."
         case .emptyResponse:
             "The prediction came back empty. Try again in a moment."
+        case .blockedByPrivacy(let message):
+            message
         case .serverError(let message):
             message
         }
@@ -25,12 +28,14 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
 
 nonisolated final class PredictionService {
     private let session: URLSession
+    private let privacyService: ConversationPrivacyService
     private let historyKey: String = "simastry_prediction_history"
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(session: URLSession = .shared) {
+    init(session: URLSession = .shared, privacyService: ConversationPrivacyService = ConversationPrivacyService()) {
         self.session = session
+        self.privacyService = privacyService
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -46,19 +51,37 @@ nonisolated final class PredictionService {
     }
 
     func generatePrediction(request: PredictionRequest, tier: String) async throws -> PredictionResult {
-        guard isConfigured else {
-            throw PredictionServiceError.serviceUnavailable
-        }
-
         guard !request.trimmedConversationText.isEmpty else {
             throw PredictionServiceError.invalidRequest
         }
 
-        let systemPrompt = makeSystemPrompt(for: request)
-        let userPrompt = makeUserPrompt(for: request)
+        let preparedConversation = privacyService.prepare(request.trimmedConversationText)
+        let preparedQuestion = request.trimmedQuestion.map { privacyService.prepare($0) }
+        let preparedHypotheticalReply = request.trimmedHypotheticalReply.map { privacyService.prepare($0) }
 
-        // Call Anthropic Claude API directly
-        let anthropicURL = URL(string: "https://api.anthropic.com/v1/messages")!
+        try validatePrivacy(preparedConversation)
+        if let preparedQuestion {
+            try validatePrivacy(preparedQuestion)
+        }
+        if let preparedHypotheticalReply {
+            try validatePrivacy(preparedHypotheticalReply)
+        }
+
+        guard isConfigured else {
+            throw PredictionServiceError.serviceUnavailable
+        }
+
+        let systemPrompt = makeSystemPrompt(for: request)
+        let userPrompt = makeUserPrompt(
+            for: request,
+            preparedConversation: preparedConversation,
+            preparedQuestion: preparedQuestion,
+            preparedHypotheticalReply: preparedHypotheticalReply
+        )
+
+        guard let anthropicURL = URL(string: "https://api.anthropic.com/v1/messages") else {
+            throw PredictionServiceError.invalidRequest
+        }
         var urlRequest = URLRequest(url: anthropicURL)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = 60
@@ -105,8 +128,8 @@ nonisolated final class PredictionService {
         let result = PredictionResult(
             id: UUID(),
             mode: request.mode,
-            question: request.trimmedQuestion ?? "",
-            conversationText: request.trimmedConversationText,
+            question: preparedQuestion?.redactedText ?? "",
+            conversationText: preparedConversation.redactedText,
             targetSunSign: request.targetSunSign,
             targetMoonSign: request.targetMoonSign,
             targetRisingSign: request.targetRisingSign,
@@ -114,6 +137,11 @@ nonisolated final class PredictionService {
             astrologicalBreakdown: parsed.breakdown,
             confidence: min(max(parsed.confidence, 0), 100),
             tone: parsed.tone,
+            privacySummary: combinedPrivacySummary(
+                conversation: preparedConversation,
+                question: preparedQuestion,
+                hypotheticalReply: preparedHypotheticalReply
+            ),
             createdAt: Date()
         )
 
@@ -256,21 +284,58 @@ nonisolated final class PredictionService {
         return prompt
     }
 
-    private func makeUserPrompt(for request: PredictionRequest) -> String {
+    private func makeUserPrompt(
+        for request: PredictionRequest,
+        preparedConversation: ConversationPrivacyResult,
+        preparedQuestion: ConversationPrivacyResult?,
+        preparedHypotheticalReply: ConversationPrivacyResult?
+    ) -> String {
         var sections: [String] = []
-        sections.append("Conversation:\n\(request.trimmedConversationText)")
 
-        if let question = request.trimmedQuestion {
-            sections.append("What the user wants to know:\n\(question)")
+        if let privacySummary = combinedPrivacySummary(
+            conversation: preparedConversation,
+            question: preparedQuestion,
+            hypotheticalReply: preparedHypotheticalReply
+        ) {
+            sections.append("Privacy handling:\n\(privacySummary)")
+        }
+
+        sections.append("Conversation:\n\(preparedConversation.redactedText)")
+
+        if let preparedQuestion {
+            sections.append("What the user wants to know:\n\(preparedQuestion.redactedText)")
         } else {
             sections.append("What the user wants to know:\nPredict the other person's most likely next text.")
         }
 
-        if let hypotheticalReply = request.trimmedHypotheticalReply {
-            sections.append("Alternative reply the user is considering sending:\n\(hypotheticalReply)\n\nUse that message as the user's next move, then predict how the other person would answer.")
+        if let preparedHypotheticalReply {
+            sections.append("Alternative reply the user is considering sending:\n\(preparedHypotheticalReply.redactedText)\n\nUse that message as the user's next move, then predict how the other person would answer.")
         }
 
         return sections.joined(separator: "\n\n")
+    }
+
+    private func validatePrivacy(_ result: ConversationPrivacyResult) throws {
+        guard result.canProceed else {
+            throw PredictionServiceError.blockedByPrivacy(
+                result.blockingMessage ?? "This conversation includes content Simastry cannot safely process."
+            )
+        }
+    }
+
+    private func combinedPrivacySummary(
+        conversation: ConversationPrivacyResult,
+        question: ConversationPrivacyResult?,
+        hypotheticalReply: ConversationPrivacyResult?
+    ) -> String? {
+        let summaries = [
+            conversation.privacySummary,
+            question?.privacySummary,
+            hypotheticalReply?.privacySummary
+        ].compactMap { $0 }
+
+        guard !summaries.isEmpty else { return nil }
+        return summaries.joined(separator: " ")
     }
 }
 
