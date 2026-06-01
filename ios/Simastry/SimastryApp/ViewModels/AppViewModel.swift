@@ -86,6 +86,7 @@ class AppViewModel {
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
+    var predictionDraft: PredictionDraft?
     var referralInfo: ReferralInfo?
 
     // MARK: - Bonus Predictions (consumable top-ups)
@@ -178,6 +179,7 @@ class AppViewModel {
             pendingDeepLinkURL = nil
             pendingDeepLink = nil
             guideFocusSign = nil
+            predictionDraft = nil
             clearAccountScopedLocalState()
             resetSetupState()
             homeSetupPhase = .modeSelection
@@ -302,6 +304,7 @@ class AppViewModel {
         pendingDeepLinkURL = nil
         pendingDeepLink = nil
         guideFocusSign = nil
+        predictionDraft = nil
         resetSetupState()
         homeSetupPhase = .modeSelection
         currentScreen = .landing
@@ -352,6 +355,7 @@ class AppViewModel {
         pendingDeepLinkURL = nil
         pendingDeepLink = nil
         guideFocusSign = nil
+        predictionDraft = nil
         resetSetupState()
         homeSetupPhase = .modeSelection
         notificationService.clearScheduledNotifications()
@@ -601,6 +605,31 @@ class AppViewModel {
         }
         await setupNotifications()
         updateWidgetData()
+    }
+
+    func startPrediction(for companion: CompanionData, question: String? = nil) {
+        guard let sun = zodiacSign(from: companion.sunSign) else {
+            showToast("Missing sign", subtitle: "Add a Sun sign before starting a prediction.", isError: true)
+            return
+        }
+
+        predictionDraft = PredictionDraft(
+            targetName: companion.name,
+            targetSunSign: sun,
+            targetMoonSign: zodiacSign(from: companion.moonSign),
+            targetRisingSign: zodiacSign(from: companion.risingSign),
+            question: question ?? "What will \(companion.name) say next?"
+        )
+        selectedTab = 3
+    }
+
+    func startPrediction(for sign: ZodiacSign, question: String? = nil) {
+        predictionDraft = PredictionDraft(
+            targetName: nil,
+            targetSunSign: sign,
+            question: question ?? "What would a \(sign.displayName) say next?"
+        )
+        selectedTab = 3
     }
 
     func checkSubscriptionStatus() async {
@@ -1701,6 +1730,7 @@ class AppViewModel {
         companionMessages = []
         discoveryMessages = []
         discoveredProfiles = []
+        predictionDraft = nil
         bonusPredictions = 0
         isDiscoverable = false
         socialDisplayName = ""
@@ -1724,6 +1754,12 @@ class AppViewModel {
         defaults.removeObject(forKey: lastDiscoveryMessageTimestampKey)
 
         deleteProfileImage()
+    }
+
+    private func zodiacSign(from value: String) -> ZodiacSign? {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return ZodiacSign(rawValue: normalized)
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == normalized }
     }
 
     func showToast(_ title: String, subtitle: String, isError: Bool = false) {

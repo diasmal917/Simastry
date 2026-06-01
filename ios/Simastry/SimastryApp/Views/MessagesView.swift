@@ -313,7 +313,14 @@ private struct MessageDetailSheet: View {
                                 Button {
                                     HapticManager.buttonPress()
                                     dismiss()
-                                    viewModel.selectedTab = 3
+                                    if let sign = zodiacSign {
+                                        viewModel.startPrediction(
+                                            for: sign,
+                                            question: "What will \(message.companionName) say next?"
+                                        )
+                                    } else {
+                                        viewModel.selectedTab = 3
+                                    }
                                 } label: {
                                     HStack(spacing: 10) {
                                         Image(systemName: "wand.and.stars")

@@ -94,6 +94,7 @@ struct SimulateView: View {
             }
             .task {
                 loadHistory()
+                applyPredictionDraftIfNeeded()
                 if reduceMotion {
                     appeared = true
                 } else {
@@ -104,6 +105,9 @@ struct SimulateView: View {
             }
             .onDisappear {
                 stopProgressCycle()
+            }
+            .onChange(of: viewModel.predictionDraft?.id) { _, _ in
+                applyPredictionDraftIfNeeded()
             }
         }
     }
@@ -511,6 +515,19 @@ struct SimulateView: View {
 
     private func loadHistory() {
         history = viewModel.predictionService.loadHistory()
+    }
+
+    private func applyPredictionDraftIfNeeded() {
+        guard let draft = viewModel.predictionDraft else { return }
+
+        selectedSunSign = draft.targetSunSign
+        selectedMoonSign = draft.targetMoonSign
+        selectedRisingSign = draft.targetRisingSign
+        if let question = draft.question?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !question.isEmpty {
+            questionText = question
+        }
+        viewModel.predictionDraft = nil
     }
 
     private func startProgressCycle() {

@@ -131,6 +131,20 @@ struct CompanionDetailSheet: View {
                     }
                     .buttonStyle(SpringPressStyle())
                 }
+
+                Button {
+                    HapticManager.buttonPress()
+                    dismiss()
+                    viewModel.startPrediction(for: companion)
+                } label: {
+                    Label("Predict Reply", systemImage: "wand.and.stars")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.midnight)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(SimastryColor.gold, in: .capsule)
+                }
+                .buttonStyle(SpringPressStyle())
             }
             .padding(16)
             .simastryGlass(cornerRadius: 16)
