@@ -1,3 +1,29 @@
-node_modules
+node_modules/
 .env
-.expo
+.expo/
+.DS_Store
+
+# Local assistant/editor state
+.claude/
+
+# Native and Expo generated outputs
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.app/
+Factory/*.app/
+expo-prototype/dist/
+expo-prototype-preview/
+
+# Local preview screenshots generated while tuning the prototype
+expo-prototype/*.png
+
+# Generated duplicate companion PNGs. The committed prototype uses JPG/WebP
+# for companion assets; force-add an intentional PNG if one is truly needed.
+expo-prototype/assets/astrogram/**/*.png
+expo-prototype/assets/hero-cast/**/*.png
+
+# Saved external reference pages/assets
+Model Template/
