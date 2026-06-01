@@ -101,6 +101,74 @@ struct AppViewModelRegressionTests {
 
         #expect(UserDefaults.standard.data(forKey: pendingChartKey) == nil)
     }
+
+    @Test func startPredictionCreatesCompanionDraft() {
+        let viewModel = AppViewModel()
+        let companion = CompanionData(
+            id: UUID(),
+            userId: UUID(),
+            name: "Seren",
+            mode: CompanionMode.soulmate.rawValue,
+            sunSign: ZodiacSign.libra.rawValue,
+            moonSign: ZodiacSign.cancer.rawValue,
+            risingSign: ZodiacSign.aries.rawValue,
+            appearanceStyle: nil,
+            conversationCount: 0,
+            firstConversationAt: nil,
+            compatibilityScore: 76,
+            companionMemory: nil,
+            relationshipLevel: 1,
+            createdAt: nil
+        )
+
+        viewModel.startPrediction(for: companion)
+
+        #expect(viewModel.selectedTab == 3)
+        #expect(viewModel.predictionDraft?.targetName == "Seren")
+        #expect(viewModel.predictionDraft?.targetSunSign == .libra)
+        #expect(viewModel.predictionDraft?.targetMoonSign == .cancer)
+        #expect(viewModel.predictionDraft?.targetRisingSign == .aries)
+        #expect(viewModel.predictionDraft?.question == "What will Seren say next?")
+    }
+
+    @Test func startPredictionCreatesSignDraft() {
+        let viewModel = AppViewModel()
+
+        viewModel.startPrediction(for: .sagittarius)
+
+        #expect(viewModel.selectedTab == 3)
+        #expect(viewModel.predictionDraft?.targetName == nil)
+        #expect(viewModel.predictionDraft?.targetSunSign == .sagittarius)
+        #expect(viewModel.predictionDraft?.targetMoonSign == nil)
+        #expect(viewModel.predictionDraft?.targetRisingSign == nil)
+        #expect(viewModel.predictionDraft?.question == "What would a Sagittarius say next?")
+    }
+
+    @Test func startPredictionRejectsMissingCompanionSign() {
+        let viewModel = AppViewModel()
+        let companion = CompanionData(
+            id: UUID(),
+            userId: UUID(),
+            name: "Noa",
+            mode: CompanionMode.soulmate.rawValue,
+            sunSign: "unknown",
+            moonSign: ZodiacSign.cancer.rawValue,
+            risingSign: ZodiacSign.aries.rawValue,
+            appearanceStyle: nil,
+            conversationCount: 0,
+            firstConversationAt: nil,
+            compatibilityScore: 50,
+            companionMemory: nil,
+            relationshipLevel: 1,
+            createdAt: nil
+        )
+
+        viewModel.startPrediction(for: companion)
+
+        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.predictionDraft == nil)
+        #expect(viewModel.toastMessage?.title == "Missing sign")
+    }
 }
 
 private struct StoredPendingOnboardingChart: Decodable {

@@ -331,6 +331,16 @@ struct CompanionsView: View {
                 .frame(width: 220)
 
                 quickActionCard(
+                    title: "Predict Reply",
+                    subtitle: "Open Predict with \(companion.name)'s chart already set.",
+                    systemImage: "wand.and.stars",
+                    tint: SimastryColor.risingViolet
+                ) {
+                    viewModel.startPrediction(for: companion)
+                }
+                .frame(width: 230)
+
+                quickActionCard(
                     title: "Pull a Reading",
                     subtitle: ritualLine(for: companion),
                     systemImage: "moon.stars.fill",
