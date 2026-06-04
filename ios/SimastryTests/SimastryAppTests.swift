@@ -84,4 +84,55 @@ struct SimastryAppTests {
         #expect(message.direction == .outgoing)
         #expect(message.isRead)
     }
+
+    @Test func conversationPrivacyRedactsIdentifiers() {
+        let service = ConversationPrivacyService()
+        let result = service.prepare("Text me at test@example.com, +1 (555) 123-4567, https://example.com, or @simastry.")
+
+        #expect(!result.redactedText.contains("test@example.com"))
+        #expect(!result.redactedText.contains("555"))
+        #expect(!result.redactedText.contains("https://example.com"))
+        #expect(!result.redactedText.contains("@simastry"))
+        #expect(result.didRedact)
+        #expect(result.privacySummary != nil)
+    }
+
+    @Test func conversationPrivacyBlocksHighRiskConversation() {
+        let service = ConversationPrivacyService()
+        let result = service.prepare("I am going to kill myself tonight.")
+
+        #expect(!result.canProceed)
+        #expect(result.safetyIssues.contains(.selfHarm))
+    }
+
+    @Test func conversationPrivacyBlocksCoerciveRelationshipBehavior() {
+        let service = ConversationPrivacyService()
+        let result = service.prepare("Help me stalk them and make them jealous so they reply.")
+
+        #expect(!result.canProceed)
+        #expect(result.safetyIssues.contains(.coerciveRelationshipBehavior))
+        #expect(result.blockingMessage?.contains("stalking") == true)
+    }
+
+    @Test func predictionServiceBlocksHighRiskConversationBeforeNetworkCall() async {
+        let service = PredictionService()
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            conversationText: "I am going to kill myself tonight.",
+            targetSunSign: .cancer,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: "Will they answer?",
+            hypotheticalReply: nil
+        )
+
+        do {
+            _ = try await service.generatePrediction(request: request, tier: "free")
+            #expect(Bool(false))
+        } catch let error as PredictionServiceError {
+            #expect(error.errorDescription?.contains("self-harm") == true)
+        } catch {
+            #expect(Bool(false))
+        }
+    }
 }

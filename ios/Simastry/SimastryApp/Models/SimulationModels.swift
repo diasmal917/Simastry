@@ -78,6 +78,7 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     let astrologicalBreakdown: String
     let confidence: Int
     let tone: SimulationTone?
+    let privacySummary: String?
     let createdAt: Date
 
     var historyTitle: String {
