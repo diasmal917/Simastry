@@ -94,3 +94,28 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
         return String(preview.prefix(80))
     }
 }
+
+nonisolated struct PredictionDraft: Identifiable, Equatable, Sendable {
+    let id: UUID
+    let targetName: String?
+    let targetSunSign: ZodiacSign
+    let targetMoonSign: ZodiacSign?
+    let targetRisingSign: ZodiacSign?
+    let question: String?
+
+    init(
+        id: UUID = UUID(),
+        targetName: String? = nil,
+        targetSunSign: ZodiacSign,
+        targetMoonSign: ZodiacSign? = nil,
+        targetRisingSign: ZodiacSign? = nil,
+        question: String? = nil
+    ) {
+        self.id = id
+        self.targetName = targetName
+        self.targetSunSign = targetSunSign
+        self.targetMoonSign = targetMoonSign
+        self.targetRisingSign = targetRisingSign
+        self.question = question
+    }
+}

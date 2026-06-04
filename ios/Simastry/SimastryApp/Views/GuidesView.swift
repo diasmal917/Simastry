@@ -171,7 +171,7 @@ struct GuidesView: View {
                         systemImage: "wand.and.stars",
                         accent: SimastryColor.risingViolet
                     ) {
-                        viewModel.selectedTab = 3
+                        viewModel.startPrediction(for: selectedSign)
                     }
 
                     nextStepCard(
@@ -191,7 +191,7 @@ struct GuidesView: View {
                         systemImage: "wand.and.stars",
                         accent: SimastryColor.risingViolet
                     ) {
-                        viewModel.selectedTab = 3
+                        viewModel.startPrediction(for: selectedSign)
                     }
 
                     nextStepCard(
