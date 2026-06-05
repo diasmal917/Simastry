@@ -47,7 +47,11 @@ final class ReviewPromptService {
             .compactMap({ $0 as? UIWindowScene })
             .first else { return }
 
-        SKStoreReviewController.requestReview(in: windowScene)
+        if #available(iOS 18.0, *) {
+            AppStore.requestReview(in: windowScene)
+        } else {
+            SKStoreReviewController.requestReview(in: windowScene)
+        }
 
         UserDefaults.standard.set(Date(), forKey: lastPromptDateKey)
         let count = UserDefaults.standard.integer(forKey: promptCountKey)

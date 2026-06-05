@@ -570,17 +570,20 @@ struct ProfileView: View {
     // MARK: - Profile Image Picker
 
     private var profileImageSection: some View {
-        VStack(spacing: 10) {
+        let profileImage = viewModel.profileImage
+        let sunSignGlyph = viewModel.userSunSign?.glyph
+
+        return VStack(spacing: 10) {
             PhotosPicker(
                 selection: $selectedPhotoItem,
                 matching: .images,
                 photoLibrary: .shared()
             ) {
                 ProfileImageView(
-                    image: viewModel.profileImage,
+                    image: profileImage,
                     size: 100,
-                    showEditBadge: viewModel.profileImage != nil,
-                    sunSignGlyph: viewModel.userSunSign?.glyph
+                    showEditBadge: profileImage != nil,
+                    sunSignGlyph: sunSignGlyph
                 )
             }
             .buttonStyle(.plain)

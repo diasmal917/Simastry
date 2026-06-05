@@ -98,11 +98,10 @@ final class StreakManager: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let lastDay = calendar.startOfDay(for: lastDate)
-        let daysSinceLast = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
 
         // Build an array: for each of the last 7 days, determine if it was checked-in.
         // We know the streak is `currentStreak` consecutive days ending on `lastCheckIn`.
-        // If the streak is broken (daysSinceLast > 1 and currentStreak was reset), only
+        // If the streak is broken and currentStreak was reset, only
         // the last check-in date counts.
 
         var result = Array(repeating: false, count: 7)
