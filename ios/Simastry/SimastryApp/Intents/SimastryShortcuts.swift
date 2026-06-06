@@ -77,24 +77,24 @@ struct GetCommunicationTipIntent: AppIntent {
     }
 }
 
-// MARK: - Daily Vibe Shortcut
+// MARK: - Daily Signal Shortcut
 struct DailyVibeIntent: AppIntent {
-    static var title: LocalizedStringResource = "Daily Vibe Check"
-    static var description = IntentDescription("Get your daily vibe from Simastry")
+    static var title: LocalizedStringResource = "Daily Signal Check"
+    static var description = IntentDescription("Get your daily chart signal from Simastry")
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let vibes = [
-            "Good energy today — lean into conversations",
+        let signals = [
+            "Today's chart signal favors clear, direct conversations",
             "Keep it low-key. Save the big talks for tomorrow",
-            "Creative energy is high — say yes to things",
+            "Creative fire is high — useful for brave but kind messages",
             "Your patience might be tested. Deep breaths",
             "Great day for reconnecting with someone",
-            "Something unexpected might come up. Roll with it",
-            "Good day to have that conversation you've been avoiding"
+            "Something unexpected might change the tone. Leave room to respond",
+            "Good day to have the conversation you've been avoiding if you keep the tone honest"
         ]
-        let index = Calendar.current.component(.hour, from: Date()) % vibes.count
-        return .result(dialog: "\(vibes[index])")
+        let index = Calendar.current.component(.hour, from: Date()) % signals.count
+        return .result(dialog: "\(signals[index])")
     }
 }
 

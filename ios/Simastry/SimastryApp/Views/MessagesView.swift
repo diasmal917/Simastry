@@ -80,7 +80,7 @@ struct MessagesView: View {
 
             Text(AppConfig.socialDiscoveryEnabled
                  ? "Add a companion or send a discovery intro, and your messages will gather here."
-                 : "Add a companion and they'll reach out based on their zodiac personality")
+                 : "Add a companion and messages will reflect their sign lens and your chart context.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
@@ -294,6 +294,8 @@ private struct MessageDetailSheet: View {
                                 .font(SimastryFont.caption)
                                 .foregroundStyle(SimastryColor.deepMuted)
                         }
+
+                        messageMethodLayer
 
                         if message.source == .discovery {
                             discoveryConversationSection
@@ -569,6 +571,60 @@ private struct MessageDetailSheet: View {
                 }
             }
         }
+    }
+
+    private var messageMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Conversation lens",
+            summary: "This thread stays anchored to message context and the companion's sign lens. Use Predict when you want a fuller chart-signal read before replying.",
+            signals: messageMethodSignals,
+            footer: "Private messages are not exposed in notification previews.",
+            accent: zodiacSign?.color ?? SimastryColor.gold
+        )
+    }
+
+    private var messageMethodSignals: [MethodSignal] {
+        var signals: [MethodSignal] = [
+            MethodSignal(
+                label: "Message context",
+                detail: conversationMessages.isEmpty ? "Single message" : "\(conversationMessages.count) messages",
+                systemImage: "text.bubble.fill",
+                tint: SimastryColor.celestialBlue
+            )
+        ]
+
+        if let zodiacSign {
+            signals.append(
+                MethodSignal(
+                    label: "Companion lens",
+                    detail: zodiacSign.displayName,
+                    systemImage: "scope",
+                    tint: zodiacSign.color
+                )
+            )
+        }
+
+        if let userSun = viewModel.userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Your Sun",
+                    detail: userSun.displayName,
+                    systemImage: "person.crop.circle.fill",
+                    tint: userSun.color
+                )
+            )
+        }
+
+        signals.append(
+            MethodSignal(
+                label: "Privacy",
+                detail: "Preview safe",
+                systemImage: "lock.shield.fill",
+                tint: SimastryColor.mutedSilver
+            )
+        )
+
+        return signals
     }
 }
 

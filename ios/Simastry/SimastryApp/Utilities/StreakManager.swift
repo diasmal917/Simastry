@@ -60,12 +60,12 @@ final class StreakManager: ObservableObject {
     var streakMessage: String? {
         switch currentStreak {
         case 3: return "3 days in a row! You're building a habit"
-        case 7: return "One week streak! The stars are impressed"
-        case 14: return "Two weeks strong! Your cosmic awareness is growing"
-        case 30: return "30-day streak! You're officially in tune with the cosmos"
+        case 7: return "One week streak! Your communication habit is forming"
+        case 14: return "Two weeks strong! Your chart awareness is growing"
+        case 30: return "30-day streak! You're building real pattern awareness"
         case 50: return "50 days! Astrologers wish they were this consistent"
-        case 100: return "100 days! You're a cosmic legend"
-        case 365: return "One year! The universe literally orbits around your consistency"
+        case 100: return "100 days! Your relationship intuition is getting sharper"
+        case 365: return "One year! That's serious consistency"
         default: return nil
         }
     }

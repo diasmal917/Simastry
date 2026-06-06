@@ -348,7 +348,7 @@ nonisolated struct AstrologyTemplates {
         ],
         "Pisces": [
             "hey... I felt your energy before you even added me. is that weird?",
-            "hi. I already dreamed about this connection. I think the universe brought us together"
+            "hi. I already feel the emotional pattern in this connection"
         ]
     ]
 
@@ -418,7 +418,7 @@ nonisolated struct AstrologyTemplates {
         "Pisces": "Heads up: Pisces reads your energy through text. They'll pick up on subtle tone shifts. Voice notes and longer messages make them feel safer."
     ]
 
-    static let closing = "The stars have spoken — your cosmic DNA is written."
+    static let closing = "Your chart signals are mapped. Now use them with care."
 
     static let ethicalDisclaimer = "Simastry helps you understand people — not control them. Use these insights with empathy."
 

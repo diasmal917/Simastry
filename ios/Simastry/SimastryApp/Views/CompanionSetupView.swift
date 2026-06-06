@@ -52,20 +52,23 @@ struct CompanionSetupView: View {
 
                 progressHeader(
                     title: "Shape your \(viewModel.selectedMode.displayName.lowercased())",
-                    subtitle: "Pick their cosmic makeup now, then name and style them in the next two moments."
+                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style the companion voice."
                 )
 
                 stageStrip(activeStep: 0)
                     .padding(.horizontal, 20)
 
+                creationMethodCard
+                    .padding(.horizontal, 20)
+
                 VStack(spacing: 18) {
                     VStack(spacing: 8) {
-                        Text("Start with their energy")
+                        Text("Start with their placement logic")
                             .font(SimastryFont.titleLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .multilineTextAlignment(.center)
 
-                        Text("You can let fate decide or choose each sign yourself.")
+                        Text("Choose the companion's chart lens yourself or generate a balanced Sun, Moon, and Rising blend.")
                             .font(SimastryFont.bodySmall)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .multilineTextAlignment(.center)
@@ -97,7 +100,7 @@ struct CompanionSetupView: View {
                                     .font(SimastryFont.titleSmall)
                                     .foregroundStyle(SimastryColor.offWhite)
 
-                                Text("We'll generate a balanced cosmic blend instantly.")
+                                Text("We'll generate a balanced placement profile instantly.")
                                     .font(SimastryFont.labelMedium)
                                     .foregroundStyle(SimastryColor.mutedSilver)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -314,6 +317,38 @@ struct CompanionSetupView: View {
         .padding(.horizontal, 20)
     }
 
+    private var creationMethodCard: some View {
+        MethodLayerPanel(
+            title: "Companion method",
+            summary: "These placements shape how the companion interprets a conversation: Sun for core drive, Moon for emotional pattern, Rising for first instinct.",
+            signals: [
+                MethodSignal(
+                    label: "Sun",
+                    detail: "Core drive",
+                    systemImage: "sun.max.fill",
+                    tint: SimastryColor.sunCoral
+                ),
+                MethodSignal(
+                    label: "Moon",
+                    detail: "Emotional pattern",
+                    systemImage: "moon.stars.fill",
+                    tint: SimastryColor.celestialBlue
+                ),
+                MethodSignal(
+                    label: "Rising",
+                    detail: "First instinct",
+                    systemImage: "sparkles",
+                    tint: SimastryColor.risingViolet
+                )
+            ],
+            footer: "The companion is fictional. Its voice stays anchored to traditional sign logic and your conversation context.",
+            accent: SimastryColor.gold
+        )
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 18)
+        .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth).delay(0.04), value: appeared)
+    }
+
     private func stageStrip(activeStep: Int) -> some View {
         HStack(spacing: 8) {
             stagePill(title: "Signs", isActive: activeStep == 0, isComplete: activeStep > 0)
@@ -511,11 +546,11 @@ struct CompanionSignPicker: View {
     private func prompt(for role: CelestialRole) -> String {
         switch role {
         case .sun:
-            return "Choose the energy they lead with."
+            return "Choose their core drive and directness."
         case .moon:
-            return "Pick the emotional tone beneath the surface."
+            return "Pick the emotional pattern beneath the surface."
         case .rising:
-            return "Choose the first impression they leave behind."
+            return "Choose their first instinct and social tone."
         }
     }
 

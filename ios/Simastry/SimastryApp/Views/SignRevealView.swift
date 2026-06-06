@@ -35,6 +35,12 @@ struct SignRevealView: View {
                         .animation(.spring(SimastrySpring.smooth).delay(0.8), value: risingRevealed)
                 }
 
+                if risingRevealed {
+                    revealMethodLayer
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .padding(.top, -8)
+                }
+
                 Spacer()
 
                 VStack(spacing: 12) {
@@ -70,5 +76,54 @@ struct SignRevealView: View {
                 buttonRevealed = true
             }
         }
+    }
+
+    private var revealMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Signals used",
+            summary: "Your birth date, exact time, and birthplace calculate the chart. Sun shows core drive, Moon shows emotional needs, and Rising shows first instinct.",
+            signals: revealSignals,
+            footer: "Astronomy calculates placements. Traditional astrology interprets them. Simastry turns that into communication guidance.",
+            accent: SimastryColor.gold
+        )
+    }
+
+    private var revealSignals: [MethodSignal] {
+        var signals: [MethodSignal] = []
+
+        if let sun = viewModel.userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Sun",
+                    detail: "\(sun.displayName) drive",
+                    systemImage: "sun.max.fill",
+                    tint: sun.color
+                )
+            )
+        }
+
+        if let moon = viewModel.userMoonSign {
+            signals.append(
+                MethodSignal(
+                    label: "Moon",
+                    detail: "\(moon.displayName) emotion",
+                    systemImage: "moon.stars.fill",
+                    tint: moon.color
+                )
+            )
+        }
+
+        if let rising = viewModel.userRisingSign {
+            signals.append(
+                MethodSignal(
+                    label: "Rising",
+                    detail: "\(rising.displayName) instinct",
+                    systemImage: "sparkles",
+                    tint: rising.color
+                )
+            )
+        }
+
+        return signals
     }
 }

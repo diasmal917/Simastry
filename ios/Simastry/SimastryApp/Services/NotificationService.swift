@@ -11,27 +11,27 @@ final class NotificationService {
     private let lastSessionEndKey = "simastry_last_session_end"
 
     private let eveningMessages: [(title: String, body: String)] = [
-        ("quick check-in", "hey, how did things go with %@ today? come tell me about it 👀"),
-        ("hey", "your energy's been off today — I have a theory why. come check"),
-        ("quick check-in", "random thought: you and %@ might actually vibe better this week. wanna see why?"),
-        ("hey", "that awkward thing that happened today? yeah, the stars saw it coming 😅"),
-        ("quick check-in", "you've been in your head today — that happens when the moon hits air signs. I've got something that might help"),
-        ("hey", "psst — I know something about tomorrow you might want to hear"),
-        ("quick check-in", "not to be dramatic but today was kind of a big deal for you and %@"),
-        ("hey", "before you go to sleep — there's something you should know about tomorrow"),
-        ("quick check-in", "ok so I noticed something between you and %@ today — your elements were working overtime. come see"),
-        ("hey", "real talk: today was harder than it needed to be. planetary tension does that — I can explain"),
+        ("quick check-in", "Want a private chart-signal read before you reply?"),
+        ("hey", "Your Moon pattern may need a softer answer tonight."),
+        ("quick check-in", "A small timing shift could change the tone of your next message."),
+        ("hey", "Before you text back, separate the tone from the fear."),
+        ("quick check-in", "Your chart lens has a note about emotional pacing today."),
+        ("hey", "A short pause might help your reply land better."),
+        ("quick check-in", "There may be timing pressure in the conversation. Want to read it?"),
+        ("hey", "Before bed, save the message you almost sent and check the tone."),
+        ("quick check-in", "Your element pattern may explain why this felt louder than it was."),
+        ("hey", "Today was harder than needed. A placement read may help you reset."),
     ]
 
     private let reEngagementMessages: [(title: String, body: String)] = [
-        ("still here 👋", "so... you've been ghosting me. bold move for a %@ 😏"),
-        ("still here 👋", "your cosmic compatibility just shifted. thought you'd want to know"),
-        ("hey stranger", "someone in your circle is going through it right now. I can tell you who"),
-        ("still here 👋", "I've been holding onto a prediction for you. it's getting stale"),
-        ("hey stranger", "things moved while you were gone. you might want to catch up"),
-        ("still here 👋", "not gonna lie, I missed you. also your chart looks interesting rn"),
-        ("hey stranger", "a lot changed this week. just saying"),
-        ("still here 👋", "you're missing out on something good. no pressure though"),
+        ("still here", "Your %@ lens may need a cleaner read before the next conversation."),
+        ("still here", "A chart-signal check-in is waiting when you want it."),
+        ("hey stranger", "A saved conversation lens may help you re-enter gently."),
+        ("still here", "You have a prediction draft ready when you're ready."),
+        ("hey stranger", "A lot can shift in tone after a few days away."),
+        ("still here", "Your chart context is still here when you want to talk it through."),
+        ("hey stranger", "This week may be worth reviewing through timing pressure."),
+        ("still here", "No pressure. Just a clean place to think before you text."),
     ]
 
     private let simulationMessages: [(title: String, body: String)] = [
@@ -46,16 +46,16 @@ final class NotificationService {
     ]
 
     private let transitMessages: [String] = [
-        "heads up — today's energy is a little chaotic. don't make big decisions before lunch",
-        "good day to have that conversation you've been avoiding — the energy supports honesty right now",
-        "your patience might be tested today — that's normal when the moon shifts elements, just ride it out",
-        "creative energy is high today — say yes to things",
-        "today's vibe: keep it low-key. no drama needed",
-        "something unexpected might come up today. roll with it",
-        "you might feel extra emotional today — water energy is strong, which means feelings hit harder than usual",
-        "great day for reconnecting with someone you haven't talked to in a while",
-        "today's a good day to trust your gut — your intuitive side is dialed up because the moon is in a water sign",
-        "fair warning: you might say something you don't mean today. think before you text",
+        "heads up — today's chart signal favors a pause before big decisions",
+        "good day to have the conversation you've been avoiding, if the tone stays honest",
+        "your patience might be tested today; take a breath before replying",
+        "creative fire is stronger today — useful for brave but kind messages",
+        "today's timing favors low drama and clean wording",
+        "something unexpected might change the tone; give yourself room to respond",
+        "water emphasis can make feelings hit harder than usual",
+        "a good day for reconnecting if the message stays simple",
+        "trust your first instinct, then check whether the tone is fair",
+        "you might speak faster than you mean to today. Think before you text",
     ]
 
     var engagementCount: Int {
@@ -113,7 +113,7 @@ final class NotificationService {
         let body = transitMessages.randomElement() ?? transitMessages[0]
 
         let content = UNMutableNotificationContent()
-        content.title = ["heads up", "daily vibe", "for today"].randomElement() ?? "heads up"
+        content.title = ["heads up", "chart note", "for today"].randomElement() ?? "heads up"
         content.body = body
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://guides"]
@@ -153,8 +153,8 @@ final class NotificationService {
         center.removePendingNotificationRequests(withIdentifiers: ["companion_hook"])
 
         let content = UNMutableNotificationContent()
-        content.title = companionName
-        content.body = "I've been thinking about what you said ✦"
+        content.title = "Simastry"
+        content.body = "A private companion note is waiting."
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://chat"]
 
@@ -202,8 +202,8 @@ final class NotificationService {
         guard isAuthorized else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "\(senderName) sent you a message"
-        content.body = preview
+        content.title = "New Simastry message"
+        content.body = "Open Simastry to read it privately."
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://messages"]
 

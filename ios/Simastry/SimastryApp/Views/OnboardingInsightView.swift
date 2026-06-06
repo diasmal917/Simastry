@@ -40,7 +40,7 @@ struct OnboardingInsightView: View {
                         .offset(y: headlineAppeared ? 0 : 10)
 
                     // MARK: - Headline
-                    Text(insight["headline"] ?? "Your cosmic profile")
+                    Text(insight["headline"] ?? "Your chart profile")
                         .font(SimastryFont.displayLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                         .multilineTextAlignment(.center)
@@ -79,10 +79,14 @@ struct OnboardingInsightView: View {
                     .opacity(miniCardsAppeared ? 1 : 0)
                     .offset(y: miniCardsAppeared ? 0 : 18)
 
+                    insightMethodLayer
+                        .opacity(miniCardsAppeared ? 1 : 0)
+                        .offset(y: miniCardsAppeared ? 0 : 18)
+
                     Spacer().frame(height: 8)
 
                     // MARK: - Sun Sign Disclaimer
-                    Text("This is your Sun sign's general nature — your Moon and Rising add layers that make you unique.")
+                    Text("This is a chart-based starting point. Your choices, context, and lived experience matter more than any placement.")
                         .font(SimastryFont.captionSmall)
                         .italic()
                         .foregroundStyle(SimastryColor.deepMuted)
@@ -183,6 +187,35 @@ struct OnboardingInsightView: View {
                 .stroke(SimastryColor.gold.opacity(0.15), lineWidth: 1)
         }
         .accessibilityLabel("Social tip: \(insight["socialTip"] ?? "")")
+    }
+
+    private var insightMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Why this insight",
+            summary: "This reads your Sun as core drive, Moon as emotional pattern, and Rising as first instinct, then translates the blend into communication guidance.",
+            signals: [
+                MethodSignal(
+                    label: "Sun",
+                    detail: sunSign.displayName,
+                    systemImage: "sun.max.fill",
+                    tint: sunSign.color
+                ),
+                MethodSignal(
+                    label: "Moon",
+                    detail: moonSign.displayName,
+                    systemImage: "moon.stars.fill",
+                    tint: moonSign.color
+                ),
+                MethodSignal(
+                    label: "Rising",
+                    detail: risingSign.displayName,
+                    systemImage: "sparkles",
+                    tint: risingSign.color
+                )
+            ],
+            footer: "Traditional Western tropical astrology is the interpretive lens.",
+            accent: sunSign.color
+        )
     }
 
     private func miniPlacementCard(role: String, sign: ZodiacSign, description: String) -> some View {

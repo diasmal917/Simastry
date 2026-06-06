@@ -77,7 +77,7 @@ struct ModeSelectionView: View {
     private var valueCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label {
-                Text("Start in under a minute")
+            Text("Start in under a minute")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
             } icon: {
@@ -85,15 +85,15 @@ struct ModeSelectionView: View {
                     .foregroundStyle(SimastryColor.gold)
             }
 
-            Text("Choose the vibe you want, discover your big three, and bring a companion to life.")
+            Text("Choose the connection type, calculate your big three, and create a companion voice grounded in placement logic.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
                 pill("Pick a path")
-                pill("Find your signs")
-                pill("Create your orb")
+                pill("Calculate signs")
+                pill("Create companion")
             }
         }
         .padding(18)
@@ -180,7 +180,7 @@ struct ModeSelectionView: View {
         case .simulateAnyone:
             "Practice a conversation, rehearse an outcome, or explore a dynamic before it happens."
         case .soulmate:
-            "Build a romantic cosmic match shaped by your signs and emotional chemistry."
+            "Build a romantic companion lens shaped by your signs and emotional chemistry."
         case .bestie:
             "Create a playful, supportive companion with easy warmth and great banter."
         }

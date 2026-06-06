@@ -1421,7 +1421,7 @@ class AppViewModel {
     func elementCompatibilityOneLiner(for socialProfile: SocialProfile) -> String {
         guard let userSun = userSunSign,
               let companionSun = ZodiacSign(rawValue: socialProfile.sunSign) else {
-            return "A cosmic connection written in the stars"
+            return "A connection lens based on available chart signals"
         }
         return AstrologyTemplates.elementPairingText(
             element1: userSun.element.rawValue,

@@ -773,7 +773,7 @@ struct SimulateView: View {
            let personalized = AstrologyTemplates.personalizedEmptyStates[signKey]?["history"] {
             return personalized
         }
-        return "Your recent predictions will gather here once you ask the stars."
+        return "Your recent predictions will gather here once you test a conversation."
     }
 
     private func relativeDateString(for date: Date) -> String {

@@ -386,11 +386,11 @@ nonisolated enum DeepLink: Equatable, Sendable {
         case .compatibility(let userSign, let companionSign):
             let u = userSign.capitalized
             let c = companionSign.capitalized
-            return "See the full \(u) & \(c) cosmic compatibility reading on Simastry \u{2728}"
+            return "See the full \(u) & \(c) compatibility reading on Simastry"
         case .guide(let sign):
-            return "Discover how to talk to a \(sign.capitalized) \u{2014} full communication guide on Simastry \u{2728}"
+            return "Discover how to talk to a \(sign.capitalized) \u{2014} full communication guide on Simastry"
         case .home:
-            return "Explore your cosmic connections on Simastry \u{2728}"
+            return "Explore astrology-grounded communication on Simastry"
         }
     }
 }

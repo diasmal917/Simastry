@@ -181,12 +181,12 @@ struct SoulCreationView: View {
 
     private var phaseText: String {
         switch phase {
-        case 0, 1: return "Gathering the stars..."
+        case 0, 1: return "Mapping the placement profile..."
         case 2:
-            let sun = viewModel.companionSunSign?.displayName ?? "cosmic"
-            let moon = viewModel.companionMoonSign?.displayName ?? "lunar"
-            let rising = viewModel.companionRisingSign?.displayName ?? "stellar"
-            return "Weaving \(sun) fire, \(moon) depth, \(rising) light..."
+            let sun = viewModel.companionSunSign?.displayName ?? "Sun"
+            let moon = viewModel.companionMoonSign?.displayName ?? "Moon"
+            let rising = viewModel.companionRisingSign?.displayName ?? "Rising"
+            return "Translating \(sun) drive, \(moon) emotion, and \(rising) instinct..."
         case 3: return ""
         default: return ""
         }

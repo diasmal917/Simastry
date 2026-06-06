@@ -205,7 +205,7 @@ struct CompanionsView: View {
                                 .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
-                            Text("Shape a new soulmate, bestie, or simulation")
+                            Text("Shape a new companion, bestie, or simulation lens")
                                 .font(SimastryFont.labelMedium)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }
@@ -341,12 +341,12 @@ struct CompanionsView: View {
                 .frame(width: 230)
 
                 quickActionCard(
-                    title: "Pull a Reading",
-                    subtitle: ritualLine(for: companion),
+                    title: "Show Lens",
+                    subtitle: "See the sign logic behind \(companion.name)'s tone and timing.",
                     systemImage: "moon.stars.fill",
                     tint: SimastryColor.celestialBlue
                 ) {
-                    viewModel.showToast("Tonight's reading", subtitle: ritualLine(for: companion), isError: false)
+                    activeSheet = .detail(companion)
                 }
                 .frame(width: 240)
 
