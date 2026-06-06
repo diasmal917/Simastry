@@ -31,6 +31,12 @@ struct ContentView: View {
         }
         .preferredColorScheme(viewModel.isDarkMode ? .dark : .light)
         .task {
+            #if DEBUG
+            if viewModel.applyDebugPreviewStateIfRequested() {
+                return
+            }
+            #endif
+
             await viewModel.checkAuthState()
             if let pendingDeepLinkURL = AppDelegate.pendingDeepLinkURL {
                 AppDelegate.pendingDeepLinkURL = nil

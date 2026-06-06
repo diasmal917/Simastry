@@ -618,6 +618,10 @@ struct SimulateView: View {
         selectedSunSign = draft.targetSunSign
         selectedMoonSign = draft.targetMoonSign
         selectedRisingSign = draft.targetRisingSign
+        if let draftConversation = draft.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !draftConversation.isEmpty {
+            conversationText = draftConversation
+        }
         if let question = draft.question?.trimmingCharacters(in: .whitespacesAndNewlines),
            !question.isEmpty {
             questionText = question

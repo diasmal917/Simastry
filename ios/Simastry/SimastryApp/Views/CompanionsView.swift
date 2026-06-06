@@ -305,10 +305,20 @@ struct CompanionsView: View {
             }
         }
         .padding(20)
-        .goldGlassRect(cornerRadius: 24)
+        .simastryGlass(cornerRadius: 24)
         .overlay {
             RoundedRectangle(cornerRadius: 24)
-                .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SimastryColor.gold.opacity(0.36),
+                            SimastryColor.gold.opacity(0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         }
         .accessibilityLabel("\(companion.name), featured companion")
         .opacity(appeared ? 1 : 0)
@@ -332,7 +342,7 @@ struct CompanionsView: View {
 
                 quickActionCard(
                     title: "Predict Reply",
-                    subtitle: "Open Predict with \(companion.name)'s chart already set.",
+                    subtitle: "Open Predict with \(companion.name)'s placement lens ready.",
                     systemImage: "wand.and.stars",
                     tint: SimastryColor.risingViolet
                 ) {

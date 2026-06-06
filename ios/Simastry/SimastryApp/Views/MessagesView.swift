@@ -318,7 +318,8 @@ private struct MessageDetailSheet: View {
                                     if let sign = zodiacSign {
                                         viewModel.startPrediction(
                                             for: sign,
-                                            question: "What will \(message.companionName) say next?"
+                                            question: "What will \(message.companionName) say next?",
+                                            conversationText: "\(message.companionName): \(message.content)"
                                         )
                                     } else {
                                         viewModel.selectedTab = 3
