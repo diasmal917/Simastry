@@ -205,7 +205,7 @@ struct CompanionsView: View {
                                 .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
-                            Text("Shape a new soulmate, bestie, or simulation")
+                            Text("Shape a new companion, bestie, or simulation lens")
                                 .font(SimastryFont.labelMedium)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }
@@ -305,10 +305,20 @@ struct CompanionsView: View {
             }
         }
         .padding(20)
-        .goldGlassRect(cornerRadius: 24)
+        .simastryGlass(cornerRadius: 24)
         .overlay {
             RoundedRectangle(cornerRadius: 24)
-                .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SimastryColor.gold.opacity(0.36),
+                            SimastryColor.gold.opacity(0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         }
         .accessibilityLabel("\(companion.name), featured companion")
         .opacity(appeared ? 1 : 0)
@@ -332,7 +342,7 @@ struct CompanionsView: View {
 
                 quickActionCard(
                     title: "Predict Reply",
-                    subtitle: "Open Predict with \(companion.name)'s chart already set.",
+                    subtitle: "Open Predict with \(companion.name)'s placement lens ready.",
                     systemImage: "wand.and.stars",
                     tint: SimastryColor.risingViolet
                 ) {
@@ -341,12 +351,12 @@ struct CompanionsView: View {
                 .frame(width: 230)
 
                 quickActionCard(
-                    title: "Pull a Reading",
-                    subtitle: ritualLine(for: companion),
+                    title: "Show Lens",
+                    subtitle: "See the sign logic behind \(companion.name)'s tone and timing.",
                     systemImage: "moon.stars.fill",
                     tint: SimastryColor.celestialBlue
                 ) {
-                    viewModel.showToast("Tonight's reading", subtitle: ritualLine(for: companion), isError: false)
+                    activeSheet = .detail(companion)
                 }
                 .frame(width: 240)
 

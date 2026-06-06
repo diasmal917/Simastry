@@ -60,7 +60,7 @@ enum LocalizedStrings {
     static let en: [String: String] = [
         // Landing
         "landing.title": "Simastry",
-        "landing.subtitle": "Understand people through the stars",
+        "landing.subtitle": "Understand people through chart signals",
         "landing.getStarted": "Get Started",
         "landing.signIn": "Already have an account? Sign in",
         "landing.terms": "Terms",

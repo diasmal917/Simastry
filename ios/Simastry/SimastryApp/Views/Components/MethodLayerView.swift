@@ -41,6 +41,23 @@ struct MethodSignalChip: View {
     }
 }
 
+struct MethodSignalCloud: View {
+    let signals: [MethodSignal]
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 132), spacing: 8, alignment: .leading)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(signals) { signal in
+                MethodSignalChip(signal: signal)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
 struct MethodLayerPanel: View {
     let title: String
     let summary: String
@@ -69,15 +86,7 @@ struct MethodLayerPanel: View {
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
                 .fixedSize(horizontal: false, vertical: true)
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(signals) { signal in
-                        MethodSignalChip(signal: signal)
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
-            .contentMargins(.horizontal, 0)
+            MethodSignalCloud(signals: signals)
 
             if let footer {
                 Text(footer)

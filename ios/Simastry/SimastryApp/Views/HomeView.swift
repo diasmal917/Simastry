@@ -291,10 +291,16 @@ struct HomeView: View {
                         .font(SimastryFont.titleMedium)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text("Paste a conversation and let the stars predict their next text.")
+                    Text("Paste a conversation and read the next text through chart signals.")
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 8) {
+                        signalPill("Message")
+                        signalPill("Sign lens")
+                        signalPill("Timing")
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -312,11 +318,11 @@ struct HomeView: View {
             }
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Predict their reply. Paste a conversation and let the stars predict their next text.")
+        .accessibilityLabel("Predict their reply. Paste a conversation and read the next text through chart signals.")
         .featureTip(
             icon: "sparkles",
             title: "Predict Their Reply",
-            body: "Paste a conversation and we'll predict what they'll say next \u{2014} based on your astrological compatibility.",
+            body: "Paste a conversation and see which message context, sign lens, and placement signals drive the reading.",
             tip: .predictFeature,
             delay: 1.0
         )
@@ -405,6 +411,15 @@ struct HomeView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(title). \(subtitle)")
+    }
+
+    private func signalPill(_ title: String) -> some View {
+        Text(title)
+            .font(SimastryFont.captionSmall)
+            .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(.white.opacity(0.055), in: .capsule)
     }
 
     private var didYouKnowCard: some View {

@@ -618,6 +618,10 @@ struct SimulateView: View {
         selectedSunSign = draft.targetSunSign
         selectedMoonSign = draft.targetMoonSign
         selectedRisingSign = draft.targetRisingSign
+        if let draftConversation = draft.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !draftConversation.isEmpty {
+            conversationText = draftConversation
+        }
         if let question = draft.question?.trimmingCharacters(in: .whitespacesAndNewlines),
            !question.isEmpty {
             questionText = question
@@ -773,7 +777,7 @@ struct SimulateView: View {
            let personalized = AstrologyTemplates.personalizedEmptyStates[signKey]?["history"] {
             return personalized
         }
-        return "Your recent predictions will gather here once you ask the stars."
+        return "Your recent predictions will gather here once you test a conversation."
     }
 
     private func relativeDateString(for date: Date) -> String {

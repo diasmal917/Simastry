@@ -102,6 +102,7 @@ nonisolated struct PredictionDraft: Identifiable, Equatable, Sendable {
     let targetMoonSign: ZodiacSign?
     let targetRisingSign: ZodiacSign?
     let question: String?
+    let conversationText: String?
 
     init(
         id: UUID = UUID(),
@@ -109,7 +110,8 @@ nonisolated struct PredictionDraft: Identifiable, Equatable, Sendable {
         targetSunSign: ZodiacSign,
         targetMoonSign: ZodiacSign? = nil,
         targetRisingSign: ZodiacSign? = nil,
-        question: String? = nil
+        question: String? = nil,
+        conversationText: String? = nil
     ) {
         self.id = id
         self.targetName = targetName
@@ -117,5 +119,6 @@ nonisolated struct PredictionDraft: Identifiable, Equatable, Sendable {
         self.targetMoonSign = targetMoonSign
         self.targetRisingSign = targetRisingSign
         self.question = question
+        self.conversationText = conversationText
     }
 }

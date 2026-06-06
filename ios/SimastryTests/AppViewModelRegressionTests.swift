@@ -121,7 +121,10 @@ struct AppViewModelRegressionTests {
             createdAt: nil
         )
 
-        viewModel.startPrediction(for: companion)
+        viewModel.startPrediction(
+            for: companion,
+            conversationText: "Seren: I need a little room before I answer."
+        )
 
         #expect(viewModel.selectedTab == 3)
         #expect(viewModel.predictionDraft?.targetName == "Seren")
@@ -129,12 +132,16 @@ struct AppViewModelRegressionTests {
         #expect(viewModel.predictionDraft?.targetMoonSign == .cancer)
         #expect(viewModel.predictionDraft?.targetRisingSign == .aries)
         #expect(viewModel.predictionDraft?.question == "What will Seren say next?")
+        #expect(viewModel.predictionDraft?.conversationText == "Seren: I need a little room before I answer.")
     }
 
     @Test func startPredictionCreatesSignDraft() {
         let viewModel = AppViewModel()
 
-        viewModel.startPrediction(for: .sagittarius)
+        viewModel.startPrediction(
+            for: .sagittarius,
+            conversationText: "Nadia: I need air tonight, not a fight."
+        )
 
         #expect(viewModel.selectedTab == 3)
         #expect(viewModel.predictionDraft?.targetName == nil)
@@ -142,6 +149,7 @@ struct AppViewModelRegressionTests {
         #expect(viewModel.predictionDraft?.targetMoonSign == nil)
         #expect(viewModel.predictionDraft?.targetRisingSign == nil)
         #expect(viewModel.predictionDraft?.question == "What would a Sagittarius say next?")
+        #expect(viewModel.predictionDraft?.conversationText == "Nadia: I need air tonight, not a fight.")
     }
 
     @Test func startPredictionRejectsMissingCompanionSign() {

@@ -9,6 +9,9 @@ class AppViewModel {
     var currentScreen: AppScreen = .loading
     var homeSetupPhase: HomeSetupPhase = .modeSelection
     var isAuthenticated: Bool = false
+    #if DEBUG
+    var isDebugPreviewStateActive: Bool = false
+    #endif
     var profile: UserProfile?
     var companions: [CompanionData] = []
     var selectedMode: CompanionMode = .soulmate
@@ -563,6 +566,18 @@ class AppViewModel {
         }
 
         companions[index] = updated
+
+        #if DEBUG
+        if isDebugPreviewStateActive {
+            if newLevel.rawValue > previousLevel.rawValue {
+                showToast("Bond deepened", subtitle: "\(updated.name) reached \(newLevel.name)", isError: false)
+            } else {
+                showToast(title, subtitle: subtitle ?? "\(updated.name) feels a little closer", isError: false)
+            }
+            return true
+        }
+        #endif
+
         do {
             try await supabase.updateCompanion(updated)
         } catch {
@@ -607,7 +622,7 @@ class AppViewModel {
         updateWidgetData()
     }
 
-    func startPrediction(for companion: CompanionData, question: String? = nil) {
+    func startPrediction(for companion: CompanionData, question: String? = nil, conversationText: String? = nil) {
         guard let sun = zodiacSign(from: companion.sunSign) else {
             showToast("Missing sign", subtitle: "Add a Sun sign before starting a prediction.", isError: true)
             return
@@ -618,16 +633,18 @@ class AppViewModel {
             targetSunSign: sun,
             targetMoonSign: zodiacSign(from: companion.moonSign),
             targetRisingSign: zodiacSign(from: companion.risingSign),
-            question: question ?? "What will \(companion.name) say next?"
+            question: question ?? "What will \(companion.name) say next?",
+            conversationText: conversationText
         )
         selectedTab = 3
     }
 
-    func startPrediction(for sign: ZodiacSign, question: String? = nil) {
+    func startPrediction(for sign: ZodiacSign, question: String? = nil, conversationText: String? = nil) {
         predictionDraft = PredictionDraft(
             targetName: nil,
             targetSunSign: sign,
-            question: question ?? "What would a \(sign.displayName) say next?"
+            question: question ?? "What would a \(sign.displayName) say next?",
+            conversationText: conversationText
         )
         selectedTab = 3
     }
@@ -1218,6 +1235,12 @@ class AppViewModel {
     }
 
     func refreshInbox(showErrors: Bool = false) async {
+        #if DEBUG
+        guard !isDebugPreviewStateActive else {
+            return
+        }
+        #endif
+
         loadMessages()
         await loadDiscoveryInboxMessages(showErrors: showErrors)
         generateCompanionMessages()
@@ -1421,7 +1444,7 @@ class AppViewModel {
     func elementCompatibilityOneLiner(for socialProfile: SocialProfile) -> String {
         guard let userSun = userSunSign,
               let companionSun = ZodiacSign(rawValue: socialProfile.sunSign) else {
-            return "A cosmic connection written in the stars"
+            return "A connection lens based on available chart signals"
         }
         return AstrologyTemplates.elementPairingText(
             element1: userSun.element.rawValue,
@@ -1976,6 +1999,134 @@ class AppViewModel {
         return created
     }
 }
+
+#if DEBUG
+extension AppViewModel {
+    @discardableResult
+    func applyDebugPreviewStateIfRequested(arguments: [String] = ProcessInfo.processInfo.arguments) -> Bool {
+        guard arguments.contains("-SimastryPreviewSeeded") else {
+            return false
+        }
+
+        let userId = UUID(uuidString: "10000000-0000-0000-0000-000000000001") ?? UUID()
+        let companionId = UUID(uuidString: "20000000-0000-0000-0000-000000000001") ?? UUID()
+        let now = Date()
+
+        isAuthenticated = true
+        isDebugPreviewStateActive = true
+        isAgeVerified = true
+        hasAcceptedThirdPartyConsent = true
+        currentScreen = .home
+        homeSetupPhase = .complete
+
+        profile = UserProfile(
+            id: userId,
+            displayName: "Maya",
+            sunSign: ZodiacSign.sagittarius.rawValue,
+            moonSign: ZodiacSign.cancer.rawValue,
+            risingSign: ZodiacSign.libra.rawValue,
+            theme: "dark",
+            tier: "pro",
+            dailyMessagesUsed: 1,
+            dailyMessagesResetDate: now,
+            weeklyPredictionsUsed: 1,
+            weeklyPredictionsResetDate: now,
+            createdAt: now.addingTimeInterval(-14 * 24 * 60 * 60)
+        )
+
+        userSunSign = .sagittarius
+        userMoonSign = .cancer
+        userRisingSign = .libra
+
+        let companion = CompanionData(
+            id: companionId,
+            userId: userId,
+            name: "Nadia",
+            mode: CompanionMode.soulmate.rawValue,
+            sunSign: ZodiacSign.sagittarius.rawValue,
+            moonSign: ZodiacSign.cancer.rawValue,
+            risingSign: ZodiacSign.libra.rawValue,
+            appearanceStyle: AppearanceStyle.warm.rawValue,
+            conversationCount: 42,
+            firstConversationAt: now.addingTimeInterval(-9 * 24 * 60 * 60),
+            compatibilityScore: 91,
+            companionMemory: "Nadia helps Maya separate direct Sagittarius timing from Cancer Moon sensitivity before replying.",
+            relationshipLevel: RelationshipLevel.familiar.rawValue,
+            createdAt: now.addingTimeInterval(-12 * 24 * 60 * 60)
+        )
+        companions = [companion]
+
+        companionMessages = [
+            CompanionMessage(
+                companionId: companionId,
+                companionName: "Nadia",
+                companionSign: ZodiacSign.sagittarius.displayName,
+                content: "I am reading this through Sagittarius directness, but your Cancer Moon may be making the silence feel more personal than it is. Separate the tone from the fear before you answer.",
+                timestamp: now.addingTimeInterval(-18 * 60),
+                isRead: false
+            ),
+            CompanionMessage(
+                companionId: companionId,
+                companionName: "Nadia",
+                companionSign: ZodiacSign.sagittarius.displayName,
+                content: "The clean reply is short, honest, and not over-explained. Give them room to meet you.",
+                timestamp: now.addingTimeInterval(-2 * 60 * 60),
+                isRead: true
+            )
+        ]
+        discoveryMessages = []
+
+        savedGuides = [
+            SavedGuide(
+                name: "Nadia",
+                sunSign: .sagittarius,
+                category: .romantic,
+                createdAt: now.addingTimeInterval(-5 * 24 * 60 * 60),
+                notes: "Use directness, space, and timing. Avoid emotional cornering."
+            ),
+            SavedGuide(
+                name: "Work Libra",
+                sunSign: .libra,
+                category: .work,
+                createdAt: now.addingTimeInterval(-3 * 24 * 60 * 60),
+                notes: "Name both sides, then ask for a clear decision."
+            )
+        ]
+
+        selectedTab = debugPreviewTab(from: arguments)
+        if selectedTab == 3 {
+            predictionDraft = PredictionDraft(
+                targetName: companion.name,
+                targetSunSign: .sagittarius,
+                targetMoonSign: .cancer,
+                targetRisingSign: .libra,
+                question: "What will Nadia say next?",
+                conversationText: "Nadia: I need a little space tonight. It is not bad, I just need air.\nMaya: Okay, I can give you room. I just want to understand the tone."
+            )
+        } else {
+            predictionDraft = nil
+        }
+
+        if selectedTab == 4 {
+            guideFocusSign = .sagittarius
+        } else {
+            guideFocusSign = nil
+        }
+
+        return true
+    }
+
+    private func debugPreviewTab(from arguments: [String]) -> Int {
+        guard let tabFlagIndex = arguments.firstIndex(of: "-SimastryPreviewTab"),
+              arguments.indices.contains(arguments.index(after: tabFlagIndex)),
+              let tab = Int(arguments[arguments.index(after: tabFlagIndex)]) else {
+            return 0
+        }
+
+        return min(max(tab, 0), 5)
+    }
+}
+#endif
 
 nonisolated struct ToastMessage: Identifiable, Sendable {
     let id = UUID()

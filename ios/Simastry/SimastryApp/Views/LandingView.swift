@@ -13,29 +13,29 @@ private let onboardingPages: [OnboardingPage] = [
     OnboardingPage(
         id: 0,
         icon: "heart.circle.fill",
-        title: "Find Your Soulmate",
-        subtitle: "Discover your perfectly compatible\ncosmic match based on your big three",
+        title: "Meet Your Companion",
+        subtitle: "Build a fictional astrology guide\naround your Sun, Moon, and Rising",
         accentColor: SimastryColor.sunCoral
     ),
     OnboardingPage(
         id: 1,
         icon: "wand.and.stars",
         title: "Predict Their Reply",
-        subtitle: "Paste a real conversation and see\nwhat they'll say next — powered by the stars",
+        subtitle: "Paste a real conversation and read\nit through chart signals",
         accentColor: SimastryColor.risingViolet
     ),
     OnboardingPage(
         id: 2,
         icon: "bubble.left.and.text.bubble.right.fill",
         title: "Know What to Say",
-        subtitle: "Communication playbooks for every sign\nso you always find the right words",
+        subtitle: "Communication playbooks for tone,\ntiming, repair, and emotional pattern",
         accentColor: SimastryColor.celestialBlue
     ),
     OnboardingPage(
         id: 3,
         icon: "person.2.fill",
-        title: "Simulate Any Personality",
-        subtitle: "Build a soulmate, bestie, or anyone —\nthen explore their cosmic personality",
+        title: "Practice Any Dynamic",
+        subtitle: "Create a companion lens, then rehearse\nthe conversation with placement logic",
         accentColor: SimastryColor.gold
     ),
 ]
@@ -219,6 +219,8 @@ struct LandingView: View {
 
     private var foregroundPanel: some View {
         VStack(spacing: 14) {
+            methodStrip
+
             GoldButton(localization.string("landing.getStarted")) {
                 withAnimation(.spring(SimastrySpring.smooth)) {
                     if viewModel.isAgeVerified {
@@ -281,6 +283,34 @@ struct LandingView: View {
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 30)
         .animation(.spring(SimastrySpring.bouncy).delay(0.5), value: appeared)
+    }
+
+    private var methodStrip: some View {
+        HStack(spacing: 8) {
+            landingMethodChip("Astronomy", icon: "scope")
+            landingMethodChip("Astrology", icon: "point.3.connected.trianglepath.dotted")
+            landingMethodChip("Guidance", icon: "text.bubble.fill")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(.black.opacity(0.20), in: .capsule)
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.14), lineWidth: 0.5)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Method: astronomy, traditional astrology, communication guidance")
+    }
+
+    private func landingMethodChip(_ title: String, icon: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(title)
+                .font(SimastryFont.captionSmall)
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white.opacity(0.82))
     }
 
     // MARK: - Shimmer Stars
