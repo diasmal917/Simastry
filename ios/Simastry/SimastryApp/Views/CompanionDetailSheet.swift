@@ -183,6 +183,8 @@ struct CompanionDetailSheet: View {
                 CompatibilityRingView(score: companion.compatibilityScore, size: 52)
             }
 
+            compatibilityMethodLayer
+
             if let userSun = viewModel.userSunSign,
                let userMoon = viewModel.userMoonSign,
                let userRising = viewModel.userRisingSign,
@@ -253,7 +255,7 @@ struct CompanionDetailSheet: View {
                 .simastryGlass(cornerRadius: 16)
             }
 
-            Text("Compatibility scores reflect astrological patterns, not relationship destiny. Every relationship is shaped by the people in it.")
+            Text("Compatibility scores reflect placement logic, not relationship destiny. Every relationship is shaped by the people in it.")
                 .font(SimastryFont.captionSmall)
                 .italic()
                 .foregroundStyle(SimastryColor.deepMuted)
@@ -310,6 +312,77 @@ struct CompanionDetailSheet: View {
                 .padding(.top, 2)
             }
         }
+    }
+
+    private var compatibilityMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Signals used",
+            summary: "This match reads your chart against \(companion.name)'s companion lens. Sun shows drive, Moon shows emotional pattern, and Rising shows first instinct.",
+            signals: compatibilityMethodSignals,
+            footer: "Astronomy calculates placements. Traditional astrology interprets the pattern. Simastry translates it into compatibility and communication guidance.",
+            accent: companionSun?.color ?? SimastryColor.gold
+        )
+    }
+
+    private var compatibilityMethodSignals: [MethodSignal] {
+        var signals: [MethodSignal] = []
+
+        if let userSunSign = viewModel.userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Your Sun",
+                    detail: userSunSign.displayName,
+                    systemImage: "sun.max.fill",
+                    tint: userSunSign.color
+                )
+            )
+        }
+
+        if let companionSun {
+            signals.append(
+                MethodSignal(
+                    label: "Companion Sun",
+                    detail: "\(companionSun.displayName) lens",
+                    systemImage: "scope",
+                    tint: companionSun.color
+                )
+            )
+        }
+
+        if let userMoonSign = viewModel.userMoonSign,
+           let companionMoon {
+            signals.append(
+                MethodSignal(
+                    label: "Moon pattern",
+                    detail: "\(userMoonSign.glyph) to \(companionMoon.glyph)",
+                    systemImage: "moon.stars.fill",
+                    tint: SimastryColor.celestialBlue
+                )
+            )
+        }
+
+        if let userRisingSign = viewModel.userRisingSign,
+           let companionRising {
+            signals.append(
+                MethodSignal(
+                    label: "Rising instinct",
+                    detail: "\(userRisingSign.glyph) to \(companionRising.glyph)",
+                    systemImage: "sparkles",
+                    tint: SimastryColor.risingViolet
+                )
+            )
+        }
+
+        signals.append(
+            MethodSignal(
+                label: "Method",
+                detail: "Western tropical",
+                systemImage: "scope",
+                tint: SimastryColor.gold
+            )
+        )
+
+        return signals
     }
 
     private func sunSunInsight(user: ZodiacSign, companion: ZodiacSign) -> String {

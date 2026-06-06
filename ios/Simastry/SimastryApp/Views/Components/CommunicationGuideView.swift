@@ -22,7 +22,7 @@ struct CommunicationGuideView: View {
                                 .font(SimastryFont.titleMedium)
                                 .foregroundStyle(SimastryColor.offWhite)
 
-                            Text("Communication reference")
+                            Text("Conversation lens")
                                 .font(SimastryFont.caption)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }
@@ -30,6 +30,10 @@ struct CommunicationGuideView: View {
                 }
 
                 animatedSection(index: 1) {
+                    guideMethodLayer
+                }
+
+                animatedSection(index: 2) {
                     VStack(alignment: .leading, spacing: 12) {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Best Approach")
@@ -63,7 +67,7 @@ struct CommunicationGuideView: View {
                     }
                 }
 
-                animatedSection(index: 2) {
+                animatedSection(index: 3) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Tips")
                             .font(SimastryFont.labelSmall)
@@ -113,7 +117,7 @@ struct CommunicationGuideView: View {
                     .simastryGlass(cornerRadius: 22)
                 }
 
-                animatedSection(index: 3) {
+                animatedSection(index: 4) {
                     VStack(alignment: .leading, spacing: 12) {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 8) {
@@ -152,7 +156,7 @@ struct CommunicationGuideView: View {
                     }
                 }
                 // Ethical disclaimer
-                Text("These insights are based on sign tendencies. Real people are shaped by experience, culture, and choice — not just their chart.")
+                Text("These insights use traditional sign logic as a communication lens. Real people are shaped by experience, culture, and choice.")
                     .font(SimastryFont.captionSmall)
                     .italic()
                     .foregroundStyle(SimastryColor.deepMuted)
@@ -171,6 +175,41 @@ struct CommunicationGuideView: View {
 
     private var entranceAnimation: Animation {
         reduceMotion ? .easeOut(duration: 0.12) : .spring(SimastrySpring.smooth)
+    }
+
+    private var guideMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Signals used",
+            summary: "\(sign.displayName) is read as a \(sign.element.rawValue) \(sign.modality) sign. That placement logic becomes practical advice for tone, timing, and repair.",
+            signals: [
+                MethodSignal(
+                    label: "Sign lens",
+                    detail: sign.displayName,
+                    systemImage: "scope",
+                    tint: sign.color
+                ),
+                MethodSignal(
+                    label: "Element",
+                    detail: sign.element.rawValue.capitalized,
+                    systemImage: "circle.hexagongrid.fill",
+                    tint: sign.color
+                ),
+                MethodSignal(
+                    label: "Modality",
+                    detail: sign.modality.capitalized,
+                    systemImage: "arrow.triangle.2.circlepath",
+                    tint: SimastryColor.gold
+                ),
+                MethodSignal(
+                    label: "Context",
+                    detail: "Communication",
+                    systemImage: "text.bubble.fill",
+                    tint: SimastryColor.celestialBlue
+                )
+            ],
+            footer: "Astrology interprets the sign pattern. Simastry translates it into conversation guidance.",
+            accent: sign.color
+        )
     }
 
     private func animatedSection<Content: View>(index: Double, @ViewBuilder content: () -> Content) -> some View {
