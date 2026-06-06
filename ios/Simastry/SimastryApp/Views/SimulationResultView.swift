@@ -22,6 +22,7 @@ struct SimulationResultView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     predictionBubble
+                    resultMethodLayer
                     breakdownSection
                     shareResultButton
                     if let sign = result.targetSunSign {
@@ -31,7 +32,7 @@ struct SimulationResultView: View {
                     confidenceFooter
 
                     // Real conversation nudge
-                    Text("Now that you know what they might say — go have the real conversation ✨")
+                    Text("Use this as preparation, then have the real conversation.")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
@@ -89,7 +90,7 @@ struct SimulationResultView: View {
 
     private var predictionBubble: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("The stars say they'll text:")
+            Text("Likely next text")
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.4)
@@ -155,6 +156,103 @@ struct SimulationResultView: View {
         .goldGlassRect(cornerRadius: 20)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+    }
+
+    private var resultMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Why this reading",
+            summary: resultMethodSummary,
+            signals: resultMethodSignals,
+            footer: "A prediction is signal strength, not certainty. Context, consent, and lived history still matter.",
+            accent: accentColor
+        )
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    private var resultMethodSummary: String {
+        guard let targetSign = result.targetSunSign else {
+            return "This reading uses the pasted message, the selected chart signals, and traditional astrology to model a possible reply."
+        }
+
+        return "This reads the conversation through \(targetSign.displayName)'s \(targetSign.element.rawValue) \(targetSign.modality) lens. Moon and Rising add emotional pattern and first instinct when present."
+    }
+
+    private var resultMethodSignals: [MethodSignal] {
+        var signals: [MethodSignal] = [
+            MethodSignal(
+                label: "Message context",
+                detail: result.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "Included" : "Limited",
+                systemImage: "text.bubble.fill",
+                tint: SimastryColor.celestialBlue
+            )
+        ]
+
+        if let targetSunSign = result.targetSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Their Sun",
+                    detail: "\(targetSunSign.displayName) \(targetSunSign.element.rawValue)",
+                    systemImage: "sun.max.fill",
+                    tint: targetSunSign.color
+                )
+            )
+        }
+
+        if let targetMoonSign = result.targetMoonSign {
+            signals.append(
+                MethodSignal(
+                    label: "Their Moon",
+                    detail: "\(targetMoonSign.displayName) emotion",
+                    systemImage: "moon.stars.fill",
+                    tint: targetMoonSign.color
+                )
+            )
+        }
+
+        if let targetRisingSign = result.targetRisingSign {
+            signals.append(
+                MethodSignal(
+                    label: "Their Rising",
+                    detail: "\(targetRisingSign.displayName) instinct",
+                    systemImage: "sparkles",
+                    tint: targetRisingSign.color
+                )
+            )
+        }
+
+        if let userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Your lens",
+                    detail: "\(userSunSign.displayName) Sun",
+                    systemImage: "person.crop.circle.fill",
+                    tint: userSunSign.color
+                )
+            )
+        }
+
+        if result.privacySummary != nil {
+            signals.append(
+                MethodSignal(
+                    label: "Privacy",
+                    detail: "Sensitive text reduced",
+                    systemImage: "lock.shield.fill",
+                    tint: SimastryColor.mutedSilver
+                )
+            )
+        }
+
+        signals.append(
+            MethodSignal(
+                label: "Method",
+                detail: "Western tropical",
+                systemImage: "scope",
+                tint: SimastryColor.gold
+            )
+        )
+
+        return signals
     }
 
     private func guideFollowUpCard(sign: ZodiacSign) -> some View {
@@ -297,7 +395,7 @@ struct SimulationResultView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("\(result.confidence)% confidence — based on conversational patterns and astrological alignment")
+                Text("\(result.confidence)% confidence - based on message context and placement logic")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
@@ -340,7 +438,7 @@ struct SimulationResultView: View {
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(SimastryColor.deepMuted)
 
-            Text("Powered by AI \u{00B7} Based on \(AppConfig.astrologyTradition.lowercased())")
+            Text("AI-assisted - \(AppConfig.astrologyTradition) - not a guarantee")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.deepMuted)
         }

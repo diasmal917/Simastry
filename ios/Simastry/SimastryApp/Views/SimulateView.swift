@@ -27,10 +27,10 @@ struct SimulateView: View {
     ]
 
     private let progressPhases: [String] = [
-        "Reading the conversation…",
-        "Channeling their energy…",
-        "Consulting the stars…",
-        "Composing their response…"
+        "Reading the conversation...",
+        "Mapping chart signals...",
+        "Checking emotional pattern...",
+        "Composing a possible reply..."
     ]
 
     private let progressDurations: [Double] = [1.5, 2.0, 2.0, 1.5]
@@ -49,6 +49,88 @@ struct SimulateView: View {
         viewModel.profile?.tier ?? "free"
     }
 
+    private var methodLayerSummary: String {
+        if let selectedSunSign {
+            return "This prediction reads the message context through \(selectedSunSign.displayName)'s conversation lens. Moon and Rising refine emotional pattern and first instinct when you add them."
+        }
+        return "Start with their Sun sign, then add Moon or Rising if you know them. The conversation text keeps the reading anchored to the actual message."
+    }
+
+    private var methodSignals: [MethodSignal] {
+        var signals: [MethodSignal] = [
+            MethodSignal(
+                label: "Message context",
+                detail: conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Needed" : "Included",
+                systemImage: "text.bubble.fill",
+                tint: SimastryColor.celestialBlue
+            )
+        ]
+
+        if let selectedSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Their Sun",
+                    detail: "\(selectedSunSign.displayName) \(selectedSunSign.element.rawValue)",
+                    systemImage: "sun.max.fill",
+                    tint: selectedSunSign.color
+                )
+            )
+        } else {
+            signals.append(
+                MethodSignal(
+                    label: "Their Sun",
+                    detail: "Required",
+                    systemImage: "sun.max.fill",
+                    tint: SimastryColor.gold
+                )
+            )
+        }
+
+        if let selectedMoonSign {
+            signals.append(
+                MethodSignal(
+                    label: "Their Moon",
+                    detail: "\(selectedMoonSign.displayName) emotion",
+                    systemImage: "moon.stars.fill",
+                    tint: selectedMoonSign.color
+                )
+            )
+        }
+
+        if let selectedRisingSign {
+            signals.append(
+                MethodSignal(
+                    label: "Their Rising",
+                    detail: "\(selectedRisingSign.displayName) instinct",
+                    systemImage: "sparkles",
+                    tint: selectedRisingSign.color
+                )
+            )
+        }
+
+        if let userSunSign = viewModel.userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Your lens",
+                    detail: "\(userSunSign.displayName) Sun",
+                    systemImage: "person.crop.circle.fill",
+                    tint: userSunSign.color
+                )
+            )
+        }
+
+        signals.append(
+            MethodSignal(
+                label: "Method",
+                detail: "Western tropical",
+                systemImage: "scope",
+                tint: SimastryColor.gold
+            )
+        )
+
+        return signals
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -58,6 +140,7 @@ struct SimulateView: View {
                     VStack(spacing: 24) {
                         header
                         modeCard
+                        methodLayerCard
                         conversationSection
                         signSection
                         textingStyleTip
@@ -125,7 +208,7 @@ struct SimulateView: View {
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Paste a real conversation and let the stars predict their next text.")
+                Text("Paste a real conversation and read it through chart signals.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
@@ -147,7 +230,7 @@ struct SimulateView: View {
                 Text(SimulationMode.whatWillTheySay.title)
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
-                Text("Predict their next reply, then test your own alternate message.")
+                Text("Use their sign lens, your context, and the message thread to model the next reply.")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
@@ -163,12 +246,24 @@ struct SimulateView: View {
         .featureTip(
             icon: "text.bubble",
             title: "How It Works",
-            body: "Pick someone's sign, paste your conversation, and get a prediction based on how your signs communicate.",
+            body: "Pick someone's sign, paste the conversation, and see which chart signals drive the reading.",
             tip: .communicationGuide,
             delay: 0.8
         )
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
+    }
+
+    private var methodLayerCard: some View {
+        MethodLayerPanel(
+            title: "Signals used",
+            summary: methodLayerSummary,
+            signals: methodSignals,
+            footer: "Astronomy calculates placements. Traditional astrology interprets them. Simastry turns that into communication guidance.",
+            accent: selectedSunSign?.color ?? SimastryColor.risingViolet
+        )
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 16)
     }
 
     private var conversationSection: some View {
@@ -324,7 +419,7 @@ struct SimulateView: View {
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Your simulation is taking shape.")
+                Text("Reading the thread through placement logic.")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
