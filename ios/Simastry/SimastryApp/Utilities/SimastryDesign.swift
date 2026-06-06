@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SimastrySpacing {
-    static let tabBarClearance: CGFloat = 90
+    static let tabBarClearance: CGFloat = 112
 }
 
 struct SimastrySpring {
