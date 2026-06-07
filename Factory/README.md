@@ -10,9 +10,9 @@ Factory is a Simastry subproject for locking and producing the final 24 companio
 - a style-board area for reusable picture references and written style prompts
 - local folders for approved images, candidates, references, and prompt packs
 - a SQLite database as the source of truth
-- browser dashboard for judging identities, generating prompt packs, uploading candidates, swapping approved slots, consolidating duplicates, and exporting app packages
+- browser dashboard for judging identities, starting Codex-assisted image jobs, uploading candidates, swapping approved slots, consolidating duplicates, and exporting app packages
 
-The factory does not automate image generation or bypass account limits. It prepares prompt packs and gives you a place to import generated files.
+The factory does not call an image API or bypass account limits. It prepares Codex-ready image jobs, tracks output folders, and gives you a place to import generated files.
 
 ## Main Workflow
 
@@ -31,7 +31,7 @@ The dashboard is now a casting studio for the final 24:
    - `astrogram_01` through `astrogram_10`
 9. Export an app package when locked identities and approved slots are ready.
 
-Generation is manual in this version. Use `Generate 10-photo prompt` in Cast Studio, or `Add + generate 10-photo prompt` in Candidate Library, to create the normal same-person, Instagram-like 10-photo pack. This normal 10-photo pack is separate from the Style Board.
+Generation is Codex-assisted in this version. Use `Start 10 Astrogram Image Job` in Cast Studio, or `Add + start image job` in Candidate Library, to create the normal same-person, Instagram-like 10-photo job. Factory shows the full Codex prompt, the reference folder, and a dedicated output folder. After Codex saves images into that output folder, use `Refresh Job Results` to import them as candidates. This normal 10-photo job is separate from the Style Board.
 
 Use `Generate style-board set` when you want one picture per style-board item. If the Style Board has 10 references, Factory creates 10 distinct prompt items: each one matches a single uploaded style picture or written style prompt rather than blending the whole board into one general style.
 

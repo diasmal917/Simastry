@@ -52,7 +52,17 @@ CASTING_STATUSES = {
     "archived",
 }
 IMAGE_KINDS = {"reference", "candidate", "approved", "archived", "rejected"}
-GENERATION_JOB_STATUSES = {"draft", "ready", "assigned", "imported", "reviewing", "approved", "blocked"}
+GENERATION_JOB_STATUSES = {
+    "draft",
+    "ready",
+    "ready_for_codex",
+    "generating_outside_factory",
+    "assigned",
+    "imported",
+    "reviewing",
+    "approved",
+    "blocked",
+}
 
 IMAGE_REALISM_STANDARD = (
     "Image realism standard: make outputs look like casual iPhone pictures of real people on Instagram, "
@@ -565,6 +575,8 @@ def init_db() -> None:
               feedback_rating INTEGER NOT NULL DEFAULT 0,
               feedback_notes TEXT NOT NULL DEFAULT '',
               feedback_updated_at TEXT NOT NULL DEFAULT '',
+              crop_mode TEXT NOT NULL DEFAULT 'cover',
+              image_position_y INTEGER NOT NULL DEFAULT 50,
               version INTEGER NOT NULL DEFAULT 1,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL,
@@ -578,6 +590,7 @@ def init_db() -> None:
               status TEXT NOT NULL DEFAULT 'ready',
               prompt_pack_path TEXT NOT NULL DEFAULT '',
               prompt_json_path TEXT NOT NULL DEFAULT '',
+              output_folder_path TEXT NOT NULL DEFAULT '',
               notes TEXT NOT NULL DEFAULT '',
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL,
@@ -654,6 +667,13 @@ def init_db() -> None:
             conn.execute("ALTER TABLE character_images ADD COLUMN feedback_notes TEXT NOT NULL DEFAULT ''")
         if "feedback_updated_at" not in character_image_columns:
             conn.execute("ALTER TABLE character_images ADD COLUMN feedback_updated_at TEXT NOT NULL DEFAULT ''")
+        if "crop_mode" not in character_image_columns:
+            conn.execute("ALTER TABLE character_images ADD COLUMN crop_mode TEXT NOT NULL DEFAULT 'cover'")
+        if "image_position_y" not in character_image_columns:
+            conn.execute("ALTER TABLE character_images ADD COLUMN image_position_y INTEGER NOT NULL DEFAULT 50")
+        generation_job_columns = {row["name"] for row in conn.execute("PRAGMA table_info(character_generation_jobs)")}
+        if "output_folder_path" not in generation_job_columns:
+            conn.execute("ALTER TABLE character_generation_jobs ADD COLUMN output_folder_path TEXT NOT NULL DEFAULT ''")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_companions_starter ON companions(is_starter, starter_rank)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_managed_characters_casting ON managed_characters(casting_status, source_type)")
 
@@ -1287,6 +1307,19 @@ def normalize_asset_slot(value: Any) -> str:
     return slot
 
 
+def normalize_crop_mode(value: Any) -> str:
+    mode = str(value or "cover").strip().lower()
+    return mode if mode in {"cover", "contain"} else "cover"
+
+
+def normalize_image_position_y(value: Any) -> int:
+    try:
+        position = int(value)
+    except (TypeError, ValueError):
+        position = 50
+    return max(0, min(position, 100))
+
+
 def slot_label(slot_key: str) -> str:
     if slot_key == "profile_avatar":
         return "Profile avatar"
@@ -1340,11 +1373,22 @@ def image_from_row(row: sqlite3.Row) -> dict[str, Any]:
     item["exists"] = path.exists()
     item["size"] = path.stat().st_size if path.exists() else 0
     item["slot_label"] = slot_label(item["slot_key"]) if item.get("slot_key") else ""
+    item["crop_mode"] = normalize_crop_mode(item.get("crop_mode"))
+    item["image_position_y"] = normalize_image_position_y(item.get("image_position_y"))
     return item
 
 
-def generation_job_from_row(row: sqlite3.Row) -> dict[str, Any]:
-    return dict(row)
+def generation_job_from_row(row: sqlite3.Row, include_prompt: bool = True) -> dict[str, Any]:
+    item = dict(row)
+    prompt_path = Path(item.get("prompt_pack_path") or "")
+    prompt_json_path = Path(item.get("prompt_json_path") or "")
+    output_path = Path(item.get("output_folder_path") or "")
+    item["prompt_text"] = prompt_path.read_text(encoding="utf-8") if include_prompt and prompt_path.exists() else ""
+    item["prompt_pack_exists"] = prompt_path.exists()
+    item["prompt_json_exists"] = prompt_json_path.exists()
+    item["output_folder_exists"] = output_path.exists()
+    item["output_image_count"] = len(list_image_files(output_path)) if output_path.exists() else 0
+    return item
 
 
 def approved_slot_map(conn: sqlite3.Connection, character_id: str) -> dict[str, dict[str, Any]]:
@@ -1846,10 +1890,12 @@ def cast_distinction_snapshot(limit: int = 36) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def build_generation_prompt_pack(character: dict[str, Any], job_id: str) -> tuple[str, dict[str, Any]]:
+def build_generation_prompt_pack(character: dict[str, Any], job_id: str, output_dir: Path) -> tuple[str, dict[str, Any]]:
     identity_dir = character_subdirectories(character["id"])["references"]
     prompt_dir = character_subdirectories(character["id"])["generation_jobs"]
     reference_count = len(character.get("references", []))
+    if reference_count < 1:
+        raise ValueError("Add at least one identity reference picture before starting a 10 Astrogram image job.")
     missing_slots = character.get("missing_slots", list(APP_ASSET_SLOTS))
     gender = character.get("gender") or "unspecified"
     signs = " / ".join(
@@ -1904,11 +1950,12 @@ def build_generation_prompt_pack(character: dict[str, Any], job_id: str) -> tupl
     ]
     prompt_json = {
         "job_id": job_id,
-        "status": "ready",
+        "status": "ready_for_codex",
         "character_id": character["id"],
         "display_name": character["display_name"],
         "identity_reference_folder": str(identity_dir),
         "identity_reference_count": reference_count,
+        "output_folder": str(output_dir),
         "required_slots": slots,
         "missing_slots": missing_slots,
         "core_prompt": same_person_prompt,
@@ -1919,11 +1966,17 @@ def build_generation_prompt_pack(character: dict[str, Any], job_id: str) -> tupl
         f"# Simastry generation job - {character['display_name']}",
         "",
         f"Job ID: `{job_id}`",
-        "Status: `ready`",
+        "Status: `ready_for_codex`",
+        "",
+        "## Codex Instruction",
+        "",
+        "Use the reference images below and generate 10 separate Astrogram-style images for this same character. "
+        "Save the completed image files into the output folder exactly as regular image files. Do not call an image API from Factory.",
         "",
         "## Attach Before Generating",
         "",
         f"- Identity references: `{identity_dir}` ({reference_count} saved)",
+        f"- Output folder: `{output_dir}`",
         "",
         "Use identity references to keep the person consistent. This standard 10-photo pack is separate from the Style Board.",
         "",
@@ -2104,11 +2157,13 @@ def create_generation_job(character_id: str, payload: dict[str, Any]) -> dict[st
     character = get_character(character_id)
     if not character:
         raise KeyError(character_id)
-    status = normalize_generation_job_status(payload.get("status"), "ready")
+    status = normalize_generation_job_status(payload.get("status"), "ready_for_codex")
     notes = str(payload.get("notes", "")).strip()
     job_id = f"job-{int(time.time())}-{uuid.uuid4().hex[:8]}"
     directories = ensure_character_directories(character_id)
-    markdown, prompt_json = build_generation_prompt_pack(character, job_id)
+    output_dir = directories["generation_jobs"] / f"{job_id}-outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    markdown, prompt_json = build_generation_prompt_pack(character, job_id, output_dir)
     prompt_pack_path = directories["generation_jobs"] / f"{job_id}.md"
     prompt_json_path = directories["generation_jobs"] / f"{job_id}.json"
     prompt_pack_path.write_text(markdown, encoding="utf-8")
@@ -2118,11 +2173,21 @@ def create_generation_job(character_id: str, payload: dict[str, Any]) -> dict[st
         conn.execute(
             """
             INSERT INTO character_generation_jobs (
-              id, character_id, status, prompt_pack_path, prompt_json_path, notes, created_at, updated_at
+              id, character_id, status, prompt_pack_path, prompt_json_path, output_folder_path, notes, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (job_id, character_id, status, str(prompt_pack_path), str(prompt_json_path), notes, timestamp, timestamp),
+            (
+                job_id,
+                character_id,
+                status,
+                str(prompt_pack_path),
+                str(prompt_json_path),
+                str(output_dir),
+                notes,
+                timestamp,
+                timestamp,
+            ),
         )
         conn.execute(
             """
@@ -2178,6 +2243,102 @@ def get_generation_job(job_id: str) -> dict[str, Any] | None:
     with connect() as conn:
         row = conn.execute("SELECT * FROM character_generation_jobs WHERE id = ?", (job_id,)).fetchone()
     return generation_job_from_row(row) if row else None
+
+
+def scan_generation_job_results(job_id: str) -> dict[str, Any]:
+    job = get_generation_job(job_id)
+    if not job:
+        raise KeyError(job_id)
+    character_id = str(job["character_id"])
+    character = get_character(character_id)
+    if not character:
+        raise KeyError(character_id)
+    output_dir = Path(job.get("output_folder_path") or "")
+    workspace_root = WORKSPACE_DIR.resolve()
+    resolved_output = output_dir.resolve() if output_dir else Path("")
+    if not output_dir or not str(resolved_output).startswith(str(workspace_root)):
+        raise ValueError("Generation job output folder is missing or outside the Factory workspace.")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    image_files = list_image_files(output_dir)
+    directories = ensure_character_directories(character_id)
+    timestamp = now_iso()
+    imported: list[dict[str, Any]] = []
+    skipped: list[str] = []
+    with connect() as conn:
+        for source_path in image_files:
+            existing = conn.execute(
+                """
+                SELECT id
+                FROM character_images
+                WHERE character_id = ? AND prompt_job_id = ? AND source_path = ?
+                LIMIT 1
+                """,
+                (character_id, job_id, str(source_path)),
+            ).fetchone()
+            if existing:
+                skipped.append(source_path.name)
+                continue
+            target = unique_file_path(directories["candidates"], source_path.name)
+            copy_imported_image(source_path, target)
+            image_id = f"img-{uuid.uuid4().hex[:12]}"
+            conn.execute(
+                """
+                INSERT INTO character_images (
+                  id, character_id, image_kind, slot_key, local_path, source_path,
+                  original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+                )
+                VALUES (?, ?, 'candidate', '', ?, ?, ?, ?, ?, 1, ?, ?, '')
+                """,
+                (
+                    image_id,
+                    character_id,
+                    str(target),
+                    str(source_path),
+                    source_path.name,
+                    job_id,
+                    "Imported from Codex-assisted 10 Astrogram image job.",
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            imported.append(
+                {
+                    "id": image_id,
+                    "name": target.name,
+                    "path": str(target),
+                    "url": f"/api/character-images/{image_id}/file",
+                    "image_kind": "candidate",
+                }
+            )
+        new_status = "imported" if imported else job.get("status") or "ready_for_codex"
+        conn.execute(
+            """
+            UPDATE character_generation_jobs
+            SET status = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (new_status, timestamp, job_id),
+        )
+        if imported:
+            conn.execute(
+                """
+                UPDATE managed_characters
+                SET status = CASE WHEN status IN ('draft', 'ready', 'assigned') THEN 'imported' ELSE status END,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, character_id),
+            )
+        conn.commit()
+    return {
+        "job": get_generation_job(job_id),
+        "character": get_character(character_id),
+        "output_folder": str(output_dir),
+        "found": len(image_files),
+        "imported": len(imported),
+        "skipped": len(skipped),
+        "items": imported,
+    }
 
 
 def update_character_casting_status(character_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -2705,9 +2866,10 @@ def promote_character_image(image_id: str, payload: dict[str, Any]) -> dict[str,
             """
             INSERT INTO character_images (
               id, character_id, image_kind, slot_key, local_path, source_path,
-              original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+              original_filename, prompt_job_id, notes, crop_mode, image_position_y,
+              version, created_at, updated_at, archived_at
             )
-            VALUES (?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?, ?, ?, '')
+            VALUES (?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '')
             """,
             (
                 approved_id,
@@ -2718,6 +2880,8 @@ def promote_character_image(image_id: str, payload: dict[str, Any]) -> dict[str,
                 source["original_filename"] or source_path.name,
                 source["prompt_job_id"],
                 notes,
+                normalize_crop_mode(source["crop_mode"] if "crop_mode" in source.keys() else "cover"),
+                normalize_image_position_y(source["image_position_y"] if "image_position_y" in source.keys() else 50),
                 version,
                 timestamp,
                 timestamp,
@@ -2773,6 +2937,148 @@ def reject_character_image(image_id: str) -> dict[str, Any]:
         )
         conn.commit()
     return {"rejected_image_id": image_id, "character": get_character(character_id)}
+
+
+def archive_character_image(image_id: str) -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect() as conn:
+        image = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+        if not image:
+            raise KeyError(image_id)
+        if image["image_kind"] not in {"approved", "candidate", "rejected"}:
+            raise ValueError("Only approved, rejected, or candidate pictures can be archived.")
+        character_id = image["character_id"]
+        if image["image_kind"] != "archived":
+            conn.execute(
+                """
+                UPDATE character_images
+                SET image_kind = 'archived', archived_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, timestamp, image_id),
+            )
+        approved_count = conn.execute(
+            """
+            SELECT COUNT(DISTINCT slot_key)
+            FROM character_images
+            WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+            """,
+            (character_id,),
+        ).fetchone()[0]
+        new_status = "approved" if int(approved_count) >= len(APP_ASSET_SLOTS) else "reviewing"
+        conn.execute(
+            "UPDATE managed_characters SET status = ?, updated_at = ? WHERE id = ?",
+            (new_status, timestamp, character_id),
+        )
+        conn.commit()
+    return {"archived_image_id": image_id, "character": get_character(character_id)}
+
+
+def update_character_image_display(image_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    crop_mode = normalize_crop_mode(payload.get("crop_mode"))
+    image_position_y = normalize_image_position_y(payload.get("image_position_y"))
+    timestamp = now_iso()
+    with connect() as conn:
+        image = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+        if not image:
+            raise KeyError(image_id)
+        conn.execute(
+            """
+            UPDATE character_images
+            SET crop_mode = ?,
+                image_position_y = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (crop_mode, image_position_y, timestamp, image_id),
+        )
+        conn.commit()
+        refreshed = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+    return {"image": image_from_row(refreshed), "character": get_character(refreshed["character_id"])}
+
+
+def move_character_image(image_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    target_character_id = str(payload.get("target_character_id", "")).strip()
+    if not target_character_id:
+        raise ValueError("Choose a destination character.")
+    timestamp = now_iso()
+    with connect() as conn:
+        source = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+        if not source:
+            raise KeyError(image_id)
+        source_character_id = source["character_id"]
+        if source_character_id == target_character_id:
+            raise ValueError("Choose a different destination character.")
+        target_character = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (target_character_id,)).fetchone()
+        if not target_character:
+            raise KeyError(target_character_id)
+        source_path = Path(source["local_path"])
+        if not source_path.exists():
+            raise FileNotFoundError(f"Source image missing: {source_path}")
+        target_dirs = ensure_character_directories(target_character_id)
+        target_path = unique_file_path(target_dirs["candidates"], source_path.name)
+        copy_imported_image(source_path, target_path)
+        moved_id = f"img-{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            """
+            INSERT INTO character_images (
+              id, character_id, image_kind, slot_key, local_path, source_path,
+              original_filename, prompt_job_id, notes, crop_mode, image_position_y,
+              version, created_at, updated_at, archived_at
+            )
+            VALUES (?, ?, 'candidate', '', ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, '')
+            """,
+            (
+                moved_id,
+                target_character_id,
+                str(target_path),
+                str(source_path),
+                source["original_filename"] or source_path.name,
+                source["prompt_job_id"],
+                f"Moved from {source_character_id}.",
+                normalize_crop_mode(source["crop_mode"] if "crop_mode" in source.keys() else "cover"),
+                normalize_image_position_y(source["image_position_y"] if "image_position_y" in source.keys() else 50),
+                timestamp,
+                timestamp,
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE character_images
+            SET image_kind = 'archived', archived_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (timestamp, timestamp, image_id),
+        )
+        source_approved_count = conn.execute(
+            """
+            SELECT COUNT(DISTINCT slot_key)
+            FROM character_images
+            WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+            """,
+            (source_character_id,),
+        ).fetchone()[0]
+        source_status = "approved" if int(source_approved_count) >= len(APP_ASSET_SLOTS) else "reviewing"
+        conn.execute(
+            "UPDATE managed_characters SET status = ?, updated_at = ? WHERE id = ?",
+            (source_status, timestamp, source_character_id),
+        )
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET status = CASE WHEN status IN ('draft', 'ready', 'assigned') THEN 'imported' ELSE status END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (timestamp, target_character_id),
+        )
+        conn.commit()
+    return {
+        "moved_image_id": moved_id,
+        "archived_source_image_id": image_id,
+        "source_character": get_character(source_character_id),
+        "target_character": get_character(target_character_id),
+    }
 
 
 def update_image_feedback(image_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -2992,6 +3298,8 @@ def export_app_assets() -> dict[str, Any]:
                     "absolute_path": str(target),
                     "source_image_id": image["id"],
                     "version": image["version"],
+                    "crop_mode": image.get("crop_mode", "cover"),
+                    "image_position_y": image.get("image_position_y", 50),
                 }
             manifest_items[character["id"]] = {
                 "display_name": character["display_name"],
@@ -4924,6 +5232,10 @@ class AssetFactoryHandler(BaseHTTPRequestHandler):
                 character_id = path.removeprefix("/api/characters/").removesuffix("/style-board-generation-jobs").strip("/")
                 self.send_json(create_style_board_generation_job(character_id, payload))
                 return
+            if path.startswith("/api/generation-jobs/") and path.endswith("/scan-results"):
+                job_id = path.removeprefix("/api/generation-jobs/").removesuffix("/scan-results").strip("/")
+                self.send_json(scan_generation_job_results(job_id))
+                return
             if path.startswith("/api/characters/") and path.endswith("/casting-status"):
                 character_id = path.removeprefix("/api/characters/").removesuffix("/casting-status").strip("/")
                 self.send_json(update_character_casting_status(character_id, payload))
@@ -4943,6 +5255,18 @@ class AssetFactoryHandler(BaseHTTPRequestHandler):
             if path.startswith("/api/images/") and path.endswith("/reject"):
                 image_id = path.removeprefix("/api/images/").removesuffix("/reject").strip("/")
                 self.send_json(reject_character_image(image_id))
+                return
+            if path.startswith("/api/images/") and path.endswith("/archive"):
+                image_id = path.removeprefix("/api/images/").removesuffix("/archive").strip("/")
+                self.send_json(archive_character_image(image_id))
+                return
+            if path.startswith("/api/images/") and path.endswith("/display"):
+                image_id = path.removeprefix("/api/images/").removesuffix("/display").strip("/")
+                self.send_json(update_character_image_display(image_id, payload))
+                return
+            if path.startswith("/api/images/") and path.endswith("/move"):
+                image_id = path.removeprefix("/api/images/").removesuffix("/move").strip("/")
+                self.send_json(move_character_image(image_id, payload))
                 return
             if path.startswith("/api/images/") and path.endswith("/promote"):
                 image_id = path.removeprefix("/api/images/").removesuffix("/promote").strip("/")

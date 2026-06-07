@@ -1,5 +1,5 @@
-const CACHE_NAME = "simastry-factory-shell-v7";
-const SHELL_ASSETS = ["/", "/index.html", "/style.css", "/app.js", "/manifest.webmanifest", "/app-icon.svg"];
+const CACHE_NAME = "simastry-factory-shell-v8";
+const SHELL_ASSETS = ["/manifest.webmanifest", "/app-icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -23,6 +23,10 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== location.origin || url.pathname.startsWith("/api/")) {
+    return;
+  }
+  if (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/app.js" || url.pathname === "/style.css") {
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
     return;
   }
   event.respondWith(

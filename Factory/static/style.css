@@ -599,6 +599,64 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.codex-job-panel {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid rgba(216, 181, 109, 0.42);
+  border-radius: 8px;
+  background: rgba(216, 181, 109, 0.08);
+  padding: 0.75rem;
+}
+
+.codex-job-header,
+.codex-job-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.codex-job-header div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.codex-job-header span,
+.codex-job-header small,
+.codex-job-paths span {
+  color: var(--muted);
+}
+
+.codex-job-paths {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.codex-job-paths div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.codex-job-paths code {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.45rem;
+  color: var(--text);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.codex-prompt-text {
+  width: 100%;
+  min-height: 16rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
 .asset-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -721,6 +779,34 @@ h3 {
   background: #d43d48;
 }
 
+.image-edit-button {
+  position: absolute;
+  left: 0.38rem;
+  bottom: 0.38rem;
+  z-index: 2;
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 6px;
+  background: rgba(12, 13, 15, 0.88);
+  color: var(--text);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  padding: 0.38rem 0.52rem;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.picture-shell:hover .image-edit-button,
+.picture-shell:focus-within .image-edit-button,
+.slot-card.editing .image-edit-button {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.image-edit-button:hover {
+  border-color: var(--gold);
+}
+
 .trash-icon {
   position: relative;
   width: 0.68rem;
@@ -751,6 +837,51 @@ h3 {
   width: 0.32rem;
   height: 0.12rem;
   border-radius: 999px;
+}
+
+.image-edit-panel {
+  display: none;
+  gap: 0.5rem;
+  border-top: 1px solid var(--line);
+  padding: 0.65rem;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.slot-card.editing .image-edit-panel {
+  display: grid;
+}
+
+.image-edit-panel label {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.image-edit-panel select,
+.image-edit-panel input,
+.image-edit-panel button {
+  width: 100%;
+  min-height: 2.15rem;
+  font-size: 0.74rem;
+}
+
+.image-edit-panel input[type="range"] {
+  min-height: 1.45rem;
+}
+
+.edit-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.archive-image-button {
+  border-color: rgba(190, 83, 91, 0.65);
+  color: #ffd7da;
+}
+
+.image-edit-panel small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .slot-empty {
@@ -1262,6 +1393,21 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .codex-job-header,
+  .codex-job-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .codex-job-actions button {
+    width: 100%;
+  }
+
+  .codex-prompt-text {
+    min-height: 13rem;
+    font-size: 0.75rem;
+  }
+
   .studio-filter-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1280,6 +1426,15 @@ h3 {
     transform: translateY(0);
     width: 2.15rem;
     height: 2.15rem;
+  }
+
+  .image-edit-button {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .edit-action-row {
+    grid-template-columns: 1fr;
   }
 
   .custom-form .wide-field,

@@ -113,6 +113,28 @@ function slotOptions(selected = "profile_avatar") {
     .join("");
 }
 
+function characterMoveOptions(selectedCharacterId = "") {
+  const seen = new Set();
+  const choices = [...state.characters, ...state.customCharacters].filter((character) => {
+    if (!character?.id || character.id === selectedCharacterId || character.casting_status === "archived" || seen.has(character.id)) {
+      return false;
+    }
+    seen.add(character.id);
+    return true;
+  });
+  if (!choices.length) return `<option value="">No other characters</option>`;
+  return [
+    `<option value="">Move to...</option>`,
+    ...choices.map((character) => `<option value="${escapeHtml(character.id)}">${escapeHtml(character.display_name)}</option>`),
+  ].join("");
+}
+
+function imageDisplayStyle(image) {
+  const cropMode = image?.crop_mode === "contain" ? "contain" : "cover";
+  const positionY = Math.max(0, Math.min(Number(image?.image_position_y ?? 50), 100));
+  return `object-fit: ${cropMode}; object-position: center ${positionY}%;`;
+}
+
 function castingLabel(status) {
   const labels = {
     needs_decision: "Needs decision",
@@ -314,7 +336,7 @@ function customCard(character) {
         <button type="button" data-upload-custom-references="${escapeHtml(character.id)}">Add references</button>
       </div>
       <div class="custom-card-actions">
-        <button type="button" data-generate-custom="${escapeHtml(character.id)}">Generate 10-photo prompt</button>
+        <button type="button" data-generate-custom="${escapeHtml(character.id)}">Start 10 Astrogram Image Job</button>
         <button type="button" data-generate-custom-style-board="${escapeHtml(character.id)}">Generate style-board set</button>
         <button type="button" data-archive-custom="${escapeHtml(character.id)}">Archive</button>
       </div>
@@ -348,15 +370,22 @@ function allConsolidationOptions(selectedCharacterId) {
 function pictureButton(image, title, className = "picture-tile", options = {}) {
   if (!image) return "";
   const canReject = Boolean(options.canReject && image.id);
+  const canEdit = Boolean(options.canEdit && image.id);
   const rejectLabel = options.rejectLabel || `Move ${title} to rejected`;
+  const editLabel = options.editLabel || `Edit ${title}`;
   return `
-    <div class="picture-shell ${canReject ? "can-reject" : ""}">
+    <div class="picture-shell ${canReject ? "can-reject" : ""} ${canEdit ? "can-edit" : ""}">
       <button class="${className}" type="button" data-full-image="${escapeHtml(image.url)}" data-full-title="${escapeHtml(title)}">
-        <img src="${escapeHtml(image.url)}" alt="${escapeHtml(title)}" />
+        <img src="${escapeHtml(image.url)}" alt="${escapeHtml(title)}" style="${escapeHtml(imageDisplayStyle(image))}" />
       </button>
       ${
         canReject
           ? `<button class="trash-button" type="button" data-reject-image="${escapeHtml(image.id)}" title="${escapeHtml(rejectLabel)}" aria-label="${escapeHtml(rejectLabel)}"><span class="trash-icon" aria-hidden="true"></span></button>`
+          : ""
+      }
+      ${
+        canEdit
+          ? `<button class="image-edit-button" type="button" data-toggle-image-edit="${escapeHtml(image.id)}" title="${escapeHtml(editLabel)}" aria-label="${escapeHtml(editLabel)}">Edit</button>`
           : ""
       }
     </div>
@@ -366,17 +395,59 @@ function pictureButton(image, title, className = "picture-tile", options = {}) {
 function slotCard(slot, characterName) {
   const image = slot.approved_image;
   const title = `${characterName} · ${slot.label || slotLabel(slot.slot_key)}`;
+  const isAstrogram = String(slot.slot_key || "").startsWith("astrogram_");
   return `
-    <div class="slot-card ${slot.missing ? "missing" : "filled"}">
+    <div class="slot-card ${slot.missing ? "missing" : "filled"}" ${image ? `data-image-card="${escapeHtml(image.id)}"` : ""}>
       ${
         image
-          ? pictureButton(image, title, "picture-tile", { canReject: true, rejectLabel: "Move to rejected" })
+          ? pictureButton(image, title, "picture-tile", {
+              canReject: true,
+              canEdit: true,
+              rejectLabel: "Move to rejected",
+              editLabel: isAstrogram ? "Edit Astrogram picture" : "Edit picture",
+            })
           : `<div class="slot-empty">Missing</div>`
       }
       <div class="slot-card-footer">
         <strong>${escapeHtml(slot.label || slotLabel(slot.slot_key))}</strong>
         <span>${image ? "Approved" : "Missing"}</span>
       </div>
+      ${image ? imageEditPanel(image, slot.slot_key) : ""}
+    </div>
+  `;
+}
+
+function imageEditPanel(image, slotKey = "") {
+  const cropMode = image.crop_mode === "contain" ? "contain" : "cover";
+  const positionY = Math.max(0, Math.min(Number(image.image_position_y ?? 50), 100));
+  return `
+    <div class="image-edit-panel">
+      <div class="edit-action-row">
+        <button type="button" data-promote-approved="${escapeHtml(image.id)}" data-promote-approved-slot="profile_avatar">Make profile avatar</button>
+        <button type="button" data-promote-approved="${escapeHtml(image.id)}" data-promote-approved-slot="card_portrait">Make card portrait</button>
+      </div>
+      <label>
+        Crop
+        <select data-edit-crop-mode>
+          <option value="cover" ${cropMode === "cover" ? "selected" : ""}>Fill crop</option>
+          <option value="contain" ${cropMode === "contain" ? "selected" : ""}>Fit full image</option>
+        </select>
+      </label>
+      <label>
+        Face position
+        <input data-edit-position-y type="range" min="0" max="100" step="5" value="${positionY}" />
+      </label>
+      <div class="edit-action-row">
+        <button type="button" data-nudge-image-position="${escapeHtml(image.id)}" data-nudge-delta="-10">Move up</button>
+        <button type="button" data-nudge-image-position="${escapeHtml(image.id)}" data-nudge-delta="10">Move down</button>
+      </div>
+      <button type="button" data-save-image-display="${escapeHtml(image.id)}">Save crop</button>
+      <div class="edit-action-row">
+        <select data-move-character-target>${characterMoveOptions(state.selectedCharacterId)}</select>
+        <button type="button" data-move-image="${escapeHtml(image.id)}">Move</button>
+      </div>
+      <button class="archive-image-button" type="button" data-archive-image="${escapeHtml(image.id)}">Archive picture</button>
+      <small>${escapeHtml(slotLabel(slotKey) || image.slot_label || "Approved picture")}</small>
     </div>
   `;
 }
@@ -475,15 +546,39 @@ function generationJobs(character) {
   if (!jobs.length) return `<div class="path-box">No prompt packs yet.</div>`;
   return jobs
     .slice(0, 3)
-    .map(
-      (job) => `
+    .map((job, index) => {
+      const promptText = job.prompt_text || "";
+      const codexReady = job.status === "ready_for_codex" || job.output_folder_path;
+      if (index === 0 && codexReady) {
+        return `
+          <article class="codex-job-panel" data-generation-job-id="${escapeHtml(job.id)}">
+            <div class="codex-job-header">
+              <div>
+                <strong>Codex image job</strong>
+                <span>${escapeHtml(job.status || "ready_for_codex")}</span>
+              </div>
+              <small>${escapeHtml(job.id)}</small>
+            </div>
+            <div class="codex-job-paths">
+              <div><span>Output folder</span><code>${escapeHtml(job.output_folder_path || "")}</code></div>
+              <div><span>Prompt file</span><code>${escapeHtml(job.prompt_pack_path || "")}</code></div>
+            </div>
+            <div class="codex-job-actions">
+              <button type="button" data-copy-job-prompt="${escapeHtml(job.id)}">Copy Codex Prompt</button>
+              <button type="button" data-scan-job-results="${escapeHtml(job.id)}">Refresh Job Results</button>
+            </div>
+            <textarea class="codex-prompt-text" readonly>${escapeHtml(promptText)}</textarea>
+          </article>
+        `;
+      }
+      return `
         <div class="job-row">
           <strong>${escapeHtml(job.id)}</strong>
           <span>${escapeHtml(job.status || "ready")}</span>
           <small>${escapeHtml(job.prompt_pack_path || "")}</small>
         </div>
-      `,
-    )
+      `;
+    })
     .join("");
 }
 
@@ -540,7 +635,7 @@ function characterDetailTemplate(character) {
     <section class="studio-block">
       <div class="section-heading-row">
         <h3>Generate And Import</h3>
-        <button type="button" data-generate-selected>Generate 10-photo prompt</button>
+        <button type="button" data-generate-selected>Start 10 Astrogram Image Job</button>
         <button type="button" data-generate-selected-style-board>Generate style-board set</button>
       </div>
       <div class="generation-tools">
@@ -702,15 +797,44 @@ async function archiveSelectedCharacter(characterId = state.selectedCharacterId)
 }
 
 async function generatePromptForCharacter(characterId, label = "character") {
-  if (!characterId) return;
-  setResult(`Preparing 10-photo prompt for ${label}...`);
+  if (!characterId) {
+    setResult("Select a character first.");
+    return;
+  }
+  setResult(`Starting 10 Astrogram image job for ${label}...`);
   const payload = await api.post(`/api/characters/${characterId}/generation-jobs`, {
-    notes: "Identity-first 10-photo Instagram-style prompt pack.",
+    notes: "Codex-assisted 10 Astrogram image job.",
   });
-  setResult("10-photo prompt ready.", {
+  setResult("Codex image job ready.", {
     character: payload.character?.display_name || label,
+    status: payload.job?.status,
+    outputFolder: payload.job?.output_folder_path,
     promptPack: payload.job?.prompt_pack_path,
     references: payload.character?.references?.length || 0,
+  });
+  await refreshStudioDetail();
+}
+
+async function copyJobPrompt(button) {
+  const panel = button.closest("[data-generation-job-id]");
+  const promptText = panel?.querySelector(".codex-prompt-text")?.value || "";
+  if (!promptText) {
+    setResult("No prompt text found for this job.");
+    return;
+  }
+  await navigator.clipboard.writeText(promptText);
+  setResult("Codex prompt copied.");
+}
+
+async function scanJobResults(jobId) {
+  if (!jobId) return;
+  setResult("Checking job output folder...");
+  const payload = await api.post(`/api/generation-jobs/${jobId}/scan-results`);
+  setResult("Job results refreshed.", {
+    found: payload.found,
+    imported: payload.imported,
+    skippedAlreadyImported: payload.skipped,
+    outputFolder: payload.output_folder,
   });
   await refreshStudioDetail();
 }
@@ -774,6 +898,67 @@ async function promoteCandidate(button) {
   setResult("Promoting candidate...");
   await api.post(`/api/images/${imageId}/promote`, { slot_key: slot });
   setResult("Candidate promoted.", { slot: slotLabel(slot) });
+  await refreshStudioDetail();
+}
+
+async function promoteApprovedImage(button) {
+  const imageId = button?.dataset?.promoteApproved || "";
+  const slot = button?.dataset?.promoteApprovedSlot || "profile_avatar";
+  if (!imageId) return;
+  setResult(`Making picture ${slotLabel(slot).toLowerCase()}...`);
+  await api.post(`/api/images/${imageId}/promote`, { slot_key: slot });
+  setResult("Picture promoted.", { slot: slotLabel(slot) });
+  await refreshStudioDetail();
+}
+
+async function saveImageDisplay(button) {
+  const imageId = button?.dataset?.saveImageDisplay || "";
+  const card = button.closest("[data-image-card]");
+  const cropMode = card?.querySelector("[data-edit-crop-mode]")?.value || "cover";
+  const imagePositionY = Number(card?.querySelector("[data-edit-position-y]")?.value || 50);
+  if (!imageId) return;
+  setResult("Saving crop...");
+  await api.post(`/api/images/${imageId}/display`, {
+    crop_mode: cropMode,
+    image_position_y: imagePositionY,
+  });
+  setResult("Crop saved.", { crop: cropMode, facePosition: imagePositionY });
+  await refreshStudioDetail();
+}
+
+async function nudgeImagePosition(button) {
+  const imageId = button?.dataset?.nudgeImagePosition || "";
+  const card = button.closest("[data-image-card]");
+  const input = card?.querySelector("[data-edit-position-y]");
+  if (!imageId || !input) return;
+  const delta = Number(button.dataset.nudgeDelta || 0);
+  const nextValue = Math.max(0, Math.min(Number(input.value || 50) + delta, 100));
+  input.value = String(nextValue);
+  await saveImageDisplay(card.querySelector("[data-save-image-display]"));
+}
+
+async function archiveImage(button) {
+  const imageId = button?.dataset?.archiveImage || "";
+  if (!imageId) return;
+  setResult("Archiving picture...");
+  await api.post(`/api/images/${imageId}/archive`);
+  setResult("Picture archived.");
+  await refreshStudioDetail();
+}
+
+async function moveImage(button) {
+  const imageId = button?.dataset?.moveImage || "";
+  const card = button.closest("[data-image-card]");
+  const targetCharacterId = card?.querySelector("[data-move-character-target]")?.value || "";
+  if (!imageId) return;
+  if (!targetCharacterId) {
+    setResult("Choose a destination character first.");
+    return;
+  }
+  const target = [...state.characters, ...state.customCharacters].find((character) => character.id === targetCharacterId);
+  setResult("Moving picture...");
+  await api.post(`/api/images/${imageId}/move`, { target_character_id: targetCharacterId });
+  setResult("Picture moved.", { destination: target?.display_name || targetCharacterId });
   await refreshStudioDetail();
 }
 
@@ -885,10 +1070,11 @@ async function createCharacter(options = {}) {
   clearCharacterReferencePreview();
   if (generatePrompt) {
     const promptPayload = await api.post(`/api/characters/${character.id}/generation-jobs`, {
-      notes: "Custom candidate 10-photo Instagram-style prompt pack.",
+      notes: "Custom candidate Codex-assisted 10 Astrogram image job.",
     });
-    setResult("Candidate added and 10-photo prompt ready.", {
+    setResult("Candidate added and Codex image job ready.", {
       name: character.display_name,
+      outputFolder: promptPayload.job?.output_folder_path,
       promptPack: promptPayload.job?.prompt_pack_path,
       referencePictures: promptPayload.character?.references?.length || files.length,
     });
@@ -1091,6 +1277,37 @@ function bindEvents() {
       await selectCharacter(state.selectedCharacterId).catch(showError);
       return;
     }
+    const editToggle = event.target.closest("[data-toggle-image-edit]");
+    if (editToggle) {
+      const card = editToggle.closest(".slot-card");
+      card?.classList.toggle("editing");
+      return;
+    }
+    const promoteApprovedButton = event.target.closest("[data-promote-approved]");
+    if (promoteApprovedButton) {
+      await promoteApprovedImage(promoteApprovedButton).catch(showError);
+      return;
+    }
+    const saveDisplayButton = event.target.closest("[data-save-image-display]");
+    if (saveDisplayButton) {
+      await saveImageDisplay(saveDisplayButton).catch(showError);
+      return;
+    }
+    const nudgeButton = event.target.closest("[data-nudge-image-position]");
+    if (nudgeButton) {
+      await nudgeImagePosition(nudgeButton).catch(showError);
+      return;
+    }
+    const moveButton = event.target.closest("[data-move-image]");
+    if (moveButton) {
+      await moveImage(moveButton).catch(showError);
+      return;
+    }
+    const archiveImageButton = event.target.closest("[data-archive-image]");
+    if (archiveImageButton) {
+      await archiveImage(archiveImageButton).catch(showError);
+      return;
+    }
     const fullPicture = event.target.closest("[data-full-image]");
     if (fullPicture) {
       openFullImage(fullPicture.dataset.fullImage, fullPicture.dataset.fullTitle);
@@ -1104,6 +1321,16 @@ function bindEvents() {
     const feedbackButton = event.target.closest("[data-save-image-feedback]");
     if (feedbackButton) {
       await saveImageFeedback(feedbackButton).catch(showError);
+      return;
+    }
+    const copyPromptButton = event.target.closest("[data-copy-job-prompt]");
+    if (copyPromptButton) {
+      await copyJobPrompt(copyPromptButton).catch(showError);
+      return;
+    }
+    const scanJobButton = event.target.closest("[data-scan-job-results]");
+    if (scanJobButton) {
+      await scanJobResults(scanJobButton.dataset.scanJobResults).catch(showError);
       return;
     }
     const primaryButton = event.target.closest("[data-primary-reference]");
