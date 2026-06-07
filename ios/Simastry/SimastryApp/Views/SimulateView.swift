@@ -168,10 +168,7 @@ struct SimulateView: View {
                             await regenerate(from: result, with: alternativeReply)
                         }
                     },
-                    onOpenGuide: { sign in
-                        viewModel.guideFocusSign = sign
-                        viewModel.selectedTab = 4
-                    },
+                    onOpenGuide: nil,
                     userSunSign: viewModel.userSunSign
                 )
             }

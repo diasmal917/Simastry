@@ -8,7 +8,6 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
-    @State private var showSavedGuides: Bool = false
     @State private var showStreakMilestone: Bool = false
 
     var body: some View {
@@ -33,9 +32,6 @@ struct HomeView: View {
                     }
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
-            }
-            .sheet(isPresented: $showSavedGuides) {
-                SavedGuidesView(viewModel: viewModel)
             }
         }
     }
@@ -274,14 +270,13 @@ struct HomeView: View {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
-                        Image(systemName: "wand.and.stars")
+                        Image(systemName: "sparkle.magnifyingglass")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(SimastryColor.risingViolet)
 
-                        Text("PREDICT REPLY")
-                            .font(SimastryFont.overline)
+                        Text("Prediction")
+                            .font(SimastryFont.labelMedium)
                             .foregroundStyle(SimastryColor.risingViolet)
-                            .tracking(1.2)
                     }
 
                     Text("What will they say next?")
@@ -460,7 +455,7 @@ struct HomeView: View {
                     case "predict":
                         viewModel.selectedTab = 3
                     case "guides":
-                        viewModel.selectedTab = 4
+                        viewModel.selectedTab = 2
                     default:
                         break
                     }
@@ -561,54 +556,6 @@ struct HomeView: View {
         .glossyCard(cornerRadius: 20)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
-    }
-
-    private var savedGuidesHomeCard: some View {
-        Button {
-            HapticManager.buttonPress()
-            showSavedGuides = true
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "bookmark.circle.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(SimastryColor.celestialBlue)
-                    .frame(width: 44, height: 44)
-                    .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: 14))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("home.savedGuides"))
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    if viewModel.savedGuides.isEmpty {
-                        Text("Save guides for people in your life")
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                    } else {
-                        Text("\(viewModel.savedGuides.count) \(viewModel.savedGuides.count == 1 ? "person" : "people") saved")
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                    }
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(SimastryColor.celestialBlue)
-                    .symbolRenderingMode(.hierarchical)
-            }
-            .padding(16)
-            .tintedGlass(SimastryColor.celestialBlue.opacity(0.10), cornerRadius: 20)
-            .overlay {
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(SimastryColor.celestialBlue.opacity(0.15), lineWidth: 1)
-            }
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Saved communication guides. \(viewModel.savedGuides.count) people saved.")
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 16)
     }
 
     // MARK: - Streak

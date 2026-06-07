@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SimastrySpacing {
-    static let tabBarClearance: CGFloat = 112
+    static let tabBarClearance: CGFloat = 72
 }
 
 struct SimastrySpring {
@@ -200,8 +200,8 @@ enum SimastryRadius {
 
 struct SimastryFont {
     // Display — large titles, hero text
-    static let displayLarge = Font.system(.largeTitle, design: .serif, weight: .bold)
-    static let displayMedium = Font.system(.title, design: .serif, weight: .bold)
+    static let displayLarge = Font.system(.largeTitle, design: .default, weight: .semibold)
+    static let displayMedium = Font.system(.title, design: .default, weight: .semibold)
 
     // Title — section headers, card titles
     static let titleLarge = Font.system(.title2, weight: .semibold)
@@ -209,7 +209,7 @@ struct SimastryFont {
     static let titleSmall = Font.system(.headline, weight: .semibold)
 
     // Body — primary content
-    static let bodyLarge = Font.system(.body, design: .serif)
+    static let bodyLarge = Font.system(.body)
     static let bodyMedium = Font.system(.body)
     static let bodySmall = Font.system(.subheadline)
 

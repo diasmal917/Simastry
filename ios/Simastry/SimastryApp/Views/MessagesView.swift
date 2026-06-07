@@ -339,27 +339,6 @@ private struct MessageDetailSheet: View {
                                 .buttonStyle(SpringPressStyle())
                                 .accessibilityLabel("Reply with a prediction for \(message.companionName)")
 
-                                if let sign = zodiacSign {
-                                    Button {
-                                        HapticManager.buttonPress()
-                                        dismiss()
-                                        viewModel.guideFocusSign = sign
-                                        viewModel.selectedTab = 4
-                                    } label: {
-                                        HStack(spacing: 10) {
-                                            Image(systemName: "book.fill")
-                                                .font(.system(size: 16, weight: .semibold))
-                                            Text("View \(sign.displayName) Guide")
-                                                .font(SimastryFont.labelLarge)
-                                        }
-                                        .foregroundStyle(SimastryColor.offWhite)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 14)
-                                        .simastryGlassPill()
-                                    }
-                                    .buttonStyle(SpringPressStyle())
-                                    .accessibilityLabel("View communication guide for \(sign.displayName)")
-                                }
                             }
                         }
 
@@ -523,12 +502,20 @@ private struct MessageDetailSheet: View {
                         Button {
                             HapticManager.buttonPress()
                             dismiss()
-                            viewModel.guideFocusSign = sign
-                            viewModel.selectedTab = 4
+                            let context = conversationMessages.isEmpty
+                                ? "\(message.companionName): \(message.content)"
+                                : conversationMessages
+                                    .map { "\($0.direction == .outgoing ? "You" : $0.companionName): \($0.content)" }
+                                    .joined(separator: "\n")
+                            viewModel.startPrediction(
+                                for: sign,
+                                question: "What should I say next?",
+                                conversationText: context
+                            )
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: "book.fill")
-                                Text("Guide")
+                                Image(systemName: "sparkle.magnifyingglass")
+                                Text("Predict")
                             }
                             .font(SimastryFont.labelMedium)
                             .foregroundStyle(SimastryColor.offWhite)
@@ -537,7 +524,7 @@ private struct MessageDetailSheet: View {
                             .simastryGlassPill()
                         }
                         .buttonStyle(SpringPressStyle())
-                        .accessibilityLabel("View communication guide for \(zodiacSign?.displayName ?? message.companionSign)")
+                        .accessibilityLabel("Predict reply for \(zodiacSign?.displayName ?? message.companionSign)")
                     }
 
                     Button {
