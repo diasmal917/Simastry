@@ -226,7 +226,7 @@ nonisolated struct AstrologyTemplates {
             "hey — that thing you're nervous about? you're going to crush it",
             "I need you to know that people notice you more than you think",
             "random appreciation post: thanks for being you. okay carry on",
-            "I have a prediction about you and I think you'll like it"
+            "I have a feeling about you and I think you'll like it"
         ],
         "Virgo": [
             "I analyzed something about our dynamic and I want to share my findings",
@@ -439,7 +439,7 @@ nonisolated struct AstrologyTemplates {
         MethodologySection(
             icon: "cpu.fill",
             title: "AI-Powered, Astrology-Grounded",
-            body: "Our predictions and communication guides are powered by AI (Claude by Anthropic), trained on synastry principles. We use AI to simulate conversation patterns based on element compatibility, modality, and sign placements — not to interpret your birth chart. Every insight traces back to a specific astrological relationship between your signs."
+            body: "Our companion messages are powered by AI and grounded in synastry principles. We use chart signals to frame conversation patterns based on element compatibility, modality, and sign placements — not to make guaranteed claims about your future. Every insight should trace back to a specific astrological relationship between your signs."
         ),
         MethodologySection(
             icon: "person.2.fill",
@@ -454,7 +454,7 @@ nonisolated struct AstrologyTemplates {
         MethodologySection(
             icon: "exclamationmark.circle.fill",
             title: "What We Can't Do",
-            body: "No app can predict the future with certainty. Our predictions show likely communication patterns based on astrological compatibility — not guarantees. People are more than their signs, and every relationship is unique."
+            body: "No app can know the future with certainty. Simastry offers communication guidance based on astrological compatibility — not guarantees. People are more than their signs, and every relationship is unique."
         ),
         MethodologySection(
             icon: "heart.circle.fill",
@@ -484,7 +484,7 @@ nonisolated struct AstrologyTemplates {
         (
             "Why some people text back instantly and others don't",
             "Fire and Air signs tend to respond fast — they process externally. Earth and Water signs need time to think — it's not ghosting, it's processing.",
-            "predict"
+            "guides"
         ),
         (
             "Compatibility isn't just about matching",
@@ -493,8 +493,8 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Your communication style is in your Mercury sign",
-            "Mercury rules how you think and talk. Even if your Sun is a quiet Pisces, Mercury in Gemini means your texts are rapid-fire. We factor this into predictions.",
-            "predict"
+            "Mercury rules how you think and talk. Even if your Sun is a quiet Pisces, Mercury in Gemini can make your texts rapid-fire. Simastry uses that as communication context.",
+            "profile"
         ),
         (
             "Why you get along with some signs instantly",
@@ -503,7 +503,7 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "The difference between astrology and horoscopes",
-            "Horoscopes are generic predictions for 1/12th of the population. What we do is compare YOUR specific sign placements against someone else's. That's synastry — and it's way more personal.",
+            "Horoscopes are generic Sun-sign forecasts for 1/12th of the population. Simastry compares your specific sign placements against someone else's. That's synastry — and it's way more personal.",
             nil
         ),
         (
@@ -518,8 +518,8 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Water signs absorb your energy over text",
-            "Cancer, Scorpio, and Pisces literally feel your mood through messages. That's why your tone matters more with them than your words. Our predictions factor emotional tone.",
-            "predict"
+            "Cancer, Scorpio, and Pisces tend to read mood through messages. That's why your tone can matter more with them than your exact words.",
+            "guides"
         ),
         (
             "The 4 elements explained in 10 seconds",
@@ -528,8 +528,8 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Why fire signs always text first",
-            "Aries, Leo, and Sagittarius are cardinal/fixed fire — they initiate. If a fire sign isn't texting first anymore, something shifted. Use Predict to find out what.",
-            "predict"
+            "Aries, Leo, and Sagittarius carry fire emphasis — they often initiate. If a fire sign gets quiet, your message should leave room without turning cold.",
+            "guides"
         ),
         (
             "Your saved guides work because of element theory",
@@ -538,8 +538,8 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Mutable signs are the hardest to predict",
-            "Gemini, Virgo, Sagittarius, Pisces — they adapt and change direction constantly. That's why predictions for mutable signs show lower confidence. It's not a bug, it's their nature.",
-            "predict"
+            "Gemini, Virgo, Sagittarius, Pisces adapt and change direction constantly. With mutable signs, leave room for the conversation to breathe.",
+            "guides"
         )
     ]
 

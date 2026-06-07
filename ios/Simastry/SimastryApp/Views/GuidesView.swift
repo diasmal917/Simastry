@@ -166,12 +166,12 @@ struct GuidesView: View {
             ViewThatFits {
                 HStack(spacing: 12) {
                     nextStepCard(
-                        title: "Try Predict",
-                        subtitle: "Test a real conversation with a \(selectedSign.displayName).",
-                        systemImage: "wand.and.stars",
-                        accent: SimastryColor.risingViolet
+                        title: "Open Messages",
+                        subtitle: "Use this sign lens in your message thread.",
+                        systemImage: "message.fill",
+                        accent: SimastryColor.celestialBlue
                     ) {
-                        viewModel.startPrediction(for: selectedSign)
+                        viewModel.selectedTab = 2
                     }
 
                     nextStepCard(
@@ -186,12 +186,12 @@ struct GuidesView: View {
 
                 VStack(spacing: 12) {
                     nextStepCard(
-                        title: "Try Predict",
-                        subtitle: "Test a real conversation with a \(selectedSign.displayName).",
-                        systemImage: "wand.and.stars",
-                        accent: SimastryColor.risingViolet
+                        title: "Open Messages",
+                        subtitle: "Use this sign lens in your message thread.",
+                        systemImage: "message.fill",
+                        accent: SimastryColor.celestialBlue
                     ) {
-                        viewModel.startPrediction(for: selectedSign)
+                        viewModel.selectedTab = 2
                     }
 
                     nextStepCard(

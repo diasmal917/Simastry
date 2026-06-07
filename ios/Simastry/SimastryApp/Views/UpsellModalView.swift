@@ -96,7 +96,7 @@ struct UpsellModalView: View {
             HStack(spacing: 16) {
                 freeChip("10 msgs/day")
                 freeChip("1 companion")
-                freeChip("3 predictions/wk")
+                freeChip("Chart context")
             }
 
             HStack(spacing: 16) {
@@ -149,7 +149,7 @@ struct UpsellModalView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     featureRow("Unlimited messages", icon: "message.fill")
                     featureRow("Up to 3 companions", icon: "person.3.fill")
-                    featureRow("Unlimited predictions", icon: "wand.and.stars")
+                    featureRow("Chart-grounded replies", icon: "scope")
                     featureRow("Full communication guides", icon: "bubble.left.and.bubble.right.fill")
                     featureRow("Daily transit readings", icon: "sun.horizon.fill")
                 }

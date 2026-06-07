@@ -341,12 +341,12 @@ struct CompanionsView: View {
                 .frame(width: 220)
 
                 quickActionCard(
-                    title: "Predict Reply",
-                    subtitle: "Open Predict with \(companion.name)'s placement lens ready.",
-                    systemImage: "wand.and.stars",
-                    tint: SimastryColor.risingViolet
+                    title: "Open Messages",
+                    subtitle: "Continue with \(companion.name) in your private inbox.",
+                    systemImage: "message.fill",
+                    tint: SimastryColor.celestialBlue
                 ) {
-                    viewModel.startPrediction(for: companion)
+                    viewModel.selectedTab = 2
                 }
                 .frame(width: 230)
 

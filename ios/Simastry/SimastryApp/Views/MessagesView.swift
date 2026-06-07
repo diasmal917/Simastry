@@ -22,7 +22,7 @@ struct MessagesView: View {
             .task {
                 await viewModel.refreshInbox(showErrors: false)
             }
-            .sheet(item: $selectedMessage) { message in
+            .fullScreenCover(item: $selectedMessage) { message in
                 MessageDetailSheet(
                     message: message,
                     viewModel: viewModel
@@ -130,13 +130,10 @@ private struct MessageRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Zodiac glyph circle — serves as avatar in mock/local mode.
-            // When Supabase social profiles go live, replace with actual profile photos
-            // using ProfileImageView.
+        HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill((zodiacSign?.color ?? SimastryColor.gold).opacity(0.15))
+                    .fill((zodiacSign?.color ?? SimastryColor.gold).opacity(0.18))
                 Circle()
                     .stroke(
                         LinearGradient(
@@ -148,15 +145,15 @@ private struct MessageRow: View {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1.5
+                        lineWidth: message.isRead ? 0.8 : 1.6
                     )
                 Text(zodiacSign?.glyph ?? "\u{2726}")
-                    .font(.system(size: 18))
+                    .font(.system(size: 20))
                     .foregroundStyle(zodiacSign?.color ?? SimastryColor.gold)
             }
-            .frame(width: 42, height: 42)
+            .frame(width: 52, height: 52)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     HStack(spacing: 6) {
                         Text(message.companionName)
@@ -177,7 +174,7 @@ private struct MessageRow: View {
 
                     Text(message.timestamp.relativeDescription)
                         .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.deepMuted)
+                        .foregroundStyle(message.isRead ? SimastryColor.deepMuted : SimastryColor.gold)
                 }
 
                 Text(previewText)
@@ -188,13 +185,21 @@ private struct MessageRow: View {
             }
 
             if !message.isRead {
-                Circle()
-                    .fill(SimastryColor.gold)
-                    .frame(width: 8, height: 8)
+                Text("1")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(width: 20, height: 20)
+                    .background(SimastryColor.gold, in: Circle())
             }
         }
-        .padding(14)
-        .simastryGlass(cornerRadius: 16)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(SimastryColor.offWhite.opacity(0.07))
+                .frame(height: 0.5)
+                .padding(.leading, 64)
+        }
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(message.companionName). \(previewText). \(message.timestamp.relativeDescription). \(message.isRead ? "Read" : "Unread")")
@@ -301,45 +306,27 @@ private struct MessageDetailSheet: View {
                             discoveryConversationSection
                         } else {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text(message.content)
-                                    .font(SimastryFont.bodyLarge)
-                                    .foregroundStyle(SimastryColor.offWhite)
-                                    .lineSpacing(5)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(message.content)
+                                            .font(SimastryFont.bodyLarge)
+                                            .foregroundStyle(SimastryColor.offWhite)
+                                            .lineSpacing(5)
+                                            .fixedSize(horizontal: false, vertical: true)
+
+                                        Text(message.timestamp.relativeDescription)
+                                            .font(SimastryFont.captionSmall)
+                                            .foregroundStyle(SimastryColor.deepMuted)
+                                    }
+                                    .padding(14)
+                                    .background(SimastryColor.offWhite.opacity(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                                    Spacer(minLength: 44)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(20)
-                            .simastryGlass(cornerRadius: 20)
 
-                            VStack(spacing: 12) {
-                                Button {
-                                    HapticManager.buttonPress()
-                                    dismiss()
-                                    if let sign = zodiacSign {
-                                        viewModel.startPrediction(
-                                            for: sign,
-                                            question: "What will \(message.companionName) say next?",
-                                            conversationText: "\(message.companionName): \(message.content)"
-                                        )
-                                    } else {
-                                        viewModel.selectedTab = 3
-                                    }
-                                } label: {
-                                    HStack(spacing: 10) {
-                                        Image(systemName: "wand.and.stars")
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text("Reply with a Prediction")
-                                            .font(SimastryFont.labelLarge)
-                                    }
-                                    .foregroundStyle(SimastryColor.midnight)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(SimastryColor.gold, in: .capsule)
-                                }
-                                .buttonStyle(SpringPressStyle())
-                                .accessibilityLabel("Reply with a prediction for \(message.companionName)")
-
-                            }
+                            replyComposer
                         }
 
                         Spacer().frame(height: 40)
@@ -412,8 +399,6 @@ private struct MessageDetailSheet: View {
         } message: {
             Text("You won't see each other in Simastry anymore. This can't be undone.")
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
         .presentationBackground(SimastryColor.midnight)
     }
 
@@ -477,85 +462,12 @@ private struct MessageDetailSheet: View {
             .simastryGlass(cornerRadius: 20)
 
             VStack(spacing: 12) {
-                TextField("Reply with your own message...", text: $replyText, axis: .vertical)
-                    .font(SimastryFont.bodyMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .lineLimit(1...4)
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(SimastryColor.offWhite.opacity(0.06))
-                    )
-                    .accessibilityLabel("Type a reply message")
-                    .onChange(of: replyText) {
-                        if replyText.count > 500 { replyText = String(replyText.prefix(500)) }
-                    }
+                replyComposer
 
                 if replyText.count > 0 {
                     Text("\(replyText.count)/500")
                         .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.deepMuted)
-                }
-
-                HStack(spacing: 12) {
-                    if let sign = zodiacSign {
-                        Button {
-                            HapticManager.buttonPress()
-                            dismiss()
-                            let context = conversationMessages.isEmpty
-                                ? "\(message.companionName): \(message.content)"
-                                : conversationMessages
-                                    .map { "\($0.direction == .outgoing ? "You" : $0.companionName): \($0.content)" }
-                                    .joined(separator: "\n")
-                            viewModel.startPrediction(
-                                for: sign,
-                                question: "What should I say next?",
-                                conversationText: context
-                            )
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "sparkle.magnifyingglass")
-                                Text("Predict")
-                            }
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .simastryGlassPill()
-                        }
-                        .buttonStyle(SpringPressStyle())
-                        .accessibilityLabel("Predict reply for \(zodiacSign?.displayName ?? message.companionSign)")
-                    }
-
-                    Button {
-                        let outgoingText = replyText
-                        isSendingReply = true
-                        Task {
-                            let sent = await viewModel.sendDiscoveryReply(
-                                to: message.companionId,
-                                companionName: message.companionName,
-                                companionSign: message.companionSign,
-                                content: outgoingText
-                            )
-                            if sent {
-                                replyText = ""
-                            }
-                            isSendingReply = false
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "paperplane.fill")
-                            Text(isSendingReply ? "Sending..." : "Send")
-                        }
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.midnight)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(SimastryColor.gold, in: Capsule())
-                    }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel(isSendingReply ? "Sending reply" : "Send reply")
-                    .disabled(isSendingReply || replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -564,7 +476,7 @@ private struct MessageDetailSheet: View {
     private var messageMethodLayer: some View {
         MethodLayerPanel(
             title: "Conversation lens",
-            summary: "This thread stays anchored to message context and the companion's sign lens. Use Predict when you want a fuller chart-signal read before replying.",
+            summary: "This thread stays anchored to message context and the companion's sign lens, so replies feel personal without exposing private content.",
             signals: messageMethodSignals,
             footer: "Private messages are not exposed in notification previews.",
             accent: zodiacSign?.color ?? SimastryColor.gold
@@ -613,6 +525,70 @@ private struct MessageDetailSheet: View {
         )
 
         return signals
+    }
+
+    private var replyComposer: some View {
+        HStack(spacing: 10) {
+            TextField("Message", text: $replyText, axis: .vertical)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1...4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(SimastryColor.offWhite.opacity(0.07))
+                )
+                .onChange(of: replyText) {
+                    if replyText.count > 500 { replyText = String(replyText.prefix(500)) }
+                }
+
+            Button {
+                sendReply()
+            } label: {
+                Image(systemName: isSendingReply ? "ellipsis" : "arrow.up")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(width: 42, height: 42)
+                    .background(SimastryColor.gold, in: Circle())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel(isSendingReply ? "Sending reply" : "Send reply")
+            .disabled(isSendingReply || replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(.top, 4)
+    }
+
+    private func sendReply() {
+        let outgoingText = replyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !outgoingText.isEmpty else { return }
+
+        isSendingReply = true
+        Task {
+            let sent: Bool
+            if message.source == .discovery {
+                sent = await viewModel.sendDiscoveryReply(
+                    to: message.companionId,
+                    companionName: message.companionName,
+                    companionSign: message.companionSign,
+                    content: outgoingText
+                )
+            } else if let companion = viewModel.companions.first(where: { $0.id == message.companionId }) {
+                sent = await viewModel.recordCompanionInteraction(
+                    with: companion,
+                    title: "Message sent",
+                    subtitle: outgoingText
+                )
+            } else {
+                viewModel.showToast("Message saved", subtitle: "Your reply is ready for this thread.", isError: false)
+                sent = true
+            }
+
+            if sent {
+                replyText = ""
+            }
+            isSendingReply = false
+        }
     }
 }
 

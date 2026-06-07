@@ -883,12 +883,6 @@ struct ProfileView: View {
                             tint: SimastryColor.celestialBlue
                         )
                         usagePill(
-                            label: "Predictions",
-                            value: "\(viewModel.remainingWeeklyPredictions)",
-                            subtitle: "this week",
-                            tint: SimastryColor.risingViolet
-                        )
-                        usagePill(
                             label: "Companions",
                             value: "\(viewModel.companions.count)/\(viewModel.companionLimit)",
                             subtitle: "slots",
@@ -896,23 +890,10 @@ struct ProfileView: View {
                         )
                     }
 
-                    if viewModel.bonusPredictions > 0 {
-                        HStack(spacing: 8) {
-                            Image(systemName: "scope")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(SimastryColor.gold)
-                            Text("Bonus Predictions: \(viewModel.bonusPredictions) remaining")
-                                .font(SimastryFont.labelMedium)
-                                .foregroundStyle(SimastryColor.offWhite)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(SimastryColor.gold.opacity(0.08), in: .capsule)
-                    }
                 } else {
                     HStack(spacing: 10) {
                         unlimitedChip("Unlimited messages")
-                        unlimitedChip("Unlimited predictions")
+                        unlimitedChip("More companions")
                     }
                 }
             }

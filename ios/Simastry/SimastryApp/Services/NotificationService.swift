@@ -27,7 +27,7 @@ final class NotificationService {
         ("still here", "Your %@ lens may need a cleaner read before the next conversation."),
         ("still here", "A chart-signal check-in is waiting when you want it."),
         ("hey stranger", "A saved conversation lens may help you re-enter gently."),
-        ("still here", "You have a prediction draft ready when you're ready."),
+        ("still here", "You have a message thread ready when you want to talk it through."),
         ("hey stranger", "A lot can shift in tone after a few days away."),
         ("still here", "Your chart context is still here when you want to talk it through."),
         ("hey stranger", "This week may be worth reviewing through timing pressure."),
@@ -35,13 +35,13 @@ final class NotificationService {
     ]
 
     private let simulationMessages: [(title: String, body: String)] = [
-        ("just saying...", "that convo you've been overthinking? I can tell you how it'll go"),
-        ("just saying...", "wondering what they're going to text? I might know 👀"),
+        ("just saying...", "that convo you've been overthinking? let's make the next message cleaner"),
+        ("just saying...", "wondering how to answer? your chart lens can help"),
         ("hear me out", "you know that thing you want to say but haven't? let's practice"),
         ("just saying...", "hot take: you should probably text them first. here's how"),
-        ("hear me out", "before you send that text — let me tell you how they'll react"),
+        ("hear me out", "before you send that text — let's check the tone"),
         ("just saying...", "I know you're composing something in your head rn. let me help"),
-        ("hear me out", "that conversation you keep replaying? I can show you a better version"),
+        ("hear me out", "that conversation you keep replaying? let's find the better version"),
         ("just saying...", "you're overthinking it. come run it by me first"),
     ]
 
@@ -241,7 +241,7 @@ final class NotificationService {
     func scheduleUsageLimitReminder(remaining: Int, type: String) {
         let center = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
-        content.title = type == "messages" ? "Messages running low" : "Predictions running low"
+        content.title = "Messages running low"
         content.body = "You have \(remaining) \(type) left. Upgrade for unlimited access."
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://upsell"]

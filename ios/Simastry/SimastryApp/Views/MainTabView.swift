@@ -6,7 +6,10 @@ struct MainTabView: View {
     private var tabSelection: Binding<Int> {
         Binding(
             get: {
-                viewModel.selectedTab == 4 ? 3 : viewModel.selectedTab
+                if viewModel.selectedTab == 3 || viewModel.selectedTab == 4 {
+                    return 2
+                }
+                return viewModel.selectedTab
             },
             set: { newValue in
                 viewModel.selectedTab = newValue
@@ -24,14 +27,10 @@ struct MainTabView: View {
                 CompanionsView(viewModel: viewModel)
             }
 
-            Tab("Predict", systemImage: "sparkle.magnifyingglass", value: 3) {
-                SimulateView(viewModel: viewModel)
-            }
-
             Tab(value: 2) {
                 MessagesView(viewModel: viewModel)
             } label: {
-                Label("DMs", systemImage: "bubble.left.and.bubble.right.fill")
+                Label("Messages", systemImage: "message.fill")
                     .environment(\.symbolVariants, .fill)
             }
             .badge(viewModel.unreadMessageCount)
@@ -56,7 +55,7 @@ struct MainTabView: View {
     }
 
     private func normalizeSelection(_ tab: Int) {
-        guard tab == 4 else { return }
-        viewModel.selectedTab = 3
+        guard tab == 3 || tab == 4 else { return }
+        viewModel.selectedTab = 2
     }
 }

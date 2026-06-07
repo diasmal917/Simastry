@@ -19,10 +19,10 @@ private let onboardingPages: [OnboardingPage] = [
     ),
     OnboardingPage(
         id: 1,
-        icon: "wand.and.stars",
-        title: "Predict Their Reply",
-        subtitle: "Paste a real conversation and read\nit through chart signals",
-        accentColor: SimastryColor.risingViolet
+        icon: "message.fill",
+        title: "Message With Astrology",
+        subtitle: "Talk through real relationship moments\nwith chart-grounded companions",
+        accentColor: SimastryColor.celestialBlue
     ),
     OnboardingPage(
         id: 2,

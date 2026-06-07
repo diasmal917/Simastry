@@ -92,7 +92,7 @@ class AppViewModel {
     var predictionDraft: PredictionDraft?
     var referralInfo: ReferralInfo?
 
-    // MARK: - Bonus Predictions (consumable top-ups)
+    // MARK: - Legacy Consumable Top-Ups
     var bonusPredictions: Int = UserDefaults.standard.integer(forKey: "bonusPredictions") {
         didSet { UserDefaults.standard.set(bonusPredictions, forKey: "bonusPredictions") }
     }
@@ -431,7 +431,7 @@ class AppViewModel {
         case "messages":
             selectedTab = 2
         case "simulate":
-            selectedTab = 3
+            selectedTab = 2
         case "guides", "astropedia":
             selectedTab = 4
         case "profile":
@@ -624,29 +624,19 @@ class AppViewModel {
 
     func startPrediction(for companion: CompanionData, question: String? = nil, conversationText: String? = nil) {
         guard let sun = zodiacSign(from: companion.sunSign) else {
-            showToast("Missing sign", subtitle: "Add a Sun sign before starting a prediction.", isError: true)
+            showToast("Missing sign", subtitle: "Add a Sun sign before opening message guidance.", isError: true)
             return
         }
 
-        predictionDraft = PredictionDraft(
-            targetName: companion.name,
-            targetSunSign: sun,
-            targetMoonSign: zodiacSign(from: companion.moonSign),
-            targetRisingSign: zodiacSign(from: companion.risingSign),
-            question: question ?? "What will \(companion.name) say next?",
-            conversationText: conversationText
-        )
-        selectedTab = 3
+        _ = sun
+        predictionDraft = nil
+        selectedTab = 2
     }
 
     func startPrediction(for sign: ZodiacSign, question: String? = nil, conversationText: String? = nil) {
-        predictionDraft = PredictionDraft(
-            targetName: nil,
-            targetSunSign: sign,
-            question: question ?? "What would a \(sign.displayName) say next?",
-            conversationText: conversationText
-        )
-        selectedTab = 3
+        _ = sign
+        predictionDraft = nil
+        selectedTab = 2
     }
 
     func checkSubscriptionStatus() async {
@@ -2095,17 +2085,9 @@ extension AppViewModel {
 
         selectedTab = debugPreviewTab(from: arguments)
         if selectedTab == 3 {
-            predictionDraft = PredictionDraft(
-                targetName: companion.name,
-                targetSunSign: .sagittarius,
-                targetMoonSign: .cancer,
-                targetRisingSign: .libra,
-                question: "What will Nadia say next?",
-                conversationText: "Nadia: I need a little space tonight. It is not bad, I just need air.\nMaya: Okay, I can give you room. I just want to understand the tone."
-            )
-        } else {
-            predictionDraft = nil
+            selectedTab = 2
         }
+        predictionDraft = nil
 
         if selectedTab == 4 {
             guideFocusSign = .sagittarius

@@ -594,10 +594,10 @@ struct AstropediaView: View {
             ViewThatFits {
                 HStack(spacing: 12) {
                     nextStepButton(
-                        title: "Use in Simulate",
-                        subtitle: "Take this sign dynamic into prediction mode.",
-                        iconName: "wand.and.stars",
-                        accent: SimastryColor.risingViolet,
+                        title: "Open Messages",
+                        subtitle: "Take this sign dynamic into a conversation.",
+                        iconName: "message.fill",
+                        accent: SimastryColor.celestialBlue,
                         tabIndex: 2
                     )
 
@@ -612,10 +612,10 @@ struct AstropediaView: View {
 
                 VStack(spacing: 12) {
                     nextStepButton(
-                        title: "Use in Simulate",
-                        subtitle: "Take this sign dynamic into prediction mode.",
-                        iconName: "wand.and.stars",
-                        accent: SimastryColor.risingViolet,
+                        title: "Open Messages",
+                        subtitle: "Take this sign dynamic into a conversation.",
+                        iconName: "message.fill",
+                        accent: SimastryColor.celestialBlue,
                         tabIndex: 2
                     )
 

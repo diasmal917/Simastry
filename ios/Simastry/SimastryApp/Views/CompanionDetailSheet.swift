@@ -135,9 +135,9 @@ struct CompanionDetailSheet: View {
                 Button {
                     HapticManager.buttonPress()
                     dismiss()
-                    viewModel.startPrediction(for: companion)
+                    viewModel.selectedTab = 2
                 } label: {
-                    Label("Predict Reply", systemImage: "wand.and.stars")
+                    Label("Open Messages", systemImage: "message.fill")
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.midnight)
                         .frame(maxWidth: .infinity)

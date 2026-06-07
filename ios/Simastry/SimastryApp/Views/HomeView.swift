@@ -45,8 +45,6 @@ struct HomeView: View {
 
                 streakPill
 
-                predictReplyCard
-
                 if let companion = viewModel.primaryCompanion,
                    let companionSign = ZodiacSign(rawValue: companion.sunSign) {
                     communicationFocusCard(companionName: companion.name, companionSign: companionSign)
@@ -116,11 +114,6 @@ struct HomeView: View {
                                 .fill(SimastryColor.surface)
                                 .frame(width: 48, height: 48)
                         }
-
-                        // Predict card skeleton
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 120)
 
                         // Communication card skeleton
                         RoundedRectangle(cornerRadius: 22)
@@ -240,7 +233,7 @@ struct HomeView: View {
                 }
 
                 HStack(spacing: 6) {
-                    Text("Open \(companionName) DM")
+                    Text("Open \(companionName) message")
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.celestialBlue)
                     Image(systemName: "arrow.right")
@@ -262,86 +255,26 @@ struct HomeView: View {
         .offset(y: appeared ? 0 : 12)
     }
 
-    private var predictReplyCard: some View {
-        Button {
-            HapticManager.buttonPress()
-            viewModel.selectedTab = 3
-        } label: {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkle.magnifyingglass")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(SimastryColor.risingViolet)
-
-                        Text("Prediction")
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.risingViolet)
-                    }
-
-                    Text("What will they say next?")
-                        .font(SimastryFont.titleMedium)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    Text("Paste a conversation and read the next text through chart signals.")
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    HStack(spacing: 8) {
-                        signalPill("Message")
-                        signalPill("Sign lens")
-                        signalPill("Timing")
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(SimastryColor.risingViolet)
-                    .symbolRenderingMode(.hierarchical)
-            }
-            .padding(20)
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.14), cornerRadius: 22)
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 1)
-            }
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Predict their reply. Paste a conversation and read the next text through chart signals.")
-        .featureTip(
-            icon: "sparkles",
-            title: "Predict Their Reply",
-            body: "Paste a conversation and see which message context, sign lens, and placement signals drive the reading.",
-            tip: .predictFeature,
-            delay: 1.0
-        )
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 10)
-    }
-
     private var featureGrid: some View {
         let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
         return LazyVGrid(columns: columns, spacing: 12) {
             featureGridCard(
-                title: "DMs",
-                subtitle: "Message Nadia",
-                systemImage: "bubble.left.and.bubble.right.fill",
+                title: "Messages",
+                subtitle: "Chat with Nadia",
+                systemImage: "message.fill",
                 tint: SimastryColor.celestialBlue
             ) {
                 viewModel.selectedTab = 2
             }
 
             featureGridCard(
-                title: "Predict",
-                subtitle: "Test a reply",
-                systemImage: "wand.and.stars",
-                tint: SimastryColor.risingViolet
+                title: "Chart",
+                subtitle: "Your signals",
+                systemImage: "scope",
+                tint: SimastryColor.celestialBlue
             ) {
-                viewModel.selectedTab = 3
+                viewModel.selectedTab = 5
             }
 
             featureGridCard(
@@ -453,7 +386,7 @@ struct HomeView: View {
                     case "companions":
                         viewModel.selectedTab = 1
                     case "predict":
-                        viewModel.selectedTab = 3
+                        viewModel.selectedTab = 2
                     case "guides":
                         viewModel.selectedTab = 2
                     default:
