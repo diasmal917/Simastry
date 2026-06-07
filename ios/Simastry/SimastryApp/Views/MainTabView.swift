@@ -85,7 +85,6 @@ private struct PremiumBottomNavigation: View {
 
     private let rightItems: [PremiumNavigationItem] = [
         .messages,
-        .guides,
         .profile
     ]
 
@@ -383,7 +382,6 @@ private enum PremiumNavigationItem: Int, CaseIterable, Identifiable {
     case companions
     case predict
     case messages
-    case guides
     case profile
 
     var id: Int { rawValue }
@@ -394,7 +392,6 @@ private enum PremiumNavigationItem: Int, CaseIterable, Identifiable {
         case .companions: 1
         case .messages: 2
         case .predict: 3
-        case .guides: 4
         case .profile: 5
         }
     }
@@ -405,7 +402,6 @@ private enum PremiumNavigationItem: Int, CaseIterable, Identifiable {
         case .companions: "Cast"
         case .predict: "Predict"
         case .messages: "DMs"
-        case .guides: "Guides"
         case .profile: "Me"
         }
     }
@@ -416,7 +412,6 @@ private enum PremiumNavigationItem: Int, CaseIterable, Identifiable {
         case .companions: "Companions"
         case .predict: "Predict"
         case .messages: "Messages"
-        case .guides: "Guides"
         case .profile: "About me"
         }
     }
@@ -427,7 +422,6 @@ private enum PremiumNavigationItem: Int, CaseIterable, Identifiable {
         case .companions: "sparkles"
         case .predict: "sparkle"
         case .messages: "bubble.left.fill"
-        case .guides: "book.closed.fill"
         case .profile: "person.fill"
         }
     }
@@ -438,7 +432,6 @@ private enum PremiumNavigationItem: Int, CaseIterable, Identifiable {
         case .companions: SimastryColor.gold
         case .predict: SimastryColor.goldLight
         case .messages: SimastryColor.celestialBlue
-        case .guides: SimastryColor.risingViolet
         case .profile: SimastryColor.goldLight
         }
     }

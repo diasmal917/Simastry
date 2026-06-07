@@ -60,8 +60,6 @@ struct HomeView: View {
 
                 didYouKnowCard
 
-                savedGuidesHomeCard
-
                 if let companion = viewModel.primaryCompanion {
                     companionCard(companion)
                 }
@@ -212,8 +210,7 @@ struct HomeView: View {
 
         return Button {
             HapticManager.buttonPress()
-            viewModel.guideFocusSign = companionSign
-            viewModel.selectedTab = 4
+            viewModel.selectedTab = 2
         } label: {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
@@ -247,7 +244,7 @@ struct HomeView: View {
                 }
 
                 HStack(spacing: 6) {
-                    Text("Read full guide")
+                    Text("Open \(companionName) DM")
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.celestialBlue)
                     Image(systemName: "arrow.right")
@@ -335,12 +332,12 @@ struct HomeView: View {
 
         return LazyVGrid(columns: columns, spacing: 12) {
             featureGridCard(
-                title: "Guides",
-                subtitle: "What to say",
+                title: "DMs",
+                subtitle: "Message Nadia",
                 systemImage: "bubble.left.and.bubble.right.fill",
                 tint: SimastryColor.celestialBlue
             ) {
-                viewModel.selectedTab = 4
+                viewModel.selectedTab = 2
             }
 
             featureGridCard(
