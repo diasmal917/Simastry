@@ -19,7 +19,7 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: tabSelection) {
-            Tab("Home", systemImage: "house.fill", value: 0) {
+            Tab("Gram", systemImage: "camera.fill", value: 0) {
                 HomeView(viewModel: viewModel)
             }
 
