@@ -627,6 +627,25 @@ h3 {
   color: var(--muted);
 }
 
+.codex-job-progress {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(216, 181, 109, 0.42);
+  border-radius: 999px;
+  background: rgba(216, 181, 109, 0.1);
+  color: var(--gold-2);
+  padding: 0.32rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.codex-job-actions .primary-action {
+  border-color: rgba(216, 181, 109, 0.78);
+  background: rgba(216, 181, 109, 0.18);
+  color: var(--gold-2);
+  font-weight: 800;
+}
+
 .codex-job-paths {
   display: grid;
   gap: 0.35rem;

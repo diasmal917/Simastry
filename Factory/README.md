@@ -31,7 +31,7 @@ The dashboard is now a casting studio for the final 24:
    - `astrogram_01` through `astrogram_10`
 9. Export an app package when locked identities and approved slots are ready.
 
-Generation is Codex-assisted in this version. Use `Start 10 Astrogram Image Job` in Cast Studio, or `Add + start image job` in Candidate Library, to create the normal same-person, Instagram-like 10-photo job. Factory shows the full Codex prompt, the reference folder, and a dedicated output folder. After Codex saves images into that output folder, use `Refresh Job Results` to import them as candidates. This normal 10-photo job is separate from the Style Board.
+Generation is Codex-assisted in this version. Use `Create Codex Image Prompt` in Cast Studio, or `Add + create Codex prompt` in Candidate Library, to create the normal same-person, Instagram-like 10-photo job. Factory shows the full Codex prompt, the reference folder, exact filenames, and a dedicated output folder. After Codex saves images into that output folder, Factory auto-imports exact `astrogram-01.png` through `astrogram-10.png` files as candidates. `Refresh Job Results` remains available as a fallback. This normal 10-photo job is separate from the Style Board.
 
 Use `Generate style-board set` when you want one picture per style-board item. If the Style Board has 10 references, Factory creates 10 distinct prompt items: each one matches a single uploaded style picture or written style prompt rather than blending the whole board into one general style.
 

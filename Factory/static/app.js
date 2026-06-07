@@ -14,6 +14,7 @@ const state = {
   castingFilter: "all",
   detailTab: "candidates",
   characterReferencePreviewUrls: [],
+  jobPollers: new Map(),
   stats: null,
 };
 
@@ -78,6 +79,11 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function escapeSelector(value) {
+  if (window.CSS?.escape) return window.CSS.escape(String(value));
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
 function formatNumber(value) {
   return Number(value || 0).toLocaleString();
 }
@@ -111,6 +117,25 @@ function slotOptions(selected = "profile_avatar") {
   return appAssetSlots
     .map((slot) => `<option value="${slot}" ${slot === selected ? "selected" : ""}>${escapeHtml(slotLabel(slot))}</option>`)
     .join("");
+}
+
+function jobProgressLabel(jobOrPayload = {}) {
+  const expected = Number(jobOrPayload.expected || jobOrPayload.expected_image_count || 10);
+  const found = Number(jobOrPayload.found || jobOrPayload.found_expected_count || 0);
+  if (found >= expected) return `${expected}/${expected} imported`;
+  if (found > 0) return `${found}/${expected} images found`;
+  return "Waiting for images";
+}
+
+function stopJobPolling(jobId) {
+  const timer = state.jobPollers.get(jobId);
+  if (timer) window.clearInterval(timer);
+  state.jobPollers.delete(jobId);
+}
+
+function stopAllJobPolling() {
+  state.jobPollers.forEach((timer) => window.clearInterval(timer));
+  state.jobPollers.clear();
 }
 
 function characterMoveOptions(selectedCharacterId = "") {
@@ -336,7 +361,7 @@ function customCard(character) {
         <button type="button" data-upload-custom-references="${escapeHtml(character.id)}">Add references</button>
       </div>
       <div class="custom-card-actions">
-        <button type="button" data-generate-custom="${escapeHtml(character.id)}">Start 10 Astrogram Image Job</button>
+        <button type="button" data-generate-custom="${escapeHtml(character.id)}">Create Codex Image Prompt</button>
         <button type="button" data-generate-custom-style-board="${escapeHtml(character.id)}">Generate style-board set</button>
         <button type="button" data-archive-custom="${escapeHtml(character.id)}">Archive</button>
       </div>
@@ -547,11 +572,17 @@ function generationJobs(character) {
   return jobs
     .slice(0, 3)
     .map((job, index) => {
-      const promptText = job.prompt_text || "";
+      const promptText = job.codex_prompt_text || job.prompt_text || "";
       const codexReady = job.status === "ready_for_codex" || job.output_folder_path;
       if (index === 0 && codexReady) {
         return `
-          <article class="codex-job-panel" data-generation-job-id="${escapeHtml(job.id)}">
+          <article
+            class="codex-job-panel"
+            data-generation-job-id="${escapeHtml(job.id)}"
+            data-job-status="${escapeHtml(job.status || "ready_for_codex")}"
+            data-job-found="${Number(job.found_expected_count || 0)}"
+            data-job-expected="${Number(job.expected_image_count || 10)}"
+          >
             <div class="codex-job-header">
               <div>
                 <strong>Codex image job</strong>
@@ -559,12 +590,13 @@ function generationJobs(character) {
               </div>
               <small>${escapeHtml(job.id)}</small>
             </div>
+            <div class="codex-job-progress" data-job-progress-text>${escapeHtml(jobProgressLabel(job))}</div>
             <div class="codex-job-paths">
               <div><span>Output folder</span><code>${escapeHtml(job.output_folder_path || "")}</code></div>
               <div><span>Prompt file</span><code>${escapeHtml(job.prompt_pack_path || "")}</code></div>
             </div>
             <div class="codex-job-actions">
-              <button type="button" data-copy-job-prompt="${escapeHtml(job.id)}">Copy Codex Prompt</button>
+              <button class="primary-action" type="button" data-copy-job-prompt="${escapeHtml(job.id)}">Copy Prompt for Codex</button>
               <button type="button" data-scan-job-results="${escapeHtml(job.id)}">Refresh Job Results</button>
             </div>
             <textarea class="codex-prompt-text" readonly>${escapeHtml(promptText)}</textarea>
@@ -635,7 +667,7 @@ function characterDetailTemplate(character) {
     <section class="studio-block">
       <div class="section-heading-row">
         <h3>Generate And Import</h3>
-        <button type="button" data-generate-selected>Start 10 Astrogram Image Job</button>
+        <button type="button" data-generate-selected>Create Codex Image Prompt</button>
         <button type="button" data-generate-selected-style-board>Generate style-board set</button>
       </div>
       <div class="generation-tools">
@@ -745,6 +777,7 @@ async function selectCharacter(id) {
   });
   const character = await api.get(`/api/characters/${id}`);
   characterDetail.innerHTML = characterDetailTemplate(character);
+  syncVisibleJobPolling();
 }
 
 function openFullImage(url, title) {
@@ -801,11 +834,11 @@ async function generatePromptForCharacter(characterId, label = "character") {
     setResult("Select a character first.");
     return;
   }
-  setResult(`Starting 10 Astrogram image job for ${label}...`);
+  setResult(`Creating Codex image prompt for ${label}...`);
   const payload = await api.post(`/api/characters/${characterId}/generation-jobs`, {
     notes: "Codex-assisted 10 Astrogram image job.",
   });
-  setResult("Codex image job ready.", {
+  setResult("Codex image prompt ready.", {
     character: payload.character?.display_name || label,
     status: payload.job?.status,
     outputFolder: payload.job?.output_folder_path,
@@ -822,21 +855,74 @@ async function copyJobPrompt(button) {
     setResult("No prompt text found for this job.");
     return;
   }
-  await navigator.clipboard.writeText(promptText);
-  setResult("Codex prompt copied.");
+  try {
+    await navigator.clipboard.writeText(promptText);
+  } catch {
+    const textArea = panel?.querySelector(".codex-prompt-text");
+    textArea?.focus();
+    textArea?.select();
+    document.execCommand("copy");
+  }
+  setResult("Prompt copied. Paste it into Codex.");
 }
 
-async function scanJobResults(jobId) {
+function updateJobPanelProgress(panel, payload) {
+  if (!panel || !payload) return;
+  const found = Number(payload.found ?? payload.job?.found_expected_count ?? 0);
+  const expected = Number(payload.expected ?? payload.job?.expected_image_count ?? 10);
+  panel.dataset.jobFound = String(found);
+  panel.dataset.jobExpected = String(expected);
+  panel.dataset.jobStatus = payload.job?.status || panel.dataset.jobStatus || "ready_for_codex";
+  const progress = panel.querySelector("[data-job-progress-text]");
+  if (progress) progress.textContent = jobProgressLabel({ found, expected });
+}
+
+async function scanJobResults(jobId, options = {}) {
   if (!jobId) return;
-  setResult("Checking job output folder...");
+  const panel = options.panel || characterDetail.querySelector(`[data-generation-job-id="${escapeSelector(jobId)}"]`);
+  if (!options.silent) setResult("Checking job output folder...");
   const payload = await api.post(`/api/generation-jobs/${jobId}/scan-results`);
-  setResult("Job results refreshed.", {
-    found: payload.found,
-    imported: payload.imported,
-    skippedAlreadyImported: payload.skipped,
-    outputFolder: payload.output_folder,
+  updateJobPanelProgress(panel, payload);
+  const expected = Number(payload.expected || 10);
+  const found = Number(payload.found || 0);
+  if (!options.silent) {
+    setResult("Job results refreshed.", {
+      status: jobProgressLabel({ found, expected }),
+      found,
+      expected,
+      imported: payload.imported,
+      skippedAlreadyImported: payload.skipped,
+      outputFolder: payload.output_folder,
+    });
+  }
+  if (found >= expected) stopJobPolling(jobId);
+  if (payload.imported > 0 || found >= expected) await refreshStudioDetail();
+  return payload;
+}
+
+function syncVisibleJobPolling() {
+  const panels = [...characterDetail.querySelectorAll("[data-generation-job-id]")];
+  const visibleJobIds = new Set(panels.map((panel) => panel.dataset.generationJobId).filter(Boolean));
+  [...state.jobPollers.keys()].forEach((jobId) => {
+    if (!visibleJobIds.has(jobId)) stopJobPolling(jobId);
   });
-  await refreshStudioDetail();
+  panels.forEach((panel) => {
+    const jobId = panel.dataset.generationJobId;
+    const found = Number(panel.dataset.jobFound || 0);
+    const expected = Number(panel.dataset.jobExpected || 10);
+    updateJobPanelProgress(panel, { found, expected, job: { status: panel.dataset.jobStatus } });
+    if (!jobId || found >= expected || state.jobPollers.has(jobId)) return;
+    const timer = window.setInterval(() => {
+      const livePanel = characterDetail.querySelector(`[data-generation-job-id="${escapeSelector(jobId)}"]`);
+      if (!livePanel) {
+        stopJobPolling(jobId);
+        return;
+      }
+      scanJobResults(jobId, { silent: true, panel: livePanel }).catch(showError);
+    }, 3500);
+    state.jobPollers.set(jobId, timer);
+    scanJobResults(jobId, { silent: true, panel }).catch(showError);
+  });
 }
 
 async function generateStyleBoardForCharacter(characterId, label = "character") {
@@ -1072,7 +1158,7 @@ async function createCharacter(options = {}) {
     const promptPayload = await api.post(`/api/characters/${character.id}/generation-jobs`, {
       notes: "Custom candidate Codex-assisted 10 Astrogram image job.",
     });
-    setResult("Candidate added and Codex image job ready.", {
+    setResult("Candidate added and Codex image prompt ready.", {
       name: character.display_name,
       outputFolder: promptPayload.job?.output_folder_path,
       promptPack: promptPayload.job?.prompt_pack_path,

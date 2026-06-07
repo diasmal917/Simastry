@@ -42,6 +42,7 @@ APP_EXPORTS_DIR = WORKSPACE_DIR / "exports" / "app-assets"
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "").strip()
 
 APP_ASSET_SLOTS = ("profile_avatar", "card_portrait", *[f"astrogram_{index:02d}" for index in range(1, 11)])
+EXPECTED_ASTROGRAM_FILENAMES = tuple(f"astrogram-{index:02d}.png" for index in range(1, 11))
 CHARACTER_STATUSES = {"draft", "ready", "assigned", "imported", "reviewing", "approved", "blocked"}
 CASTING_STATUSES = {
     "needs_decision",
@@ -1383,11 +1384,29 @@ def generation_job_from_row(row: sqlite3.Row, include_prompt: bool = True) -> di
     prompt_path = Path(item.get("prompt_pack_path") or "")
     prompt_json_path = Path(item.get("prompt_json_path") or "")
     output_path = Path(item.get("output_folder_path") or "")
+    found_expected = [
+        filename
+        for filename in EXPECTED_ASTROGRAM_FILENAMES
+        if output_path.exists() and (output_path / filename).is_file()
+    ]
     item["prompt_text"] = prompt_path.read_text(encoding="utf-8") if include_prompt and prompt_path.exists() else ""
+    item["codex_prompt_text"] = ""
+    if include_prompt and prompt_json_path.exists():
+        try:
+            item["codex_prompt_text"] = json.loads(prompt_json_path.read_text(encoding="utf-8")).get("core_prompt", "")
+        except (json.JSONDecodeError, OSError):
+            item["codex_prompt_text"] = ""
     item["prompt_pack_exists"] = prompt_path.exists()
     item["prompt_json_exists"] = prompt_json_path.exists()
     item["output_folder_exists"] = output_path.exists()
     item["output_image_count"] = len(list_image_files(output_path)) if output_path.exists() else 0
+    item["expected_filenames"] = list(EXPECTED_ASTROGRAM_FILENAMES)
+    item["expected_image_count"] = len(EXPECTED_ASTROGRAM_FILENAMES)
+    item["found_expected_filenames"] = found_expected
+    item["found_expected_count"] = len(found_expected)
+    item["missing_expected_filenames"] = [
+        filename for filename in EXPECTED_ASTROGRAM_FILENAMES if filename not in set(found_expected)
+    ]
     return item
 
 
@@ -1923,74 +1942,110 @@ def build_generation_prompt_pack(character: dict[str, Any], job_id: str, output_
         for slot in APP_ASSET_SLOTS
     ]
     cast_snapshot = cast_distinction_snapshot()
-    same_person_prompt = (
-        f"Use GPT Image 2 to generate 10 individual realistic pictures of the same fictional adult person: "
-        f"{character['display_name']}. {presentation_direction} "
-        f"Signs: {signs or 'not assigned'}. App role: {role}. "
-        "Use the identity reference images as the face, hair, body, age-read, and styling anchor when provided. "
-        "The results should feel like realistic photos this person would post on Instagram or use in a dating app, "
-        "with a consistent identity across all ten images. "
-        f"Visual notes: {visual_notes}. "
-        f"{IMAGE_REALISM_STANDARD} {POSE_VARIATION_STANDARD} {CAST_DISTINCTION_STANDARD} "
-        "Make every output a separate image of the same person, not a collage. No text, logo, watermark, nudity, explicit pose, "
-        "zodiac costume, UI screenshot, or celebrity resemblance. "
-        "Create images that can fill: profile avatar, card portrait, and ten Astrogram feed slots."
-    )
     photo_briefs = [
-        "close profile/avatar crop with relaxed eye contact and natural phone-photo texture",
-        "vertical 2:3 card portrait, upper body clear, phone-photo realistic, not cinematic",
-        "mirror or elevator selfie with imperfect framing and a changed outfit",
-        "friend-taken walking or street candid from several feet away",
-        "cafe or dinner-table candid with natural hands and believable social setting",
-        "at-home ordinary photo with comfortable styling and off-center framing",
-        "outdoor lifestyle photo with wider crop and real background detail",
-        "night-out flash or low-light photo with phone-camera grain",
-        "hobby/personality photo where face is not centered and hands are doing something",
-        "travel, sidewalk, car, or balcony candid with a different angle, expression, and outfit",
+        "close profile/avatar crop",
+        "vertical card portrait",
+        "mirror or elevator selfie",
+        "walking or street candid",
+        "cafe or dinner-table candid",
+        "at-home ordinary photo",
+        "outdoor lifestyle photo",
+        "night-out flash or low-light photo",
+        "hobby/personality photo with hands doing something",
+        "travel, sidewalk, car, or balcony candid",
     ]
+    file_briefs = [
+        {"filename": filename, "brief": brief}
+        for filename, brief in zip(EXPECTED_ASTROGRAM_FILENAMES, photo_briefs)
+    ]
+    identity_reference_images = [
+        {
+            "path": str(Path(reference.get("local_path", "")).resolve()),
+            "original_filename": reference.get("original_filename") or reference.get("name", ""),
+            "display_name": reference.get("name", ""),
+        }
+        for reference in character.get("references", [])
+        if reference.get("local_path")
+    ]
+    identity_reference_lines = [
+        f"{index}. {item['path']}"
+        + (f" (original: {item['original_filename']})" if item.get("original_filename") else "")
+        for index, item in enumerate(identity_reference_images, start=1)
+    ]
+    codex_prompt_lines = [
+        "Codex, run this Factory image job.",
+        "",
+        f"Character: {character['display_name']}",
+        f"Factory character ID: {character['id']}",
+        f"Signs: {signs or 'not assigned'}",
+        f"Presentation note: {presentation_direction}",
+        f"App role: {role}",
+        f"Visual notes: {visual_notes}",
+        "",
+        f"Use identity reference images from this folder: {identity_dir}",
+        "",
+        "Identity reference images:",
+        *identity_reference_lines,
+        "",
+        "Use all listed identity reference images together as the identity anchor. Preserve the same face, hair, age-read, body type, and overall person identity across all 10 outputs.",
+        f"Save files into this output folder: {output_dir}",
+        "",
+        "Generate 10 separate realistic Astrogram-style images of the same fictional adult companion.",
+        "Keep the same face, hair, age-read, body type, and identity from the references across all 10 images.",
+        "Make the images look like realistic Instagram/iPhone photos, not fashion editorials or AI influencer portraits.",
+        "",
+        "Use these exact filenames and image briefs:",
+        *[
+            f"{index}. {item['filename']} - {item['brief']}"
+            for index, item in enumerate(file_briefs, start=1)
+        ],
+        "",
+        "Avoid collage, text, watermark, zodiac costume, celebrity resemblance, nudity, explicit posing, plastic skin, "
+        "perfect symmetry, cinematic fashion lighting, and repeated same pose/outfit/angle.",
+        "",
+        f"{IMAGE_REALISM_STANDARD}",
+        f"{POSE_VARIATION_STANDARD}",
+        f"{CAST_DISTINCTION_STANDARD}",
+        "",
+        "After saving the files, report which images were created.",
+    ]
+    same_person_prompt = "\n".join(codex_prompt_lines)
     prompt_json = {
         "job_id": job_id,
         "status": "ready_for_codex",
         "character_id": character["id"],
         "display_name": character["display_name"],
+        "signs": signs or "not assigned",
         "identity_reference_folder": str(identity_dir),
         "identity_reference_count": reference_count,
+        "identity_reference_images": identity_reference_images,
         "output_folder": str(output_dir),
+        "expected_filenames": list(EXPECTED_ASTROGRAM_FILENAMES),
         "required_slots": slots,
         "missing_slots": missing_slots,
         "core_prompt": same_person_prompt,
-        "photo_briefs": photo_briefs,
+        "photo_briefs": file_briefs,
         "cast_distinction_snapshot": cast_snapshot,
     }
     markdown_lines = [
-        f"# Simastry generation job - {character['display_name']}",
+        f"# Codex Factory image job - {character['display_name']}",
         "",
         f"Job ID: `{job_id}`",
         "Status: `ready_for_codex`",
         "",
-        "## Codex Instruction",
+        "## Copy This Prompt Into Codex",
         "",
-        "Use the reference images below and generate 10 separate Astrogram-style images for this same character. "
-        "Save the completed image files into the output folder exactly as regular image files. Do not call an image API from Factory.",
+        same_person_prompt,
         "",
-        "## Attach Before Generating",
+        "## Factory Tracking",
         "",
         f"- Identity references: `{identity_dir}` ({reference_count} saved)",
         f"- Output folder: `{output_dir}`",
-        "",
-        "Use identity references to keep the person consistent. This standard 10-photo pack is separate from the Style Board.",
+        f"- Exact filenames: {', '.join(EXPECTED_ASTROGRAM_FILENAMES)}",
         "",
         "## Required App Slots",
         "",
         *[f"- `{slot['slot_key']}` - {slot['label']} - {slot['need']}" for slot in slots],
-        "",
-        "## Main GPT Image 2 Prompt",
-        "",
-        same_person_prompt,
-        "",
-        "## Ask For These 10 Photos",
-        "",
-        *[f"{index}. {brief}" for index, brief in enumerate(photo_briefs, start=1)],
         "",
         "## Cast Distinction Check",
         "",
@@ -2259,7 +2314,8 @@ def scan_generation_job_results(job_id: str) -> dict[str, Any]:
     if not output_dir or not str(resolved_output).startswith(str(workspace_root)):
         raise ValueError("Generation job output folder is missing or outside the Factory workspace.")
     output_dir.mkdir(parents=True, exist_ok=True)
-    image_files = list_image_files(output_dir)
+    expected_paths = [output_dir / filename for filename in EXPECTED_ASTROGRAM_FILENAMES]
+    image_files = [path for path in expected_paths if path.is_file()]
     directories = ensure_character_directories(character_id)
     timestamp = now_iso()
     imported: list[dict[str, Any]] = []
@@ -2310,7 +2366,11 @@ def scan_generation_job_results(job_id: str) -> dict[str, Any]:
                     "image_kind": "candidate",
                 }
             )
-        new_status = "imported" if imported else job.get("status") or "ready_for_codex"
+        new_status = (
+            "imported"
+            if imported or len(image_files) >= len(EXPECTED_ASTROGRAM_FILENAMES)
+            else job.get("status") or "ready_for_codex"
+        )
         conn.execute(
             """
             UPDATE character_generation_jobs
@@ -2335,6 +2395,9 @@ def scan_generation_job_results(job_id: str) -> dict[str, Any]:
         "character": get_character(character_id),
         "output_folder": str(output_dir),
         "found": len(image_files),
+        "expected": len(EXPECTED_ASTROGRAM_FILENAMES),
+        "found_filenames": [path.name for path in image_files],
+        "missing_filenames": [path.name for path in expected_paths if not path.is_file()],
         "imported": len(imported),
         "skipped": len(skipped),
         "items": imported,
