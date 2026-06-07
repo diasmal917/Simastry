@@ -1,0 +1,19 @@
+{
+  "name": "Simastry Factory",
+  "short_name": "Factory",
+  "description": "Mobile casting studio for locking the final 24 Simastry companions.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101113",
+  "theme_color": "#101113",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

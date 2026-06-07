@@ -2,166 +2,149 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Factory</title>
-    <link rel="stylesheet" href="/style.css" />
+    <meta name="theme-color" content="#101113" />
+    <meta name="apple-mobile-web-app-title" content="Factory" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="/style.css?v=codex-job-20260607a" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Simastry subproject</p>
           <h1>Factory</h1>
+          <p>Identity-first studio for locking the final 24 Simastry companions.</p>
         </div>
         <div class="topbar-actions">
-          <button id="seedBtn" type="button">Seed catalog</button>
-          <button id="syncAppsBtn" type="button">Sync Simastry apps</button>
-          <button id="linearBtn" type="button">Build Linear plan</button>
-          <button id="taskBtn" type="button">Draft Slack updates</button>
-          <button id="pushSlackBtn" type="button">Push Slack assignments</button>
-          <button id="monitorSlackBtn" type="button">Monitor Slack</button>
-          <button id="scanBtn" type="button">Scan folders</button>
-          <a class="button-link" href="/api/export/catalog.csv">Export CSV</a>
+          <button id="importApprovedAssetsBtn" type="button">Refresh pictures</button>
+          <button id="exportAppAssetsBtn" type="button">Export app package</button>
         </div>
       </header>
 
-      <section class="stats-grid" id="statsGrid" aria-live="polite"></section>
+      <nav class="tab-bar" aria-label="Factory sections">
+        <button class="tab-button active" type="button" data-tab-target="castTab">Cast Studio</button>
+        <button class="tab-button" type="button" data-tab-target="customTab">Candidate Library</button>
+      </nav>
 
-      <section class="factory-panel app-sync-panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Simastry app sync</h2>
-            <p>Factory reads the website and Expo prototype to identify app-facing characters that already exist.</p>
-          </div>
-        </div>
-        <div class="app-sync-grid" id="appSyncGrid">
-          <div class="path-box">Run Simastry app sync to connect existing characters.</div>
+      <section class="tab-panel active" id="castTab">
+        <section class="cast-summary" id="statsGrid" aria-live="polite"></section>
+
+        <div class="cast-layout">
+          <section class="factory-panel cast-panel">
+            <div class="panel-heading compact-heading">
+              <div>
+                <h2>Starter 24</h2>
+                <p id="characterCount">Loading...</p>
+              </div>
+            </div>
+            <div class="studio-filter-bar" id="castingFilterBar"></div>
+            <div class="character-gallery" id="characterGallery"></div>
+          </section>
+
+          <section class="factory-panel detail-surface" id="characterDetail">
+            <p class="empty-state">Select a companion to review its identity, images, and next generation step.</p>
+          </section>
         </div>
       </section>
 
-      <section class="factory-panel visual-production-panel">
-        <div class="panel-heading">
-          <div>
-            <h2>ChatGPT visual production</h2>
-            <p>Tracks companion image prompt sessions, reviews, and approvals created by the internal ChatGPT app.</p>
-          </div>
-        </div>
-        <div class="visual-session-grid" id="visualSessionsGrid">
-          <div class="path-box">Loading ChatGPT visual production sessions…</div>
-        </div>
-      </section>
-
-      <section class="factory-panel slack-assignment-panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Slack assignments</h2>
-            <p>Factory posts daily worker tasks to Slack and monitors assignment threads for completion signals.</p>
-          </div>
-        </div>
-        <div class="slack-assignment-grid" id="slackAssignmentGrid">
-          <div class="path-box">No Slack assignments loaded yet.</div>
-        </div>
-      </section>
-
-      <section class="factory-panel reference-panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Style references</h2>
-            <p>Upload examples of the realistic dating-app and Instagram look you want the companion photos to follow.</p>
-          </div>
-        </div>
-        <div class="reference-controls">
-          <label class="file-picker">
-            Reference images
-            <input id="referenceInput" type="file" accept="image/*" multiple />
-          </label>
-          <button id="uploadReferencesBtn" type="button">Upload references</button>
-          <div class="reference-path" id="referencePath">Loading style-board folder…</div>
-        </div>
-        <div class="reference-grid" id="referenceGrid"></div>
-      </section>
-
-      <section class="factory-panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Batch builder</h2>
-            <p>Phase one defaults to Starter 24: female and male hero companions for each zodiac sign.</p>
-          </div>
-        </div>
-        <div class="batch-controls">
-          <label>
-            Scope
-            <select id="batchScope">
-              <option value="starter">Starter 24</option>
-              <option value="all">All 3,456</option>
-            </select>
-          </label>
-          <label>
-            Asset type
-            <select id="batchKind">
-              <option value="photo-pack">10-photo same-person pack</option>
-              <option value="card">Card portrait</option>
-              <option value="profile">Astrogram profile</option>
-              <option value="social-photo">Astrogram photo</option>
-              <option value="video-brief">Video brief</option>
-            </select>
-          </label>
-          <label>
-            Pull from
-            <select id="batchStatus">
-              <option value="active">Active starter list</option>
-              <option value="todo">Todo</option>
-              <option value="queued">Queued</option>
-              <option value="generated">Generated</option>
-              <option value="reviewed">Reviewed</option>
-            </select>
-          </label>
-          <label>
-            Batch size
-            <input id="batchCount" type="number" min="1" max="500" value="24" />
-          </label>
-          <button id="batchBtn" type="button">Create batch</button>
-        </div>
-        <div class="result-box" id="resultBox">Ready.</div>
-      </section>
-
-      <section class="companion-layout">
-        <div class="factory-panel list-panel">
-          <div class="panel-heading compact">
+      <section class="tab-panel" id="customTab" hidden>
+        <section class="factory-panel custom-panel">
+          <div class="panel-heading compact-heading">
             <div>
-              <h2>Companions</h2>
-              <p id="listCount">Loading catalog…</p>
+              <h2>Upload Candidate</h2>
+              <p>Create custom candidates from multiple reference images, then generate or consolidate them into the final 24.</p>
             </div>
           </div>
-          <div class="filters">
-            <input id="searchInput" type="search" placeholder="Search name, id, or sign" />
-            <select id="scopeFilter">
-              <option value="starter">Starter 24</option>
-              <option value="">All companions</option>
-            </select>
-            <select id="statusFilter">
-              <option value="">All statuses</option>
-              <option value="todo">Todo</option>
-              <option value="queued">Queued</option>
-              <option value="generated">Generated</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="approved">Approved</option>
-              <option value="blocked">Blocked</option>
-            </select>
-            <select id="genderFilter">
-              <option value="">All genders</option>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
-          </div>
-          <div class="companion-list" id="companionList"></div>
-        </div>
 
-        <aside class="factory-panel detail-panel" id="detailPanel">
-          <p class="empty-state">Select a companion to inspect its identity, prompt, folder, and review state.</p>
-        </aside>
+          <div class="custom-form">
+            <label>
+              Name
+              <input id="characterNameInput" type="text" placeholder="Name" />
+            </label>
+            <label>
+              Sign
+              <select id="characterSignInput">
+                <option value="">Optional</option>
+                <option>Aries</option>
+                <option>Taurus</option>
+                <option>Gemini</option>
+                <option>Cancer</option>
+                <option>Leo</option>
+                <option>Virgo</option>
+                <option>Libra</option>
+                <option>Scorpio</option>
+                <option>Sagittarius</option>
+                <option>Capricorn</option>
+                <option>Aquarius</option>
+                <option>Pisces</option>
+              </select>
+            </label>
+            <label>
+              Character pictures
+              <input id="characterReferenceInput" type="file" accept="image/*" multiple />
+            </label>
+            <div class="upload-preview-grid wide-field" id="characterReferencePreview" aria-live="polite"></div>
+            <label class="wide-field">
+              Notes
+              <textarea id="characterNotesInput" rows="3" placeholder="Face, hair, style, must-keep details"></textarea>
+            </label>
+            <button id="createCharacterBtn" type="button">Add candidate</button>
+            <button id="createAndGenerateCharacterBtn" type="button">Add + create Codex prompt</button>
+          </div>
+        </section>
+
+        <section class="factory-panel custom-library-panel">
+          <div class="panel-heading compact-heading">
+            <div>
+              <h2>Candidate Library</h2>
+              <p id="customCharacterCount">None yet.</p>
+            </div>
+          </div>
+          <div class="custom-gallery" id="customGallery"></div>
+        </section>
+
+        <section class="factory-panel reference-panel">
+          <div class="panel-heading compact-heading">
+            <div>
+              <h2>Style Board</h2>
+              <p>Reusable photo style guidance for every generated companion set.</p>
+            </div>
+          </div>
+          <div class="style-prompt-form">
+            <label>
+              Style prompt
+              <textarea id="stylePromptInput" rows="3" placeholder="Example: realistic iPhone photos, natural daylight, dating-app casual, varied settings, no cinematic polish"></textarea>
+            </label>
+            <button id="addStylePromptBtn" type="button">Add style prompt</button>
+          </div>
+          <div class="reference-controls">
+            <label>
+              Style pictures
+              <input id="referenceInput" type="file" accept="image/*" multiple />
+            </label>
+            <button id="uploadReferencesBtn" type="button">Upload style pictures</button>
+          </div>
+          <div class="style-prompt-list" id="stylePromptList"></div>
+          <div class="reference-grid" id="referenceGrid"></div>
+        </section>
       </section>
+
+      <dialog class="image-dialog" id="imageDialog">
+        <form method="dialog">
+          <button class="dialog-close" type="submit" aria-label="Close">Close</button>
+        </form>
+        <img id="fullImage" alt="" />
+        <p id="fullImageCaption"></p>
+      </dialog>
+
+      <div class="result-box" id="resultBox">Ready.</div>
     </main>
-    <script src="/app.js"></script>
+    <script src="/app.js?v=codex-job-20260607a"></script>
   </body>
 </html>

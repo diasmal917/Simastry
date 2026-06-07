@@ -1,32 +1,51 @@
 # Factory
 
-Factory is a Simastry subproject for preparing and tracking the 3,456 companion assets:
+Factory is a Simastry subproject for locking and producing the final 24 companion identities:
 
 - 1,728 Sun/Moon/Rising combinations
 - male and female versions of each
 - a Starter 24 phase for female and male hero companions for each zodiac sign
-- a style-board upload area for visual references
-- local folders for every companion
+- an identity-first Cast Studio for app-facing companions
+- a Candidate Library for custom replacement identities
+- a style-board area for reusable picture references and written style prompts
+- local folders for approved images, candidates, references, and prompt packs
 - a SQLite database as the source of truth
-- browser dashboard for prompt batches, imports, review, and status
+- browser dashboard for judging identities, starting Codex-assisted image jobs, uploading candidates, swapping approved slots, consolidating duplicates, and exporting app packages
 
-The factory does not automate image generation or bypass account limits. It prepares controlled batches and gives you a place to import generated files.
+The factory does not call an image API or bypass account limits. It prepares Codex-ready image jobs, tracks output folders, and gives you a place to import generated files.
 
-## ChatGPT Visual Production App
+## Main Workflow
 
-The internal ChatGPT app lives in:
+The dashboard is now a casting studio for the final 24:
+
+1. Review the `Cast Studio` board and lock identities before treating assets as complete.
+2. Use casting states: `needs_decision`, `locked`, `needs_better_photos`, `replace_identity`, `consolidate_duplicate`, and `archived`.
+3. Click a profile to manage its references, candidates, approved app slots, rejected images, archived versions, and prompt packs.
+4. Use the red hover trash control to move a picture out of approved and into that character's rejected tab.
+5. Upload generated candidates, promote them into app slots, or replace a slot directly with an upload.
+6. Use `Candidate Library` to add custom replacement identities from one or more reference pictures.
+7. Consolidate duplicate/custom candidates into the winning app-facing companion instead of deleting them.
+8. Keep each final companion focused on the required app slots:
+   - `profile_avatar`
+   - `card_portrait`
+   - `astrogram_01` through `astrogram_10`
+9. Export an app package when locked identities and approved slots are ready.
+
+Generation is Codex-assisted in this version. Use `Create Codex Image Prompt` in Cast Studio, or `Add + create Codex prompt` in Candidate Library, to create the normal same-person, Instagram-like 10-photo job. Factory shows the full Codex prompt, the reference folder, exact filenames, and a dedicated output folder. After Codex saves images into that output folder, Factory auto-imports exact `astrogram-01.png` through `astrogram-10.png` files as candidates. `Refresh Job Results` remains available as a fallback. This normal 10-photo job is separate from the Style Board.
+
+Use `Generate style-board set` when you want one picture per style-board item. If the Style Board has 10 references, Factory creates 10 distinct prompt items: each one matches a single uploaded style picture or written style prompt rather than blending the whole board into one general style.
+
+After importing generated candidates, rate each picture and add feedback notes. Future style-board prompt packs summarize high-rated outputs to reinforce and low-rated outputs to avoid.
+
+Use `Import approved pictures` to pull already-approved portraits and Astrogram photos from the existing Factory review folders and Expo prototype assets into the managed character gallery. The import is safe to run repeatedly: it fills empty approved slots and does not overwrite slots that already have an approved picture. Bulk import focuses on visible app pictures; identity references can still be uploaded from each character detail page.
+
+Factory does not write approved images directly into the Swift, Expo, or website asset folders in this version. Use `Export app package` to create a manifest, approved-image folder, missing-slot report, and casting-status report under:
 
 ```text
-chatgpt-apps/companion-image-factory/
+workspace/exports/app-assets/
 ```
 
-It guides teammates through realistic, emotionally magnetic companion image production and logs sessions back into Factory. The app does not generate images through an API or bypass ChatGPT account limits. Teammates use ChatGPT Images directly, then record prompt drafts, generated candidates, and review decisions in Factory.
-
-Factory stores that work in SQLite and mirrors session artifacts to:
-
-```text
-workspace/visual-production/
-```
+Generation jobs are manual. They create prompt packs for ChatGPT Images / GPT Image 2 and track the work locally; they do not call an image API.
 
 ## Start
 
@@ -39,6 +58,26 @@ Then open:
 ```text
 http://127.0.0.1:8765
 ```
+
+## iPhone / Mobile Web App
+
+Factory can run as a mobile-friendly local web app from your Mac. Use this when you want to review, upload, reject, promote, and lock characters from your iPhone.
+
+Start mobile mode on the Mac:
+
+```bash
+Factory/bin/launch-factory-mobile
+```
+
+The script opens Factory on the Mac and prints an iPhone URL like:
+
+```text
+http://192.168.1.23:8765/
+```
+
+Open that URL in Safari on the iPhone while the iPhone and Mac are on the same trusted Wi-Fi network. In Safari, use Share -> Add to Home Screen to make it feel like a small app.
+
+Mobile mode binds Factory to the local network. Use it on trusted Wi-Fi only, and stop the server when you are done if you do not want other devices on the same network to see it.
 
 ## Mac Icon
 
@@ -73,29 +112,21 @@ workspace/
       messages/
       review/
   batches/
+  characters/
+    char-custom-.../
+      profile.json
+      references/
+      candidates/
+      approved/
+      generation-jobs/
+      rejected/
   imports/
-  cloud-drop/
-    delegate-1/
-    delegate-2/
-  app-sync/
-  daily-tasks/
-  linear/
+  exports/
+    app-assets/
   references/
     style-board/
+    style-prompts.json
 ```
-
-## Batch Workflow
-
-1. Upload realistic dating-app or Instagram-style references into `Style references`.
-2. Keep the dashboard scope on `Starter 24`.
-3. Create a `10-photo same-person pack` batch of 24.
-4. Use `workspace/batches/<batch-id>/prompt_sheet.md` as the daily GPT generation queue.
-5. Ask GPT Image 2 to generate 10 individual images for each companion prompt.
-6. Save finished files into the assigned cloud folder or `workspace/imports/<companion-id>/`.
-7. Press `Scan folders` in the dashboard.
-8. Review and approve the first 24 before expanding to the full catalog.
-
-Import scanning copies files into the correct companion folder. It does not delete your import files.
 
 ## Image Realism Standard
 
@@ -163,44 +194,3 @@ For every companion prompt and review:
 - add more blonde men and blonde women across future companions when identity references allow it; do not override an already-approved dark-haired identity just to make a companion blonde
 
 The goal is not generic diversity. The goal is a cast where each person feels specific enough to remember after one screen.
-
-## Delegates
-
-The Starter 24 are marked as existing characters. Female starters are initially assigned to `Delegate 1`; male starters are initially assigned to `Delegate 2`. You can change the delegate name, Slack handle or channel, target picture count, cloud folder, and character brief from each companion detail panel.
-
-Use `Upload character references` inside a companion detail panel when you already have that person's identity. Those images live in that companion's `references/identity/` folder and are included in future prompt sheets.
-
-`Draft Slack updates` creates local Slack-ready task drafts and prompt files in:
-
-```text
-workspace/daily-tasks/<date>/
-```
-
-`Push Slack assignments` posts those daily task packets to the assigned Slack user or channel when `SLACK_BOT_TOKEN` is configured. `Monitor Slack` checks posted assignment threads for worker replies and marks the assignment as `in_progress` or `worker_reported_done` when replies include completion language like "done", "complete", "uploaded", or "finished".
-
-Slack setup:
-
-```bash
-export SLACK_BOT_TOKEN=xoxb-your-token
-python3 server.py --port 8765
-```
-
-Delegate Slack targets can be a Slack channel ID, user ID, `#channel`, `@user`, or a Slack mention copied from Slack. Factory stores posted assignment metadata in SQLite so the dashboard can track message status and latest worker replies.
-
-## Simastry Apps And Linear
-
-`Sync Simastry apps` scans the local website and Expo prototype to identify the app-facing zodiac characters that already exist. Those characters are matched back to the Starter 24 by sign and saved in:
-
-```text
-workspace/app-sync/app_characters.json
-```
-
-The Swift iOS app currently creates companions dynamically through Supabase, so Factory treats the website and Expo cast as the fixed existing-character source.
-
-`Build Linear plan` creates local Linear-ready issue drafts in:
-
-```text
-workspace/linear/<date>/
-```
-
-Factory does not post to Linear automatically. The drafts are meant to become production tickets once a Linear API key or manual import workflow is approved.

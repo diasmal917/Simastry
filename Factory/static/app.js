@@ -1,20 +1,55 @@
+const castingStates = [
+  "needs_decision",
+  "locked",
+  "needs_better_photos",
+  "replace_identity",
+  "consolidate_duplicate",
+  "archived",
+];
+
 const state = {
-  companions: [],
-  selectedId: null,
-  searchTimer: null,
+  characters: [],
+  customCharacters: [],
+  selectedCharacterId: null,
+  castingFilter: "all",
+  detailTab: "candidates",
+  characterReferencePreviewUrls: [],
+  jobPollers: new Map(),
+  stats: null,
 };
+
+const appAssetSlots = [
+  "profile_avatar",
+  "card_portrait",
+  "astrogram_01",
+  "astrogram_02",
+  "astrogram_03",
+  "astrogram_04",
+  "astrogram_05",
+  "astrogram_06",
+  "astrogram_07",
+  "astrogram_08",
+  "astrogram_09",
+  "astrogram_10",
+];
 
 const statsGrid = document.querySelector("#statsGrid");
 const resultBox = document.querySelector("#resultBox");
-const companionList = document.querySelector("#companionList");
-const detailPanel = document.querySelector("#detailPanel");
-const listCount = document.querySelector("#listCount");
+const characterCount = document.querySelector("#characterCount");
+const customCharacterCount = document.querySelector("#customCharacterCount");
+const characterGallery = document.querySelector("#characterGallery");
+const castingFilterBar = document.querySelector("#castingFilterBar");
+const customGallery = document.querySelector("#customGallery");
+const characterDetail = document.querySelector("#characterDetail");
 const referenceGrid = document.querySelector("#referenceGrid");
-const referencePath = document.querySelector("#referencePath");
 const referenceInput = document.querySelector("#referenceInput");
-const appSyncGrid = document.querySelector("#appSyncGrid");
-const visualSessionsGrid = document.querySelector("#visualSessionsGrid");
-const slackAssignmentGrid = document.querySelector("#slackAssignmentGrid");
+const stylePromptInput = document.querySelector("#stylePromptInput");
+const stylePromptList = document.querySelector("#stylePromptList");
+const characterReferenceInput = document.querySelector("#characterReferenceInput");
+const characterReferencePreview = document.querySelector("#characterReferencePreview");
+const imageDialog = document.querySelector("#imageDialog");
+const fullImage = document.querySelector("#fullImage");
+const fullImageCaption = document.querySelector("#fullImageCaption");
 
 const api = {
   async get(path) {
@@ -44,280 +79,117 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function setResult(message, payload) {
-  resultBox.textContent = payload ? `${message}\n${JSON.stringify(payload, null, 2)}` : message;
+function escapeSelector(value) {
+  if (window.CSS?.escape) return window.CSS.escape(String(value));
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 }
 
 function formatNumber(value) {
   return Number(value || 0).toLocaleString();
 }
 
-async function loadStats() {
-  const stats = await api.get("/api/stats");
-  const starterReady = (stats.starter_generated || 0) + (stats.starter_reviewed || 0) + (stats.starter_approved || 0);
-  const cards = [
-    ["Starter", stats.starter_total],
-    ["Complete", stats.starter_complete],
-    ["Needs work", stats.starter_incomplete],
-    ["Assigned", stats.starter_assigned],
-    ["Existing chars", stats.starter_existing_characters],
-    ["App cast", stats.app_character_count],
-    ["Starter images", (stats.starter_cards || 0) + (stats.starter_photos || 0)],
-    ["References", stats.reference_count],
-    ["Visual sessions", stats.visual_session_count],
-    ["Visual approved", stats.visual_approved_count],
-    ["Slack tasks", stats.slack_assignment_count],
-    ["Slack posted", stats.slack_posted_count],
-  ];
-  statsGrid.innerHTML = cards
-    .map(([label, value]) => `<div class="stat-card"><span>${label}</span><strong>${formatNumber(value)}</strong></div>`)
+function setResult(message, payload) {
+  resultBox.textContent = payload ? `${message}\n${JSON.stringify(payload, null, 2)}` : message;
+}
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 680px)").matches;
+}
+
+function scrollToStudioDetail() {
+  if (isMobileViewport()) {
+    characterDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function scrollToCastGallery() {
+  characterGallery.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function slotLabel(slot) {
+  if (slot === "profile_avatar") return "Profile";
+  if (slot === "card_portrait") return "Card";
+  if (slot.startsWith("astrogram_")) return `Post ${slot.split("_").at(-1)}`;
+  return slot.replaceAll("_", " ");
+}
+
+function slotOptions(selected = "profile_avatar") {
+  return appAssetSlots
+    .map((slot) => `<option value="${slot}" ${slot === selected ? "selected" : ""}>${escapeHtml(slotLabel(slot))}</option>`)
     .join("");
 }
 
-function slackAssignmentCard(assignment) {
-  const target = assignment.slack_target || "missing target";
-  const latest = assignment.latest_reply_text ? `<p>${escapeHtml(assignment.latest_reply_text)}</p>` : "";
-  const error = assignment.error ? `<p class="error-text">${escapeHtml(assignment.error)}</p>` : "";
-  return `
-    <div class="slack-assignment-card">
-      <div>
-        <strong>${escapeHtml(assignment.delegate_name)}</strong>
-        <span>${escapeHtml(target)} · ${assignment.companion_ids?.length || 0} companions</span>
-      </div>
-      <span class="status-pill ${escapeHtml(assignment.status)}">${escapeHtml(assignment.status)}</span>
-      ${latest}
-      ${error}
-    </div>
-  `;
+function jobProgressLabel(jobOrPayload = {}) {
+  const expected = Number(jobOrPayload.expected || jobOrPayload.expected_image_count || 10);
+  const found = Number(jobOrPayload.found || jobOrPayload.found_expected_count || 0);
+  if (found >= expected) return `${expected}/${expected} imported`;
+  if (found > 0) return `${found}/${expected} images found`;
+  return "Waiting for images";
 }
 
-async function loadSlackAssignments() {
-  if (!slackAssignmentGrid) return;
-  const payload = await api.get("/api/slack-assignments?limit=8");
-  slackAssignmentGrid.innerHTML = payload.items.length
-    ? payload.items.map(slackAssignmentCard).join("")
-    : `<div class="path-box">No Slack assignments yet. Draft or push assignments first.</div>`;
+function stopJobPolling(jobId) {
+  const timer = state.jobPollers.get(jobId);
+  if (timer) window.clearInterval(timer);
+  state.jobPollers.delete(jobId);
 }
 
-function visualSessionCard(session) {
-  const archetype = String(session.archetype || "").replaceAll("_", " ");
-  const level = Number(session.sensuality_level || 1);
-  return `
-    <div class="visual-session-card">
-      <div>
-        <strong>${escapeHtml(session.character_name)}</strong>
-        <span>${escapeHtml(session.operator)} · ${escapeHtml(session.presentation)} · ${escapeHtml(session.age_read)}</span>
-      </div>
-      <p>${escapeHtml(archetype)} · sensuality ${level}/3 · ${escapeHtml(session.realism_target)}</p>
-      <span class="status-pill ${escapeHtml(session.status)}">${escapeHtml(session.status)}</span>
-    </div>
-  `;
+function stopAllJobPolling() {
+  state.jobPollers.forEach((timer) => window.clearInterval(timer));
+  state.jobPollers.clear();
 }
 
-async function loadVisualSessions() {
-  if (!visualSessionsGrid) return;
-  const payload = await api.get("/api/visual-production/sessions?limit=8");
-  visualSessionsGrid.innerHTML = payload.items.length
-    ? payload.items.map(visualSessionCard).join("")
-    : `<div class="path-box">No ChatGPT visual production sessions yet.</div>`;
-}
-
-function companionRow(companion) {
-  const active = companion.id === state.selectedId ? "active" : "";
-  const signs = `${companion.sun_sign} Sun / ${companion.moon_sign} Moon / ${companion.rising_sign} Rising`;
-  const idLabel = companion.is_starter ? `S${String(companion.starter_rank).padStart(2, "0")}` : companion.id.replace("simastry-", "#");
-  const workLabel = `${companion.photo_count}/${companion.target_photo_count || 10} img · ${companion.delegate_name || "unassigned"}`;
-  return `
-    <button class="companion-row ${active}" type="button" data-id="${companion.id}">
-      <span class="id-pill">${idLabel}</span>
-      <span class="identity">
-        <strong>${escapeHtml(companion.display_name)}</strong>
-        <span>${escapeHtml(signs)}</span>
-      </span>
-      <span class="asset-counts">${escapeHtml(workLabel)}</span>
-      <span class="status-pill ${companion.status}">${companion.status}</span>
-    </button>
-  `;
-}
-
-async function loadCompanions() {
-  const params = new URLSearchParams();
-  const search = document.querySelector("#searchInput").value.trim();
-  const scope = document.querySelector("#scopeFilter").value;
-  const status = document.querySelector("#statusFilter").value;
-  const gender = document.querySelector("#genderFilter").value;
-  if (search) params.set("search", search);
-  if (scope) params.set("scope", scope);
-  if (status) params.set("status", status);
-  if (gender) params.set("gender", gender);
-  params.set("limit", "160");
-  const payload = await api.get(`/api/companions?${params.toString()}`);
-  state.companions = payload.items;
-  listCount.textContent = scope === "starter" ? `${formatNumber(payload.total)} Starter 24 companions` : `${formatNumber(payload.total)} matching companions`;
-  companionList.innerHTML = payload.items.map(companionRow).join("");
-}
-
-function detailTemplate(companion) {
-  const signs = `${companion.sun_sign} Sun / ${companion.moon_sign} Moon / ${companion.rising_sign} Rising`;
-  const phaseLabel = companion.is_starter ? `Starter 24 · ${companion.gender}` : companion.gender;
-  const identityReferences = companion.identity_references || [];
-  const identityGrid = identityReferences.length
-    ? identityReferences
-        .map(
-          (item) => `
-            <div class="reference-thumb">
-              <img src="${item.url}" alt="${escapeHtml(item.name)}" />
-              <span title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
-            </div>
-          `,
-        )
-        .join("")
-    : `<div class="path-box">No character references yet.</div>`;
-  return `
-    <div class="detail-header">
-      <div>
-        <p class="eyebrow">${escapeHtml(phaseLabel)}</p>
-        <h2>${escapeHtml(companion.display_name)}</h2>
-        <p>${escapeHtml(signs)}</p>
-      </div>
-      <span class="status-pill ${companion.status}">${companion.status}</span>
-    </div>
-
-    <div class="meta-grid">
-      <div><span>Pictures</span>${companion.photo_count}/${companion.target_photo_count || 10}</div>
-      <div><span>Remaining</span>${companion.remaining_photo_count}</div>
-      <div><span>Complete</span>${companion.is_complete ? "Yes" : "No"}</div>
-    </div>
-
-    <p class="section-label">Generation focus</p>
-    <p>Realistic same-person photos for dating-app and Instagram-style use.</p>
-
-    ${
-      companion.app_character_name
-        ? `
-          <p class="section-label">Simastry app character</p>
-          <div class="app-character-box">
-            <strong>${escapeHtml(companion.app_character_name)}</strong>
-            <span>${escapeHtml(companion.app_sources || "Synced from Simastry apps")} · ${companion.app_asset_count || 0} app assets · ${companion.app_astrogram_count || 0} Astrogram photos</span>
-          </div>
-        `
-        : ""
+function characterMoveOptions(selectedCharacterId = "") {
+  const seen = new Set();
+  const choices = [...state.characters, ...state.customCharacters].filter((character) => {
+    if (!character?.id || character.id === selectedCharacterId || character.casting_status === "archived" || seen.has(character.id)) {
+      return false;
     }
-
-    <p class="section-label">Character references</p>
-    <div class="identity-reference-controls">
-      <label class="file-picker">
-        Add pictures for this companion
-        <input data-identity-input type="file" accept="image/*" multiple />
-      </label>
-      <button data-identity-upload type="button">Upload character references</button>
-    </div>
-    <div class="path-box">${escapeHtml(companion.identity_reference_dir)}</div>
-    <div class="identity-reference-grid">${identityGrid}</div>
-
-    <div class="production-form">
-      <label>
-        Character source
-        <select data-production-field="character_source">
-          <option value="existing_character" ${companion.character_source === "existing_character" ? "selected" : ""}>Existing character</option>
-          <option value="generated_from_scratch" ${companion.character_source === "generated_from_scratch" ? "selected" : ""}>Generate from scratch</option>
-        </select>
-      </label>
-      <label>
-        Delegate
-        <input data-production-field="delegate_name" value="${escapeHtml(companion.delegate_name || "")}" placeholder="Delegate name" />
-      </label>
-      <label>
-        Slack handle or channel
-        <input data-production-field="delegate_slack" value="${escapeHtml(companion.delegate_slack || "")}" placeholder="@name or #channel" />
-      </label>
-      <label>
-        Target pictures
-        <input data-production-field="target_photo_count" type="number" min="1" value="${companion.target_photo_count || 10}" />
-      </label>
-      <label class="wide-field">
-        Cloud folder
-        <input data-production-field="cloud_folder_path" value="${escapeHtml(companion.cloud_folder_path || "")}" />
-      </label>
-      <label class="wide-field">
-        Existing character brief
-        <textarea data-production-field="character_brief" rows="4" placeholder="Describe the already-known character, look, age range, styling rules, and any must-keep details.">${escapeHtml(companion.character_brief || "")}</textarea>
-      </label>
-      <button data-production-save type="button">Save assignment</button>
-    </div>
-
-    <p class="section-label">Folder</p>
-    <div class="path-box">${escapeHtml(companion.folder_path)}</div>
-
-    <div class="status-actions">
-      <button data-status="todo" type="button">Todo</button>
-      <button data-status="reviewed" type="button">Reviewed</button>
-      <button data-status="approved" type="button">Approved</button>
-      <button data-status="blocked" type="button">Blocked</button>
-      <button data-status="generated" type="button">Generated</button>
-      <button data-status="queued" type="button">Queued</button>
-    </div>
-
-    <p class="section-label">Core prompt</p>
-    <div class="prompt-box">${escapeHtml(companion.prompt_core)}</div>
-  `;
-}
-
-async function selectCompanion(id) {
-  state.selectedId = id;
-  companionList.querySelectorAll(".companion-row").forEach((row) => {
-    row.classList.toggle("active", row.dataset.id === id);
+    seen.add(character.id);
+    return true;
   });
-  const companion = await api.get(`/api/companions/${id}`);
-  detailPanel.innerHTML = detailTemplate(companion);
+  if (!choices.length) return `<option value="">No other characters</option>`;
+  return [
+    `<option value="">Move to...</option>`,
+    ...choices.map((character) => `<option value="${escapeHtml(character.id)}">${escapeHtml(character.display_name)}</option>`),
+  ].join("");
 }
 
-async function seedCatalog() {
-  setResult("Seeding catalog and folders…");
-  const payload = await api.post("/api/seed");
-  setResult("Catalog ready.", payload);
-  await Promise.all([loadStats(), loadCompanions()]);
+function imageDisplayStyle(image) {
+  const cropMode = image?.crop_mode === "contain" ? "contain" : "cover";
+  const positionY = Math.max(0, Math.min(Number(image?.image_position_y ?? 50), 100));
+  return `object-fit: ${cropMode}; object-position: center ${positionY}%;`;
 }
 
-async function loadReferences() {
-  const payload = await api.get("/api/references");
-  referencePath.textContent = payload.directory;
-  if (!payload.items.length) {
-    referenceGrid.innerHTML = `<div class="path-box">No references uploaded yet.</div>`;
-    return;
-  }
-  referenceGrid.innerHTML = payload.items
+function castingLabel(status) {
+  const labels = {
+    needs_decision: "Needs decision",
+    locked: "Locked",
+    needs_better_photos: "Needs better photos",
+    replace_identity: "Replace identity",
+    consolidate_duplicate: "Consolidate duplicate",
+    archived: "Archived",
+    candidates: "Candidates",
+    references: "References",
+    rejected: "Rejected",
+  };
+  return labels[status] || status.replaceAll("_", " ");
+}
+
+function castingOptions(selected = "needs_decision") {
+  return castingStates
     .map(
-      (item) => `
-        <div class="reference-thumb">
-          <img src="${item.url}" alt="${escapeHtml(item.name)}" />
-          <span title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
-        </div>
-      `,
+      (status) =>
+        `<option value="${status}" ${status === selected ? "selected" : ""}>${escapeHtml(castingLabel(status))}</option>`,
     )
     .join("");
 }
 
-async function loadAppCharacters() {
-  const payload = await api.get("/api/app-characters");
-  if (!payload.items.length) {
-    appSyncGrid.innerHTML = `<div class="path-box">No app characters synced yet.</div>`;
-    return;
-  }
-  appSyncGrid.innerHTML = payload.items
-    .map((item) => {
-      const companionLabel = item.factory_companions
-        .map((companion) => `${companion.display_name} (${companion.gender})`)
-        .join(", ");
-      return `
-        <div class="app-character-card">
-          <span>${escapeHtml(item.sign)}</span>
-          <strong>${escapeHtml(item.display_name)}</strong>
-          <p>${escapeHtml(item.source_summary || "No source summary")} · ${item.existing_asset_count}/${item.asset_count} assets · ${item.astrogram_count} Astrogram</p>
-          <small>${escapeHtml(companionLabel || "No Starter 24 match")}</small>
-        </div>
-      `;
-    })
+function initials(name) {
+  return String(name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
     .join("");
 }
 
@@ -330,155 +202,1325 @@ function readFileAsDataURL(file) {
   });
 }
 
+function renderCharacterReferencePreview() {
+  state.characterReferencePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  state.characterReferencePreviewUrls = [];
+  const files = [...characterReferenceInput.files];
+  if (!files.length) {
+    characterReferencePreview.innerHTML = "";
+    return;
+  }
+  characterReferencePreview.innerHTML = files
+    .map((file) => {
+      const url = URL.createObjectURL(file);
+      state.characterReferencePreviewUrls.push(url);
+      return `
+        <div class="preview-thumb">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(file.name)}" />
+          <span title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function clearCharacterReferencePreview() {
+  state.characterReferencePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  state.characterReferencePreviewUrls = [];
+  characterReferencePreview.innerHTML = "";
+}
+
+function characterApproval(character) {
+  const completion = character.asset_completion || character.completion || {};
+  const approved = Number(completion.approved || 0);
+  const required = Number(completion.required || appAssetSlots.length);
+  const missing = Number(completion.missing || Math.max(required - approved, 0));
+  const percent = required ? Math.round((approved / required) * 100) : 0;
+  return { approved, required, missing, percent, isComplete: missing === 0 && approved >= required };
+}
+
+function coreMissing(character) {
+  const missing = character.missing_slots || [];
+  return missing.filter((slot) => slot === "profile_avatar" || slot === "card_portrait");
+}
+
+function thumbnailMarkup(character) {
+  if (character.thumbnail_url) {
+    return `<img src="${escapeHtml(character.thumbnail_url)}" alt="${escapeHtml(character.display_name)}" />`;
+  }
+  return `<span>${escapeHtml(initials(character.display_name))}</span>`;
+}
+
+function renderStats() {
+  const locked = state.characters.filter((character) => character.casting_status === "locked").length;
+  const needsDecision = state.characters.filter((character) => character.casting_status !== "locked").length;
+  const coreReady = state.characters.filter((character) => coreMissing(character).length === 0).length;
+  const candidates = state.characters.reduce((total, character) => total + Number(character.image_counts?.candidate || 0), 0);
+  const items = [
+    ["Cast", state.characters.length],
+    ["Locked", locked],
+    ["Needs decision", needsDecision],
+    ["Core ready", coreReady],
+    ["Candidates", candidates],
+  ];
+  statsGrid.innerHTML = items
+    .map(([label, value]) => `<div class="summary-pill"><span>${label}</span><strong>${formatNumber(value)}</strong></div>`)
+    .join("");
+}
+
+function filteredCharacters() {
+  if (state.castingFilter === "all") return state.characters;
+  return state.characters.filter((character) => character.casting_status === state.castingFilter);
+}
+
+function renderCastingFilters() {
+  const counts = {
+    all: state.characters.length,
+    ...Object.fromEntries(castingStates.map((status) => [status, 0])),
+  };
+  state.characters.forEach((character) => {
+    counts[character.casting_status] = Number(counts[character.casting_status] || 0) + 1;
+  });
+  const filters = ["all", ...castingStates];
+  castingFilterBar.innerHTML = filters
+    .map((status) => {
+      const label = status === "all" ? "All" : castingLabel(status);
+      return `
+        <button class="filter-chip ${state.castingFilter === status ? "active" : ""}" type="button" data-casting-filter="${status}">
+          <span>${escapeHtml(label)}</span>
+          <strong>${formatNumber(counts[status] || 0)}</strong>
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function quickFlags(character) {
+  const flags = [];
+  const missingCore = coreMissing(character);
+  const approval = characterApproval(character);
+  if (missingCore.length) flags.push("Core missing");
+  if (approval.missing) flags.push(`${approval.missing} slots missing`);
+  if (Number(character.image_counts?.candidate || 0)) flags.push("Candidates");
+  if (Number(character.image_counts?.rejected || 0)) flags.push("Rejected");
+  return flags.slice(0, 3);
+}
+
+function characterCard(character) {
+  const active = character.id === state.selectedCharacterId ? "active" : "";
+  const approval = characterApproval(character);
+  const flags = quickFlags(character);
+  return `
+    <button class="cast-card studio-card ${active} ${character.casting_status === "archived" ? "archived" : ""}" type="button" data-character-id="${escapeHtml(character.id)}">
+      <div class="cast-photo">${thumbnailMarkup(character)}</div>
+      <div class="cast-card-footer">
+        <div class="card-title-row">
+          <strong>${escapeHtml(character.display_name)}</strong>
+          <em class="casting-badge ${escapeHtml(character.casting_status)}">${escapeHtml(castingLabel(character.casting_status))}</em>
+        </div>
+        <span>${escapeHtml(character.gender || "Companion")} · ${escapeHtml(character.sun_sign || "No sign")}</span>
+        <div class="asset-meter" aria-label="${approval.approved} of ${approval.required} assets approved">
+          <span style="width: ${Math.max(approval.percent, 4)}%"></span>
+        </div>
+        <div class="cast-status-row">
+          <small>${approval.approved}/${approval.required} assets</small>
+          <small>${character.generation_job_count || 0} prompts</small>
+        </div>
+        <div class="flag-row">
+          ${flags.length ? flags.map((flag) => `<span>${escapeHtml(flag)}</span>`).join("") : `<span>Ready to judge</span>`}
+        </div>
+      </div>
+    </button>
+  `;
+}
+
+function renderCharacterGallery() {
+  const items = filteredCharacters();
+  characterGallery.innerHTML = items.length
+    ? items.map(characterCard).join("")
+    : `<div class="path-box">No characters match this casting state.</div>`;
+}
+
+function customCard(character) {
+  const title = `${character.display_name || "Custom character"} profile`;
+  const referenceCount = Number(character.image_counts?.reference || 0);
+  const candidateCount = Number(character.image_counts?.candidate || 0);
+  return `
+    <article class="custom-card ${character.casting_status === "archived" ? "archived" : ""}" data-custom-character-id="${escapeHtml(character.id)}">
+      <button class="custom-photo-button" type="button" data-full-image="${escapeHtml(character.thumbnail_url || "")}" data-full-title="${escapeHtml(title)}" ${character.thumbnail_url ? "" : "disabled"}>
+        <div class="custom-photo">${thumbnailMarkup(character)}</div>
+      </button>
+      <strong>${escapeHtml(character.display_name)}</strong>
+      <span>${escapeHtml(castingLabel(character.casting_status))}</span>
+      <span>${formatNumber(referenceCount)} reference${referenceCount === 1 ? "" : "s"} · ${formatNumber(candidateCount)} candidate${candidateCount === 1 ? "" : "s"}</span>
+      <div class="custom-reference-uploader">
+        <label>
+          Add reference pictures
+          <input type="file" accept="image/*" multiple data-custom-reference-files />
+        </label>
+        <button type="button" data-upload-custom-references="${escapeHtml(character.id)}">Add references</button>
+      </div>
+      <div class="custom-card-actions">
+        <button type="button" data-generate-custom="${escapeHtml(character.id)}">Create Codex Image Prompt</button>
+        <button type="button" data-generate-custom-style-board="${escapeHtml(character.id)}">Generate style-board set</button>
+        <button type="button" data-archive-custom="${escapeHtml(character.id)}">Archive</button>
+      </div>
+    </article>
+  `;
+}
+
+function customCharacterOptions(selected = "") {
+  const choices = state.customCharacters.filter((character) => character.casting_status !== "archived");
+  if (!choices.length) {
+    return `<option value="">No custom candidates yet</option>`;
+  }
+  return [
+    `<option value="">Choose custom candidate</option>`,
+    ...choices.map(
+      (character) =>
+        `<option value="${escapeHtml(character.id)}" ${character.id === selected ? "selected" : ""}>${escapeHtml(character.display_name)}</option>`,
+    ),
+  ].join("");
+}
+
+function allConsolidationOptions(selectedCharacterId) {
+  const choices = state.customCharacters.filter((character) => character.id !== selectedCharacterId && character.casting_status !== "archived");
+  if (!choices.length) return `<option value="">No duplicate candidates yet</option>`;
+  return [
+    `<option value="">Choose duplicate candidate</option>`,
+    ...choices.map((character) => `<option value="${escapeHtml(character.id)}">${escapeHtml(character.display_name)}</option>`),
+  ].join("");
+}
+
+function pictureButton(image, title, className = "picture-tile", options = {}) {
+  if (!image) return "";
+  const canReject = Boolean(options.canReject && image.id);
+  const canEdit = Boolean(options.canEdit && image.id);
+  const rejectLabel = options.rejectLabel || `Move ${title} to rejected`;
+  const editLabel = options.editLabel || `Edit ${title}`;
+  return `
+    <div class="picture-shell ${canReject ? "can-reject" : ""} ${canEdit ? "can-edit" : ""}">
+      <button class="${className}" type="button" data-full-image="${escapeHtml(image.url)}" data-full-title="${escapeHtml(title)}">
+        <img src="${escapeHtml(image.url)}" alt="${escapeHtml(title)}" style="${escapeHtml(imageDisplayStyle(image))}" />
+      </button>
+      ${
+        canReject
+          ? `<button class="trash-button" type="button" data-reject-image="${escapeHtml(image.id)}" title="${escapeHtml(rejectLabel)}" aria-label="${escapeHtml(rejectLabel)}"><span class="trash-icon" aria-hidden="true"></span></button>`
+          : ""
+      }
+      ${
+        canEdit
+          ? `<button class="image-edit-button" type="button" data-toggle-image-edit="${escapeHtml(image.id)}" title="${escapeHtml(editLabel)}" aria-label="${escapeHtml(editLabel)}">Edit</button>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function slotCard(slot, characterName) {
+  const image = slot.approved_image;
+  const title = `${characterName} · ${slot.label || slotLabel(slot.slot_key)}`;
+  const isAstrogram = String(slot.slot_key || "").startsWith("astrogram_");
+  return `
+    <div class="slot-card ${slot.missing ? "missing" : "filled"}" ${image ? `data-image-card="${escapeHtml(image.id)}"` : ""}>
+      ${
+        image
+          ? pictureButton(image, title, "picture-tile", {
+              canReject: true,
+              canEdit: true,
+              rejectLabel: "Move to rejected",
+              editLabel: isAstrogram ? "Edit Astrogram picture" : "Edit picture",
+            })
+          : `<div class="slot-empty">Missing</div>`
+      }
+      <div class="slot-card-footer">
+        <strong>${escapeHtml(slot.label || slotLabel(slot.slot_key))}</strong>
+        <span>${image ? "Approved" : "Missing"}</span>
+      </div>
+      ${image ? imageEditPanel(image, slot.slot_key) : ""}
+    </div>
+  `;
+}
+
+function imageEditPanel(image, slotKey = "") {
+  const cropMode = image.crop_mode === "contain" ? "contain" : "cover";
+  const positionY = Math.max(0, Math.min(Number(image.image_position_y ?? 50), 100));
+  return `
+    <div class="image-edit-panel">
+      <div class="edit-action-row">
+        <button type="button" data-promote-approved="${escapeHtml(image.id)}" data-promote-approved-slot="profile_avatar">Make profile avatar</button>
+        <button type="button" data-promote-approved="${escapeHtml(image.id)}" data-promote-approved-slot="card_portrait">Make card portrait</button>
+      </div>
+      <label>
+        Crop
+        <select data-edit-crop-mode>
+          <option value="cover" ${cropMode === "cover" ? "selected" : ""}>Fill crop</option>
+          <option value="contain" ${cropMode === "contain" ? "selected" : ""}>Fit full image</option>
+        </select>
+      </label>
+      <label>
+        Face position
+        <input data-edit-position-y type="range" min="0" max="100" step="5" value="${positionY}" />
+      </label>
+      <div class="edit-action-row">
+        <button type="button" data-nudge-image-position="${escapeHtml(image.id)}" data-nudge-delta="-10">Move up</button>
+        <button type="button" data-nudge-image-position="${escapeHtml(image.id)}" data-nudge-delta="10">Move down</button>
+      </div>
+      <button type="button" data-save-image-display="${escapeHtml(image.id)}">Save crop</button>
+      <div class="edit-action-row">
+        <select data-move-character-target>${characterMoveOptions(state.selectedCharacterId)}</select>
+        <button type="button" data-move-image="${escapeHtml(image.id)}">Move</button>
+      </div>
+      <button class="archive-image-button" type="button" data-archive-image="${escapeHtml(image.id)}">Archive picture</button>
+      <small>${escapeHtml(slotLabel(slotKey) || image.slot_label || "Approved picture")}</small>
+    </div>
+  `;
+}
+
+function referenceCard(image, characterName, isPrimary = false) {
+  const title = `${characterName} reference`;
+  return `
+    <div class="asset-card" data-image-card="${escapeHtml(image.id)}">
+      ${pictureButton(image, title)}
+      <div class="slot-card-footer">
+        <strong>${escapeHtml(image.name || "Reference")}</strong>
+        <span>${isPrimary ? "Primary reference" : "Reference"}</span>
+      </div>
+      <div class="asset-card-actions">
+        <button type="button" data-primary-reference="${escapeHtml(image.id)}">${isPrimary ? "Primary" : "Make primary"}</button>
+      </div>
+    </div>
+  `;
+}
+
+function candidateCard(image, characterName) {
+  const title = `${characterName} candidate`;
+  const rating = Number(image.feedback_rating || 0);
+  return `
+    <div class="asset-card" data-image-card="${escapeHtml(image.id)}">
+      ${pictureButton(image, title, "picture-tile", { canReject: true, rejectLabel: "Reject candidate" })}
+      <div class="slot-card-footer">
+        <strong>${escapeHtml(image.name || "Candidate")}</strong>
+        <span>${rating ? `${rating}/5` : "Unrated"} candidate</span>
+      </div>
+      <div class="feedback-form">
+        <label>
+          Rating
+          <select data-feedback-rating>
+            <option value="0" ${rating === 0 ? "selected" : ""}>No rating</option>
+            ${[1, 2, 3, 4, 5].map((value) => `<option value="${value}" ${rating === value ? "selected" : ""}>${value}/5</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          Feedback
+          <textarea data-feedback-notes rows="2" placeholder="What to reinforce or avoid?">${escapeHtml(image.feedback_notes || "")}</textarea>
+        </label>
+        <button type="button" data-save-image-feedback="${escapeHtml(image.id)}">Save feedback</button>
+      </div>
+      <div class="asset-card-actions">
+        <select data-promote-slot>${slotOptions("profile_avatar")}</select>
+        <button type="button" data-promote-candidate="${escapeHtml(image.id)}">Promote</button>
+      </div>
+    </div>
+  `;
+}
+
+function historyCard(image, label, characterName) {
+  const slot = image.slot_label || slotLabel(image.slot_key || "");
+  const title = `${characterName} · ${slot || label}`;
+  return `
+    <div class="asset-card muted">
+      ${pictureButton(image, title)}
+      <div class="slot-card-footer">
+        <strong>${escapeHtml(slot || label)}</strong>
+        <span>${escapeHtml(label)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderAssetPanel(character, panelName) {
+  if (panelName === "references") {
+    const references = character.references || [];
+    return references.length
+      ? `<div class="asset-grid">${references
+          .map((image) => referenceCard(image, character.display_name, image.id === character.primary_reference_image_id))
+          .join("")}</div>`
+      : `<div class="path-box">No identity references yet.</div>`;
+  }
+  if (panelName === "candidates") {
+    const candidates = character.candidates || [];
+    return candidates.length
+      ? `<div class="asset-grid">${candidates.map((image) => candidateCard(image, character.display_name)).join("")}</div>`
+      : `<div class="path-box">No generated candidates yet.</div>`;
+  }
+  if (panelName === "rejected") {
+    const rejected = character.rejected_images || [];
+    return rejected.length
+      ? `<div class="asset-grid">${rejected.map((image) => historyCard(image, "Rejected", character.display_name)).join("")}</div>`
+      : `<div class="path-box">No rejected pictures.</div>`;
+  }
+  const archived = character.archived_images || [];
+  return archived.length
+    ? `<div class="asset-grid">${archived.map((image) => historyCard(image, "Archived", character.display_name)).join("")}</div>`
+    : `<div class="path-box">No archived slot versions.</div>`;
+}
+
+function generationJobs(character) {
+  const jobs = character.generation_jobs || [];
+  if (!jobs.length) return `<div class="path-box">No prompt packs yet.</div>`;
+  return jobs
+    .slice(0, 3)
+    .map((job, index) => {
+      const promptText = job.codex_prompt_text || job.prompt_text || "";
+      const codexReady = job.status === "ready_for_codex" || job.output_folder_path;
+      if (index === 0 && codexReady) {
+        return `
+          <article
+            class="codex-job-panel"
+            data-generation-job-id="${escapeHtml(job.id)}"
+            data-job-status="${escapeHtml(job.status || "ready_for_codex")}"
+            data-job-found="${Number(job.found_expected_count || 0)}"
+            data-job-expected="${Number(job.expected_image_count || 10)}"
+          >
+            <div class="codex-job-header">
+              <div>
+                <strong>Codex image job</strong>
+                <span>${escapeHtml(job.status || "ready_for_codex")}</span>
+              </div>
+              <small>${escapeHtml(job.id)}</small>
+            </div>
+            <div class="codex-job-progress" data-job-progress-text>${escapeHtml(jobProgressLabel(job))}</div>
+            <div class="codex-job-paths">
+              <div><span>Output folder</span><code>${escapeHtml(job.output_folder_path || "")}</code></div>
+              <div><span>Prompt file</span><code>${escapeHtml(job.prompt_pack_path || "")}</code></div>
+            </div>
+            <div class="codex-job-actions">
+              <button class="primary-action" type="button" data-copy-job-prompt="${escapeHtml(job.id)}">Copy Prompt for Codex</button>
+              <button type="button" data-scan-job-results="${escapeHtml(job.id)}">Refresh Job Results</button>
+            </div>
+            <textarea class="codex-prompt-text" readonly>${escapeHtml(promptText)}</textarea>
+          </article>
+        `;
+      }
+      return `
+        <div class="job-row">
+          <strong>${escapeHtml(job.id)}</strong>
+          <span>${escapeHtml(job.status || "ready")}</span>
+          <small>${escapeHtml(job.prompt_pack_path || "")}</small>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function characterDetailTemplate(character) {
+  const approval = characterApproval(character);
+  const thumbnailTitle = `${character.display_name} profile`;
+  const coreSlots = (character.slot_status || []).filter((slot) => slot.slot_key === "profile_avatar" || slot.slot_key === "card_portrait");
+  const astrogramSlots = (character.slot_status || []).filter((slot) => slot.slot_key.startsWith("astrogram_"));
+  const activeTab = state.detailTab || "candidates";
+  return `
+    <button class="mobile-back-button" type="button" data-scroll-gallery>Back to 24</button>
+
+    <div class="character-detail-header studio-detail-header">
+      <div class="detail-profile">
+        ${
+          character.thumbnail_url
+            ? `<button class="detail-avatar" type="button" data-full-image="${escapeHtml(character.thumbnail_url)}" data-full-title="${escapeHtml(thumbnailTitle)}">${thumbnailMarkup(character)}</button>`
+            : `<div class="detail-avatar">${thumbnailMarkup(character)}</div>`
+        }
+        <div>
+          <h2>${escapeHtml(character.display_name)}</h2>
+          <p>${escapeHtml(character.gender || "Companion")} · ${escapeHtml(character.sun_sign || "No sign")}</p>
+          <div class="detail-chip-row">
+            <em class="casting-badge ${escapeHtml(character.casting_status)}">${escapeHtml(castingLabel(character.casting_status))}</em>
+            <em class="approval-badge ${approval.isComplete ? "approved" : "not-approved"}">${approval.approved}/${approval.required} assets</em>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="studio-block">
+      <h3>Casting Decision</h3>
+      <div class="casting-editor">
+        <label>
+          Casting status
+          <select data-casting-status>${castingOptions(character.casting_status)}</select>
+        </label>
+        <label class="wide-field">
+          Casting notes
+          <textarea data-casting-notes rows="3" placeholder="What needs to change before this identity is locked?">${escapeHtml(character.casting_notes || "")}</textarea>
+        </label>
+        <button type="button" data-save-casting>Save casting</button>
+        <button type="button" data-archive-character>Archive character</button>
+      </div>
+    </section>
+
+    <div class="detail-stats">
+      <div><span>Identity</span><strong>${escapeHtml(castingLabel(character.casting_status))}</strong></div>
+      <div><span>Assets</span><strong>${approval.approved}/${approval.required}</strong></div>
+      <div><span>References</span><strong>${formatNumber(character.image_counts?.reference || 0)}</strong></div>
+      <div><span>Candidates</span><strong>${formatNumber(character.image_counts?.candidate || 0)}</strong></div>
+    </div>
+
+    <section class="studio-block">
+      <div class="section-heading-row">
+        <h3>Generate And Import</h3>
+        <button type="button" data-generate-selected>Create Codex Image Prompt</button>
+        <button type="button" data-generate-selected-style-board>Generate style-board set</button>
+      </div>
+      <div class="generation-tools">
+        <label>
+          Upload generated candidates
+          <input id="candidateUpload" data-candidate-upload-files type="file" accept="image/*" multiple />
+        </label>
+        <button type="button" data-upload-candidates>Upload candidates</button>
+        <label>
+          Upload identity references
+          <input id="identityReferenceUpload" data-reference-upload-files type="file" accept="image/*" multiple />
+        </label>
+        <button type="button" data-upload-character-references>Upload references</button>
+      </div>
+      <div class="job-list">${generationJobs(character)}</div>
+    </section>
+
+    <section class="studio-block">
+      <h3>Profile And Card</h3>
+      <div class="slot-grid core-slot-grid">${coreSlots.map((slot) => slotCard(slot, character.display_name)).join("")}</div>
+    </section>
+
+    <section class="studio-block">
+      <h3>Astrogram</h3>
+      <div class="slot-grid">${astrogramSlots.map((slot) => slotCard(slot, character.display_name)).join("")}</div>
+    </section>
+
+    <section class="studio-block">
+      <h3>Image Library</h3>
+      <div class="detail-picture-tabs">
+        ${["candidates", "references", "rejected", "archived"]
+          .map(
+            (tab) =>
+              `<button class="detail-picture-tab ${activeTab === tab ? "active" : ""}" type="button" data-picture-tab="${tab}">${escapeHtml(castingLabel(tab).replace("Needs ", ""))}</button>`,
+          )
+          .join("")}
+      </div>
+      <div class="picture-panel active" data-picture-panel="${escapeHtml(activeTab)}">
+        ${renderAssetPanel(character, activeTab)}
+      </div>
+    </section>
+
+    <section class="studio-block">
+      <h3>Replace Or Consolidate</h3>
+      <div class="customize-panel">
+        <label>
+          Slot
+          <select data-replace-slot>${slotOptions("profile_avatar")}</select>
+        </label>
+        <label>
+          Upload direct replacement
+          <input data-replace-file type="file" accept="image/*" />
+        </label>
+        <button data-replace-upload type="button">Replace with upload</button>
+        <label>
+          Custom candidate
+          <select data-custom-character-select>${customCharacterOptions()}</select>
+        </label>
+        <button data-swap-custom type="button" ${state.customCharacters.some((item) => item.casting_status !== "archived") ? "" : "disabled"}>Replace with custom</button>
+        <label>
+          Duplicate candidate
+          <select data-consolidate-character-select>${allConsolidationOptions(character.id)}</select>
+        </label>
+        <button data-consolidate-character type="button" ${state.customCharacters.some((item) => item.casting_status !== "archived") ? "" : "disabled"}>Consolidate duplicate</button>
+      </div>
+    </section>
+  `;
+}
+
+async function loadStats() {
+  state.stats = await api.get("/api/stats");
+}
+
+async function loadCharacters() {
+  const payload = await api.get("/api/characters?source=app&limit=24");
+  state.characters = payload.items;
+  characterCount.textContent = `${formatNumber(payload.total)} app-facing companions`;
+  renderStats();
+  renderCastingFilters();
+  renderCharacterGallery();
+
+  const selectedStillVisible = state.characters.some((item) => item.id === state.selectedCharacterId);
+  const preferredSelection = filteredCharacters()[0] || state.characters[0];
+  if (!selectedStillVisible && preferredSelection) {
+    await selectCharacter(preferredSelection.id);
+  } else if (state.selectedCharacterId) {
+    await selectCharacter(state.selectedCharacterId);
+  } else if (preferredSelection) {
+    await selectCharacter(preferredSelection.id);
+  }
+  renderCharacterGallery();
+}
+
+async function loadCustomCharacters() {
+  const payload = await api.get("/api/characters?source=custom&limit=200");
+  state.customCharacters = payload.items;
+  customCharacterCount.textContent = `${formatNumber(payload.total)} candidates`;
+  customGallery.innerHTML = payload.items.length
+    ? payload.items.map(customCard).join("")
+    : `<div class="path-box">No custom candidates yet.</div>`;
+}
+
+async function selectCharacter(id) {
+  state.selectedCharacterId = id;
+  characterGallery.querySelectorAll(".cast-card").forEach((card) => {
+    card.classList.toggle("active", card.dataset.characterId === id);
+  });
+  const character = await api.get(`/api/characters/${id}`);
+  characterDetail.innerHTML = characterDetailTemplate(character);
+  syncVisibleJobPolling();
+}
+
+function openFullImage(url, title) {
+  if (!url) return;
+  fullImage.src = url;
+  fullImage.alt = title || "Full picture";
+  fullImageCaption.textContent = title || "";
+  if (typeof imageDialog.showModal === "function") {
+    imageDialog.showModal();
+  } else {
+    imageDialog.setAttribute("open", "");
+  }
+}
+
+async function refreshStudioDetail() {
+  await Promise.all([loadStats(), loadCustomCharacters()]);
+  await loadCharacters();
+}
+
+async function rejectImage(imageId) {
+  if (!state.selectedCharacterId || !imageId) return;
+  setResult("Moving picture to Rejected...");
+  await api.post(`/api/images/${imageId}/reject`);
+  state.detailTab = "rejected";
+  setResult("Picture moved to Rejected.");
+  await refreshStudioDetail();
+}
+
+async function saveCastingStatus(primaryReferenceImageId = "") {
+  if (!state.selectedCharacterId) return;
+  const status = characterDetail.querySelector("[data-casting-status]")?.value || "needs_decision";
+  const notes = characterDetail.querySelector("[data-casting-notes]")?.value || "";
+  setResult("Saving casting decision...");
+  await api.post(`/api/characters/${state.selectedCharacterId}/casting-status`, {
+    casting_status: status,
+    casting_notes: notes,
+    primary_reference_image_id: primaryReferenceImageId,
+  });
+  setResult(primaryReferenceImageId ? "Primary reference saved." : "Casting decision saved.");
+  await refreshStudioDetail();
+}
+
+async function archiveSelectedCharacter(characterId = state.selectedCharacterId) {
+  if (!characterId) return;
+  setResult("Archiving character...");
+  await api.post(`/api/characters/${characterId}/archive`, { reason: "Archived from Factory Cast Studio." });
+  setResult("Character archived.");
+  if (characterId === state.selectedCharacterId) state.detailTab = "candidates";
+  await refreshStudioDetail();
+}
+
+async function generatePromptForCharacter(characterId, label = "character") {
+  if (!characterId) {
+    setResult("Select a character first.");
+    return;
+  }
+  setResult(`Creating Codex image prompt for ${label}...`);
+  const payload = await api.post(`/api/characters/${characterId}/generation-jobs`, {
+    notes: "Codex-assisted 10 Astrogram image job.",
+  });
+  setResult("Codex image prompt ready.", {
+    character: payload.character?.display_name || label,
+    status: payload.job?.status,
+    outputFolder: payload.job?.output_folder_path,
+    promptPack: payload.job?.prompt_pack_path,
+    references: payload.character?.references?.length || 0,
+  });
+  await refreshStudioDetail();
+}
+
+async function copyJobPrompt(button) {
+  const panel = button.closest("[data-generation-job-id]");
+  const promptText = panel?.querySelector(".codex-prompt-text")?.value || "";
+  if (!promptText) {
+    setResult("No prompt text found for this job.");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(promptText);
+  } catch {
+    const textArea = panel?.querySelector(".codex-prompt-text");
+    textArea?.focus();
+    textArea?.select();
+    document.execCommand("copy");
+  }
+  setResult("Prompt copied. Paste it into Codex.");
+}
+
+function updateJobPanelProgress(panel, payload) {
+  if (!panel || !payload) return;
+  const found = Number(payload.found ?? payload.job?.found_expected_count ?? 0);
+  const expected = Number(payload.expected ?? payload.job?.expected_image_count ?? 10);
+  panel.dataset.jobFound = String(found);
+  panel.dataset.jobExpected = String(expected);
+  panel.dataset.jobStatus = payload.job?.status || panel.dataset.jobStatus || "ready_for_codex";
+  const progress = panel.querySelector("[data-job-progress-text]");
+  if (progress) progress.textContent = jobProgressLabel({ found, expected });
+}
+
+async function scanJobResults(jobId, options = {}) {
+  if (!jobId) return;
+  const panel = options.panel || characterDetail.querySelector(`[data-generation-job-id="${escapeSelector(jobId)}"]`);
+  if (!options.silent) setResult("Checking job output folder...");
+  const payload = await api.post(`/api/generation-jobs/${jobId}/scan-results`);
+  updateJobPanelProgress(panel, payload);
+  const expected = Number(payload.expected || 10);
+  const found = Number(payload.found || 0);
+  if (!options.silent) {
+    setResult("Job results refreshed.", {
+      status: jobProgressLabel({ found, expected }),
+      found,
+      expected,
+      imported: payload.imported,
+      skippedAlreadyImported: payload.skipped,
+      outputFolder: payload.output_folder,
+    });
+  }
+  if (found >= expected) stopJobPolling(jobId);
+  if (payload.imported > 0 || found >= expected) await refreshStudioDetail();
+  return payload;
+}
+
+function syncVisibleJobPolling() {
+  const panels = [...characterDetail.querySelectorAll("[data-generation-job-id]")];
+  const visibleJobIds = new Set(panels.map((panel) => panel.dataset.generationJobId).filter(Boolean));
+  [...state.jobPollers.keys()].forEach((jobId) => {
+    if (!visibleJobIds.has(jobId)) stopJobPolling(jobId);
+  });
+  panels.forEach((panel) => {
+    const jobId = panel.dataset.generationJobId;
+    const found = Number(panel.dataset.jobFound || 0);
+    const expected = Number(panel.dataset.jobExpected || 10);
+    updateJobPanelProgress(panel, { found, expected, job: { status: panel.dataset.jobStatus } });
+    if (!jobId || found >= expected || state.jobPollers.has(jobId)) return;
+    const timer = window.setInterval(() => {
+      const livePanel = characterDetail.querySelector(`[data-generation-job-id="${escapeSelector(jobId)}"]`);
+      if (!livePanel) {
+        stopJobPolling(jobId);
+        return;
+      }
+      scanJobResults(jobId, { silent: true, panel: livePanel }).catch(showError);
+    }, 3500);
+    state.jobPollers.set(jobId, timer);
+    scanJobResults(jobId, { silent: true, panel }).catch(showError);
+  });
+}
+
+async function generateStyleBoardForCharacter(characterId, label = "character") {
+  if (!characterId) return;
+  setResult(`Preparing style-board set for ${label}...`);
+  const payload = await api.post(`/api/characters/${characterId}/style-board-generation-jobs`, {
+    notes: "One picture per individual style-board reference.",
+  });
+  setResult("Style-board prompt set ready.", {
+    character: payload.character?.display_name || label,
+    styleItems: payload.style_item_count,
+    promptPack: payload.job?.prompt_pack_path,
+  });
+  await refreshStudioDetail();
+}
+
+async function uploadCandidates() {
+  if (!state.selectedCharacterId) return;
+  const input = characterDetail.querySelector("[data-candidate-upload-files]");
+  const files = [...(input?.files || [])];
+  if (!files.length) {
+    setResult("Choose generated candidate pictures first.");
+    return;
+  }
+  setResult("Uploading generated candidates...");
+  const encodedFiles = await Promise.all(files.map(readFileAsDataURL));
+  const payload = await api.post(`/api/characters/${state.selectedCharacterId}/images/upload`, {
+    files: encodedFiles,
+    notes: "Uploaded generated candidate from Cast Studio.",
+  });
+  input.value = "";
+  state.detailTab = "candidates";
+  setResult("Candidates uploaded.", { saved: payload.saved });
+  await refreshStudioDetail();
+}
+
+async function uploadCharacterReferences() {
+  if (!state.selectedCharacterId) return;
+  const input = characterDetail.querySelector("[data-reference-upload-files]");
+  const files = [...(input?.files || [])];
+  if (!files.length) {
+    setResult("Choose identity reference pictures first.");
+    return;
+  }
+  setResult("Uploading identity references...");
+  const encodedFiles = await Promise.all(files.map(readFileAsDataURL));
+  const payload = await api.post(`/api/characters/${state.selectedCharacterId}/references/upload`, { files: encodedFiles });
+  input.value = "";
+  state.detailTab = "references";
+  setResult("Identity references uploaded.", { saved: payload.saved });
+  await refreshStudioDetail();
+}
+
+async function promoteCandidate(button) {
+  if (!state.selectedCharacterId) return;
+  const card = button.closest("[data-image-card]");
+  const imageId = button.dataset.promoteCandidate;
+  const slot = card?.querySelector("[data-promote-slot]")?.value || "profile_avatar";
+  setResult("Promoting candidate...");
+  await api.post(`/api/images/${imageId}/promote`, { slot_key: slot });
+  setResult("Candidate promoted.", { slot: slotLabel(slot) });
+  await refreshStudioDetail();
+}
+
+async function promoteApprovedImage(button) {
+  const imageId = button?.dataset?.promoteApproved || "";
+  const slot = button?.dataset?.promoteApprovedSlot || "profile_avatar";
+  if (!imageId) return;
+  setResult(`Making picture ${slotLabel(slot).toLowerCase()}...`);
+  await api.post(`/api/images/${imageId}/promote`, { slot_key: slot });
+  setResult("Picture promoted.", { slot: slotLabel(slot) });
+  await refreshStudioDetail();
+}
+
+async function saveImageDisplay(button) {
+  const imageId = button?.dataset?.saveImageDisplay || "";
+  const card = button.closest("[data-image-card]");
+  const cropMode = card?.querySelector("[data-edit-crop-mode]")?.value || "cover";
+  const imagePositionY = Number(card?.querySelector("[data-edit-position-y]")?.value || 50);
+  if (!imageId) return;
+  setResult("Saving crop...");
+  await api.post(`/api/images/${imageId}/display`, {
+    crop_mode: cropMode,
+    image_position_y: imagePositionY,
+  });
+  setResult("Crop saved.", { crop: cropMode, facePosition: imagePositionY });
+  await refreshStudioDetail();
+}
+
+async function nudgeImagePosition(button) {
+  const imageId = button?.dataset?.nudgeImagePosition || "";
+  const card = button.closest("[data-image-card]");
+  const input = card?.querySelector("[data-edit-position-y]");
+  if (!imageId || !input) return;
+  const delta = Number(button.dataset.nudgeDelta || 0);
+  const nextValue = Math.max(0, Math.min(Number(input.value || 50) + delta, 100));
+  input.value = String(nextValue);
+  await saveImageDisplay(card.querySelector("[data-save-image-display]"));
+}
+
+async function archiveImage(button) {
+  const imageId = button?.dataset?.archiveImage || "";
+  if (!imageId) return;
+  setResult("Archiving picture...");
+  await api.post(`/api/images/${imageId}/archive`);
+  setResult("Picture archived.");
+  await refreshStudioDetail();
+}
+
+async function moveImage(button) {
+  const imageId = button?.dataset?.moveImage || "";
+  const card = button.closest("[data-image-card]");
+  const targetCharacterId = card?.querySelector("[data-move-character-target]")?.value || "";
+  if (!imageId) return;
+  if (!targetCharacterId) {
+    setResult("Choose a destination character first.");
+    return;
+  }
+  const target = [...state.characters, ...state.customCharacters].find((character) => character.id === targetCharacterId);
+  setResult("Moving picture...");
+  await api.post(`/api/images/${imageId}/move`, { target_character_id: targetCharacterId });
+  setResult("Picture moved.", { destination: target?.display_name || targetCharacterId });
+  await refreshStudioDetail();
+}
+
+async function saveImageFeedback(button) {
+  const imageId = button?.dataset?.saveImageFeedback || "";
+  if (!imageId) return;
+  const card = button.closest("[data-image-card]");
+  const rating = Number(card?.querySelector("[data-feedback-rating]")?.value || 0);
+  const feedbackNotes = card?.querySelector("[data-feedback-notes]")?.value || "";
+  setResult("Saving image feedback...");
+  await api.post(`/api/images/${imageId}/feedback`, {
+    rating,
+    feedback_notes: feedbackNotes,
+  });
+  setResult("Image feedback saved.");
+  await refreshStudioDetail();
+}
+
+async function replaceSlotWithUpload() {
+  if (!state.selectedCharacterId) return;
+  const input = characterDetail.querySelector("[data-replace-file]");
+  const slot = characterDetail.querySelector("[data-replace-slot]")?.value || "profile_avatar";
+  const file = input?.files?.[0];
+  if (!file) {
+    setResult("Choose a picture first.");
+    return;
+  }
+  setResult("Replacing picture...");
+  const encoded = await readFileAsDataURL(file);
+  const upload = await api.post(`/api/characters/${state.selectedCharacterId}/images/upload`, {
+    files: [encoded],
+    notes: "Direct replacement uploaded from Cast Studio.",
+  });
+  const imageId = upload.items?.[0]?.id;
+  if (!imageId) throw new Error("Picture upload did not save.");
+  await api.post(`/api/images/${imageId}/promote`, { slot_key: slot });
+  input.value = "";
+  setResult("Picture replaced.", { slot: slotLabel(slot) });
+  await refreshStudioDetail();
+}
+
+async function swapSlotWithCustom() {
+  if (!state.selectedCharacterId) return;
+  const slot = characterDetail.querySelector("[data-replace-slot]")?.value || "profile_avatar";
+  const sourceCharacterId = characterDetail.querySelector("[data-custom-character-select]")?.value || "";
+  if (!sourceCharacterId) {
+    setResult("Choose a custom candidate first.");
+    return;
+  }
+  setResult("Replacing picture from custom candidate...");
+  await api.post(`/api/characters/${state.selectedCharacterId}/swap-from-character`, {
+    source_character_id: sourceCharacterId,
+    slot_key: slot,
+  });
+  setResult("Picture replaced.", { slot: slotLabel(slot) });
+  await refreshStudioDetail();
+}
+
+async function consolidateDuplicate() {
+  if (!state.selectedCharacterId) return;
+  const sourceCharacterId = characterDetail.querySelector("[data-consolidate-character-select]")?.value || "";
+  if (!sourceCharacterId) {
+    setResult("Choose a duplicate candidate first.");
+    return;
+  }
+  const notes = characterDetail.querySelector("[data-casting-notes]")?.value || "";
+  setResult("Consolidating duplicate...");
+  const payload = await api.post(`/api/characters/${state.selectedCharacterId}/consolidate`, {
+    source_character_id: sourceCharacterId,
+    notes,
+  });
+  state.detailTab = "references";
+  setResult("Duplicate consolidated.", { copied: payload.copied_count });
+  await refreshStudioDetail();
+}
+
+async function createCharacter(options = {}) {
+  const generatePrompt = Boolean(options.generatePrompt);
+  const nameInput = document.querySelector("#characterNameInput");
+  const name = nameInput.value.trim();
+  if (!name) {
+    setResult("Add a candidate name first.");
+    nameInput.focus();
+    return;
+  }
+  const sign = document.querySelector("#characterSignInput").value;
+  const files = [...characterReferenceInput.files];
+  if (!files.length) {
+    setResult("Choose at least one character picture.");
+    characterReferenceInput.focus();
+    return;
+  }
+  const encodedFiles = await Promise.all(files.map(readFileAsDataURL));
+  setResult(generatePrompt ? "Adding candidate and preparing prompt..." : "Adding candidate...");
+  const character = await api.post("/api/characters", {
+    display_name: name,
+    gender: "",
+    sun_sign: sign,
+    moon_sign: sign,
+    rising_sign: sign,
+    visual_notes: document.querySelector("#characterNotesInput").value.trim(),
+    files: encodedFiles,
+  });
+
+  document.querySelector("#characterNameInput").value = "";
+  document.querySelector("#characterSignInput").value = "";
+  document.querySelector("#characterNotesInput").value = "";
+  characterReferenceInput.value = "";
+  clearCharacterReferencePreview();
+  if (generatePrompt) {
+    const promptPayload = await api.post(`/api/characters/${character.id}/generation-jobs`, {
+      notes: "Custom candidate Codex-assisted 10 Astrogram image job.",
+    });
+    setResult("Candidate added and Codex image prompt ready.", {
+      name: character.display_name,
+      outputFolder: promptPayload.job?.output_folder_path,
+      promptPack: promptPayload.job?.prompt_pack_path,
+      referencePictures: promptPayload.character?.references?.length || files.length,
+    });
+  } else {
+    setResult("Candidate added.", {
+      name: character.display_name,
+      referencePictures: character.references?.length || files.length,
+    });
+  }
+  await Promise.all([loadStats(), loadCustomCharacters()]);
+  if (state.selectedCharacterId) await selectCharacter(state.selectedCharacterId);
+}
+
+async function uploadCustomReferences(button) {
+  const characterId = button?.dataset?.uploadCustomReferences || "";
+  if (!characterId) return;
+  const card = button.closest("[data-custom-character-id]");
+  const input = card?.querySelector("[data-custom-reference-files]");
+  const files = [...(input?.files || [])];
+  if (!files.length) {
+    setResult("Choose reference pictures for this candidate first.");
+    input?.focus();
+    return;
+  }
+  const character = state.customCharacters.find((item) => item.id === characterId);
+  setResult(`Adding ${files.length} reference picture${files.length === 1 ? "" : "s"}...`);
+  const encodedFiles = await Promise.all(files.map(readFileAsDataURL));
+  const payload = await api.post(`/api/characters/${characterId}/references/upload`, { files: encodedFiles });
+  input.value = "";
+  setResult("Reference pictures added.", {
+    candidate: payload.character?.display_name || character?.display_name || "Custom candidate",
+    added: payload.saved,
+    totalReferences: payload.character?.references?.length,
+  });
+  await Promise.all([loadStats(), loadCustomCharacters()]);
+  if (state.selectedCharacterId) await selectCharacter(state.selectedCharacterId);
+}
+
+async function exportAppAssets() {
+  setResult("Building app-facing 24 export package...");
+  const payload = await api.post("/api/export/app-assets");
+  setResult("Export package created.", {
+    directory: payload.directory,
+    missing: payload.missing_count,
+    unlocked: payload.unlocked_count,
+  });
+  await loadStats();
+}
+
+async function importApprovedAssets() {
+  setResult("Refreshing approved pictures...");
+  const payload = await api.post("/api/characters/import-approved-assets");
+  setResult("Approved pictures refreshed.", {
+    charactersUpdated: payload.characters_updated,
+    slotsAdded: payload.approved_slots_added,
+  });
+  await refreshStudioDetail();
+}
+
+function referenceThumbs(items) {
+  if (!items?.length) return `<div class="path-box">No style pictures yet.</div>`;
+  return items
+    .map(
+      (item) => `
+        <div class="reference-shell">
+          <button class="reference-thumb" type="button" data-full-image="${escapeHtml(item.url)}" data-full-title="${escapeHtml(item.name)}">
+            <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name)}" />
+            <span title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+          </button>
+          <button class="trash-button" type="button" data-delete-style-reference="${escapeHtml(item.name)}" title="Delete style picture" aria-label="Delete style picture"><span class="trash-icon" aria-hidden="true"></span></button>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function stylePromptCards(prompts) {
+  if (!prompts?.length) return `<div class="path-box">No style prompts yet.</div>`;
+  return prompts
+    .map(
+      (item) => `
+        <article class="style-prompt-card">
+          <p>${escapeHtml(item.text)}</p>
+          <span>${escapeHtml(item.created_at || "")}</span>
+          <button type="button" data-delete-style-prompt="${escapeHtml(item.id)}">Delete prompt</button>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+async function loadReferences() {
+  const payload = await api.get("/api/references");
+  referenceGrid.innerHTML = referenceThumbs(payload.items);
+  stylePromptList.innerHTML = stylePromptCards(payload.prompts);
+}
+
 async function uploadReferences() {
   const files = [...referenceInput.files];
   if (!files.length) {
-    setResult("Choose one or more reference images first.");
+    setResult("Choose style pictures first.");
     return;
   }
-  setResult("Uploading reference images…");
+  setResult("Uploading style pictures...");
   const encodedFiles = await Promise.all(files.map(readFileAsDataURL));
   const payload = await api.post("/api/references/upload", { files: encodedFiles });
   referenceInput.value = "";
-  setResult("References uploaded.", payload);
+  setResult("Style pictures uploaded.", { saved: payload.saved });
   await Promise.all([loadReferences(), loadStats()]);
 }
 
-async function createBatch() {
-  const scope = document.querySelector("#batchScope").value;
-  const kind = document.querySelector("#batchKind").value;
-  const status = document.querySelector("#batchStatus").value;
-  const count = Number(document.querySelector("#batchCount").value || 24);
-  setResult("Creating batch…");
-  const payload = await api.post("/api/batches", { scope, kind, status, count });
-  setResult("Batch created.", payload);
-  await Promise.all([loadStats(), loadCompanions()]);
-}
-
-async function scanImports() {
-  setResult("Scanning import and cloud folders…");
-  const payload = await api.post("/api/imports/scan");
-  setResult("Folder scan complete.", payload);
-  await Promise.all([loadStats(), loadCompanions()]);
-  if (state.selectedId) await selectCompanion(state.selectedId);
-}
-
-async function syncSimastryApps() {
-  setResult("Scanning Simastry app characters…");
-  const payload = await api.post("/api/simastry/sync");
-  setResult("Simastry app sync complete.", payload);
-  await Promise.all([loadStats(), loadCompanions(), loadAppCharacters()]);
-  if (state.selectedId) await selectCompanion(state.selectedId);
-}
-
-async function buildLinearPlan() {
-  setResult("Building Linear issue drafts…");
-  const payload = await api.post("/api/linear/drafts");
-  setResult("Linear issue drafts created.", payload);
-}
-
-async function generateDelegateTasks() {
-  setResult("Creating Slack task drafts…");
-  const payload = await api.post("/api/slack-tasks/generate");
-  setResult("Slack task drafts created.", payload);
-  await Promise.all([loadStats(), loadSlackAssignments()]);
-}
-
-async function pushSlackAssignments() {
-  setResult("Pushing Slack assignments…");
-  const payload = await api.post("/api/slack-assignments/push");
-  setResult("Slack assignment push complete.", payload);
-  await Promise.all([loadStats(), loadSlackAssignments()]);
-}
-
-async function monitorSlackAssignments() {
-  setResult("Checking Slack assignment threads…");
-  const payload = await api.post("/api/slack-assignments/monitor");
-  setResult("Slack assignment monitor complete.", payload);
-  await Promise.all([loadStats(), loadSlackAssignments()]);
-}
-
-async function uploadIdentityReferences() {
-  if (!state.selectedId) return;
-  const input = detailPanel.querySelector("[data-identity-input]");
-  const files = [...(input?.files || [])];
-  if (!files.length) {
-    setResult("Choose one or more character reference pictures first.");
+async function addStylePrompt() {
+  const text = stylePromptInput.value.trim();
+  if (!text) {
+    setResult("Add a style prompt first.");
+    stylePromptInput.focus();
     return;
   }
-  setResult("Uploading character references…");
-  const encodedFiles = await Promise.all(files.map(readFileAsDataURL));
-  const payload = await api.post(`/api/companions/${state.selectedId}/identity-references/upload`, { files: encodedFiles });
-  if (input) input.value = "";
-  detailPanel.innerHTML = detailTemplate(payload.companion);
-  setResult("Character references uploaded.", payload);
-  await Promise.all([loadStats(), loadCompanions()]);
+  setResult("Adding style prompt...");
+  const payload = await api.post("/api/style-prompts", { text });
+  stylePromptInput.value = "";
+  setResult("Style prompt added.", { saved: payload.saved, prompts: payload.prompts?.length || 0 });
+  await Promise.all([loadReferences(), loadStats()]);
 }
 
-async function saveProduction() {
-  if (!state.selectedId) return;
-  const payload = {};
-  detailPanel.querySelectorAll("[data-production-field]").forEach((field) => {
-    payload[field.dataset.productionField] = field.value;
+async function deleteStyleReference(button) {
+  const name = button?.dataset?.deleteStyleReference || "";
+  if (!name) return;
+  setResult("Deleting style picture...");
+  await api.post("/api/references/delete", { name });
+  setResult("Style picture deleted.", { name });
+  await Promise.all([loadReferences(), loadStats()]);
+}
+
+async function deleteStylePrompt(button) {
+  const id = button?.dataset?.deleteStylePrompt || "";
+  if (!id) return;
+  setResult("Deleting style prompt...");
+  await api.post("/api/style-prompts/delete", { id });
+  setResult("Style prompt deleted.");
+  await Promise.all([loadReferences(), loadStats()]);
+}
+
+function switchTab(targetId) {
+  document.querySelectorAll(".tab-button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tabTarget === targetId);
   });
-  setResult("Saving assignment…");
-  const companion = await api.post(`/api/companions/${state.selectedId}/production`, payload);
-  detailPanel.innerHTML = detailTemplate(companion);
-  setResult("Assignment saved.");
-  await Promise.all([loadStats(), loadCompanions()]);
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    const active = panel.id === targetId;
+    panel.hidden = !active;
+    panel.classList.toggle("active", active);
+  });
 }
 
 function bindEvents() {
-  document.querySelector("#seedBtn").addEventListener("click", () => seedCatalog().catch(showError));
-  document.querySelector("#syncAppsBtn").addEventListener("click", () => syncSimastryApps().catch(showError));
-  document.querySelector("#linearBtn").addEventListener("click", () => buildLinearPlan().catch(showError));
-  document.querySelector("#batchBtn").addEventListener("click", () => createBatch().catch(showError));
-  document.querySelector("#scanBtn").addEventListener("click", () => scanImports().catch(showError));
-  document.querySelector("#taskBtn").addEventListener("click", () => generateDelegateTasks().catch(showError));
-  document.querySelector("#pushSlackBtn").addEventListener("click", () => pushSlackAssignments().catch(showError));
-  document.querySelector("#monitorSlackBtn").addEventListener("click", () => monitorSlackAssignments().catch(showError));
+  document.querySelector("#createCharacterBtn").addEventListener("click", () => createCharacter().catch(showError));
+  document
+    .querySelector("#createAndGenerateCharacterBtn")
+    .addEventListener("click", () => createCharacter({ generatePrompt: true }).catch(showError));
+  document.querySelector("#importApprovedAssetsBtn").addEventListener("click", () => importApprovedAssets().catch(showError));
+  document.querySelector("#exportAppAssetsBtn").addEventListener("click", () => exportAppAssets().catch(showError));
   document.querySelector("#uploadReferencesBtn").addEventListener("click", () => uploadReferences().catch(showError));
+  document.querySelector("#addStylePromptBtn").addEventListener("click", () => addStylePrompt().catch(showError));
+  characterReferenceInput.addEventListener("change", renderCharacterReferencePreview);
 
-  companionList.addEventListener("click", (event) => {
-    const row = event.target.closest(".companion-row");
-    if (row) selectCompanion(row.dataset.id).catch(showError);
+  document.querySelector(".tab-bar").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-tab-target]");
+    if (button) switchTab(button.dataset.tabTarget);
   });
 
-  detailPanel.addEventListener("click", async (event) => {
-    const identityUploadButton = event.target.closest("[data-identity-upload]");
-    if (identityUploadButton) {
-      await uploadIdentityReferences().catch(showError);
+  castingFilterBar.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-casting-filter]");
+    if (!button) return;
+    state.castingFilter = button.dataset.castingFilter;
+    renderCastingFilters();
+    renderCharacterGallery();
+  });
+
+  characterGallery.addEventListener("click", async (event) => {
+    const card = event.target.closest("[data-character-id]");
+    if (card) {
+      await selectCharacter(card.dataset.characterId).catch(showError);
+      scrollToStudioDetail();
+    }
+  });
+
+  characterDetail.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-scroll-gallery]")) {
+      scrollToCastGallery();
       return;
     }
-    const productionButton = event.target.closest("[data-production-save]");
-    if (productionButton) {
-      await saveProduction().catch(showError);
+    const rejectButton = event.target.closest("[data-reject-image]");
+    if (rejectButton) {
+      await rejectImage(rejectButton.dataset.rejectImage).catch(showError);
       return;
     }
-    const button = event.target.closest("[data-status]");
-    if (!button || !state.selectedId) return;
-    const companion = await api.post(`/api/companions/${state.selectedId}/status`, { status: button.dataset.status });
-    detailPanel.innerHTML = detailTemplate(companion);
-    await Promise.all([loadStats(), loadCompanions()]);
+    const pictureTab = event.target.closest("[data-picture-tab]");
+    if (pictureTab) {
+      state.detailTab = pictureTab.dataset.pictureTab;
+      await selectCharacter(state.selectedCharacterId).catch(showError);
+      return;
+    }
+    const editToggle = event.target.closest("[data-toggle-image-edit]");
+    if (editToggle) {
+      const card = editToggle.closest(".slot-card");
+      card?.classList.toggle("editing");
+      return;
+    }
+    const promoteApprovedButton = event.target.closest("[data-promote-approved]");
+    if (promoteApprovedButton) {
+      await promoteApprovedImage(promoteApprovedButton).catch(showError);
+      return;
+    }
+    const saveDisplayButton = event.target.closest("[data-save-image-display]");
+    if (saveDisplayButton) {
+      await saveImageDisplay(saveDisplayButton).catch(showError);
+      return;
+    }
+    const nudgeButton = event.target.closest("[data-nudge-image-position]");
+    if (nudgeButton) {
+      await nudgeImagePosition(nudgeButton).catch(showError);
+      return;
+    }
+    const moveButton = event.target.closest("[data-move-image]");
+    if (moveButton) {
+      await moveImage(moveButton).catch(showError);
+      return;
+    }
+    const archiveImageButton = event.target.closest("[data-archive-image]");
+    if (archiveImageButton) {
+      await archiveImage(archiveImageButton).catch(showError);
+      return;
+    }
+    const fullPicture = event.target.closest("[data-full-image]");
+    if (fullPicture) {
+      openFullImage(fullPicture.dataset.fullImage, fullPicture.dataset.fullTitle);
+      return;
+    }
+    const promoteButton = event.target.closest("[data-promote-candidate]");
+    if (promoteButton) {
+      await promoteCandidate(promoteButton).catch(showError);
+      return;
+    }
+    const feedbackButton = event.target.closest("[data-save-image-feedback]");
+    if (feedbackButton) {
+      await saveImageFeedback(feedbackButton).catch(showError);
+      return;
+    }
+    const copyPromptButton = event.target.closest("[data-copy-job-prompt]");
+    if (copyPromptButton) {
+      await copyJobPrompt(copyPromptButton).catch(showError);
+      return;
+    }
+    const scanJobButton = event.target.closest("[data-scan-job-results]");
+    if (scanJobButton) {
+      await scanJobResults(scanJobButton.dataset.scanJobResults).catch(showError);
+      return;
+    }
+    const primaryButton = event.target.closest("[data-primary-reference]");
+    if (primaryButton) {
+      await saveCastingStatus(primaryButton.dataset.primaryReference).catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-save-casting]")) {
+      await saveCastingStatus().catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-archive-character]")) {
+      await archiveSelectedCharacter().catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-generate-selected]")) {
+      const selected = state.characters.find((character) => character.id === state.selectedCharacterId);
+      await generatePromptForCharacter(state.selectedCharacterId, selected?.display_name || "selected character").catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-generate-selected-style-board]")) {
+      const selected = state.characters.find((character) => character.id === state.selectedCharacterId);
+      await generateStyleBoardForCharacter(state.selectedCharacterId, selected?.display_name || "selected character").catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-upload-candidates]")) {
+      await uploadCandidates().catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-upload-character-references]")) {
+      await uploadCharacterReferences().catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-replace-upload]")) {
+      await replaceSlotWithUpload().catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-swap-custom]")) {
+      await swapSlotWithCustom().catch(showError);
+      return;
+    }
+    if (event.target.closest("[data-consolidate-character]")) {
+      await consolidateDuplicate().catch(showError);
+    }
   });
 
-  ["#scopeFilter", "#statusFilter", "#genderFilter"].forEach((selector) => {
-    document.querySelector(selector).addEventListener("change", () => loadCompanions().catch(showError));
+  customGallery.addEventListener("click", async (event) => {
+    const uploadReferencesButton = event.target.closest("[data-upload-custom-references]");
+    if (uploadReferencesButton) {
+      await uploadCustomReferences(uploadReferencesButton).catch(showError);
+      return;
+    }
+    const generateButton = event.target.closest("[data-generate-custom]");
+    if (generateButton) {
+      const character = state.customCharacters.find((item) => item.id === generateButton.dataset.generateCustom);
+      await generatePromptForCharacter(generateButton.dataset.generateCustom, character?.display_name || "custom candidate").catch(showError);
+      return;
+    }
+    const generateStyleButton = event.target.closest("[data-generate-custom-style-board]");
+    if (generateStyleButton) {
+      const character = state.customCharacters.find((item) => item.id === generateStyleButton.dataset.generateCustomStyleBoard);
+      await generateStyleBoardForCharacter(generateStyleButton.dataset.generateCustomStyleBoard, character?.display_name || "custom candidate").catch(showError);
+      return;
+    }
+    const archiveButton = event.target.closest("[data-archive-custom]");
+    if (archiveButton) {
+      await archiveSelectedCharacter(archiveButton.dataset.archiveCustom).catch(showError);
+      return;
+    }
+    const fullPicture = event.target.closest("[data-full-image]");
+    if (fullPicture) openFullImage(fullPicture.dataset.fullImage, fullPicture.dataset.fullTitle);
   });
-  document.querySelector("#searchInput").addEventListener("input", () => {
-    clearTimeout(state.searchTimer);
-    state.searchTimer = setTimeout(() => loadCompanions().catch(showError), 180);
+
+  referenceGrid.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-delete-style-reference]");
+    if (deleteButton) {
+      deleteStyleReference(deleteButton).catch(showError);
+      return;
+    }
+    const fullPicture = event.target.closest("[data-full-image]");
+    if (fullPicture) openFullImage(fullPicture.dataset.fullImage, fullPicture.dataset.fullTitle);
+  });
+
+  stylePromptList.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-delete-style-prompt]");
+    if (deleteButton) deleteStylePrompt(deleteButton).catch(showError);
+  });
+
+  imageDialog.addEventListener("click", (event) => {
+    if (event.target === imageDialog) imageDialog.close();
   });
 }
 
 function showError(error) {
-  setResult(`Something needs attention: ${error.message}`);
+  setResult(`Needs attention: ${error.message}`);
 }
 
 async function init() {
   bindEvents();
-  await Promise.all([loadStats(), loadCompanions(), loadReferences(), loadAppCharacters(), loadVisualSessions(), loadSlackAssignments()]);
-  if (state.companions[0]) await selectCompanion(state.companions[0].id);
+  await Promise.all([loadStats(), loadCustomCharacters(), loadReferences()]);
+  await loadCharacters();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
 }
 
 init().catch(showError);

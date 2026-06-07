@@ -2,7 +2,9 @@ import Foundation
 
 let appRoot = "/Users/chiburashka/Documents/Codex/Simastry/Factory"
 let port = ProcessInfo.processInfo.environment["SIMASTRY_FACTORY_PORT"] ?? "8765"
-let url = "http://127.0.0.1:\(port)/"
+let host = ProcessInfo.processInfo.environment["SIMASTRY_FACTORY_HOST"] ?? "127.0.0.1"
+let openHost = host == "0.0.0.0" ? "127.0.0.1" : host
+let url = "http://\(openHost):\(port)/"
 let statsURL = "\(url)api/stats"
 let logDirectory = "\(appRoot)/workspace/logs"
 let logFile = "\(logDirectory)/factory-server.log"
@@ -47,7 +49,7 @@ if serverIsReady() {
 
 let process = Process()
 process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-process.arguments = ["python3", "\(appRoot)/server.py", "--port", port]
+process.arguments = ["python3", "\(appRoot)/server.py", "--host", host, "--port", port]
 process.currentDirectoryURL = URL(fileURLWithPath: appRoot)
 
 if !FileManager.default.fileExists(atPath: logFile) {
