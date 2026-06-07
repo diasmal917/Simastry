@@ -9,9 +9,11 @@ import mimetypes
 import os
 import re
 import shutil
+import socket
 import sqlite3
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -29,12 +31,28 @@ COMPANIONS_DIR = WORKSPACE_DIR / "companions"
 BATCHES_DIR = WORKSPACE_DIR / "batches"
 IMPORTS_DIR = WORKSPACE_DIR / "imports"
 REFERENCES_DIR = WORKSPACE_DIR / "references" / "style-board"
+STYLE_PROMPTS_PATH = WORKSPACE_DIR / "references" / "style-prompts.json"
 CLOUD_DROP_DIR = WORKSPACE_DIR / "cloud-drop"
 DAILY_TASKS_DIR = WORKSPACE_DIR / "daily-tasks"
 APP_SYNC_DIR = WORKSPACE_DIR / "app-sync"
 LINEAR_DIR = WORKSPACE_DIR / "linear"
 VISUAL_PRODUCTION_DIR = WORKSPACE_DIR / "visual-production"
+CHARACTER_LIBRARY_DIR = WORKSPACE_DIR / "characters"
+APP_EXPORTS_DIR = WORKSPACE_DIR / "exports" / "app-assets"
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "").strip()
+
+APP_ASSET_SLOTS = ("profile_avatar", "card_portrait", *[f"astrogram_{index:02d}" for index in range(1, 11)])
+CHARACTER_STATUSES = {"draft", "ready", "assigned", "imported", "reviewing", "approved", "blocked"}
+CASTING_STATUSES = {
+    "needs_decision",
+    "locked",
+    "needs_better_photos",
+    "replace_identity",
+    "consolidate_duplicate",
+    "archived",
+}
+IMAGE_KINDS = {"reference", "candidate", "approved", "archived", "rejected"}
+GENERATION_JOB_STATUSES = {"draft", "ready", "assigned", "imported", "reviewing", "approved", "blocked"}
 
 IMAGE_REALISM_STANDARD = (
     "Image realism standard: make outputs look like casual iPhone pictures of real people on Instagram, "
@@ -332,6 +350,7 @@ ASSET_EXTENSIONS = {
     ".webp",
 }
 VIDEO_EXTENSIONS = {".m4v", ".mov", ".mp4", ".webm"}
+IMAGE_EXTENSIONS = {".avif", ".heic", ".jpeg", ".jpg", ".png", ".webp"}
 
 
 def now_iso() -> str:
@@ -365,8 +384,11 @@ def ensure_workspace() -> None:
         APP_SYNC_DIR,
         LINEAR_DIR,
         VISUAL_PRODUCTION_DIR,
+        CHARACTER_LIBRARY_DIR,
+        APP_EXPORTS_DIR,
     ]:
         directory.mkdir(parents=True, exist_ok=True)
+    STYLE_PROMPTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     readme = IMPORTS_DIR / "README.txt"
     if not readme.exists():
         readme.write_text(
@@ -508,6 +530,70 @@ def init_db() -> None:
               updated_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS managed_characters (
+              id TEXT PRIMARY KEY,
+              source_type TEXT NOT NULL DEFAULT 'custom',
+              companion_id TEXT NOT NULL DEFAULT '',
+              app_character_key TEXT NOT NULL DEFAULT '',
+              display_name TEXT NOT NULL,
+              gender TEXT NOT NULL DEFAULT '',
+              sun_sign TEXT NOT NULL DEFAULT '',
+              moon_sign TEXT NOT NULL DEFAULT '',
+              rising_sign TEXT NOT NULL DEFAULT '',
+              app_role TEXT NOT NULL DEFAULT '',
+              visual_notes TEXT NOT NULL DEFAULT '',
+              status TEXT NOT NULL DEFAULT 'draft',
+              casting_status TEXT NOT NULL DEFAULT 'needs_decision',
+              casting_notes TEXT NOT NULL DEFAULT '',
+              locked_at TEXT NOT NULL DEFAULT '',
+              primary_reference_image_id TEXT NOT NULL DEFAULT '',
+              folder_path TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS character_images (
+              id TEXT PRIMARY KEY,
+              character_id TEXT NOT NULL,
+              image_kind TEXT NOT NULL DEFAULT 'candidate',
+              slot_key TEXT NOT NULL DEFAULT '',
+              local_path TEXT NOT NULL UNIQUE,
+              source_path TEXT NOT NULL DEFAULT '',
+              original_filename TEXT NOT NULL DEFAULT '',
+              prompt_job_id TEXT NOT NULL DEFAULT '',
+              notes TEXT NOT NULL DEFAULT '',
+              feedback_rating INTEGER NOT NULL DEFAULT 0,
+              feedback_notes TEXT NOT NULL DEFAULT '',
+              feedback_updated_at TEXT NOT NULL DEFAULT '',
+              version INTEGER NOT NULL DEFAULT 1,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              archived_at TEXT NOT NULL DEFAULT '',
+              FOREIGN KEY (character_id) REFERENCES managed_characters(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS character_generation_jobs (
+              id TEXT PRIMARY KEY,
+              character_id TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'ready',
+              prompt_pack_path TEXT NOT NULL DEFAULT '',
+              prompt_json_path TEXT NOT NULL DEFAULT '',
+              notes TEXT NOT NULL DEFAULT '',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (character_id) REFERENCES managed_characters(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS app_asset_exports (
+              id TEXT PRIMARY KEY,
+              directory TEXT NOT NULL,
+              manifest_path TEXT NOT NULL,
+              missing_report_path TEXT NOT NULL,
+              character_count INTEGER NOT NULL DEFAULT 0,
+              missing_count INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_companions_status ON companions(status);
             CREATE INDEX IF NOT EXISTS idx_companions_signs ON companions(sun_sign, moon_sign, rising_sign);
             CREATE INDEX IF NOT EXISTS idx_assets_companion ON assets(companion_id);
@@ -515,6 +601,9 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_visual_sessions_status ON visual_production_sessions(status, updated_at);
             CREATE INDEX IF NOT EXISTS idx_visual_events_session ON visual_production_events(session_id, created_at);
             CREATE INDEX IF NOT EXISTS idx_slack_assignments_status ON slack_assignments(status, updated_at);
+            CREATE INDEX IF NOT EXISTS idx_managed_characters_source ON managed_characters(source_type, updated_at);
+            CREATE INDEX IF NOT EXISTS idx_character_images_character ON character_images(character_id, image_kind, slot_key);
+            CREATE INDEX IF NOT EXISTS idx_character_generation_jobs_character ON character_generation_jobs(character_id, updated_at);
             """
         )
         companion_columns = {row["name"] for row in conn.execute("PRAGMA table_info(companions)")}
@@ -549,7 +638,24 @@ def init_db() -> None:
         batch_columns = {row["name"] for row in conn.execute("PRAGMA table_info(batches)")}
         if "scope" not in batch_columns:
             conn.execute("ALTER TABLE batches ADD COLUMN scope TEXT NOT NULL DEFAULT 'all'")
+        managed_character_columns = {row["name"] for row in conn.execute("PRAGMA table_info(managed_characters)")}
+        if "casting_status" not in managed_character_columns:
+            conn.execute("ALTER TABLE managed_characters ADD COLUMN casting_status TEXT NOT NULL DEFAULT 'needs_decision'")
+        if "casting_notes" not in managed_character_columns:
+            conn.execute("ALTER TABLE managed_characters ADD COLUMN casting_notes TEXT NOT NULL DEFAULT ''")
+        if "locked_at" not in managed_character_columns:
+            conn.execute("ALTER TABLE managed_characters ADD COLUMN locked_at TEXT NOT NULL DEFAULT ''")
+        if "primary_reference_image_id" not in managed_character_columns:
+            conn.execute("ALTER TABLE managed_characters ADD COLUMN primary_reference_image_id TEXT NOT NULL DEFAULT ''")
+        character_image_columns = {row["name"] for row in conn.execute("PRAGMA table_info(character_images)")}
+        if "feedback_rating" not in character_image_columns:
+            conn.execute("ALTER TABLE character_images ADD COLUMN feedback_rating INTEGER NOT NULL DEFAULT 0")
+        if "feedback_notes" not in character_image_columns:
+            conn.execute("ALTER TABLE character_images ADD COLUMN feedback_notes TEXT NOT NULL DEFAULT ''")
+        if "feedback_updated_at" not in character_image_columns:
+            conn.execute("ALTER TABLE character_images ADD COLUMN feedback_updated_at TEXT NOT NULL DEFAULT ''")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_companions_starter ON companions(is_starter, starter_rank)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_managed_characters_casting ON managed_characters(casting_status, source_type)")
 
 
 def companion_from_row(row: sqlite3.Row) -> dict[str, Any]:
@@ -925,6 +1031,10 @@ def stats() -> dict[str, Any]:
         slack_posted_count = conn.execute(
             "SELECT COUNT(*) FROM slack_assignments WHERE status IN ('posted', 'in_progress', 'worker_reported_done')"
         ).fetchone()[0]
+        managed_character_count = conn.execute("SELECT COUNT(*) FROM managed_characters").fetchone()[0]
+        custom_character_count = conn.execute("SELECT COUNT(*) FROM managed_characters WHERE source_type = 'custom'").fetchone()[0]
+        approved_slot_count = conn.execute("SELECT COUNT(*) FROM character_images WHERE image_kind = 'approved'").fetchone()[0]
+        candidate_image_count = conn.execute("SELECT COUNT(*) FROM character_images WHERE image_kind = 'candidate'").fetchone()[0]
         totals["batch_count"] = batch_count
         totals["asset_count"] = asset_count
         totals["app_character_count"] = app_character_count
@@ -932,10 +1042,15 @@ def stats() -> dict[str, Any]:
         totals["visual_approved_count"] = visual_approved_count
         totals["slack_assignment_count"] = slack_assignment_count
         totals["slack_posted_count"] = slack_posted_count
+        totals["managed_character_count"] = managed_character_count
+        totals["custom_character_count"] = custom_character_count
+        totals["approved_slot_count"] = approved_slot_count
+        totals["candidate_image_count"] = candidate_image_count
         totals["slack_enabled"] = 1 if SLACK_BOT_TOKEN else 0
         totals["workspace"] = str(WORKSPACE_DIR)
         totals["imports"] = str(IMPORTS_DIR)
         totals["reference_count"] = len(list_reference_files())
+        totals["style_prompt_count"] = len(list_style_prompts())
         totals["references"] = str(REFERENCES_DIR)
         totals["cloud_drop"] = str(CLOUD_DROP_DIR)
         totals["daily_tasks"] = str(DAILY_TASKS_DIR)
@@ -956,11 +1071,46 @@ def list_reference_files() -> list[Path]:
     )
 
 
+def list_style_prompts() -> list[dict[str, Any]]:
+    ensure_workspace()
+    if not STYLE_PROMPTS_PATH.exists():
+        return []
+    try:
+        payload = json.loads(STYLE_PROMPTS_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    prompts: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text", "")).strip()
+        if not text:
+            continue
+        prompts.append(
+            {
+                "id": str(item.get("id", "")) or f"style-prompt-{len(prompts) + 1}",
+                "text": text,
+                "created_at": str(item.get("created_at", "")),
+            }
+        )
+    return prompts
+
+
+def write_style_prompts(prompts: list[dict[str, Any]]) -> None:
+    ensure_workspace()
+    STYLE_PROMPTS_PATH.write_text(json.dumps(prompts, indent=2, ensure_ascii=True), encoding="utf-8")
+
+
 def list_references() -> dict[str, Any]:
     files = list_reference_files()
+    prompts = list_style_prompts()
     return {
         "count": len(files),
         "directory": str(REFERENCES_DIR),
+        "prompt_count": len(prompts),
+        "prompt_path": str(STYLE_PROMPTS_PATH),
         "items": [
             {
                 "name": path.name,
@@ -971,7 +1121,45 @@ def list_references() -> dict[str, Any]:
             }
             for path in files
         ],
+        "prompts": prompts,
     }
+
+
+def save_style_prompt(text: str) -> dict[str, Any]:
+    prompt_text = str(text or "").strip()
+    if not prompt_text:
+        raise ValueError("Add a style prompt first.")
+    prompts = list_style_prompts()
+    timestamp = now_iso()
+    prompt = {
+        "id": f"style-prompt-{int(time.time())}-{uuid.uuid4().hex[:8]}",
+        "text": prompt_text,
+        "created_at": timestamp,
+    }
+    prompts.insert(0, prompt)
+    write_style_prompts(prompts)
+    return {"prompt": prompt, "prompts": prompts, "saved": 1}
+
+
+def delete_style_prompt(prompt_id: str) -> dict[str, Any]:
+    prompt_id = str(prompt_id or "").strip()
+    if not prompt_id:
+        raise ValueError("Choose a style prompt to delete.")
+    prompts = list_style_prompts()
+    remaining = [prompt for prompt in prompts if prompt["id"] != prompt_id]
+    if len(remaining) == len(prompts):
+        raise KeyError(prompt_id)
+    write_style_prompts(remaining)
+    return {"deleted": prompt_id, "prompts": remaining, "references": list_references()}
+
+
+def delete_style_reference(filename: str) -> dict[str, Any]:
+    safe_name = safe_filename(str(filename or ""))
+    reference_path = (REFERENCES_DIR / safe_name).resolve()
+    if not str(reference_path).startswith(str(REFERENCES_DIR.resolve())) or not reference_path.exists():
+        raise KeyError(safe_name)
+    reference_path.unlink()
+    return {"deleted": safe_name, "references": list_references()}
 
 
 def save_reference_uploads(files: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1047,6 +1235,1818 @@ def save_identity_reference_uploads(companion_id: str, files: list[dict[str, Any
         "items": saved,
         "directory": str(directory),
         "companion": refreshed,
+    }
+
+
+def character_slug(value: str) -> str:
+    return slugify(value)[:64] or "character"
+
+
+def character_folder(character_id: str) -> Path:
+    return CHARACTER_LIBRARY_DIR / character_id
+
+
+def character_subdirectories(character_id: str) -> dict[str, Path]:
+    base = character_folder(character_id)
+    return {
+        "base": base,
+        "references": base / "references",
+        "candidates": base / "candidates",
+        "approved": base / "approved",
+        "generation_jobs": base / "generation-jobs",
+        "rejected": base / "rejected",
+    }
+
+
+def ensure_character_directories(character_id: str) -> dict[str, Path]:
+    directories = character_subdirectories(character_id)
+    for directory in directories.values():
+        directory.mkdir(parents=True, exist_ok=True)
+    return directories
+
+
+def normalize_character_status(value: Any, fallback: str = "draft") -> str:
+    status = str(value or fallback).strip().lower().replace(" ", "_")
+    return status if status in CHARACTER_STATUSES else fallback
+
+
+def normalize_casting_status(value: Any, fallback: str = "needs_decision") -> str:
+    status = str(value or fallback).strip().lower().replace(" ", "_")
+    return status if status in CASTING_STATUSES else fallback
+
+
+def normalize_generation_job_status(value: Any, fallback: str = "ready") -> str:
+    status = str(value or fallback).strip().lower().replace(" ", "_")
+    return status if status in GENERATION_JOB_STATUSES else fallback
+
+
+def normalize_asset_slot(value: Any) -> str:
+    slot = str(value or "").strip().lower()
+    if slot not in APP_ASSET_SLOTS:
+        raise ValueError(f"Unknown app asset slot: {slot or 'missing'}")
+    return slot
+
+
+def slot_label(slot_key: str) -> str:
+    if slot_key == "profile_avatar":
+        return "Profile avatar"
+    if slot_key == "card_portrait":
+        return "Card portrait"
+    if slot_key.startswith("astrogram_"):
+        return f"Astrogram {slot_key.rsplit('_', 1)[-1]}"
+    return slot_key.replace("_", " ").title()
+
+
+def unique_file_path(directory: Path, original_name: str) -> Path:
+    safe_name = safe_filename(original_name)
+    target = directory / safe_name
+    stem = target.stem
+    suffix = target.suffix
+    counter = 2
+    while target.exists():
+        target = directory / f"{stem}-{counter}{suffix}"
+        counter += 1
+    return target
+
+
+def uploaded_file_bytes(file_info: dict[str, Any], fallback_name: str) -> tuple[str, bytes] | None:
+    data_url = str(file_info.get("data", ""))
+    if not data_url:
+        return None
+    if "," in data_url and data_url.startswith("data:"):
+        header, encoded = data_url.split(",", 1)
+        mime = header.split(";", 1)[0].replace("data:", "")
+        suffix = mimetypes.guess_extension(mime) or Path(str(file_info.get("name", ""))).suffix or ".png"
+    else:
+        encoded = data_url
+        suffix = Path(str(file_info.get("name", ""))).suffix or ".png"
+    try:
+        raw = base64.b64decode(encoded, validate=False)
+    except Exception:
+        return None
+    if not raw:
+        return None
+    original_name = str(file_info.get("name", fallback_name)).strip() or fallback_name
+    if not Path(original_name).suffix:
+        original_name = f"{original_name}{suffix}"
+    return original_name, raw
+
+
+def image_from_row(row: sqlite3.Row) -> dict[str, Any]:
+    item = dict(row)
+    path = Path(item["local_path"])
+    item["url"] = f"/api/character-images/{item['id']}/file"
+    item["name"] = path.name
+    item["exists"] = path.exists()
+    item["size"] = path.stat().st_size if path.exists() else 0
+    item["slot_label"] = slot_label(item["slot_key"]) if item.get("slot_key") else ""
+    return item
+
+
+def generation_job_from_row(row: sqlite3.Row) -> dict[str, Any]:
+    return dict(row)
+
+
+def approved_slot_map(conn: sqlite3.Connection, character_id: str) -> dict[str, dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM character_images
+        WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+        ORDER BY slot_key ASC, version DESC, updated_at DESC
+        """,
+        (character_id,),
+    ).fetchall()
+    slots: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        slot_key = row["slot_key"]
+        if slot_key not in slots:
+            slots[slot_key] = image_from_row(row)
+    return slots
+
+
+def thumbnail_for_character(conn: sqlite3.Connection, character_id: str, approved_slots: dict[str, dict[str, Any]]) -> str:
+    for slot in ("profile_avatar", "card_portrait"):
+        item = approved_slots.get(slot)
+        if item and item.get("exists"):
+            return str(item["url"])
+    row = conn.execute(
+        """
+        SELECT *
+        FROM character_images
+        WHERE character_id = ?
+          AND image_kind IN ('approved', 'reference', 'candidate')
+        ORDER BY CASE image_kind
+                   WHEN 'approved' THEN 0
+                   WHEN 'reference' THEN 1
+                   ELSE 2
+                 END,
+                 created_at DESC
+        LIMIT 1
+        """,
+        (character_id,),
+    ).fetchone()
+    if not row:
+        return ""
+    return image_from_row(row)["url"]
+
+
+def character_from_row(row: sqlite3.Row, include_detail: bool = False) -> dict[str, Any]:
+    item = dict(row)
+    item["folder_path"] = str(Path(item["folder_path"]))
+    item["casting_status"] = normalize_casting_status(item.get("casting_status"), "needs_decision")
+    item["casting_notes"] = item.get("casting_notes", "")
+    item["locked_at"] = item.get("locked_at", "")
+    item["primary_reference_image_id"] = item.get("primary_reference_image_id", "")
+    with connect() as conn:
+        approved_slots = approved_slot_map(conn, item["id"])
+        item["thumbnail_url"] = thumbnail_for_character(conn, item["id"], approved_slots)
+        missing_slots = [slot for slot in APP_ASSET_SLOTS if slot not in approved_slots]
+        asset_completion = {
+            "required": len(APP_ASSET_SLOTS),
+            "approved": len(approved_slots),
+            "missing": len(missing_slots),
+            "percent": round((len(approved_slots) / len(APP_ASSET_SLOTS)) * 100),
+        }
+        item["completion"] = asset_completion
+        item["asset_completion"] = asset_completion
+        item["missing_slots"] = missing_slots
+        item["slot_status"] = [
+            {
+                "slot_key": slot,
+                "label": slot_label(slot),
+                "approved_image": approved_slots.get(slot),
+                "missing": slot not in approved_slots,
+            }
+            for slot in APP_ASSET_SLOTS
+        ]
+        counts = conn.execute(
+            """
+            SELECT image_kind, COUNT(*) AS count
+            FROM character_images
+            WHERE character_id = ?
+            GROUP BY image_kind
+            """,
+            (item["id"],),
+        ).fetchall()
+        item["image_counts"] = {count["image_kind"]: count["count"] for count in counts}
+        item["generation_job_count"] = conn.execute(
+            "SELECT COUNT(*) FROM character_generation_jobs WHERE character_id = ?",
+            (item["id"],),
+        ).fetchone()[0]
+        core_missing = [slot for slot in ("profile_avatar", "card_portrait") if slot not in approved_slots]
+        quality_flags: list[str] = []
+        if item["casting_status"] != "locked":
+            quality_flags.append("identity_unlocked")
+        if core_missing:
+            quality_flags.append("missing_profile_or_card")
+        if missing_slots:
+            quality_flags.append("missing_astrogram_slots")
+        if item["image_counts"].get("candidate", 0):
+            quality_flags.append("has_candidates")
+        if item["image_counts"].get("rejected", 0):
+            quality_flags.append("has_rejected")
+        item["quality_flags"] = quality_flags
+        item["casting"] = {
+            "status": item["casting_status"],
+            "notes": item["casting_notes"],
+            "locked_at": item["locked_at"],
+            "primary_reference_image_id": item["primary_reference_image_id"],
+            "is_locked": item["casting_status"] == "locked",
+            "needs_decision": item["casting_status"] != "locked",
+        }
+        if include_detail:
+            images = conn.execute(
+                """
+                SELECT *
+                FROM character_images
+                WHERE character_id = ?
+                ORDER BY created_at DESC
+                """,
+                (item["id"],),
+            ).fetchall()
+            grouped: dict[str, list[dict[str, Any]]] = {kind: [] for kind in IMAGE_KINDS}
+            for image in images:
+                grouped.setdefault(image["image_kind"], []).append(image_from_row(image))
+            item["references"] = grouped.get("reference", [])
+            item["candidates"] = grouped.get("candidate", [])
+            item["approved_images"] = grouped.get("approved", [])
+            item["archived_images"] = grouped.get("archived", [])
+            item["rejected_images"] = grouped.get("rejected", [])
+            jobs = conn.execute(
+                """
+                SELECT *
+                FROM character_generation_jobs
+                WHERE character_id = ?
+                ORDER BY created_at DESC
+                """,
+                (item["id"],),
+            ).fetchall()
+            item["generation_jobs"] = [generation_job_from_row(job) for job in jobs]
+    return item
+
+
+def write_character_profile(character: dict[str, Any]) -> None:
+    directories = ensure_character_directories(character["id"])
+    profile = {
+        "id": character["id"],
+        "source_type": character.get("source_type", ""),
+        "companion_id": character.get("companion_id", ""),
+        "app_character_key": character.get("app_character_key", ""),
+        "display_name": character.get("display_name", ""),
+        "gender": character.get("gender", ""),
+        "signs": {
+            "sun": character.get("sun_sign", ""),
+            "moon": character.get("moon_sign", ""),
+            "rising": character.get("rising_sign", ""),
+        },
+        "app_role": character.get("app_role", ""),
+        "visual_notes": character.get("visual_notes", ""),
+        "casting": {
+            "status": character.get("casting_status", "needs_decision"),
+            "notes": character.get("casting_notes", ""),
+            "locked_at": character.get("locked_at", ""),
+            "primary_reference_image_id": character.get("primary_reference_image_id", ""),
+        },
+        "required_slots": list(APP_ASSET_SLOTS),
+        "folders": {key: str(value) for key, value in directories.items()},
+        "updated_at": character.get("updated_at", now_iso()),
+    }
+    (directories["base"] / "profile.json").write_text(json.dumps(profile, indent=2, ensure_ascii=True), encoding="utf-8")
+
+
+def upsert_managed_character_from_record(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
+    timestamp = now_iso()
+    character_id = record["id"]
+    directories = ensure_character_directories(character_id)
+    conn.execute(
+        """
+        INSERT INTO managed_characters (
+          id, source_type, companion_id, app_character_key, display_name, gender,
+          sun_sign, moon_sign, rising_sign, app_role, visual_notes, status,
+          casting_status, casting_notes, locked_at, primary_reference_image_id,
+          folder_path, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          source_type = excluded.source_type,
+          companion_id = CASE WHEN managed_characters.companion_id = '' THEN excluded.companion_id ELSE managed_characters.companion_id END,
+          app_character_key = CASE WHEN managed_characters.app_character_key = '' THEN excluded.app_character_key ELSE managed_characters.app_character_key END,
+          display_name = CASE WHEN managed_characters.source_type IN ('app', 'starter') THEN excluded.display_name ELSE managed_characters.display_name END,
+          gender = CASE WHEN managed_characters.gender = '' THEN excluded.gender ELSE managed_characters.gender END,
+          sun_sign = CASE WHEN managed_characters.sun_sign = '' THEN excluded.sun_sign ELSE managed_characters.sun_sign END,
+          moon_sign = CASE WHEN managed_characters.moon_sign = '' THEN excluded.moon_sign ELSE managed_characters.moon_sign END,
+          rising_sign = CASE WHEN managed_characters.rising_sign = '' THEN excluded.rising_sign ELSE managed_characters.rising_sign END,
+          app_role = CASE WHEN managed_characters.app_role = '' THEN excluded.app_role ELSE managed_characters.app_role END,
+          visual_notes = CASE WHEN managed_characters.visual_notes = '' THEN excluded.visual_notes ELSE managed_characters.visual_notes END,
+          folder_path = excluded.folder_path,
+          updated_at = excluded.updated_at
+        """,
+        (
+            character_id,
+            record.get("source_type", "custom"),
+            record.get("companion_id", ""),
+            record.get("app_character_key", ""),
+            record.get("display_name", "Unnamed character"),
+            record.get("gender", ""),
+            record.get("sun_sign", ""),
+            record.get("moon_sign", ""),
+            record.get("rising_sign", ""),
+            record.get("app_role", ""),
+            record.get("visual_notes", ""),
+            normalize_character_status(record.get("status"), "draft"),
+            normalize_casting_status(record.get("casting_status"), "needs_decision"),
+            str(directories["base"]),
+            timestamp,
+            timestamp,
+        ),
+    )
+
+
+def ensure_managed_characters_from_existing() -> None:
+    init_db()
+    with connect() as conn:
+        app_rows = conn.execute("SELECT * FROM app_characters ORDER BY id").fetchall()
+        covered_companion_ids: set[str] = set()
+        for app_row in app_rows:
+            factory_ids = json.loads(app_row["factory_companion_ids"] or "[]")
+            covered_companion_ids.update(str(item) for item in factory_ids)
+            companion_row = None
+            if factory_ids:
+                companion_row = conn.execute("SELECT * FROM companions WHERE id = ? LIMIT 1", (factory_ids[0],)).fetchone()
+            character_id = f"char-app-{character_slug(app_row['id'])}"
+            sign = app_row["sign"]
+            record = {
+                "id": character_id,
+                "source_type": "app",
+                "companion_id": companion_row["id"] if companion_row else "",
+                "app_character_key": app_row["id"],
+                "display_name": app_row["display_name"],
+                "gender": companion_row["gender"] if companion_row else "",
+                "sun_sign": sign,
+                "moon_sign": sign,
+                "rising_sign": sign,
+                "app_role": "Synced app-facing character",
+                "visual_notes": app_row["source_summary"],
+                "status": "ready",
+            }
+            upsert_managed_character_from_record(conn, record)
+        starter_rows = conn.execute(
+            """
+            SELECT *
+            FROM companions
+            WHERE is_starter = 1
+            ORDER BY starter_rank
+            """
+        ).fetchall()
+        for row in starter_rows:
+            if row["id"] in covered_companion_ids and app_rows:
+                continue
+            record = {
+                "id": f"char-starter-{row['id']}",
+                "source_type": "starter",
+                "companion_id": row["id"],
+                "app_character_key": row["app_character_key"] if "app_character_key" in row.keys() else "",
+                "display_name": row["display_name"],
+                "gender": row["gender"],
+                "sun_sign": row["sun_sign"],
+                "moon_sign": row["moon_sign"],
+                "rising_sign": row["rising_sign"],
+                "app_role": "Starter 24 companion",
+                "visual_notes": row["visual_direction"],
+                "status": "ready" if row["status"] != "blocked" else "blocked",
+            }
+            upsert_managed_character_from_record(conn, record)
+        conn.commit()
+        rows = conn.execute("SELECT * FROM managed_characters").fetchall()
+    for row in rows:
+        write_character_profile(dict(row))
+
+
+def list_characters(params: dict[str, list[str]]) -> dict[str, Any]:
+    init_db()
+    ensure_managed_characters_from_existing()
+    limit = min(max(int(params.get("limit", ["160"])[0]), 1), 500)
+    offset = max(int(params.get("offset", ["0"])[0]), 0)
+    where = []
+    args: list[Any] = []
+    search = params.get("search", [""])[0].strip()
+    source = params.get("source", [""])[0].strip()
+    status_filter = params.get("status", [""])[0].strip()
+    casting_filter = params.get("casting", [""])[0].strip()
+    if search:
+        where.append(
+            "(id LIKE ? OR display_name LIKE ? OR gender LIKE ? OR sun_sign LIKE ? OR moon_sign LIKE ? OR rising_sign LIKE ? OR app_role LIKE ?)"
+        )
+        like = f"%{search}%"
+        args.extend([like, like, like, like, like, like, like])
+    if source:
+        where.append("source_type = ?")
+        args.append(source)
+    if status_filter:
+        where.append("status = ?")
+        args.append(status_filter)
+    if casting_filter:
+        where.append("casting_status = ?")
+        args.append(normalize_casting_status(casting_filter))
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    with connect() as conn:
+        total = conn.execute(f"SELECT COUNT(*) FROM managed_characters {where_sql}", args).fetchone()[0]
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM managed_characters
+            {where_sql}
+            ORDER BY CASE source_type
+                       WHEN 'app' THEN 0
+                       WHEN 'starter' THEN 1
+                       WHEN 'custom' THEN 2
+                       ELSE 3
+                     END,
+                     CASE sun_sign
+                       WHEN 'Aries' THEN 1
+                       WHEN 'Taurus' THEN 2
+                       WHEN 'Gemini' THEN 3
+                       WHEN 'Cancer' THEN 4
+                       WHEN 'Leo' THEN 5
+                       WHEN 'Virgo' THEN 6
+                       WHEN 'Libra' THEN 7
+                       WHEN 'Scorpio' THEN 8
+                       WHEN 'Sagittarius' THEN 9
+                       WHEN 'Capricorn' THEN 10
+                       WHEN 'Aquarius' THEN 11
+                       WHEN 'Pisces' THEN 12
+                       ELSE 99
+                     END,
+                     CASE gender WHEN 'female' THEN 0 WHEN 'male' THEN 1 ELSE 2 END,
+                     display_name ASC
+            LIMIT ? OFFSET ?
+            """,
+            [*args, limit, offset],
+        ).fetchall()
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "required_slots": list(APP_ASSET_SLOTS),
+        "casting_statuses": list(CASTING_STATUSES),
+        "items": [character_from_row(row) for row in rows],
+    }
+
+
+def get_character(character_id: str) -> dict[str, Any] | None:
+    init_db()
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (character_id,)).fetchone()
+    if not row:
+        ensure_managed_characters_from_existing()
+        with connect() as conn:
+            row = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (character_id,)).fetchone()
+    if not row:
+        return None
+    return character_from_row(row, include_detail=True)
+
+
+def create_character(payload: dict[str, Any]) -> dict[str, Any]:
+    init_db()
+    display_name = str(payload.get("display_name", "")).strip() or "Unnamed Character"
+    character_id = f"char-custom-{character_slug(display_name)}-{uuid.uuid4().hex[:8]}"
+    timestamp = now_iso()
+    directories = ensure_character_directories(character_id)
+    gender = str(payload.get("gender", "")).strip()
+    sun_sign = str(payload.get("sun_sign", "")).strip()
+    moon_sign = str(payload.get("moon_sign", "")).strip()
+    rising_sign = str(payload.get("rising_sign", "")).strip()
+    app_role = str(payload.get("app_role", "")).strip()
+    visual_notes = str(payload.get("visual_notes", "")).strip()
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO managed_characters (
+              id, source_type, companion_id, app_character_key, display_name, gender,
+              sun_sign, moon_sign, rising_sign, app_role, visual_notes, status,
+              casting_status, casting_notes, locked_at, primary_reference_image_id,
+              folder_path, created_at, updated_at
+            )
+            VALUES (?, 'custom', '', '', ?, ?, ?, ?, ?, ?, ?, 'draft', 'needs_decision', '', '', '', ?, ?, ?)
+            """,
+            (
+                character_id,
+                display_name,
+                gender,
+                sun_sign,
+                moon_sign,
+                rising_sign,
+                app_role,
+                visual_notes,
+                str(directories["base"]),
+                timestamp,
+                timestamp,
+            ),
+        )
+        conn.commit()
+    upload_character_references(character_id, payload.get("files", []))
+    character = get_character(character_id)
+    assert character is not None
+    write_character_profile(character)
+    return character
+
+
+def save_character_uploads(
+    character_id: str,
+    files: list[dict[str, Any]],
+    image_kind: str,
+    directory_key: str,
+    prompt_job_id: str = "",
+    notes: str = "",
+) -> dict[str, Any]:
+    character = get_character(character_id)
+    if not character:
+        raise KeyError(character_id)
+    if image_kind not in IMAGE_KINDS:
+        raise ValueError(f"Unknown image kind: {image_kind}")
+    directories = ensure_character_directories(character_id)
+    target_dir = directories[directory_key]
+    saved: list[dict[str, Any]] = []
+    timestamp = now_iso()
+    with connect() as conn:
+        for index, file_info in enumerate(files, start=1):
+            decoded = uploaded_file_bytes(file_info, f"{image_kind}-{index}.png")
+            if not decoded:
+                continue
+            original_name, raw = decoded
+            target = unique_file_path(target_dir, original_name)
+            target.write_bytes(raw)
+            image_id = f"img-{uuid.uuid4().hex[:12]}"
+            conn.execute(
+                """
+                INSERT INTO character_images (
+                  id, character_id, image_kind, slot_key, local_path, source_path,
+                  original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+                )
+                VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, 1, ?, ?, '')
+                """,
+                (
+                    image_id,
+                    character_id,
+                    image_kind,
+                    str(target),
+                    str(file_info.get("source_path", "")),
+                    original_name,
+                    prompt_job_id,
+                    notes,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            saved.append(
+                {
+                    "id": image_id,
+                    "name": target.name,
+                    "path": str(target),
+                    "url": f"/api/character-images/{image_id}/file",
+                    "image_kind": image_kind,
+                }
+            )
+        if saved and image_kind == "candidate":
+            conn.execute(
+                """
+                UPDATE managed_characters
+                SET status = CASE WHEN status IN ('draft', 'ready', 'assigned') THEN 'imported' ELSE status END,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, character_id),
+            )
+        conn.commit()
+    return {"saved": len(saved), "items": saved, "character": get_character(character_id)}
+
+
+def upload_character_references(character_id: str, files: list[dict[str, Any]]) -> dict[str, Any]:
+    return save_character_uploads(character_id, files, "reference", "references")
+
+
+def upload_character_images(character_id: str, files: list[dict[str, Any]], prompt_job_id: str = "", notes: str = "") -> dict[str, Any]:
+    return save_character_uploads(character_id, files, "candidate", "candidates", prompt_job_id=prompt_job_id, notes=notes)
+
+
+def cast_distinction_snapshot(limit: int = 36) -> list[dict[str, Any]]:
+    ensure_managed_characters_from_existing()
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, display_name, gender, sun_sign, moon_sign, rising_sign, source_type, visual_notes
+            FROM managed_characters
+            ORDER BY CASE source_type WHEN 'app' THEN 0 WHEN 'starter' THEN 1 ELSE 2 END,
+                     display_name ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def build_generation_prompt_pack(character: dict[str, Any], job_id: str) -> tuple[str, dict[str, Any]]:
+    identity_dir = character_subdirectories(character["id"])["references"]
+    prompt_dir = character_subdirectories(character["id"])["generation_jobs"]
+    reference_count = len(character.get("references", []))
+    missing_slots = character.get("missing_slots", list(APP_ASSET_SLOTS))
+    gender = character.get("gender") or "unspecified"
+    signs = " / ".join(
+        part
+        for part in [
+            f"{character.get('sun_sign')} Sun" if character.get("sun_sign") else "",
+            f"{character.get('moon_sign')} Moon" if character.get("moon_sign") else "",
+            f"{character.get('rising_sign')} Rising" if character.get("rising_sign") else "",
+        ]
+        if part
+    )
+    visual_notes = character.get("visual_notes") or "No extra visual notes yet."
+    role = character.get("app_role") or "Simastry companion"
+    presentation_direction = (
+        f"Presentation: {gender}."
+        if str(gender).strip() and str(gender).strip().lower() != "unspecified"
+        else "Infer gender and presentation from the identity reference images; do not need a typed gender label."
+    )
+    slots = [
+        {
+            "slot_key": slot,
+            "label": slot_label(slot),
+            "need": "approved" if slot not in missing_slots else "missing",
+        }
+        for slot in APP_ASSET_SLOTS
+    ]
+    cast_snapshot = cast_distinction_snapshot()
+    same_person_prompt = (
+        f"Use GPT Image 2 to generate 10 individual realistic pictures of the same fictional adult person: "
+        f"{character['display_name']}. {presentation_direction} "
+        f"Signs: {signs or 'not assigned'}. App role: {role}. "
+        "Use the identity reference images as the face, hair, body, age-read, and styling anchor when provided. "
+        "The results should feel like realistic photos this person would post on Instagram or use in a dating app, "
+        "with a consistent identity across all ten images. "
+        f"Visual notes: {visual_notes}. "
+        f"{IMAGE_REALISM_STANDARD} {POSE_VARIATION_STANDARD} {CAST_DISTINCTION_STANDARD} "
+        "Make every output a separate image of the same person, not a collage. No text, logo, watermark, nudity, explicit pose, "
+        "zodiac costume, UI screenshot, or celebrity resemblance. "
+        "Create images that can fill: profile avatar, card portrait, and ten Astrogram feed slots."
+    )
+    photo_briefs = [
+        "close profile/avatar crop with relaxed eye contact and natural phone-photo texture",
+        "vertical 2:3 card portrait, upper body clear, phone-photo realistic, not cinematic",
+        "mirror or elevator selfie with imperfect framing and a changed outfit",
+        "friend-taken walking or street candid from several feet away",
+        "cafe or dinner-table candid with natural hands and believable social setting",
+        "at-home ordinary photo with comfortable styling and off-center framing",
+        "outdoor lifestyle photo with wider crop and real background detail",
+        "night-out flash or low-light photo with phone-camera grain",
+        "hobby/personality photo where face is not centered and hands are doing something",
+        "travel, sidewalk, car, or balcony candid with a different angle, expression, and outfit",
+    ]
+    prompt_json = {
+        "job_id": job_id,
+        "status": "ready",
+        "character_id": character["id"],
+        "display_name": character["display_name"],
+        "identity_reference_folder": str(identity_dir),
+        "identity_reference_count": reference_count,
+        "required_slots": slots,
+        "missing_slots": missing_slots,
+        "core_prompt": same_person_prompt,
+        "photo_briefs": photo_briefs,
+        "cast_distinction_snapshot": cast_snapshot,
+    }
+    markdown_lines = [
+        f"# Simastry generation job - {character['display_name']}",
+        "",
+        f"Job ID: `{job_id}`",
+        "Status: `ready`",
+        "",
+        "## Attach Before Generating",
+        "",
+        f"- Identity references: `{identity_dir}` ({reference_count} saved)",
+        "",
+        "Use identity references to keep the person consistent. This standard 10-photo pack is separate from the Style Board.",
+        "",
+        "## Required App Slots",
+        "",
+        *[f"- `{slot['slot_key']}` - {slot['label']} - {slot['need']}" for slot in slots],
+        "",
+        "## Main GPT Image 2 Prompt",
+        "",
+        same_person_prompt,
+        "",
+        "## Ask For These 10 Photos",
+        "",
+        *[f"{index}. {brief}" for index, brief in enumerate(photo_briefs, start=1)],
+        "",
+        "## Cast Distinction Check",
+        "",
+        "Before approving, compare thumbnail identity against the active Simastry cast:",
+        "",
+        *[
+            f"- {item['display_name']} ({item['source_type']}, {item.get('gender') or 'unknown'}, {item.get('sun_sign') or 'no sign'})"
+            for item in cast_snapshot
+        ],
+        "",
+        "Reject or regenerate images that collapse into another approved character's visual lane.",
+    ]
+    prompt_dir.mkdir(parents=True, exist_ok=True)
+    return "\n".join(markdown_lines) + "\n", prompt_json
+
+
+def feedback_snapshot(character_id: str, limit: int = 40) -> dict[str, Any]:
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, image_kind, original_filename, notes, feedback_rating, feedback_notes, feedback_updated_at
+            FROM character_images
+            WHERE character_id = ?
+              AND (feedback_rating > 0 OR feedback_notes != '')
+            ORDER BY feedback_updated_at DESC, updated_at DESC
+            LIMIT ?
+            """,
+            (character_id, limit),
+        ).fetchall()
+    liked: list[dict[str, Any]] = []
+    avoid: list[dict[str, Any]] = []
+    neutral: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        rating = int(item.get("feedback_rating") or 0)
+        if rating >= 4:
+            liked.append(item)
+        elif rating and rating <= 2:
+            avoid.append(item)
+        else:
+            neutral.append(item)
+    return {"liked": liked, "avoid": avoid, "neutral": neutral, "count": len(rows)}
+
+
+def feedback_line(item: dict[str, Any]) -> str:
+    label = item.get("original_filename") or item.get("id", "image")
+    notes = str(item.get("feedback_notes") or "").strip()
+    if notes:
+        return f"- {label}: {notes}"
+    return f"- {label}: rated {int(item.get('feedback_rating') or 0)}/5"
+
+
+def build_style_board_prompt_pack(character: dict[str, Any], job_id: str) -> tuple[str, dict[str, Any]]:
+    identity_dir = character_subdirectories(character["id"])["references"]
+    prompt_dir = character_subdirectories(character["id"])["generation_jobs"]
+    style_images = list_references()["items"]
+    style_prompts = list_style_prompts()
+    feedback = feedback_snapshot(character["id"])
+    reference_count = len(character.get("references", []))
+    visual_notes = character.get("visual_notes") or "No extra visual notes yet."
+    prompt_items: list[dict[str, Any]] = []
+    for index, image in enumerate(style_images, start=1):
+        prompt_items.append(
+            {
+                "kind": "style_image",
+                "id": image["name"],
+                "label": f"Style image {index}: {image['name']}",
+                "reference": image["path"],
+                "prompt": (
+                    f"Generate exactly one realistic iPhone/Instagram-style picture of {character['display_name']} using the identity "
+                    f"references in `{identity_dir}` for the person's face and identity. Attach this single style reference image: "
+                    f"`{image['path']}`. Match only this reference's visual style, camera distance, crop, lighting, setting energy, "
+                    "color mood, and social-photo realism. Do not blend it with other style-board references. Keep the person consistent, "
+                    "adult, attractive, natural, and non-cinematic. No collage, text, watermark, explicit pose, celebrity resemblance, "
+                    "or zodiac costume."
+                ),
+            }
+        )
+    for index, prompt in enumerate(style_prompts, start=1):
+        prompt_items.append(
+            {
+                "kind": "style_prompt",
+                "id": prompt["id"],
+                "label": f"Style prompt {index}",
+                "reference": prompt["text"],
+                "prompt": (
+                    f"Generate exactly one realistic iPhone/Instagram-style picture of {character['display_name']} using the identity "
+                    f"references in `{identity_dir}` for the person's face and identity. Match this one written style direction only: "
+                    f"{prompt['text']} Do not blend it with other style-board references. Keep the person consistent, adult, attractive, "
+                    "natural, and non-cinematic. No collage, text, watermark, explicit pose, celebrity resemblance, or zodiac costume."
+                ),
+            }
+        )
+    learned_lines = []
+    if feedback["liked"]:
+        learned_lines.append("Reinforce from highly rated prior outputs:")
+        learned_lines.extend(feedback_line(item) for item in feedback["liked"][:8])
+    if feedback["avoid"]:
+        learned_lines.append("Avoid from low rated prior outputs:")
+        learned_lines.extend(feedback_line(item) for item in feedback["avoid"][:8])
+    if feedback["neutral"]:
+        learned_lines.append("Other notes:")
+        learned_lines.extend(feedback_line(item) for item in feedback["neutral"][:6])
+    prompt_json = {
+        "job_id": job_id,
+        "status": "ready",
+        "job_type": "style_board_set",
+        "character_id": character["id"],
+        "display_name": character["display_name"],
+        "identity_reference_folder": str(identity_dir),
+        "identity_reference_count": reference_count,
+        "style_board_folder": str(REFERENCES_DIR),
+        "style_prompt_path": str(STYLE_PROMPTS_PATH),
+        "style_item_count": len(prompt_items),
+        "style_items": prompt_items,
+        "feedback": feedback,
+    }
+    markdown_lines = [
+        f"# Simastry style-board set - {character['display_name']}",
+        "",
+        f"Job ID: `{job_id}`",
+        "Status: `ready`",
+        "Job type: `style_board_set`",
+        "",
+        "## Attach Before Generating",
+        "",
+        f"- Identity references: `{identity_dir}` ({reference_count} saved)",
+        f"- Style-board image folder: `{REFERENCES_DIR}` ({len(style_images)} saved)",
+        f"- Written style prompts: `{STYLE_PROMPTS_PATH}` ({len(style_prompts)} saved)",
+        "",
+        "Generate one output per style-board item below. Each output should match exactly one style-board item, not the whole board.",
+        f"Character notes: {visual_notes}",
+        "",
+        "## Learned Feedback",
+        "",
+        *(learned_lines if learned_lines else ["- No prior ratings or comments yet."]),
+        "",
+        "## One-Picture Style Prompts",
+        "",
+    ]
+    for index, item in enumerate(prompt_items, start=1):
+        markdown_lines.extend(
+            [
+                f"### {index}. {item['label']}",
+                "",
+                f"Reference: `{item['reference']}`" if item["kind"] == "style_image" else f"Reference: {item['reference']}",
+                "",
+                item["prompt"],
+                "",
+            ]
+        )
+    if not prompt_items:
+        markdown_lines.extend(
+            [
+                "No style-board items exist yet. Add style pictures or written style prompts first.",
+                "",
+            ]
+        )
+    prompt_dir.mkdir(parents=True, exist_ok=True)
+    return "\n".join(markdown_lines) + "\n", prompt_json
+
+
+def create_generation_job(character_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    character = get_character(character_id)
+    if not character:
+        raise KeyError(character_id)
+    status = normalize_generation_job_status(payload.get("status"), "ready")
+    notes = str(payload.get("notes", "")).strip()
+    job_id = f"job-{int(time.time())}-{uuid.uuid4().hex[:8]}"
+    directories = ensure_character_directories(character_id)
+    markdown, prompt_json = build_generation_prompt_pack(character, job_id)
+    prompt_pack_path = directories["generation_jobs"] / f"{job_id}.md"
+    prompt_json_path = directories["generation_jobs"] / f"{job_id}.json"
+    prompt_pack_path.write_text(markdown, encoding="utf-8")
+    prompt_json_path.write_text(json.dumps(prompt_json, indent=2, ensure_ascii=True), encoding="utf-8")
+    timestamp = now_iso()
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO character_generation_jobs (
+              id, character_id, status, prompt_pack_path, prompt_json_path, notes, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (job_id, character_id, status, str(prompt_pack_path), str(prompt_json_path), notes, timestamp, timestamp),
+        )
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET status = CASE WHEN status = 'draft' THEN 'ready' ELSE status END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (timestamp, character_id),
+        )
+        conn.commit()
+    return {"job": get_generation_job(job_id), "character": get_character(character_id)}
+
+
+def create_style_board_generation_job(character_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    character = get_character(character_id)
+    if not character:
+        raise KeyError(character_id)
+    status = normalize_generation_job_status(payload.get("status"), "ready")
+    notes = str(payload.get("notes", "")).strip() or "Style-board one-picture-per-reference prompt pack."
+    job_id = f"style-job-{int(time.time())}-{uuid.uuid4().hex[:8]}"
+    directories = ensure_character_directories(character_id)
+    markdown, prompt_json = build_style_board_prompt_pack(character, job_id)
+    prompt_pack_path = directories["generation_jobs"] / f"{job_id}.md"
+    prompt_json_path = directories["generation_jobs"] / f"{job_id}.json"
+    prompt_pack_path.write_text(markdown, encoding="utf-8")
+    prompt_json_path.write_text(json.dumps(prompt_json, indent=2, ensure_ascii=True), encoding="utf-8")
+    timestamp = now_iso()
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO character_generation_jobs (
+              id, character_id, status, prompt_pack_path, prompt_json_path, notes, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (job_id, character_id, status, str(prompt_pack_path), str(prompt_json_path), notes, timestamp, timestamp),
+        )
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET status = CASE WHEN status = 'draft' THEN 'ready' ELSE status END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (timestamp, character_id),
+        )
+        conn.commit()
+    return {"job": get_generation_job(job_id), "character": get_character(character_id), "style_item_count": prompt_json["style_item_count"]}
+
+
+def get_generation_job(job_id: str) -> dict[str, Any] | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM character_generation_jobs WHERE id = ?", (job_id,)).fetchone()
+    return generation_job_from_row(row) if row else None
+
+
+def update_character_casting_status(character_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    casting_status = normalize_casting_status(payload.get("casting_status") or payload.get("status"))
+    notes = str(payload.get("casting_notes", payload.get("notes", ""))).strip()
+    primary_reference_image_id = str(payload.get("primary_reference_image_id", "")).strip()
+    timestamp = now_iso()
+    with connect() as conn:
+        character = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (character_id,)).fetchone()
+        if not character:
+            raise KeyError(character_id)
+        if primary_reference_image_id:
+            image = conn.execute(
+                "SELECT id FROM character_images WHERE id = ? AND character_id = ?",
+                (primary_reference_image_id, character_id),
+            ).fetchone()
+            if not image:
+                raise ValueError("Primary reference image does not belong to this character.")
+        locked_at = timestamp if casting_status == "locked" else ""
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET casting_status = ?,
+                casting_notes = ?,
+                locked_at = ?,
+                primary_reference_image_id = CASE WHEN ? != '' THEN ? ELSE primary_reference_image_id END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                casting_status,
+                notes,
+                locked_at,
+                primary_reference_image_id,
+                primary_reference_image_id,
+                timestamp,
+                character_id,
+            ),
+        )
+        conn.commit()
+    character = get_character(character_id)
+    if character:
+        write_character_profile(character)
+    return {"character": character}
+
+
+def archive_character(character_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = payload or {}
+    reason = str(payload.get("reason", payload.get("notes", ""))).strip()
+    timestamp = now_iso()
+    with connect() as conn:
+        character = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (character_id,)).fetchone()
+        if not character:
+            raise KeyError(character_id)
+        notes = str(character["casting_notes"] or "").strip()
+        archive_note = f"Archived {timestamp}."
+        if reason:
+            archive_note = f"{archive_note} {reason}"
+        combined_notes = f"{notes}\n{archive_note}".strip() if notes else archive_note
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET casting_status = 'archived',
+                casting_notes = ?,
+                locked_at = '',
+                status = CASE WHEN source_type = 'custom' THEN 'blocked' ELSE status END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (combined_notes, timestamp, character_id),
+        )
+        conn.commit()
+    character = get_character(character_id)
+    if character:
+        write_character_profile(character)
+    return {"character": character}
+
+
+def consolidate_character(target_character_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    source_character_id = str(payload.get("source_character_id", "")).strip()
+    notes = str(payload.get("notes", "")).strip()
+    if not source_character_id:
+        raise ValueError("Choose a duplicate or custom character to consolidate.")
+    if source_character_id == target_character_id:
+        raise ValueError("Choose a different character to consolidate.")
+    timestamp = now_iso()
+    copied: list[dict[str, Any]] = []
+    with connect() as conn:
+        target = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (target_character_id,)).fetchone()
+        source = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (source_character_id,)).fetchone()
+        if not target:
+            raise KeyError(target_character_id)
+        if not source:
+            raise KeyError(source_character_id)
+        target_dirs = ensure_character_directories(target_character_id)
+        source_images = conn.execute(
+            """
+            SELECT *
+            FROM character_images
+            WHERE character_id = ? AND image_kind IN ('reference', 'candidate')
+            ORDER BY image_kind ASC, created_at ASC
+            """,
+            (source_character_id,),
+        ).fetchall()
+        for source_image in source_images:
+            source_path = Path(source_image["local_path"])
+            if not source_path.exists():
+                continue
+            target_dir = target_dirs["references"] if source_image["image_kind"] == "reference" else target_dirs["candidates"]
+            target_path = unique_file_path(target_dir, source_path.name)
+            copy_imported_image(source_path, target_path)
+            image_id = f"img-{uuid.uuid4().hex[:12]}"
+            conn.execute(
+                """
+                INSERT INTO character_images (
+                  id, character_id, image_kind, slot_key, local_path, source_path,
+                  original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+                )
+                VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, 1, ?, ?, '')
+                """,
+                (
+                    image_id,
+                    target_character_id,
+                    source_image["image_kind"],
+                    str(target_path),
+                    str(source_path),
+                    source_image["original_filename"] or source_path.name,
+                    source_image["prompt_job_id"],
+                    f"Consolidated from {source['display_name']}.",
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            copied.append({"id": image_id, "image_kind": source_image["image_kind"], "path": str(target_path)})
+        source_notes = str(source["casting_notes"] or "").strip()
+        archive_note = f"Consolidated into {target['display_name']} on {timestamp}."
+        if notes:
+            archive_note = f"{archive_note} {notes}"
+        source_notes = f"{source_notes}\n{archive_note}".strip() if source_notes else archive_note
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET casting_status = 'archived',
+                casting_notes = ?,
+                locked_at = '',
+                status = CASE WHEN source_type = 'custom' THEN 'blocked' ELSE status END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (source_notes, timestamp, source_character_id),
+        )
+        conn.execute(
+            """
+            UPDATE managed_characters
+            SET casting_status = CASE WHEN casting_status = 'needs_decision' THEN 'needs_better_photos' ELSE casting_status END,
+                casting_notes = CASE
+                  WHEN ? != '' AND casting_notes != '' THEN casting_notes || char(10) || ?
+                  WHEN ? != '' THEN ?
+                  ELSE casting_notes
+                END,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (notes, notes, notes, notes, timestamp, target_character_id),
+        )
+        conn.commit()
+    target_character = get_character(target_character_id)
+    source_character = get_character(source_character_id)
+    if target_character:
+        write_character_profile(target_character)
+    if source_character:
+        write_character_profile(source_character)
+    return {
+        "target_character": target_character,
+        "archived_character": source_character,
+        "copied_count": len(copied),
+        "copied": copied,
+    }
+
+
+def get_character_image_path(image_id: str) -> Path | None:
+    init_db()
+    with connect() as conn:
+        row = conn.execute("SELECT local_path FROM character_images WHERE id = ?", (image_id,)).fetchone()
+    if not row:
+        return None
+    path = Path(row["local_path"]).resolve()
+    workspace_root = WORKSPACE_DIR.resolve()
+    if not str(path).startswith(str(workspace_root)) or not path.exists():
+        return None
+    return path
+
+
+def is_image_file(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def asset_sort_key(path: Path) -> tuple[int, str]:
+    name = path.name.lower()
+    number_match = re.search(r"(?:astrogram__|post-|candidate-|lifestyle-|iphone-|nadia-)(\d{1,2})", name)
+    if not number_match:
+        number_match = re.search(r"(?:^|[-_])(\d{1,2})(?=\.)", name)
+    number = int(number_match.group(1)) if number_match else 999
+    return number, name
+
+
+def list_image_files(directory: Path) -> list[Path]:
+    if not directory.exists() or not directory.is_dir():
+        return []
+    return sorted([path for path in directory.iterdir() if is_image_file(path)], key=asset_sort_key)
+
+
+def copy_imported_image(source_path: Path, target_path: Path) -> None:
+    with source_path.open("rb") as source_file, target_path.open("wb") as target_file:
+        while True:
+            chunk = source_file.read(1024 * 1024)
+            if not chunk:
+                break
+            target_file.write(chunk)
+
+
+def approved_astrogram_sources(character: dict[str, Any]) -> list[Path]:
+    companion_id = str(character.get("companion_id", "")).strip()
+    app_key = str(character.get("app_character_key", "")).strip()
+    source_dirs = [
+        PROJECT_ROOT / "expo-prototype" / "assets" / "astrogram" / app_key,
+        WORKSPACE_DIR / "review-previews" / "astrogram" / companion_id,
+        IMPORTS_DIR / companion_id,
+    ]
+    for directory in source_dirs:
+        files = [
+            path
+            for path in list_image_files(directory)
+            if "identity" not in path.name.lower()
+            and "seed" not in path.name.lower()
+            and "contact" not in path.name.lower()
+        ]
+        if files:
+            return files
+    return []
+
+
+def hero_cast_sources(character: dict[str, Any]) -> list[Path]:
+    hero_dir = PROJECT_ROOT / "expo-prototype" / "assets" / "hero-cast"
+    if not hero_dir.exists():
+        return []
+    name = str(character.get("display_name", "")).lower().strip()
+    sign = str(character.get("sun_sign", "")).lower().strip()
+    matches = []
+    for path in hero_dir.iterdir():
+        path_name = path.name.lower()
+        if not is_image_file(path):
+            continue
+        if name and name not in path_name:
+            continue
+        if sign and sign not in path_name:
+            continue
+        matches.append(path)
+
+    def hero_sort_key(path: Path) -> tuple[int, int, str]:
+        path_name = path.name.lower()
+        version_match = re.search(r"(?:v|-)(\d+)(?=\.)", path_name)
+        version = int(version_match.group(1)) if version_match else 0
+        category = 0 if "iphone" in path_name or "profile" in path_name else 1 if "card" in path_name else 2
+        return category, -version, path_name
+
+    return sorted(matches, key=hero_sort_key)
+
+
+def identity_reference_sources(character: dict[str, Any]) -> list[Path]:
+    companion_id = str(character.get("companion_id", "")).strip()
+    source_dirs = [
+        WORKSPACE_DIR / "review-previews" / "identity" / companion_id,
+        IMPORTS_DIR / companion_id,
+    ]
+    files: list[Path] = []
+    for directory in source_dirs:
+        files.extend(
+            path
+            for path in list_image_files(directory)
+            if "identity" in path.name.lower() or "seed" in path.name.lower()
+        )
+    return sorted(files, key=asset_sort_key)
+
+
+def approved_slots_for_character(conn: sqlite3.Connection, character_id: str) -> set[str]:
+    rows = conn.execute(
+        """
+        SELECT DISTINCT slot_key
+        FROM character_images
+        WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+        """,
+        (character_id,),
+    ).fetchall()
+    return {row["slot_key"] for row in rows}
+
+
+def import_reference_source(conn: sqlite3.Connection, character: dict[str, Any], source_path: Path) -> dict[str, Any] | None:
+    existing = conn.execute(
+        """
+        SELECT id
+        FROM character_images
+        WHERE character_id = ? AND source_path = ? AND image_kind = 'reference'
+        LIMIT 1
+        """,
+        (character["id"], str(source_path)),
+    ).fetchone()
+    if existing:
+        return None
+    directories = ensure_character_directories(character["id"])
+    target = unique_file_path(directories["references"], source_path.name)
+    copy_imported_image(source_path, target)
+    timestamp = now_iso()
+    image_id = f"img-{uuid.uuid4().hex[:12]}"
+    conn.execute(
+        """
+        INSERT INTO character_images (
+          id, character_id, image_kind, slot_key, local_path, source_path,
+          original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+        )
+        VALUES (?, ?, 'reference', '', ?, ?, ?, '', ?, 1, ?, ?, '')
+        """,
+        (
+            image_id,
+            character["id"],
+            str(target),
+            str(source_path),
+            source_path.name,
+            "Imported approved identity reference.",
+            timestamp,
+            timestamp,
+        ),
+    )
+    return {"id": image_id, "source": str(source_path), "target": str(target)}
+
+
+def import_approved_source_into_slot(
+    conn: sqlite3.Connection,
+    character: dict[str, Any],
+    slot_key: str,
+    source_path: Path,
+) -> dict[str, Any] | None:
+    existing = conn.execute(
+        """
+        SELECT id
+        FROM character_images
+        WHERE character_id = ? AND slot_key = ? AND image_kind = 'approved'
+        LIMIT 1
+        """,
+        (character["id"], slot_key),
+    ).fetchone()
+    if existing:
+        return None
+    directories = ensure_character_directories(character["id"])
+    max_version = conn.execute(
+        "SELECT COALESCE(MAX(version), 0) FROM character_images WHERE character_id = ? AND slot_key = ?",
+        (character["id"], slot_key),
+    ).fetchone()[0]
+    version = int(max_version or 0) + 1
+    suffix = source_path.suffix.lower() if source_path.suffix.lower() in IMAGE_EXTENSIONS else ".png"
+    target = directories["approved"] / f"{slot_key}__v{version}{suffix}"
+    counter = 2
+    while target.exists():
+        target = directories["approved"] / f"{slot_key}__v{version}-{counter}{suffix}"
+        counter += 1
+    copy_imported_image(source_path, target)
+    timestamp = now_iso()
+    image_id = f"img-{uuid.uuid4().hex[:12]}"
+    conn.execute(
+        """
+        INSERT INTO character_images (
+          id, character_id, image_kind, slot_key, local_path, source_path,
+          original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+        )
+        VALUES (?, ?, 'approved', ?, ?, ?, ?, '', ?, ?, ?, ?, '')
+        """,
+        (
+            image_id,
+            character["id"],
+            slot_key,
+            str(target),
+            str(source_path),
+            source_path.name,
+            "Imported from approved existing assets.",
+            version,
+            timestamp,
+            timestamp,
+        ),
+    )
+    return {
+        "id": image_id,
+        "slot_key": slot_key,
+        "source": str(source_path),
+        "target": str(target),
+        "version": version,
+    }
+
+
+def import_approved_character_assets(include_references: bool = False) -> dict[str, Any]:
+    init_db()
+    ensure_managed_characters_from_existing()
+    summary: list[dict[str, Any]] = []
+    total_slots_added = 0
+    total_references_added = 0
+    timestamp = now_iso()
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM managed_characters
+            ORDER BY CASE source_type WHEN 'app' THEN 0 WHEN 'starter' THEN 1 ELSE 2 END,
+                     display_name ASC
+            """
+        ).fetchall()
+        for row in rows:
+            character = dict(row)
+            approved_slots = approved_slots_for_character(conn, character["id"])
+            astrogram_sources = approved_astrogram_sources(character)
+            hero_sources = hero_cast_sources(character)
+            profile_source = next((path for path in hero_sources if "card" not in path.name.lower()), None)
+            card_source = next((path for path in hero_sources if "card" in path.name.lower()), None)
+            if not profile_source and astrogram_sources:
+                profile_source = astrogram_sources[0]
+            if not card_source:
+                card_source = profile_source or (astrogram_sources[1] if len(astrogram_sources) > 1 else None)
+            desired_slots: dict[str, Path] = {}
+            if profile_source:
+                desired_slots["profile_avatar"] = profile_source
+            if card_source:
+                desired_slots["card_portrait"] = card_source
+            for index, source in enumerate(astrogram_sources[:10], start=1):
+                desired_slots[f"astrogram_{index:02d}"] = source
+            imported_slots = []
+            for slot_key in APP_ASSET_SLOTS:
+                source = desired_slots.get(slot_key)
+                if not source or slot_key in approved_slots:
+                    continue
+                imported = import_approved_source_into_slot(conn, character, slot_key, source)
+                if imported:
+                    imported_slots.append(imported)
+                    approved_slots.add(slot_key)
+            imported_references = []
+            if include_references:
+                for source in identity_reference_sources(character):
+                    imported = import_reference_source(conn, character, source)
+                    if imported:
+                        imported_references.append(imported)
+            approved_count = len(approved_slots_for_character(conn, character["id"]))
+            if imported_slots or imported_references:
+                status = "approved" if approved_count >= len(APP_ASSET_SLOTS) else "reviewing"
+                conn.execute(
+                    """
+                    UPDATE managed_characters
+                    SET status = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (status, timestamp, character["id"]),
+                )
+                character["status"] = status
+                character["updated_at"] = timestamp
+                total_slots_added += len(imported_slots)
+                total_references_added += len(imported_references)
+            summary.append(
+                {
+                    "character_id": character["id"],
+                    "display_name": character["display_name"],
+                    "slots_added": len(imported_slots),
+                    "references_added": len(imported_references),
+                    "approved_slots": approved_count,
+                    "missing_slots": len(APP_ASSET_SLOTS) - approved_count,
+                    "astrogram_sources_found": len(astrogram_sources),
+                    "hero_sources_found": len(hero_sources),
+                }
+            )
+            conn.commit()
+        conn.commit()
+    for item in summary:
+        character = get_character(item["character_id"])
+        if character:
+            write_character_profile(character)
+    return {
+        "characters_checked": len(summary),
+        "characters_updated": sum(1 for item in summary if item["slots_added"] or item["references_added"]),
+        "approved_slots_added": total_slots_added,
+        "references_added": total_references_added,
+        "required_slots_per_character": len(APP_ASSET_SLOTS),
+        "characters": summary,
+    }
+
+
+def promote_character_image(image_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    slot_key = normalize_asset_slot(payload.get("slot_key"))
+    notes = str(payload.get("notes", "")).strip()
+    timestamp = now_iso()
+    with connect() as conn:
+        source = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+        if not source:
+            raise KeyError(image_id)
+        source_path = Path(source["local_path"])
+        if not source_path.exists():
+            raise FileNotFoundError(f"Source image missing: {source_path}")
+        character_id = source["character_id"]
+        directories = ensure_character_directories(character_id)
+        max_version = conn.execute(
+            "SELECT COALESCE(MAX(version), 0) FROM character_images WHERE character_id = ? AND slot_key = ?",
+            (character_id, slot_key),
+        ).fetchone()[0]
+        version = int(max_version or 0) + 1
+        conn.execute(
+            """
+            UPDATE character_images
+            SET image_kind = 'archived', archived_at = ?, updated_at = ?
+            WHERE character_id = ? AND slot_key = ? AND image_kind = 'approved'
+            """,
+            (timestamp, timestamp, character_id, slot_key),
+        )
+        target = directories["approved"] / f"{slot_key}__v{version}{source_path.suffix.lower() or '.png'}"
+        counter = 2
+        while target.exists():
+            target = directories["approved"] / f"{slot_key}__v{version}-{counter}{source_path.suffix.lower() or '.png'}"
+            counter += 1
+        shutil.copy2(source_path, target)
+        approved_id = f"img-{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            """
+            INSERT INTO character_images (
+              id, character_id, image_kind, slot_key, local_path, source_path,
+              original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+            )
+            VALUES (?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?, ?, ?, '')
+            """,
+            (
+                approved_id,
+                character_id,
+                slot_key,
+                str(target),
+                str(source_path),
+                source["original_filename"] or source_path.name,
+                source["prompt_job_id"],
+                notes,
+                version,
+                timestamp,
+                timestamp,
+            ),
+        )
+        approved_count = conn.execute(
+            """
+            SELECT COUNT(DISTINCT slot_key)
+            FROM character_images
+            WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+            """,
+            (character_id,),
+        ).fetchone()[0]
+        new_status = "approved" if int(approved_count) >= len(APP_ASSET_SLOTS) else "reviewing"
+        conn.execute(
+            "UPDATE managed_characters SET status = ?, updated_at = ? WHERE id = ?",
+            (new_status, timestamp, character_id),
+        )
+        conn.commit()
+    return {"promoted_image_id": approved_id, "slot_key": slot_key, "character": get_character(character_id)}
+
+
+def reject_character_image(image_id: str) -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect() as conn:
+        image = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+        if not image:
+            raise KeyError(image_id)
+        if image["image_kind"] not in {"approved", "candidate", "rejected"}:
+            raise ValueError("Only approved or candidate pictures can be rejected.")
+        character_id = image["character_id"]
+        if image["image_kind"] != "rejected":
+            conn.execute(
+                """
+                UPDATE character_images
+                SET image_kind = 'rejected', archived_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, timestamp, image_id),
+            )
+        approved_count = conn.execute(
+            """
+            SELECT COUNT(DISTINCT slot_key)
+            FROM character_images
+            WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+            """,
+            (character_id,),
+        ).fetchone()[0]
+        new_status = "approved" if int(approved_count) >= len(APP_ASSET_SLOTS) else "reviewing"
+        conn.execute(
+            "UPDATE managed_characters SET status = ?, updated_at = ? WHERE id = ?",
+            (new_status, timestamp, character_id),
+        )
+        conn.commit()
+    return {"rejected_image_id": image_id, "character": get_character(character_id)}
+
+
+def update_image_feedback(image_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    rating = int(payload.get("rating", 0) or 0)
+    rating = max(0, min(rating, 5))
+    feedback_notes = str(payload.get("feedback_notes", payload.get("notes", ""))).strip()
+    timestamp = now_iso()
+    with connect() as conn:
+        image = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+        if not image:
+            raise KeyError(image_id)
+        conn.execute(
+            """
+            UPDATE character_images
+            SET feedback_rating = ?,
+                feedback_notes = ?,
+                feedback_updated_at = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (rating, feedback_notes, timestamp, timestamp, image_id),
+        )
+        conn.commit()
+        refreshed = conn.execute("SELECT * FROM character_images WHERE id = ?", (image_id,)).fetchone()
+    return {"image": image_from_row(refreshed), "character": get_character(refreshed["character_id"])}
+
+
+def primary_character_image_row(conn: sqlite3.Connection, character_id: str) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT *
+        FROM character_images
+        WHERE character_id = ?
+          AND image_kind IN ('approved', 'reference', 'candidate')
+        ORDER BY CASE
+                   WHEN image_kind = 'approved' AND slot_key = 'profile_avatar' THEN 0
+                   WHEN image_kind = 'approved' AND slot_key = 'card_portrait' THEN 1
+                   WHEN image_kind = 'approved' THEN 2
+                   WHEN image_kind = 'reference' THEN 3
+                   ELSE 4
+                 END,
+                 updated_at DESC
+        LIMIT 1
+        """,
+        (character_id,),
+    ).fetchone()
+
+
+def swap_character_slot_from_custom(target_character_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    source_character_id = str(payload.get("source_character_id", "")).strip()
+    if not source_character_id:
+        raise ValueError("Choose a custom character first.")
+    if source_character_id == target_character_id:
+        raise ValueError("Choose a different custom character.")
+    slot_key = normalize_asset_slot(payload.get("slot_key") or "profile_avatar")
+    timestamp = now_iso()
+    with connect() as conn:
+        target = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (target_character_id,)).fetchone()
+        source_character = conn.execute("SELECT * FROM managed_characters WHERE id = ?", (source_character_id,)).fetchone()
+        if not target:
+            raise KeyError(target_character_id)
+        if not source_character:
+            raise KeyError(source_character_id)
+        source = primary_character_image_row(conn, source_character_id)
+        if not source:
+            raise ValueError("That custom character does not have a picture yet.")
+        source_path = Path(source["local_path"])
+        if not source_path.exists():
+            raise FileNotFoundError(f"Source image missing: {source_path}")
+        directories = ensure_character_directories(target_character_id)
+        max_version = conn.execute(
+            "SELECT COALESCE(MAX(version), 0) FROM character_images WHERE character_id = ? AND slot_key = ?",
+            (target_character_id, slot_key),
+        ).fetchone()[0]
+        version = int(max_version or 0) + 1
+        conn.execute(
+            """
+            UPDATE character_images
+            SET image_kind = 'archived', archived_at = ?, updated_at = ?
+            WHERE character_id = ? AND slot_key = ? AND image_kind = 'approved'
+            """,
+            (timestamp, timestamp, target_character_id, slot_key),
+        )
+        suffix = source_path.suffix.lower() if source_path.suffix.lower() in IMAGE_EXTENSIONS else ".png"
+        target_path = directories["approved"] / f"{slot_key}__v{version}{suffix}"
+        counter = 2
+        while target_path.exists():
+            target_path = directories["approved"] / f"{slot_key}__v{version}-{counter}{suffix}"
+            counter += 1
+        copy_imported_image(source_path, target_path)
+        approved_id = f"img-{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            """
+            INSERT INTO character_images (
+              id, character_id, image_kind, slot_key, local_path, source_path,
+              original_filename, prompt_job_id, notes, version, created_at, updated_at, archived_at
+            )
+            VALUES (?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?, ?, ?, '')
+            """,
+            (
+                approved_id,
+                target_character_id,
+                slot_key,
+                str(target_path),
+                str(source_path),
+                source["original_filename"] or source_path.name,
+                source["prompt_job_id"],
+                f"Swapped from custom character {source_character['display_name']}.",
+                version,
+                timestamp,
+                timestamp,
+            ),
+        )
+        approved_count = conn.execute(
+            """
+            SELECT COUNT(DISTINCT slot_key)
+            FROM character_images
+            WHERE character_id = ? AND image_kind = 'approved' AND slot_key != ''
+            """,
+            (target_character_id,),
+        ).fetchone()[0]
+        new_status = "approved" if int(approved_count) >= len(APP_ASSET_SLOTS) else "reviewing"
+        conn.execute(
+            "UPDATE managed_characters SET status = ?, updated_at = ? WHERE id = ?",
+            (new_status, timestamp, target_character_id),
+        )
+        conn.commit()
+    return {
+        "promoted_image_id": approved_id,
+        "slot_key": slot_key,
+        "source_character_id": source_character_id,
+        "character": get_character(target_character_id),
+    }
+
+
+def export_app_assets() -> dict[str, Any]:
+    init_db()
+    ensure_managed_characters_from_existing()
+    timestamp_label = datetime.now().strftime("%Y%m%d-%H%M%S")
+    export_id = f"app-assets-{timestamp_label}"
+    export_dir = APP_EXPORTS_DIR / export_id
+    approved_dir = export_dir / "approved-images"
+    approved_dir.mkdir(parents=True, exist_ok=True)
+    missing_report: list[dict[str, Any]] = []
+    casting_report: list[dict[str, Any]] = []
+    manifest_items: dict[str, Any] = {}
+    copied = 0
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM managed_characters
+            WHERE source_type = 'app'
+            ORDER BY CASE sun_sign
+                       WHEN 'Aries' THEN 1
+                       WHEN 'Taurus' THEN 2
+                       WHEN 'Gemini' THEN 3
+                       WHEN 'Cancer' THEN 4
+                       WHEN 'Leo' THEN 5
+                       WHEN 'Virgo' THEN 6
+                       WHEN 'Libra' THEN 7
+                       WHEN 'Scorpio' THEN 8
+                       WHEN 'Sagittarius' THEN 9
+                       WHEN 'Capricorn' THEN 10
+                       WHEN 'Aquarius' THEN 11
+                       WHEN 'Pisces' THEN 12
+                       ELSE 99
+                     END,
+                     CASE gender WHEN 'female' THEN 0 WHEN 'male' THEN 1 ELSE 2 END,
+                     display_name
+            """
+        ).fetchall()
+        for row in rows:
+            character = character_from_row(row)
+            if character["casting_status"] != "locked":
+                casting_report.append(
+                    {
+                        "character_id": character["id"],
+                        "display_name": character["display_name"],
+                        "app_character_key": character.get("app_character_key", ""),
+                        "casting_status": character["casting_status"],
+                        "casting_notes": character.get("casting_notes", ""),
+                    }
+                )
+            character_dir = approved_dir / character["id"]
+            character_dir.mkdir(parents=True, exist_ok=True)
+            slots: dict[str, Any] = {}
+            for slot in APP_ASSET_SLOTS:
+                image = next((item["approved_image"] for item in character["slot_status"] if item["slot_key"] == slot), None)
+                if not image:
+                    missing_report.append(
+                        {
+                            "character_id": character["id"],
+                            "display_name": character["display_name"],
+                            "slot_key": slot,
+                            "slot_label": slot_label(slot),
+                        }
+                    )
+                    continue
+                source_path = Path(image["local_path"])
+                if not source_path.exists():
+                    missing_report.append(
+                        {
+                            "character_id": character["id"],
+                            "display_name": character["display_name"],
+                            "slot_key": slot,
+                            "slot_label": slot_label(slot),
+                            "reason": "approved file missing on disk",
+                        }
+                    )
+                    continue
+                target = character_dir / f"{slot}{source_path.suffix.lower() or '.png'}"
+                shutil.copy2(source_path, target)
+                copied += 1
+                slots[slot] = {
+                    "path": str(target.relative_to(export_dir)),
+                    "absolute_path": str(target),
+                    "source_image_id": image["id"],
+                    "version": image["version"],
+                }
+            manifest_items[character["id"]] = {
+                "display_name": character["display_name"],
+                "source_type": character["source_type"],
+                "companion_id": character.get("companion_id", ""),
+                "app_character_key": character.get("app_character_key", ""),
+                "gender": character.get("gender", ""),
+                "casting_status": character.get("casting_status", "needs_decision"),
+                "casting_notes": character.get("casting_notes", ""),
+                "locked_at": character.get("locked_at", ""),
+                "signs": {
+                    "sun": character.get("sun_sign", ""),
+                    "moon": character.get("moon_sign", ""),
+                    "rising": character.get("rising_sign", ""),
+                },
+                "completion": character["completion"],
+                "slots": slots,
+            }
+    manifest = {
+        "id": export_id,
+        "created_at": now_iso(),
+        "required_slots": list(APP_ASSET_SLOTS),
+        "image_count": copied,
+        "character_count": len(manifest_items),
+        "missing_count": len(missing_report),
+        "unlocked_count": len(casting_report),
+        "characters": manifest_items,
+    }
+    manifest_path = export_dir / "manifest.json"
+    missing_path = export_dir / "missing-slots.json"
+    casting_path = export_dir / "casting-report.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True), encoding="utf-8")
+    missing_path.write_text(json.dumps(missing_report, indent=2, ensure_ascii=True), encoding="utf-8")
+    casting_path.write_text(json.dumps(casting_report, indent=2, ensure_ascii=True), encoding="utf-8")
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO app_asset_exports (
+              id, directory, manifest_path, missing_report_path, character_count, missing_count, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (export_id, str(export_dir), str(manifest_path), str(missing_path), len(manifest_items), len(missing_report), now_iso()),
+        )
+        conn.commit()
+    return {
+        "id": export_id,
+        "directory": str(export_dir),
+        "manifest": str(manifest_path),
+        "missing_report": str(missing_path),
+        "casting_report": str(casting_path),
+        "character_count": len(manifest_items),
+        "image_count": copied,
+        "missing_count": len(missing_report),
+        "unlocked_count": len(casting_report),
     }
 
 
@@ -2757,6 +4757,31 @@ class AssetFactoryHandler(BaseHTTPRequestHandler):
             if path == "/api/references":
                 self.send_json(list_references())
                 return
+            if path == "/api/characters":
+                self.send_json(list_characters(parse_qs(parsed.query)))
+                return
+            if path.startswith("/api/character-images/") and path.endswith("/file"):
+                image_id = path.removeprefix("/api/character-images/").removesuffix("/file").strip("/")
+                image_path = get_character_image_path(image_id)
+                if not image_path:
+                    self.send_error_json("Image not found", 404)
+                    return
+                mime_type = mimetypes.guess_type(str(image_path))[0] or "application/octet-stream"
+                body = image_path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", mime_type)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if path.startswith("/api/characters/"):
+                character_id = path.removeprefix("/api/characters/").strip("/")
+                character = get_character(character_id)
+                if not character:
+                    self.send_error_json("Character not found", 404)
+                    return
+                self.send_json(character)
+                return
             if path.startswith("/api/references/file/"):
                 filename = safe_filename(path.removeprefix("/api/references/file/").strip("/"))
                 reference_path = (REFERENCES_DIR / filename).resolve()
@@ -2858,6 +4883,75 @@ class AssetFactoryHandler(BaseHTTPRequestHandler):
             if path == "/api/references/upload":
                 self.send_json(save_reference_uploads(payload.get("files", [])))
                 return
+            if path == "/api/references/delete":
+                self.send_json(delete_style_reference(payload.get("name", payload.get("filename", ""))))
+                return
+            if path == "/api/style-prompts":
+                self.send_json(save_style_prompt(payload.get("text", "")))
+                return
+            if path == "/api/style-prompts/delete":
+                self.send_json(delete_style_prompt(payload.get("id", "")))
+                return
+            if path == "/api/characters":
+                self.send_json(create_character(payload))
+                return
+            if path == "/api/characters/import-approved-assets":
+                self.send_json(import_approved_character_assets())
+                return
+            if path == "/api/export/app-assets":
+                self.send_json(export_app_assets())
+                return
+            if path.startswith("/api/characters/") and path.endswith("/references/upload"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/references/upload").strip("/")
+                self.send_json(upload_character_references(character_id, payload.get("files", [])))
+                return
+            if path.startswith("/api/characters/") and path.endswith("/images/upload"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/images/upload").strip("/")
+                self.send_json(
+                    upload_character_images(
+                        character_id,
+                        payload.get("files", []),
+                        prompt_job_id=str(payload.get("prompt_job_id", "")),
+                        notes=str(payload.get("notes", "")),
+                    )
+                )
+                return
+            if path.startswith("/api/characters/") and path.endswith("/generation-jobs"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/generation-jobs").strip("/")
+                self.send_json(create_generation_job(character_id, payload))
+                return
+            if path.startswith("/api/characters/") and path.endswith("/style-board-generation-jobs"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/style-board-generation-jobs").strip("/")
+                self.send_json(create_style_board_generation_job(character_id, payload))
+                return
+            if path.startswith("/api/characters/") and path.endswith("/casting-status"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/casting-status").strip("/")
+                self.send_json(update_character_casting_status(character_id, payload))
+                return
+            if path.startswith("/api/characters/") and path.endswith("/archive"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/archive").strip("/")
+                self.send_json(archive_character(character_id, payload))
+                return
+            if path.startswith("/api/characters/") and path.endswith("/consolidate"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/consolidate").strip("/")
+                self.send_json(consolidate_character(character_id, payload))
+                return
+            if path.startswith("/api/characters/") and path.endswith("/swap-from-character"):
+                character_id = path.removeprefix("/api/characters/").removesuffix("/swap-from-character").strip("/")
+                self.send_json(swap_character_slot_from_custom(character_id, payload))
+                return
+            if path.startswith("/api/images/") and path.endswith("/reject"):
+                image_id = path.removeprefix("/api/images/").removesuffix("/reject").strip("/")
+                self.send_json(reject_character_image(image_id))
+                return
+            if path.startswith("/api/images/") and path.endswith("/promote"):
+                image_id = path.removeprefix("/api/images/").removesuffix("/promote").strip("/")
+                self.send_json(promote_character_image(image_id, payload))
+                return
+            if path.startswith("/api/images/") and path.endswith("/feedback"):
+                image_id = path.removeprefix("/api/images/").removesuffix("/feedback").strip("/")
+                self.send_json(update_image_feedback(image_id, payload))
+                return
             if path in {"/api/slack-tasks/generate", "/api/delegate-tasks/generate"}:
                 self.send_json(generate_delegate_tasks())
                 return
@@ -2911,20 +5005,52 @@ class AssetFactoryHandler(BaseHTTPRequestHandler):
         if not requested.exists() or not requested.is_file():
             self.send_error(404)
             return
-        mime_type = mimetypes.guess_type(str(requested))[0] or "application/octet-stream"
+        if requested.name == "manifest.webmanifest":
+            mime_type = "application/manifest+json"
+        elif requested.name == "sw.js":
+            mime_type = "text/javascript; charset=utf-8"
+        else:
+            mime_type = mimetypes.guess_type(str(requested))[0] or "application/octet-stream"
         body = requested.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", mime_type)
+        self.send_header("Cache-Control", "no-cache")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
 
-def serve(port: int) -> None:
+def local_network_urls(port: int) -> list[str]:
+    addresses: set[str] = set()
+    try:
+        hostname = socket.gethostname()
+        for result in socket.getaddrinfo(hostname, None, socket.AF_INET, socket.SOCK_STREAM):
+            address = result[4][0]
+            if address and not address.startswith("127."):
+                addresses.add(address)
+    except OSError:
+        pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("8.8.8.8", 80))
+            address = probe.getsockname()[0]
+            if address and not address.startswith("127."):
+                addresses.add(address)
+    except OSError:
+        pass
+    return [f"http://{address}:{port}/" for address in sorted(addresses)]
+
+
+def serve(port: int, host: str = "127.0.0.1") -> None:
     init_db()
-    address = ("127.0.0.1", port)
+    address = (host, port)
     httpd = ThreadingHTTPServer(address, AssetFactoryHandler)
-    print(f"Factory running at http://127.0.0.1:{port}")
+    display_host = "127.0.0.1" if host in {"0.0.0.0", ""} else host
+    print(f"Factory running at http://{display_host}:{port}")
+    if host in {"0.0.0.0", ""}:
+        print("Mobile/LAN mode enabled. Use only on a trusted Wi-Fi network.")
+        for url in local_network_urls(port):
+            print(f"iPhone URL: {url}")
     print(f"Workspace: {WORKSPACE_DIR}")
     httpd.serve_forever()
 
@@ -2932,6 +5058,8 @@ def serve(port: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Local Simastry Factory manager")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--host", default=os.environ.get("SIMASTRY_FACTORY_HOST", "127.0.0.1"), help="Host to bind, usually 127.0.0.1 or 0.0.0.0")
+    parser.add_argument("--mobile", action="store_true", help="Serve on the local network for iPhone access")
     parser.add_argument("--seed", action="store_true", help="Seed 3,456 companions before serving")
     parser.add_argument("--seed-only", action="store_true", help="Seed companions and exit")
     parser.add_argument("--scan-imports", action="store_true", help="Scan imports and exit")
@@ -2953,7 +5081,8 @@ def main() -> None:
         return
     if args.seed_only:
         return
-    serve(args.port)
+    host = "0.0.0.0" if args.mobile else args.host
+    serve(args.port, host=host)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,12 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PA
 
 APP_ROOT="/Users/chiburashka/Documents/Codex/Simastry/Factory"
 PORT="${SIMASTRY_FACTORY_PORT:-8765}"
-URL="http://127.0.0.1:${PORT}/"
+HOST="${SIMASTRY_FACTORY_HOST:-127.0.0.1}"
+OPEN_HOST="${HOST}"
+if [[ "${OPEN_HOST}" == "0.0.0.0" ]]; then
+  OPEN_HOST="127.0.0.1"
+fi
+URL="http://${OPEN_HOST}:${PORT}/"
 LOG_DIR="${APP_ROOT}/workspace/logs"
 PID_FILE="${LOG_DIR}/server.pid"
 LOG_FILE="${LOG_DIR}/factory-server.log"
@@ -34,4 +39,4 @@ fi
 
 cd "${APP_ROOT}"
 echo "$$" > "${PID_FILE}"
-exec python3 "${APP_ROOT}/server.py" --port "${PORT}" >> "${LOG_FILE}" 2>&1
+exec python3 "${APP_ROOT}/server.py" --host "${HOST}" --port "${PORT}" >> "${LOG_FILE}" 2>&1
