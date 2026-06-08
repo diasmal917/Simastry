@@ -28,10 +28,183 @@ struct HomeView: View {
                     case .soulCreation:
                         SoulCreationView(viewModel: viewModel)
                     case .complete:
-                        homeContent
+                        gramContent
                     }
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
+            }
+        }
+    }
+
+    private var gramContent: some View {
+        let profile = FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
+        let posts = Array(profile.gridImageNames.prefix(6))
+
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                gramHeader(profile)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 18) {
+                        Image(profile.profileImageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 92, height: 92)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [SimastryColor.goldLight, SimastryColor.gold, SimastryColor.goldDark],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 2
+                                    )
+                            )
+
+                        HStack(spacing: 18) {
+                            gramStat(value: "\(posts.count)", label: "posts")
+                            gramStat(value: "24", label: "cast")
+                            gramStat(value: "\(profile.sign.glyph)", label: profile.sign.displayName)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 10)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(profile.name)
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text(profile.metadataLine)
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+
+                        Text(profile.bio)
+                            .font(SimastryFont.bodySmall)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    HStack(spacing: 8) {
+                        ForEach(profile.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.white.opacity(0.07), in: Capsule())
+                        }
+                    }
+
+                    gramMethodChips(profile)
+                }
+                .padding(.horizontal, 20)
+
+                Divider()
+                    .overlay(SimastryColor.offWhite.opacity(0.12))
+                    .padding(.horizontal, 20)
+
+                gramGrid(posts)
+
+                Spacer().frame(height: SimastrySpacing.tabBarClearance)
+            }
+            .padding(.top, 14)
+        }
+        .scrollIndicators(.hidden)
+        .background(Color.clear)
+    }
+
+    private func gramHeader(_ profile: FactoryCompanionProfile) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Gram")
+                    .font(SimastryFont.titleLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text("@\(profile.handle)")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+
+            Spacer()
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.selectedTab = 2
+            } label: {
+                Image(systemName: "message.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(width: 42, height: 42)
+                    .background(SimastryColor.gold, in: Circle())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Message \(profile.name)")
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func gramStat(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(SimastryFont.titleSmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1)
+
+            Text(label)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func gramMethodChips(_ profile: FactoryCompanionProfile) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                gramMethodChip(systemImage: "scope", text: "\(profile.sign.displayName) lens", tint: profile.sign.color)
+                gramMethodChip(systemImage: "checkmark.seal.fill", text: "Factory photos", tint: SimastryColor.gold)
+                gramMethodChip(systemImage: "lock.fill", text: "Fictional", tint: SimastryColor.celestialBlue)
+            }
+            .padding(.vertical, 1)
+        }
+    }
+
+    private func gramMethodChip(systemImage: String, text: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(tint)
+
+            Text(text)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(.white.opacity(0.055), in: Capsule())
+        .overlay(Capsule().stroke(tint.opacity(0.18), lineWidth: 0.5))
+    }
+
+    private func gramGrid(_ imageNames: [String]) -> some View {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
+
+        return LazyVGrid(columns: columns, spacing: 2) {
+            ForEach(imageNames, id: \.self) { imageName in
+                GeometryReader { proxy in
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.width)
+                        .clipped()
+                }
+                .aspectRatio(1, contentMode: .fit)
+                .accessibilityHidden(true)
             }
         }
     }

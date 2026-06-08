@@ -20,6 +20,8 @@ struct CompanionsView: View {
     @State private var appeared: Bool = false
     @State private var activeSheet: CompanionsSheet?
     @State private var pendingDeleteCompanion: CompanionData?
+    @State private var currentCastIndex: Int = 0
+    @State private var dragOffset: CGSize = .zero
 
     private var deleteDialogIsPresented: Binding<Bool> {
         Binding(
@@ -37,13 +39,9 @@ struct CompanionsView: View {
             ZStack {
                 CelestialBackground()
 
-                if viewModel.companions.isEmpty {
-                    companionPlaceholder
-                } else {
-                    companionDashboard
-                }
+                castDeck
             }
-            .navigationTitle("Companions")
+            .navigationTitle("Cast")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -82,6 +80,204 @@ struct CompanionsView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var castDeck: some View {
+        let profiles = FactoryCompanionCatalog.all
+
+        return GeometryReader { proxy in
+            let cardHeight = min(max(proxy.size.height - SimastrySpacing.tabBarClearance - 172, 468), 570)
+
+            VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Cast")
+                        .font(SimastryFont.titleLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text("Swipe for the companion voice you want in Messages.")
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+
+                ZStack {
+                    ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
+                        let relativeIndex = normalizedRelativeIndex(index, active: currentCastIndex, count: profiles.count)
+                        if relativeIndex >= 0 && relativeIndex < 3 {
+                            castCard(profile, height: cardHeight)
+                                .scaleEffect(relativeIndex == 0 ? 1 : 1 - CGFloat(relativeIndex) * 0.045)
+                                .offset(y: CGFloat(relativeIndex) * 12)
+                                .opacity(relativeIndex == 0 ? 1 : 0.58)
+                                .zIndex(Double(3 - relativeIndex))
+                                .offset(relativeIndex == 0 ? dragOffset : .zero)
+                                .rotationEffect(.degrees(relativeIndex == 0 ? Double(dragOffset.width / 24) : 0))
+                                .gesture(
+                                    DragGesture()
+                                        .onChanged { value in
+                                            dragOffset = value.translation
+                                        }
+                                        .onEnded { value in
+                                            let threshold: CGFloat = 95
+                                            if abs(value.translation.width) > threshold {
+                                                moveToNextCard()
+                                            } else {
+                                                withAnimation(.spring(SimastrySpring.snappy)) {
+                                                    dragOffset = .zero
+                                                }
+                                            }
+                                        }
+                                )
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: cardHeight + 18)
+                .padding(.horizontal, 18)
+
+                HStack(spacing: 18) {
+                    castActionButton(systemImage: "xmark", label: "Skip", tint: SimastryColor.mutedSilver) {
+                        moveToNextCard()
+                    }
+
+                    castActionButton(systemImage: "message.fill", label: "Message", tint: SimastryColor.gold) {
+                        HapticManager.buttonPress()
+                        viewModel.selectedTab = 2
+                    }
+
+                    castActionButton(systemImage: "heart.fill", label: "Save", tint: SimastryColor.sunCoral) {
+                        moveToNextCard()
+                    }
+                }
+                .padding(.bottom, SimastrySpacing.tabBarClearance + 2)
+            }
+        }
+    }
+
+    private func castCard(_ profile: FactoryCompanionProfile, height: CGFloat) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            Image(profile.cardImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .clipped()
+
+            LinearGradient(
+                colors: [
+                    .black.opacity(0.05),
+                    .black.opacity(0.20),
+                    SimastryColor.midnight.opacity(0.72),
+                    SimastryColor.midnight.opacity(0.96)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(profile.name)
+                        .font(SimastryFont.displayMedium)
+                        .foregroundStyle(.white)
+
+                    Text(profile.sign.glyph)
+                        .font(SimastryFont.titleMedium)
+                        .foregroundStyle(profile.sign.color)
+                }
+
+                Text(profile.metadataLine)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(.white.opacity(0.84))
+
+                Text(profile.headline)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(profile.personalityBio)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(.white.opacity(0.78))
+                    .lineSpacing(3)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    ForEach(profile.tags.prefix(3), id: \.self) { tag in
+                        Text(tag)
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.midnight)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(SimastryColor.gold.opacity(0.92), in: Capsule())
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    castSignalPill(systemImage: "scope", text: "\(profile.sign.displayName) lens", tint: profile.sign.color)
+                    castSignalPill(systemImage: "photo.fill", text: "Factory", tint: SimastryColor.gold)
+                }
+            }
+            .padding(20)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(.white.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.32), radius: 22, x: 0, y: 14)
+        .accessibilityLabel("\(profile.name), \(profile.metadataLine). \(profile.personalityBio)")
+    }
+
+    private func castSignalPill(systemImage: String, text: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(tint)
+
+            Text(text)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(.white.opacity(0.76))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(.black.opacity(0.28), in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
+    }
+
+    private func castActionButton(systemImage: String, label: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 48, height: 48)
+                    .background(.white.opacity(0.07), in: Circle())
+                    .overlay(Circle().stroke(tint.opacity(0.34), lineWidth: 1))
+
+                Text(label)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+    }
+
+    private func normalizedRelativeIndex(_ index: Int, active: Int, count: Int) -> Int {
+        let normalizedActive = active % count
+        return index >= normalizedActive ? index - normalizedActive : count - normalizedActive + index
+    }
+
+    private func moveToNextCard() {
+        HapticManager.buttonPress()
+        withAnimation(.spring(SimastrySpring.snappy)) {
+            dragOffset = .zero
+            currentCastIndex = (currentCastIndex + 1) % FactoryCompanionCatalog.all.count
         }
     }
 
