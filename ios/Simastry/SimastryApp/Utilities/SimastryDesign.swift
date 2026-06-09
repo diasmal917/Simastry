@@ -238,14 +238,14 @@ extension View {
     func tintedGlass(_ color: Color, cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(color.opacity(0.10), in: .rect(cornerRadius: cornerRadius))
-                .background(SimastryColor.surface.opacity(0.86), in: .rect(cornerRadius: cornerRadius))
-                .glassEffect(.regular.tint(color.opacity(0.18)), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.94), in: .rect(cornerRadius: cornerRadius))
+                .background(color.opacity(0.025), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(color.opacity(0.06)), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
                             LinearGradient(
-                                colors: [.white.opacity(0.14), color.opacity(0.18), .white.opacity(0.04)],
+                                colors: [color.opacity(0.22), .white.opacity(0.055)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -254,13 +254,13 @@ extension View {
                 )
         } else {
             self
-                .background(color.opacity(0.08), in: .rect(cornerRadius: cornerRadius))
-                .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.94), in: .rect(cornerRadius: cornerRadius))
+                .background(color.opacity(0.025), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .stroke(
                             LinearGradient(
-                                colors: [.white.opacity(0.12), .white.opacity(0.04)],
+                                colors: [color.opacity(0.18), .white.opacity(0.045)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),

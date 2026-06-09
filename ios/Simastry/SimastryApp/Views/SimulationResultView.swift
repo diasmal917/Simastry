@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SimulationResultView: View {
     let result: PredictionResult
@@ -11,6 +12,7 @@ struct SimulationResultView: View {
     @State private var alternativeReply: String = ""
     @State private var showShareCard: Bool = false
     @State private var appeared: Bool = false
+    @State private var copiedSuggestion: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accentColor: Color {
@@ -22,6 +24,7 @@ struct SimulationResultView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     predictionBubble
+                    suggestedReplySection
                     resultMethodLayer
                     breakdownSection
                     shareResultButton
@@ -139,6 +142,71 @@ struct SimulationResultView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+    }
+
+    @ViewBuilder
+    private var suggestedReplySection: some View {
+        if let suggestion = suggestedReplyText {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrowshape.turn.up.left.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("Suggested reply")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .tracking(1.4)
+                        .textCase(.uppercase)
+
+                    Spacer()
+
+                    Button {
+                        HapticManager.buttonPress()
+                        UIPasteboard.general.string = suggestion
+                        copiedSuggestion = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            copiedSuggestion = false
+                        }
+                    } label: {
+                        Label(copiedSuggestion ? "Copied" : "Copy", systemImage: copiedSuggestion ? "checkmark" : "doc.on.doc")
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(SimastryColor.gold.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel(copiedSuggestion ? "Suggested reply copied" : "Copy suggested reply")
+                }
+
+                Text(suggestion)
+                    .font(SimastryFont.bodyLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let approach = result.targetSunSign.flatMap({ CommunicationTemplates.guides[$0]?.bestApproach }) {
+                    Text(approach)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(18)
+            .tintedGlass(SimastryColor.gold, cornerRadius: 20)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+        }
+    }
+
+    private var suggestedReplyText: String? {
+        guard let sign = result.targetSunSign,
+              let options = AstrologyTemplates.suggestedReplies[sign.displayName],
+              !options.isEmpty else { return nil }
+        let seed = abs((result.conversationText?.count ?? 0) &+ result.predictedMessage.count)
+        return options[seed % options.count]
     }
 
     private var breakdownSection: some View {
@@ -341,7 +409,7 @@ struct SimulationResultView: View {
                             .font(.system(size: 14, weight: .semibold))
                     }
 
-                    Text(isRegenerating ? "Re-reading the timeline" : "See New Response")
+                    Text(isRegenerating ? "Updating prediction" : "See New Response")
                         .font(SimastryFont.titleSmall)
                 }
                 .foregroundStyle(SimastryColor.midnight)
@@ -434,11 +502,13 @@ struct SimulationResultView: View {
 
     private var aiDisclosureBadge: some View {
         HStack(spacing: 6) {
-            Image(systemName: "cpu")
+            Image(systemName: result.isLocalComposition == true ? "scope" : "cpu")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(SimastryColor.deepMuted)
 
-            Text("AI-assisted - \(AppConfig.astrologyTradition) - not a guarantee")
+            Text(result.isLocalComposition == true
+                 ? "Placement logic, on device - \(AppConfig.astrologyTradition) - not a guarantee"
+                 : "AI-assisted - \(AppConfig.astrologyTradition) - not a guarantee")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.deepMuted)
         }

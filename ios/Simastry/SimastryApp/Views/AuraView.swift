@@ -200,7 +200,7 @@ struct AuraView: View {
 
     private var auraMethodSummary: String {
         if viewModel.hasAuraWalletContext && viewModel.useAuraWalletForAura {
-            return "This uses your saved Sun, Moon, and Rising as chart signals. Your read-only public wallet is also enabled for Aura context, so Zodiacs holdings can be used once the lookup provider is connected."
+            return "This uses your saved Sun, Moon, and Rising as chart signals. Once the lookup provider is connected, your aura can also reflect the Zodiacs you hold — a display of your collection, never a key to app features."
         }
         return "This uses your saved Sun, Moon, and Rising as chart signals, then maps those placements to sign, element, and modality strengths."
     }

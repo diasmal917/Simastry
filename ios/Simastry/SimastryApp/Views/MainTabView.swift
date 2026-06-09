@@ -20,10 +20,6 @@ struct MainTabView: View {
                 HomeView(viewModel: viewModel)
             }
 
-            Tab("People", systemImage: "person.2.fill", value: 1) {
-                PeopleView(viewModel: viewModel)
-            }
-
             Tab(value: 2) {
                 MessagesView(viewModel: viewModel)
             } label: {
@@ -31,6 +27,10 @@ struct MainTabView: View {
                     .environment(\.symbolVariants, .fill)
             }
             .badge(viewModel.unreadMessageCount)
+
+            Tab("People", systemImage: "person.2.fill", value: 1) {
+                PeopleView(viewModel: viewModel)
+            }
 
             Tab("Me", systemImage: "person.crop.circle.fill", value: 5) {
                 ProfileView(viewModel: viewModel)

@@ -463,19 +463,19 @@ struct ProfileView: View {
         } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle()
-                        .fill(
-                            AngularGradient(
-                                colors: auraGradientColors,
-                                center: .center
-                            )
-                        )
-                        .frame(width: 54, height: 54)
-                        .blur(radius: 0.4)
+                    GlossyOrbView(
+                        signColors: [
+                            viewModel.userSunSign?.color ?? SimastryColor.gold,
+                            viewModel.userMoonSign?.color ?? SimastryColor.celestialBlue
+                        ],
+                        state: .idle,
+                        size: 54
+                    )
 
                     Circle()
-                        .fill(Color.black.opacity(0.28))
-                        .frame(width: 43, height: 43)
+                        .fill(Color.black.opacity(0.26))
+                        .frame(width: 34, height: 34)
+                        .blur(radius: 5)
 
                     Image(systemName: "sparkles")
                         .font(.system(size: 18, weight: .semibold))
@@ -519,16 +519,6 @@ struct ProfileView: View {
             return "\(profile.title) · chart-signal energy"
         }
         return "Visualize your Sun, Moon, and Rising once your signs are set."
-    }
-
-    private var auraGradientColors: [Color] {
-        let colors = [
-            viewModel.userSunSign?.color,
-            viewModel.userMoonSign?.color,
-            viewModel.userRisingSign?.color,
-            Optional(SimastryColor.gold)
-        ].compactMap { $0 }
-        return colors + [colors.first ?? SimastryColor.gold]
     }
 
     // MARK: - Discovery Section

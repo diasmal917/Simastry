@@ -9,6 +9,7 @@ struct GlossyOrbView: View {
     let state: OrbState
     let size: CGFloat
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var breatheScale: CGFloat = 1.0
     @State private var glowOpacity: Double = 0.3
     @State private var rotation: Double = 0
@@ -70,6 +71,11 @@ struct GlossyOrbView: View {
     }
 
     private func startAnimations() {
+        guard !reduceMotion else {
+            if state == .active { glowOpacity = 0.6 }
+            return
+        }
+
         switch state {
         case .idle:
             withAnimation(.spring(SimastrySpring.drift).repeatForever(autoreverses: true)) {

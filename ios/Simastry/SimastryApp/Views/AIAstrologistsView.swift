@@ -19,10 +19,9 @@ private struct GramPostSelection: Identifiable {
 }
 
 private struct AstrologistCredential {
-    let experience: String
-    let readings: String
-    let score: String
-    let responseTime: String
+    let lens: String
+    let method: String
+    let reply: String
     let methods: [String]
     let qualification: String
 }
@@ -94,7 +93,10 @@ struct AIAstrologistsView: View {
         .sheet(item: $selectedGramPost) { post in
             let comments = Binding<[String]>(
                 get: { gramComments[post.id] ?? seededComments(for: post.profile, index: post.index) },
-                set: { gramComments[post.id] = $0 }
+                set: {
+                    gramComments[post.id] = $0
+                    Self.persistGramComments(gramComments)
+                }
             )
             GramPostDetailSheet(
                 profile: post.profile,
@@ -112,10 +114,28 @@ struct AIAstrologistsView: View {
             )
         }
         .onAppear {
+            if gramComments.isEmpty {
+                gramComments = Self.loadGramComments()
+            }
             guard !hasInitializedCastIndex else { return }
             select(FactoryCompanionCatalog.match(for: viewModel.primaryCompanion))
             hasInitializedCastIndex = true
         }
+    }
+
+    static let gramCommentsDefaultsKey = "simastry_gram_comments"
+
+    private static func loadGramComments() -> [String: [String]] {
+        guard let data = UserDefaults.standard.data(forKey: gramCommentsDefaultsKey),
+              let decoded = try? JSONDecoder().decode([String: [String]].self, from: data) else {
+            return [:]
+        }
+        return decoded
+    }
+
+    private static func persistGramComments(_ comments: [String: [String]]) {
+        guard let data = try? JSONEncoder().encode(comments) else { return }
+        UserDefaults.standard.set(data, forKey: gramCommentsDefaultsKey)
     }
 
     private var header: some View {
@@ -252,6 +272,14 @@ struct AIAstrologistsView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
 
+                        Text("AI persona")
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(.white.opacity(0.06), in: Capsule())
+                            .lineLimit(1)
+
                         Spacer(minLength: 0)
 
                         ZodiacIconView(sign: profile.sign, size: 25, showsGlow: false)
@@ -266,10 +294,10 @@ struct AIAstrologistsView: View {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 6, height: 6)
-                        Text("Available now")
+                        Text("Always available")
                         Text("•")
                             .foregroundStyle(SimastryColor.deepMuted)
-                        Text("avg reply \(credential.responseTime)")
+                        Text("replies instantly")
                     }
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
@@ -283,9 +311,9 @@ struct AIAstrologistsView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 6) {
-                        credentialMetric("Exp", credential.experience)
-                        credentialMetric("Reads", credential.readings)
-                        credentialMetric("Score", credential.score)
+                        credentialMetric("Lens", credential.lens)
+                        credentialMetric("Method", credential.method)
+                        credentialMetric("Reply", credential.reply)
                     }
                 }
             }
@@ -302,11 +330,18 @@ struct AIAstrologistsView: View {
                 }
             }
 
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("Simastry method check")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.gold)
+                        .tracking(1.1)
+                        .textCase(.uppercase)
+                }
 
                 Text(credential.qualification)
                     .font(SimastryFont.caption)
@@ -314,6 +349,7 @@ struct AIAstrologistsView: View {
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(SimastryColor.gold.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
@@ -376,103 +412,6 @@ struct AIAstrologistsView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
         .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private func trainerCard(_ profile: FactoryCompanionProfile, width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                Image(profile.cardImageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: width, height: 292)
-                    .clipped()
-
-                HStack(spacing: 6) {
-                    Image(systemName: "scope")
-                        .font(.system(size: 10, weight: .bold))
-                    Text("\(profile.sign.displayName.uppercased()) LENS")
-                        .font(SimastryFont.overline)
-                        .tracking(1.0)
-                }
-                .foregroundStyle(SimastryColor.gold)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(.black.opacity(0.44), in: Capsule())
-                .padding(12)
-            }
-
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(alignment: .firstTextBaseline, spacing: 9) {
-                    Text(profile.name)
-                        .font(SimastryFont.titleLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    ZodiacIconView(sign: profile.sign, size: 28, showsGlow: false)
-
-                    Spacer(minLength: 0)
-                }
-
-                Text("AI Astrologist")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.gold)
-                    .tracking(1.1)
-                    .textCase(.uppercase)
-
-                Text(astrologistSpecialty(for: profile))
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(profile.personalityBio)
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .lineSpacing(3)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 8) {
-                    ForEach(profile.tags.prefix(3), id: \.self) { tag in
-                        Text(tag)
-                            .font(SimastryFont.captionSmall)
-                            .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 6)
-                            .background(.white.opacity(0.07), in: Capsule())
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    astrologistAction("Message", systemImage: "message.fill", isPrimary: true) {
-                        select(profile)
-                        viewModel.selectedTab = 2
-                    }
-
-                    astrologistAction("Gram", systemImage: "camera.fill", isPrimary: false) {
-                        select(profile)
-                        selectedSegment = .gram
-                    }
-
-                    astrologistAction("Predict", systemImage: "wand.and.stars", isPrimary: false) {
-                        openPredict(with: profile)
-                    }
-                }
-
-            }
-            .padding(14)
-            .frame(width: width, alignment: .leading)
-            .background(SimastryColor.surface.opacity(0.94))
-        }
-        .frame(width: width)
-        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 0.8)
-        }
-        .shadow(color: .black.opacity(0.34), radius: 22, x: 0, y: 14)
-        .onTapGesture {
-            select(profile)
-        }
     }
 
     private var signsDirectory: some View {
@@ -687,17 +626,11 @@ struct AIAstrologistsView: View {
     }
 
     private func astrologistCredential(for profile: FactoryCompanionProfile) -> AstrologistCredential {
-        let index = profiles.firstIndex(where: { $0.id == profile.id }) ?? 0
-        let experience = ["9 yrs", "8 yrs", "10 yrs", "7 yrs", "6 yrs", "8 yrs", "11 yrs", "9 yrs"][index % 8]
-        let readings = ["2.8k", "3.4k", "4.1k", "2.2k", "3.7k", "5.0k", "2.6k", "4.6k"][index % 8]
-        let score = ["4.96", "4.94", "4.98", "4.92", "4.95", "4.97", "4.93", "4.99"][index % 8]
-        let responseTime = ["< 1m", "2m", "< 1m", "3m"][index % 4]
-
-        return AstrologistCredential(
-            experience: experience,
-            readings: readings,
-            score: score,
-            responseTime: responseTime,
+        // Honest, method-true credentials: no invented human experience or ratings.
+        AstrologistCredential(
+            lens: profile.sign.displayName,
+            method: "Tropical",
+            reply: "Instant",
             methods: astrologistMethods(for: profile),
             qualification: astrologistQualification(for: profile)
         )

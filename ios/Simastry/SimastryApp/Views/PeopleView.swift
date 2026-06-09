@@ -312,6 +312,7 @@ struct RelationshipPersonDetailView: View {
     @State private var localNotes: String = ""
     @State private var privateLabel: String = ""
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showHowToTalk: Bool = false
 
     private var currentPerson: RelationshipPerson {
         viewModel.relationshipPeople.first { $0.id == person.id } ?? person
@@ -328,8 +329,10 @@ struct RelationshipPersonDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
+                    loopActionsRow
                     relationshipPatternSection
                     todayReadingSection
+                    howToTalkSection
                     methodPanel
                     notesSection
                     privacySection
@@ -409,6 +412,111 @@ struct RelationshipPersonDetailView: View {
         }
         .padding(18)
         .glossyCard(cornerRadius: 22)
+    }
+
+    /// Bridges this person into the core loop: model their reply in Predict,
+    /// or read sign-grounded message guidance without leaving the page.
+    private var loopActionsRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openPredict(with: PredictionDraft(
+                    targetName: currentPerson.displayName,
+                    targetSunSign: currentPerson.sunSign,
+                    targetMoonSign: currentPerson.moonSign,
+                    targetRisingSign: currentPerson.risingSign,
+                    question: "What will \(currentPerson.displayName) say next?"
+                ))
+            } label: {
+                Label("Predict their reply", systemImage: "wand.and.stars")
+                    .font(SimastryFont.labelMedium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(SimastryGradient.gold, in: Capsule())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityHint("Opens Predict with \(currentPerson.displayName)'s chart signals filled in")
+
+            Button {
+                HapticManager.buttonPress()
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    showHowToTalk.toggle()
+                }
+            } label: {
+                Label("How to talk", systemImage: "text.bubble")
+                    .font(SimastryFont.labelMedium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(.white.opacity(0.06), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.10), lineWidth: 0.7))
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityHint("Shows communication guidance for a \(currentPerson.sunSign.displayName) Sun")
+        }
+    }
+
+    @ViewBuilder
+    private var howToTalkSection: some View {
+        if showHowToTalk, let guide = CommunicationTemplates.guides[currentPerson.sunSign] {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionTitle("How to talk to \(currentPerson.displayName)", systemImage: "text.bubble.fill")
+
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(guide.tips.prefix(3).enumerated()), id: \.offset) { _, tip in
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(SimastryColor.gold)
+                                .padding(.top, 4)
+                            Text(tip)
+                                .font(SimastryFont.bodySmall)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                                .lineSpacing(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Best approach")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.gold)
+                            .tracking(1)
+                            .textCase(.uppercase)
+                        Text(guide.bestApproach)
+                            .font(SimastryFont.bodySmall)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(12)
+                    .background(SimastryColor.gold.opacity(0.07), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("What to avoid")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.amber)
+                            .tracking(1)
+                            .textCase(.uppercase)
+                        Text(guide.avoid)
+                            .font(SimastryFont.bodySmall)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.74))
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(12)
+                    .background(SimastryColor.amber.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .padding(16)
+                .glossyCard(cornerRadius: 20)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
     }
 
     private var relationshipPatternSection: some View {

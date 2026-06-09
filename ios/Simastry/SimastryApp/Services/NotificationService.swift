@@ -127,6 +127,27 @@ final class NotificationService {
         center.add(request)
     }
 
+    /// Daily communication brief. Content is built from the user's own chart
+    /// signals only — no names, no message content — so previews stay private.
+    func scheduleDailyBrief(focusName: String, body: String) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["daily_brief"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Daily brief · \(focusName) focus"
+        content.body = body
+        content.sound = .default
+        content.userInfo = ["deeplink": "simastry://home"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = 9
+        dateComponents.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+
+        let request = UNNotificationRequest(identifier: "daily_brief", content: content, trigger: trigger)
+        center.add(request)
+    }
+
     func scheduleEveningCheckIn(companionName: String) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["evening_checkin"])
@@ -230,6 +251,7 @@ final class NotificationService {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [
                 "daily_transit",
+                "daily_brief",
                 "evening_checkin",
                 "companion_hook",
                 "inactive_reengagement",

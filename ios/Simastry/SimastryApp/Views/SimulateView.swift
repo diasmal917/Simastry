@@ -209,11 +209,27 @@ struct SimulateView: View {
 
     private var header: some View {
         VStack(spacing: 14) {
-            GlossyOrbView(
-                signColors: [SimastryColor.risingViolet, SimastryColor.celestialBlue],
-                state: .active,
-                size: 84
-            )
+            ZStack {
+                GlossyOrbView(
+                    signColors: [
+                        selectedSunSign?.color ?? SimastryColor.risingViolet,
+                        selectedMoonSign?.color ?? SimastryColor.celestialBlue
+                    ],
+                    state: .active,
+                    size: 84
+                )
+                .id(selectedSunSign)
+
+                if let selectedSunSign {
+                    Circle()
+                        .fill(.black.opacity(0.24))
+                        .frame(width: 48, height: 48)
+                        .blur(radius: 6)
+
+                    ZodiacIconView(sign: selectedSunSign, size: 40, showsGlow: true)
+                }
+            }
+            .accessibilityHidden(true)
 
             VStack(spacing: 6) {
                 Text("What Will They Say?")
@@ -470,7 +486,7 @@ struct SimulateView: View {
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Past Simulations")
+                Text("Past Predictions")
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
@@ -492,7 +508,7 @@ struct SimulateView: View {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(SimastryColor.risingViolet)
-                    Text("No simulations yet")
+                    Text("No predictions yet")
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
                     Text(personalizedHistoryEmptyText)
@@ -565,6 +581,14 @@ struct SimulateView: View {
     }
 
     private func historyRow(_ item: PredictionResult) -> some View {
+        VStack(spacing: 8) {
+            historyRowMain(item)
+            outcomeStrip(item)
+        }
+        .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
+    }
+
+    private func historyRowMain(_ item: PredictionResult) -> some View {
         HStack(spacing: 12) {
             Button {
                 selectedResult = item
@@ -590,7 +614,7 @@ struct SimulateView: View {
 
                     Text("\(item.confidence)%")
                         .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.gold)
+                        .foregroundStyle(confidenceColor(item.confidence))
                 }
                 .padding(16)
                 .simastryGlass(cornerRadius: 18)
@@ -611,7 +635,53 @@ struct SimulateView: View {
             }
             .buttonStyle(SpringPressStyle())
         }
-        .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
+    }
+
+    private func confidenceColor(_ value: Int) -> Color {
+        if value >= 75 { return SimastryColor.gold }
+        if value >= 50 { return SimastryColor.offWhite }
+        return SimastryColor.mutedSilver
+    }
+
+    private func outcomeStrip(_ item: PredictionResult) -> some View {
+        HStack(spacing: 8) {
+            Text(item.outcome == nil ? "Did this land?" : "Outcome")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+
+            Spacer(minLength: 0)
+
+            outcomeChip(.landed, for: item)
+            outcomeChip(.missed, for: item)
+        }
+        .padding(.horizontal, 6)
+    }
+
+    private func outcomeChip(_ outcome: PredictionOutcome, for item: PredictionResult) -> some View {
+        let isSelected = item.outcome == outcome
+        let tint = outcome == .landed ? SimastryColor.gold : SimastryColor.deepMuted
+
+        return Button {
+            HapticManager.buttonPress()
+            viewModel.predictionService.setOutcome(isSelected ? nil : outcome, for: item.id)
+            withAnimation(.spring(SimastrySpring.snappy)) {
+                loadHistory()
+            }
+        } label: {
+            Label(outcome.title, systemImage: outcome.systemImage)
+                .font(SimastryFont.captionSmall.weight(.semibold))
+                .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(isSelected ? tint : Color.white.opacity(0.05), in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(isSelected ? tint.opacity(0.6) : .white.opacity(0.09), lineWidth: 0.6)
+                }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("\(outcome.title)\(isSelected ? ", selected" : "")")
+        .accessibilityHint("Marks whether this prediction matched what happened")
     }
 
     private func sectionLabel(_ title: String) -> some View {
@@ -724,7 +794,7 @@ struct SimulateView: View {
             stopProgressCycle()
             isGenerating = false
             let message = (error as? LocalizedError)?.errorDescription ?? "Try again in a moment."
-            viewModel.showToast("Simulation interrupted", subtitle: message, isError: true)
+            viewModel.showToast("Prediction interrupted", subtitle: message, isError: true)
         }
     }
 
@@ -778,7 +848,7 @@ struct SimulateView: View {
         } catch {
             CrashReporter.log(error, context: "regeneratePrediction")
             let message = (error as? LocalizedError)?.errorDescription ?? "Try again in a moment."
-            viewModel.showToast("Couldn't redraw the timeline", subtitle: message, isError: true)
+            viewModel.showToast("Couldn't update the prediction", subtitle: message, isError: true)
         }
 
         isRegenerating = false

@@ -135,6 +135,12 @@ class AppViewModel {
     var predictionDraft: PredictionDraft?
     var referralInfo: ReferralInfo?
 
+    // MARK: - Companion DM State
+    /// Companion threads currently "typing" a reply (drives the typing indicator).
+    var typingCompanionIds: Set<UUID> = []
+    /// The companion thread the user is looking at, so replies arrive pre-read.
+    var openCompanionThreadId: UUID?
+
     // MARK: - Legacy Consumable Top-Ups
     var bonusPredictions: Int = UserDefaults.standard.integer(forKey: "bonusPredictions") {
         didSet { UserDefaults.standard.set(bonusPredictions, forKey: "bonusPredictions") }
@@ -162,7 +168,7 @@ class AppViewModel {
         }
         auraWalletPublicAddress = trimmed
         auraWalletLastCheckedAt = Date()
-        showToast("Wallet saved", subtitle: "Read-only context will be used for Aura.", isError: false)
+        showToast("Wallet saved", subtitle: "Your Aura can reflect this wallet's Zodiacs.", isError: false)
     }
 
     func clearAuraWalletContext() {
@@ -976,6 +982,27 @@ class AppViewModel {
         if let rising = profile?.risingSign, let tier = profile?.tier {
             notificationService.scheduleDailyTransit(risingSign: rising, tier: tier)
         }
+
+        scheduleDailyBriefNotification()
+    }
+
+    /// Mirrors Home's rotating daily brief. The notification fires the next
+    /// morning, so it carries tomorrow's focus (Home uses dayOfYear % 3).
+    func scheduleDailyBriefNotification() {
+        guard let type = CommunicationTypeProfile.make(
+            sun: userSunSign,
+            moon: userMoonSign,
+            rising: userRisingSign
+        ) else { return }
+
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let (focusName, line): (String, String) = switch (dayOfYear + 1) % 3 {
+        case 0: ("Sun", type.sunSignal)
+        case 1: ("Moon", type.moonSignal)
+        default: ("Rising", type.risingSignal)
+        }
+
+        notificationService.scheduleDailyBrief(focusName: focusName, body: line)
     }
 
     func navigateAfterAuth() async {
@@ -1676,16 +1703,23 @@ class AppViewModel {
     // MARK: - Companion Messages (Inbox)
 
     var unreadMessageCount: Int {
-        (companionMessages + discoveryMessages).filter { !$0.isRead }.count
+        (companionMessages + discoveryMessages)
+            .filter { !$0.isRead && $0.direction == .incoming }
+            .count
     }
 
     var inboxMessages: [CompanionMessage] {
+        let companionThreads = Dictionary(grouping: companionMessages, by: \.companionId)
+            .compactMap { _, messages in
+                messages.max { $0.timestamp < $1.timestamp }
+            }
+
         let discoveryThreads = Dictionary(grouping: discoveryMessages, by: \.companionId)
             .compactMap { _, messages in
                 messages.max { $0.timestamp < $1.timestamp }
             }
 
-        return (companionMessages + discoveryThreads)
+        return (companionThreads + discoveryThreads)
             .sorted { $0.timestamp > $1.timestamp }
     }
 
@@ -1701,14 +1735,140 @@ class AppViewModel {
             companionMessages = []
             return
         }
+        // Preserve stored direction so outgoing replies survive relaunch; legacy
+        // messages without the field decode as companion/incoming.
         companionMessages = messages
             .map { message in
                 var normalized = message
                 normalized.source = .companion
-                normalized.direction = .incoming
                 return normalized
             }
             .sorted { $0.timestamp > $1.timestamp }
+    }
+
+    /// Full companion thread, oldest first, for the DM view.
+    func companionConversation(with companionId: UUID) -> [CompanionMessage] {
+        companionMessages
+            .filter { $0.companionId == companionId }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    /// Marks every incoming message in a companion thread as read.
+    func markCompanionThreadRead(_ companionId: UUID) {
+        var changed = false
+        for index in companionMessages.indices where companionMessages[index].companionId == companionId {
+            if companionMessages[index].direction == .incoming && !companionMessages[index].isRead {
+                companionMessages[index].isRead = true
+                changed = true
+            }
+        }
+        if changed { saveMessages() }
+    }
+
+    /// Sends a user message into a companion thread and schedules a sign-lens reply.
+    /// The reply is composed on device from the method layer — no remote AI.
+    @discardableResult
+    func sendCompanionThreadMessage(
+        companionId: UUID,
+        companionName: String,
+        companionSign: String,
+        content: String
+    ) async -> Bool {
+        guard canSendMessage() else {
+            showToast(
+                "Messages used up",
+                subtitle: "You've used all \(dailyMessageLimit) messages today. Upgrade for unlimited messages.",
+                isError: true
+            )
+            showUpsell = true
+            return false
+        }
+
+        let outgoing = CompanionMessage(
+            companionId: companionId,
+            companionName: companionName,
+            companionSign: companionSign,
+            content: content,
+            timestamp: Date(),
+            isRead: true,
+            source: .companion,
+            direction: .outgoing
+        )
+        companionMessages.insert(outgoing, at: 0)
+        saveMessages()
+
+        // Keep relationship metrics in sync when a companion record exists.
+        if let index = companions.firstIndex(where: { $0.id == companionId }) {
+            var updated = companions[index]
+            updated.conversationCount += 1
+            if updated.firstConversationAt == nil {
+                updated.firstConversationAt = Date()
+            }
+            updated.relationshipLevel = RelationshipLevel.from(messageCount: updated.conversationCount).rawValue
+            if updated.compatibilityScore < 97 {
+                updated.compatibilityScore += 1
+            }
+            companions[index] = updated
+
+            #if DEBUG
+            let skipRemote = isDebugPreviewStateActive
+            #else
+            let skipRemote = false
+            #endif
+            if !skipRemote {
+                try? await supabase.updateCompanion(updated)
+            }
+        }
+
+        await consumeMessage()
+        scheduleCompanionReply(companionId: companionId, companionName: companionName, companionSign: companionSign)
+        return true
+    }
+
+    private func scheduleCompanionReply(companionId: UUID, companionName: String, companionSign: String) {
+        guard !typingCompanionIds.contains(companionId) else { return }
+        typingCompanionIds.insert(companionId)
+
+        let threadCount = companionMessages.filter { $0.companionId == companionId }.count
+        let delay = Double(1_400 + (threadCount % 4) * 350)
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(delay))
+            typingCompanionIds.remove(companionId)
+
+            let reply = CompanionMessage(
+                companionId: companionId,
+                companionName: companionName,
+                companionSign: companionSign,
+                content: composeCompanionReply(signName: companionSign, threadCount: threadCount),
+                timestamp: Date(),
+                isRead: openCompanionThreadId == companionId,
+                source: .companion,
+                direction: .incoming
+            )
+            companionMessages.insert(reply, at: 0)
+            saveMessages()
+        }
+    }
+
+    /// Composes a companion reply from the persona's sign lens: an element-keyed opener
+    /// plus one guidance beat, rotated by thread length so it doesn't repeat.
+    private func composeCompanionReply(signName: String, threadCount: Int) -> String {
+        let sign = ZodiacSign(rawValue: signName.lowercased())
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == signName.lowercased() }
+            ?? .sagittarius
+
+        let openers = AstrologyTemplates.companionReplyOpeners[sign.element.rawValue] ?? []
+        let guidance = AstrologyTemplates.companionReplyGuidance[sign.element.rawValue] ?? []
+
+        let opener = openers.isEmpty ? "" : openers[threadCount % openers.count]
+        let beat = guidance.isEmpty
+            ? "Say it plainly, once, and give the reply room to land."
+            : guidance[(threadCount / max(openers.count, 1) + threadCount) % guidance.count]
+
+        return [opener, beat]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     func saveMessages() {
@@ -1720,9 +1880,7 @@ class AppViewModel {
 
     func markMessageRead(_ message: CompanionMessage) {
         if message.source == .companion {
-            guard let index = companionMessages.firstIndex(where: { $0.id == message.id }) else { return }
-            companionMessages[index].isRead = true
-            saveMessages()
+            markCompanionThreadRead(message.companionId)
         } else {
             for index in discoveryMessages.indices where discoveryMessages[index].companionId == message.companionId {
                 if discoveryMessages[index].direction == .incoming {
@@ -1741,7 +1899,8 @@ class AppViewModel {
 
     func deleteMessage(_ message: CompanionMessage) {
         if message.source == .companion {
-            companionMessages.removeAll { $0.id == message.id }
+            // Inbox rows represent whole threads now — remove the conversation.
+            companionMessages.removeAll { $0.companionId == message.companionId }
             saveMessages()
         } else {
             discoveryMessages.removeAll { $0.companionId == message.companionId }
@@ -1938,6 +2097,7 @@ class AppViewModel {
         defaults.removeObject(forKey: auraWalletUseInAuraKey)
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
+        defaults.removeObject(forKey: AIAstrologistsView.gramCommentsDefaultsKey)
 
         relationshipPeopleStore.deleteAll()
         deleteProfileImage()

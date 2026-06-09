@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct MessagesView: View {
     @Bindable var viewModel: AppViewModel
@@ -92,8 +93,7 @@ struct MessagesView: View {
             if viewModel.companions.isEmpty {
                 Button {
                     HapticManager.buttonPress()
-                    viewModel.selectedTab = 0
-                    viewModel.homeSetupPhase = .modeSelection
+                    viewModel.openAIAstrologists()
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "plus.circle.fill")
@@ -126,7 +126,7 @@ private struct MessageRow: View {
     }
 
     private var previewText: String {
-        if message.source == .discovery && message.direction == .outgoing {
+        if message.direction == .outgoing {
             return "You: \(message.content)"
         }
         return message.content
@@ -261,8 +261,11 @@ private struct MessageDetailSheet: View {
     @State private var isSendingReply: Bool = false
     @State private var showSafetyOptions: Bool = false
     @State private var showBlockConfirmation: Bool = false
-    @State private var localCompanionReplies: [CompanionMessage] = []
     @FocusState private var replyFocused: Bool
+
+    private var isCompanionTyping: Bool {
+        message.source == .companion && viewModel.typingCompanionIds.contains(message.companionId)
+    }
 
     private var zodiacSign: ZodiacSign? {
         ZodiacSign(rawValue: message.companionSign.lowercased())
@@ -317,10 +320,19 @@ private struct MessageDetailSheet: View {
                                 .id(threadMessage.id)
                             }
 
+                            if isCompanionTyping {
+                                TypingIndicatorBubble(
+                                    companionAvatar: MessageAvatarView(message: message, size: 28, showGlow: false)
+                                )
+                                .id("typing-indicator")
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            }
+
                             Spacer().frame(height: 16)
                         }
                         .padding(.horizontal, 14)
                         .padding(.top, 14)
+                        .animation(.spring(SimastrySpring.smooth), value: isCompanionTyping)
                     }
                     .scrollIndicators(.hidden)
                     .onAppear {
@@ -328,6 +340,15 @@ private struct MessageDetailSheet: View {
                     }
                     .onChange(of: displayMessages.count) {
                         scrollToLatest(proxy)
+                    }
+                    .onChange(of: isCompanionTyping) {
+                        if isCompanionTyping {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                                withAnimation(.spring(SimastrySpring.smooth)) {
+                                    proxy.scrollTo("typing-indicator", anchor: .bottom)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -344,6 +365,14 @@ private struct MessageDetailSheet: View {
         .task {
             if message.source == .discovery {
                 await viewModel.refreshInbox(showErrors: false)
+            } else {
+                viewModel.openCompanionThreadId = message.companionId
+                viewModel.markCompanionThreadRead(message.companionId)
+            }
+        }
+        .onDisappear {
+            if viewModel.openCompanionThreadId == message.companionId {
+                viewModel.openCompanionThreadId = nil
             }
         }
         .confirmationDialog("Report or Block", isPresented: $showSafetyOptions, titleVisibility: .visible) {
@@ -385,8 +414,8 @@ private struct MessageDetailSheet: View {
             let thread = conversationMessages
             return thread.isEmpty ? [message] : thread
         }
-        return ([message] + localCompanionReplies)
-            .sorted { $0.timestamp < $1.timestamp }
+        let thread = viewModel.companionConversation(with: message.companionId)
+        return thread.isEmpty ? [message] : thread
     }
 
     private var dmHeader: some View {
@@ -471,77 +500,6 @@ private struct MessageDetailSheet: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             withAnimation(.spring(SimastrySpring.smooth)) {
                 proxy.scrollTo(last.id, anchor: .bottom)
-            }
-        }
-    }
-
-    private var discoveryConversationSection: some View {
-        VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Conversation")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.gold)
-                    .tracking(1)
-                    .textCase(.uppercase)
-
-                if conversationMessages.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: "bubble.left.and.text.bubble.right")
-                            .font(.system(size: 14))
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                        Text("Start the conversation — say something!")
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                }
-
-                ForEach(conversationMessages) { threadMessage in
-                    HStack {
-                        if threadMessage.direction == .outgoing {
-                            Spacer(minLength: 44)
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(threadMessage.direction == .outgoing ? "You" : threadMessage.companionName)
-                                .font(SimastryFont.captionSmall)
-                                .foregroundStyle(threadMessage.direction == .outgoing ? SimastryColor.midnight.opacity(0.72) : SimastryColor.gold)
-
-                            Text(threadMessage.content)
-                                .font(SimastryFont.bodyMedium)
-                                .foregroundStyle(threadMessage.direction == .outgoing ? SimastryColor.midnight : SimastryColor.offWhite)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Text(threadMessage.timestamp.relativeDescription)
-                                .font(SimastryFont.captionSmall)
-                                .foregroundStyle(threadMessage.direction == .outgoing ? SimastryColor.midnight.opacity(0.62) : SimastryColor.deepMuted)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(
-                            threadMessage.direction == .outgoing ? SimastryColor.gold : SimastryColor.offWhite.opacity(0.06),
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
-
-                        if threadMessage.direction == .incoming {
-                            Spacer(minLength: 44)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .simastryGlass(cornerRadius: 20)
-
-            VStack(spacing: 12) {
-                replyComposer
-
-                if replyText.count > 0 {
-                    Text("\(replyText.count)/500")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.deepMuted)
-                }
             }
         }
     }
@@ -705,36 +663,64 @@ private struct MessageDetailSheet: View {
                     companionSign: message.companionSign,
                     content: outgoingText
                 )
-            } else if let companion = viewModel.companions.first(where: { $0.id == message.companionId }) {
-                sent = await viewModel.recordCompanionInteraction(
-                    with: companion,
-                    title: "Message sent",
-                    subtitle: outgoingText
-                )
             } else {
-                viewModel.showToast("Message saved", subtitle: "Your reply is ready for this thread.", isError: false)
-                sent = true
+                sent = await viewModel.sendCompanionThreadMessage(
+                    companionId: message.companionId,
+                    companionName: message.companionName,
+                    companionSign: message.companionSign,
+                    content: outgoingText
+                )
             }
 
             if sent {
-                if message.source == .companion {
-                    localCompanionReplies.append(
-                        CompanionMessage(
-                            companionId: message.companionId,
-                            companionName: message.companionName,
-                            companionSign: message.companionSign,
-                            content: outgoingText,
-                            timestamp: Date(),
-                            isRead: true,
-                            source: message.source,
-                            direction: .outgoing
-                        )
-                    )
-                }
                 replyText = ""
             }
             isSendingReply = false
         }
+    }
+}
+
+// MARK: - Typing Indicator
+
+private struct TypingIndicatorBubble: View {
+    let companionAvatar: MessageAvatarView
+    @State private var phase: Int = 0
+
+    private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            companionAvatar
+
+            HStack(spacing: 5) {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .fill(SimastryColor.mutedSilver)
+                        .frame(width: 7, height: 7)
+                        .opacity(phase == index ? 0.95 : 0.35)
+                        .scaleEffect(phase == index ? 1.12 : 1.0)
+                }
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .background {
+                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    .fill(SimastryColor.surface.opacity(0.94))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 19, style: .continuous)
+                            .stroke(.white.opacity(0.08), lineWidth: 0.7)
+                    }
+            }
+
+            Spacer(minLength: 54)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                phase = (phase + 1) % 3
+            }
+        }
+        .accessibilityLabel("Typing a reply")
     }
 }
 

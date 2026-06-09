@@ -422,6 +422,180 @@ nonisolated struct AstrologyTemplates {
 
     static let ethicalDisclaimer = "Simastry helps you understand people — not control them. Use these insights with empathy."
 
+    // MARK: - Local Placement-Logic Prediction (offline composer)
+
+    /// Likely next texts per Sun sign, voiced like real messages. Used when the remote
+    /// prediction channel is not configured so Predict never dead-ends.
+    static let likelyReplies: [String: [String]] = [
+        "Aries": [
+            "ok honestly? just say what you actually want lol",
+            "I'm around tonight. you in or not",
+            "ha. fine, you have my attention"
+        ],
+        "Taurus": [
+            "Sorry, slow day. Still thinking about what you said — can we talk later tonight?",
+            "I'm not ignoring you. I just don't want to answer this halfway.",
+            "Okay. That actually means a lot. Let me get through today and I'll call you."
+        ],
+        "Gemini": [
+            "wait okay I have thoughts. several. which do you want first 😅",
+            "lol that's fair. counterpoint though —",
+            "okay you can't just drop that and disappear. explain"
+        ],
+        "Cancer": [
+            "I read this a few times. I'm okay, just needed a minute.",
+            "That made me feel some type of way, in a good sense I think.",
+            "Can we not do this over text? I'd rather hear your voice."
+        ],
+        "Leo": [
+            "Okay THIS is the energy I needed today!!",
+            "you know exactly what you're doing with that message 😏",
+            "I was waiting for you to say it first, for the record."
+        ],
+        "Virgo": [
+            "I have three questions, but the short answer is yes.",
+            "Appreciate you being specific. That makes this easier.",
+            "Let me think about the right way to answer this — I don't want to be careless about it."
+        ],
+        "Libra": [
+            "Okay that's fair, and you said it kindly, which I noticed.",
+            "I keep drafting replies and deleting them, which probably tells you something.",
+            "Can we find a middle here? I think we actually agree more than it sounds."
+        ],
+        "Scorpio": [
+            "Interesting that you said that now.",
+            "I'm not going to pretend that didn't land. It did.",
+            "Say less. I'd rather finish this in person."
+        ],
+        "Sagittarius": [
+            "ha — okay that's the most honest thing you've sent all week. respect",
+            "I'm not mad, I just needed air. still do, a little.",
+            "yes to the plan, no to the overthinking. let's go"
+        ],
+        "Capricorn": [
+            "Noted. Let's talk Thursday when I can give it real attention.",
+            "I don't say this often, but that was well put.",
+            "I'd rather do this properly than fast. Give me a day."
+        ],
+        "Aquarius": [
+            "okay unexpected, but I'm intrigued. go on",
+            "I need to sit with that. not avoiding — processing.",
+            "weirdly, I was about to send you almost the same thing."
+        ],
+        "Pisces": [
+            "I felt that more than I expected to.",
+            "I don't have words yet but I didn't want to leave you waiting.",
+            "Can tonight just be us talking properly? I miss that."
+        ]
+    ]
+
+    /// Suggested replies the user could send, per the target's Sun sign — tuned to the
+    /// sign's best-approach pattern. Communication guidance, not scripts.
+    static let suggestedReplies: [String: [String]] = [
+        "Aries": [
+            "Straight answer: I want to see you. Tonight work?",
+            "No games — I liked what you said. What's the next move?"
+        ],
+        "Taurus": [
+            "No rush on this. I meant it, and it'll still be true tomorrow.",
+            "Take your time. I'd rather have your real answer than a fast one."
+        ],
+        "Gemini": [
+            "Okay, one question, answer honestly: what did you actually think when you read my last text?",
+            "I'll trade you — one real answer for one ridiculous story from today."
+        ],
+        "Cancer": [
+            "I'm not going anywhere. Tell me when you're ready.",
+            "That wasn't me pulling away — I just worded it badly. You matter to me."
+        ],
+        "Leo": [
+            "You were the best part of that night, and I don't say that lightly.",
+            "Come on, you know I notice you. I just want the version of this where we're both honest."
+        ],
+        "Virgo": [
+            "Here's what I actually meant, said plainly: ",
+            "You were right about the details. Here's what I'll do differently."
+        ],
+        "Libra": [
+            "I think we both have a point. Can we talk it through instead of trading texts?",
+            "No pressure either way — I just want us to land somewhere fair."
+        ],
+        "Scorpio": [
+            "I'll just be honest, even if it's uncomfortable: ",
+            "No performance, no angle. Here's the truth of it."
+        ],
+        "Sagittarius": [
+            "No pressure and no drama — door's open if you want in.",
+            "Honest version: I had fun, I want more of it, and you can take that at face value."
+        ],
+        "Capricorn": [
+            "Short version: I'm serious about this. Tell me what works for your week.",
+            "I'd rather plan something real than keep circling. Thursday?"
+        ],
+        "Aquarius": [
+            "No expectations attached — I just thought of you and didn't censor it.",
+            "Take whatever space you need. The idea stands when you're back."
+        ],
+        "Pisces": [
+            "I'm not asking for an answer — I just wanted you to know how it felt.",
+            "Whatever you're feeling is allowed. I'd still rather hear it than guess."
+        ]
+    ]
+
+    /// The guidance beat of an AI Astrologist reply — follows an opener.
+    /// Keyed by the astrologist's ZodiacElement rawValue, voiced through that lens.
+    static let companionReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Say the true thing in one sentence, then stop typing. Momentum likes a clean exit.",
+            "You don't need a better argument, you need a braver first line. Send the honest one.",
+            "If you're asking whether to reach out — that's already your answer. Keep it short.",
+            "Don't pad it with apologies. One clear sentence carries further than three soft ones."
+        ],
+        "earth": [
+            "Reply once, plainly, and let it sit. Reliability reads louder than speed.",
+            "Strip out everything you added to sound casual. The plain version is the strong one.",
+            "You don't owe an instant answer. A steady reply tomorrow beats a wobbly one tonight.",
+            "Name one concrete thing you'll do, not five things you feel. That's what builds trust here."
+        ],
+        "air": [
+            "Lead with the question you actually want answered. Curiosity reopens rooms that arguments close.",
+            "The subtext is doing more work than the words. Answer the subtext, lightly.",
+            "Keep it one beat lighter than you feel. You can always add weight later — you can't remove it.",
+            "If the thread stalled, change the angle, not the volume. Ask something only they can answer."
+        ],
+        "water": [
+            "Name the feeling without assigning blame, then leave space. That combination is rare and it works.",
+            "Don't perform okay-ness. One honest line about how it landed is enough.",
+            "Read their last message again slowly. The answer they need is usually in what they avoided saying.",
+            "Protect your softness — say the kind thing, but keep the boundary in the same breath."
+        ]
+    ]
+
+    /// Companion chat openers per element — the first beat of an AI Astrologist reply,
+    /// before sign-specific guidance. Keyed by ZodiacElement rawValue.
+    static let companionReplyOpeners: [String: [String]] = [
+        "fire": [
+            "Good. You said it instead of circling it.",
+            "I like the heat in this one. Let's aim it.",
+            "Quick read before you hit send on anything else:"
+        ],
+        "earth": [
+            "Let's slow this down for one breath.",
+            "Okay. Solid ground first, then the reply.",
+            "Here's the steady version of what you're feeling:"
+        ],
+        "air": [
+            "Interesting thread. Let's read the pattern, not just the words.",
+            "Two ways to play this — here's the cleaner one.",
+            "Let's separate the tone from the content for a second."
+        ],
+        "water": [
+            "I can feel the weight under that message.",
+            "First: nothing is wrong with how you feel about this.",
+            "Let's read what's underneath before you answer."
+        ]
+    ]
+
     // MARK: - Transparency & Methodology
 
     struct MethodologySection {

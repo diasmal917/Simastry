@@ -58,12 +58,12 @@ struct SimastrySettingsView: View {
         .alert("Read-only Aura wallet", isPresented: $showingReadOnlyInfo) {
             Button("OK") {}
         } message: {
-            Text("Simastry uses only the public wallet address to read public Zodiacs holdings for Aura. It cannot move funds, request signatures, request approvals, or make transactions.")
+            Text("Simastry uses only the public wallet address to read which Zodiacs you hold, so your Aura can reflect them. Holdings never unlock app features, and Simastry cannot move funds, request signatures, request approvals, or make transactions.")
         }
         .alert("Phantom wallet", isPresented: $showingPhantomInfo) {
             Button("OK") {}
         } message: {
-            Text("Production Phantom support should use the official Phantom SDK or deeplink flow to request only the public address. This prototype keeps the safe path available now: paste a public wallet address for read-only Aura context.")
+            Text("Production Phantom support should use the official Phantom SDK or deeplink flow to request only the public address. This prototype keeps the safe path available now: paste a public wallet address for read-only display context.")
         }
         .confirmationDialog("Clear local Simastry data from this device?", isPresented: $showingClearDataConfirmation, titleVisibility: .visible) {
             Button("Clear Local Data", role: .destructive) {
@@ -226,7 +226,7 @@ struct SimastrySettingsView: View {
                         Text("Read-only wallet for Aura")
                             .font(SimastryFont.titleSmall)
                             .foregroundStyle(SimastryColor.offWhite)
-                        Text("Used only to calculate Aura from public Zodiacs holdings. Simastry cannot sign, approve, or move anything.")
+                        Text("Lets your Aura reflect the Zodiacs you hold. Display only — holdings never unlock app features, and Simastry cannot sign, approve, or move anything.")
                             .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .fixedSize(horizontal: false, vertical: true)
@@ -303,7 +303,7 @@ struct SimastrySettingsView: View {
                             tint: SimastryColor.gold
                         )
 
-                        Toggle("Use this wallet in Aura", isOn: $viewModel.useAuraWalletForAura)
+                        Toggle("Reflect this wallet in Aura", isOn: $viewModel.useAuraWalletForAura)
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .tint(SimastryColor.gold)
@@ -395,6 +395,13 @@ struct SimastrySettingsView: View {
                 title: "Method Layer",
                 detail: "Astronomy calculates. Astrology interprets. Simastry translates into communication guidance.",
                 tint: SimastryColor.gold
+            )
+
+            settingRow(
+                icon: "text.book.closed.fill",
+                title: "For reflection",
+                detail: "Simastry offers guidance for reflection and entertainment. It is not professional, medical, legal, or financial advice.",
+                tint: SimastryColor.mutedSilver
             )
 
             settingRow(

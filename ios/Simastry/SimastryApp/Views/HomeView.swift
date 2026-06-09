@@ -60,187 +60,6 @@ struct HomeView: View {
         }
     }
 
-    private var gramContent: some View {
-        let profile = FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
-        let posts = Array(profile.gridImageNames.prefix(6))
-
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                gramHeader(profile)
-
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .top, spacing: 18) {
-                        Image(profile.profileImageName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 92, height: 92)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [SimastryColor.goldLight, SimastryColor.gold, SimastryColor.goldDark],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 2
-                                    )
-                            )
-
-                        HStack(spacing: 18) {
-                            gramStat(value: "\(posts.count)", label: "posts")
-                            gramStat(value: "24", label: "astrologists")
-                            VStack(spacing: 3) {
-                                ZodiacIconView(sign: profile.sign, size: 34, showsGlow: false)
-                                Text(profile.sign.displayName)
-                                    .font(SimastryFont.captionSmall)
-                                    .foregroundStyle(SimastryColor.mutedSilver)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.72)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 10)
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(profile.name)
-                            .font(SimastryFont.titleSmall)
-                            .foregroundStyle(SimastryColor.offWhite)
-
-                        Text(profile.metadataLine)
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-
-                        Text(profile.bio)
-                            .font(SimastryFont.bodySmall)
-                            .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    HStack(spacing: 8) {
-                        ForEach(profile.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(SimastryFont.captionSmall)
-                                .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.white.opacity(0.07), in: Capsule())
-                        }
-                    }
-
-                    gramMethodChips(profile)
-                }
-                .padding(.horizontal, 20)
-
-                Divider()
-                    .overlay(SimastryColor.offWhite.opacity(0.12))
-                    .padding(.horizontal, 20)
-
-                gramGrid(posts)
-
-                Spacer().frame(height: SimastrySpacing.tabBarClearance)
-            }
-            .padding(.top, 14)
-        }
-        .scrollIndicators(.hidden)
-        .background(Color.clear)
-    }
-
-    private func gramHeader(_ profile: FactoryCompanionProfile) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Gram")
-                    .font(SimastryFont.titleLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                Text("@\(profile.handle)")
-                    .font(SimastryFont.labelMedium)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-            }
-
-            Spacer()
-
-            Button {
-                HapticManager.buttonPress()
-                viewModel.selectedTab = 2
-            } label: {
-                Image(systemName: "message.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(SimastryColor.midnight)
-                    .frame(width: 42, height: 42)
-                    .background(SimastryColor.gold, in: Circle())
-            }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Message \(profile.name)")
-        }
-        .padding(.horizontal, 20)
-    }
-
-    private func gramStat(value: String, label: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value)
-                .font(SimastryFont.titleSmall)
-                .foregroundStyle(SimastryColor.offWhite)
-                .lineLimit(1)
-
-            Text(label)
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func gramMethodChips(_ profile: FactoryCompanionProfile) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                gramMethodChip(systemImage: "scope", text: "\(profile.sign.displayName) lens", tint: profile.sign.color)
-                gramMethodChip(systemImage: "checkmark.seal.fill", text: "Factory photos", tint: SimastryColor.gold)
-                gramMethodChip(systemImage: "lock.fill", text: "Fictional", tint: SimastryColor.celestialBlue)
-            }
-            .padding(.vertical, 1)
-        }
-    }
-
-    private func gramMethodChip(systemImage: String, text: String, tint: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(tint)
-
-            Text(text)
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(.white.opacity(0.055), in: Capsule())
-        .overlay(Capsule().stroke(tint.opacity(0.18), lineWidth: 0.5))
-    }
-
-    private func gramGrid(_ imageNames: [String]) -> some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
-
-        return LazyVGrid(columns: columns, spacing: 2) {
-            ForEach(imageNames, id: \.self) { imageName in
-                GeometryReader { proxy in
-                    Image(imageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.width)
-                        .clipped()
-                }
-                .aspectRatio(1, contentMode: .fit)
-                .accessibilityHidden(true)
-            }
-        }
-    }
-
     private var homeContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -250,19 +69,19 @@ struct HomeView: View {
 
                 communicationTypeSummaryCard
 
-                summaryMetricGrid
+                dailyBriefCard
+
+                if communicationType == nil {
+                    predictCard
+                }
 
                 aiAstrologistsHeroCard
 
-                predictCard
+                summaryMetricGrid
 
                 if let companion = viewModel.primaryCompanion,
                    let companionSign = ZodiacSign(rawValue: companion.sunSign) {
                     communicationFocusCard(companionName: companion.name, companionSign: companionSign)
-                }
-
-                if let sun = viewModel.userSunSign {
-                    todayEnergyCard(sun: sun)
                 }
 
                 Spacer().frame(height: SimastrySpacing.tabBarClearance)
@@ -323,6 +142,16 @@ struct HomeView: View {
                             .fill(SimastryColor.surface)
                             .frame(height: 140)
 
+                        // Daily brief skeleton
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 170)
+
+                        // AI Astrologists skeleton
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 210)
+
                         // Grid skeleton
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                             ForEach(0..<4, id: \.self) { _ in
@@ -331,16 +160,6 @@ struct HomeView: View {
                                     .frame(height: 110)
                             }
                         }
-
-                        // Did You Know skeleton
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 140)
-
-                        // Companion skeleton
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 80)
                     }
                     .padding(.horizontal, 16)
                     .skeletonShimmer()
@@ -588,11 +407,18 @@ struct HomeView: View {
                 .padding(.top, 2)
             }
             .padding(20)
-            .tintedGlass(SimastryColor.celestialBlue, cornerRadius: 22)
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(SimastryColor.celestialBlue.opacity(0.22), lineWidth: 1)
-            }
+            .background(SimastryColor.surface.opacity(0.94), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [SimastryColor.celestialBlue.opacity(0.24), .white.opacity(0.055)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            )
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Today with \(companionName). \(todayTip)")
@@ -600,61 +426,32 @@ struct HomeView: View {
         .offset(y: appeared ? 0 : 12)
     }
 
-    private var featureGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
-        return LazyVGrid(columns: columns, spacing: 12) {
-            featureGridCard(
-                title: "Messages",
-                subtitle: "Chat with Nadia",
-                systemImage: "message.fill",
-                tint: SimastryColor.celestialBlue
-            ) {
-                viewModel.selectedTab = 2
-            }
-
-            featureGridCard(
-                title: "Chart",
-                subtitle: "Your signals",
-                systemImage: "scope",
-                tint: SimastryColor.celestialBlue
-            ) {
-                viewModel.selectedTab = 5
-            }
-
-            featureGridCard(
-                title: "Predict",
-                subtitle: "Model a reply",
-                systemImage: "wand.and.stars",
-                tint: SimastryColor.risingViolet
-            ) {
-                showPredict = true
-            }
-
-            featureGridCard(
-                title: "AI Astrologists",
-                subtitle: "Portraits and Gram",
-                systemImage: "sparkles",
-                tint: SimastryColor.gold
-            ) {
-                viewModel.openAIAstrologists()
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 14)
-    }
-
     private var aiAstrologistsHeroCard: some View {
         let profile = FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
 
-        return VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topLeading) {
+        return Button {
+            HapticManager.buttonPress()
+            showAIAstrologists = true
+        } label: {
+            ZStack(alignment: .bottomLeading) {
                 Image(profile.cardImageName)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 110)
+                    .frame(height: 280, alignment: .top)
                     .clipped()
+                    .overlay {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .black.opacity(0.30), location: 0),
+                                .init(color: .clear, location: 0.24),
+                                .init(color: .clear, location: 0.46),
+                                .init(color: .black.opacity(0.86), location: 1.0)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    }
 
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
@@ -667,54 +464,49 @@ struct HomeView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
                 .background(.black.opacity(0.42), in: Capsule())
-                .padding(12)
-            }
+                .padding(14)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 7) {
-                    Text("AI Astrologists")
-                        .font(SimastryFont.titleLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(profile.sign.displayName) lens • AI Astrologist")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.goldLight)
+                        .tracking(1.1)
+                        .textCase(.uppercase)
+                        .lineLimit(1)
 
-                    Spacer()
+                    HStack(alignment: .center, spacing: 10) {
+                        Text(profile.name)
+                            .font(SimastryFont.titleLarge)
+                            .foregroundStyle(.white)
 
-                    Button {
-                        HapticManager.buttonPress()
-                        showAIAstrologists = true
-                    } label: {
+                        Spacer()
+
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(SimastryColor.midnight)
                             .frame(width: 36, height: 36)
                             .background(SimastryGradient.gold, in: Circle())
                     }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel("Open AI Astrologists")
+
+                    Text("Reads your \(communicationType?.title ?? "communication type") through a \(profile.sign.displayName) lens.")
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(.white.opacity(0.86))
+                        .lineSpacing(3)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Text("\(profile.sign.displayName) lens • Factory portraits")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.gold)
-                    .tracking(1.0)
-                    .textCase(.uppercase)
-                    .lineLimit(1)
-
-                Text("\(profile.name) reads your \(communicationType?.title ?? "communication type") through a \(profile.sign.displayName) lens.")
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .lineSpacing(3)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
+                .padding(16)
             }
-            .padding(16)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(.white.opacity(0.12), lineWidth: 0.8)
+            )
         }
-        .background(SimastryColor.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 0.8)
-        )
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("AI Astrologists. \(profile.name), \(profile.sign.displayName) lens. Opens the astrologist directory.")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
@@ -758,243 +550,127 @@ struct HomeView: View {
         .offset(y: appeared ? 0 : 12)
     }
 
-    private func featureGridCard(
-        title: String,
-        subtitle: String,
-        systemImage: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
+    // MARK: - Daily Communication Brief
+
+    /// Which chart signal leads today's brief — rotates daily through Sun/Moon/Rising.
+    private var briefFocusRole: CelestialRole {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        return [CelestialRole.sun, .moon, .rising][dayOfYear % 3]
+    }
+
+    private var briefFocusLine: String? {
+        guard let communicationType else { return nil }
+        switch briefFocusRole {
+        case .sun: return communicationType.sunSignal
+        case .moon: return communicationType.moonSignal
+        case .rising: return communicationType.risingSignal
+        }
+    }
+
+    private var briefMoveLine: String? {
+        guard let sun = viewModel.userSunSign else { return nil }
+        let moves = AstrologyTemplates.companionReplyGuidance[sun.element.rawValue] ?? []
+        guard !moves.isEmpty else { return nil }
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        return moves[dayOfYear % moves.count]
+    }
+
+    @ViewBuilder
+    private var dailyBriefCard: some View {
+        if let briefFocusLine {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sun.haze.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("Daily brief")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .tracking(1.3)
+                        .textCase(.uppercase)
+
+                    Spacer()
+
+                    Text("\(briefFocusRole.displayName) focus")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(SimastryColor.gold.opacity(0.12), in: Capsule())
+                }
+
+                Text(briefFocusLine)
+                    .font(SimastryFont.bodyLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let briefMoveLine {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "arrow.turn.down.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.top, 3)
+
+                        Text(briefMoveLine)
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    briefAction("Predict a reply", systemImage: "wand.and.stars", isPrimary: true) {
+                        showPredict = true
+                    }
+                    briefAction("Messages", systemImage: "message.fill", isPrimary: false) {
+                        viewModel.selectedTab = 2
+                    }
+                }
+                .padding(.top, 2)
+            }
+            .padding(18)
+            .background(SimastryColor.surface.opacity(0.94), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [SimastryColor.gold.opacity(0.26), .white.opacity(0.055)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            )
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Daily brief, \(briefFocusRole.displayName) focus. \(briefFocusLine)")
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+        }
+    }
+
+    private func briefAction(_ label: String, systemImage: String, isPrimary: Bool, action: @escaping () -> Void) -> some View {
         Button {
             HapticManager.buttonPress()
             action()
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 40, height: 40)
-                    .background(tint.opacity(0.10), in: .rect(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(tint.opacity(0.15), lineWidth: 0.5)
-                    )
-
-                Text(title)
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                Text(subtitle)
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .glossyCard(cornerRadius: 18)
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("\(title). \(subtitle)")
-    }
-
-    private func signalPill(_ title: String) -> some View {
-        Text(title)
-            .font(SimastryFont.captionSmall)
-            .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background(.white.opacity(0.055), in: .capsule)
-    }
-
-    private var didYouKnowCard: some View {
-        let nuggets = AstrologyTemplates.dailyNuggets
-        let dayIndex = Calendar.current.component(.day, from: Date()) % nuggets.count
-        let nugget = nuggets[dayIndex]
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(SimastryColor.amber)
-
-                Text(localization.string("home.didYouKnow"))
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(SimastryColor.amber)
-
-                Spacer()
-            }
-
-            Text(nugget.title)
-                .font(SimastryFont.labelLarge)
-                .foregroundStyle(SimastryColor.offWhite)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(nugget.body)
-                .font(SimastryFont.caption)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let feature = nugget.relatedFeature {
-                Button {
-                    HapticManager.buttonPress()
-                    AnalyticsService.shared.track(.didYouKnowTapped)
-                    switch feature {
-                    case "profile":
-                        viewModel.selectedTab = 5
-                    case "companions":
-                        viewModel.openAIAstrologists()
-                    case "predict":
-                        showPredict = true
-                    case "guides":
-                        viewModel.selectedTab = 1
-                    default:
-                        break
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(localization.string("home.tryIt"))
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.amber)
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(SimastryColor.amber)
-                    }
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 2)
-            }
-        }
-        .padding(20)
-        .glossyCard(cornerRadius: 22)
-        .accessibilityLabel("Did you know? \(nugget.title). \(nugget.body)")
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 15)
-        .animation(reduceMotion ? nil : .spring(SimastrySpring.smooth).delay(0.1), value: appeared)
-    }
-
-    private func companionCard(_ companion: CompanionData) -> some View {
-        let level = RelationshipLevel.from(messageCount: companion.conversationCount)
-
-        return Button {
-            HapticManager.buttonPress()
-            viewModel.openAIAstrologists()
-        } label: {
-            HStack(spacing: 14) {
-                GlossyOrbView(
-                    signColors: [
-                        ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
-                        ZodiacSign(rawValue: companion.moonSign)?.color ?? SimastryColor.celestialBlue
-                    ],
-                    state: .idle,
-                    size: 50
+            Label(label, systemImage: systemImage)
+                .font(SimastryFont.labelMedium)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .foregroundStyle(isPrimary ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.88))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(
+                    isPrimary
+                        ? SimastryGradient.gold
+                        : LinearGradient(colors: [.white.opacity(0.07), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: Capsule()
                 )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(companion.name)
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    HStack(spacing: 6) {
-                        Text(level.name)
-                            .font(SimastryFont.labelSmall)
-                            .foregroundStyle(SimastryColor.midnight)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(SimastryColor.gold, in: .capsule)
-
-                        Text("\(companion.conversationCount) sparks")
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                    }
-                }
-
-                Spacer()
-
-                VStack(spacing: 2) {
-                    Text("\(companion.compatibilityScore)%")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.gold)
-                    Text("fit")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                }
-            }
-            .padding(18)
-            .simastryGlass(cornerRadius: 20)
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("\(companion.name), \(level.name) bond, \(companion.compatibilityScore) percent fit")
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 16)
-    }
-
-    private func todayEnergyCard(sun: ZodiacSign) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                CelestialRoleIcon(role: .sun, size: 28)
-                Text("Your Energy Today")
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-                Spacer()
-            }
-
-            Text(AstrologyTemplates.sunSign[sun.rawValue] ?? "")
-                .font(SimastryFont.bodyLarge)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
-                .lineSpacing(3)
-        }
-        .padding(18)
-        .glossyCard(cornerRadius: 20)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 18)
-    }
-
-    // MARK: - Streak
-
-    private var streakPill: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-
-                Text("\(streakManager.currentStreak)")
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                Text(streakManager.streakEncouragement)
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .simastryGlassPill()
-
-            // Milestone toast
-            if showStreakMilestone, let message = streakManager.streakMessage {
-                HStack(spacing: 10) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold)
-
-                    Text(message)
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .goldGlassRect(cornerRadius: 16)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .top).combined(with: .opacity),
-                    removal: .opacity
-                ))
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 8)
     }
 
     private var greetingText: String {

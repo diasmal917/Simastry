@@ -68,7 +68,16 @@ nonisolated final class PredictionService {
         }
 
         guard isConfigured else {
-            throw PredictionServiceError.serviceUnavailable
+            // No remote channel configured: compose a placement-logic reading locally so
+            // Predict never dead-ends. Privacy validation above still applies.
+            let result = composeLocalPrediction(
+                request: request,
+                preparedConversation: preparedConversation,
+                preparedQuestion: preparedQuestion,
+                preparedHypotheticalReply: preparedHypotheticalReply
+            )
+            save(result)
+            return result
         }
 
         let systemPrompt = makeSystemPrompt(for: request)
@@ -142,11 +151,129 @@ nonisolated final class PredictionService {
                 question: preparedQuestion,
                 hypotheticalReply: preparedHypotheticalReply
             ),
-            createdAt: Date()
+            createdAt: Date(),
+            isLocalComposition: false
         )
 
         save(result)
         return result
+    }
+
+    // MARK: - Local Placement-Logic Composer
+
+    /// Builds a prediction from the method layer alone: the pasted message context,
+    /// the target's placements, and traditional Western tropical interpretation.
+    /// Deterministic per (conversation, day) so repeated taps don't feel random.
+    private func composeLocalPrediction(
+        request: PredictionRequest,
+        preparedConversation: ConversationPrivacyResult,
+        preparedQuestion: ConversationPrivacyResult?,
+        preparedHypotheticalReply: ConversationPrivacyResult?
+    ) -> PredictionResult {
+        let sun = request.targetSunSign
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let seed = abs(preparedConversation.redactedText.count
+            &+ (preparedHypotheticalReply?.redactedText.count ?? 0)
+            &+ dayOfYear)
+
+        let replies = AstrologyTemplates.likelyReplies[sun.displayName] ?? ["They keep it brief and wait to see your next move."]
+        let predictedMessage = replies[seed % replies.count]
+
+        var breakdownSentences: [String] = []
+        if let core = CommunicationTemplates.reasoning[sun.displayName] {
+            breakdownSentences.append("\(core).")
+        }
+        if let moon = request.targetMoonSign {
+            breakdownSentences.append("Their \(moon.displayName) Moon shapes the reaction underneath: \(moonClause(for: moon)).")
+        }
+        if let rising = request.targetRisingSign {
+            breakdownSentences.append("Their \(rising.displayName) Rising sets the first response: \(risingClause(for: rising)).")
+        }
+        if request.trimmedHypotheticalReply != nil {
+            breakdownSentences.append("Read against the message you're considering, this is the most likely register they answer in.")
+        }
+        let breakdown = breakdownSentences.joined(separator: " ")
+
+        return PredictionResult(
+            id: UUID(),
+            mode: request.mode,
+            question: preparedQuestion?.redactedText ?? "",
+            conversationText: preparedConversation.redactedText,
+            targetSunSign: request.targetSunSign,
+            targetMoonSign: request.targetMoonSign,
+            targetRisingSign: request.targetRisingSign,
+            predictedMessage: predictedMessage,
+            astrologicalBreakdown: breakdown.isEmpty
+                ? "Read through \(sun.displayName)'s \(sun.element.rawValue) \(sun.modality) lens against the pasted message context."
+                : breakdown,
+            confidence: localConfidence(for: request, conversationLength: preparedConversation.redactedText.count),
+            tone: localTone(for: sun, seed: seed),
+            privacySummary: combinedPrivacySummary(
+                conversation: preparedConversation,
+                question: preparedQuestion,
+                hypotheticalReply: preparedHypotheticalReply
+            ),
+            createdAt: Date(),
+            isLocalComposition: true
+        )
+    }
+
+    private func localConfidence(for request: PredictionRequest, conversationLength: Int) -> Int {
+        var confidence = 58
+        switch request.targetSunSign.element {
+        case .fire, .earth: confidence += 8   // steadier texting patterns
+        case .air: confidence += 4
+        case .water: confidence += 2
+        }
+        if request.targetMoonSign != nil { confidence += 7 }
+        if request.targetRisingSign != nil { confidence += 5 }
+        if conversationLength > 240 { confidence += 6 } else if conversationLength > 80 { confidence += 3 }
+        return min(confidence, 86)
+    }
+
+    private func localTone(for sign: ZodiacSign, seed: Int) -> SimulationTone {
+        let options: [SimulationTone]
+        switch sign.element {
+        case .fire: options = [.confident, .playful, .flirty]
+        case .earth: options = [.warm, .guarded, .confident]
+        case .air: options = [.playful, .distant, .warm]
+        case .water: options = [.warm, .guarded, .anxious]
+        }
+        return options[seed % options.count]
+    }
+
+    private func moonClause(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries: "feelings spike fast and settle once something can be done"
+        case .taurus: "they open up only after the pace feels steady"
+        case .gemini: "they metabolize emotion by talking it through"
+        case .cancer: "silence tends to read as distance to them"
+        case .leo: "warmth is what makes it safe for them to soften"
+        case .virgo: "they look for a detail they can fix before they relax"
+        case .libra: "they want the tone balanced before the topic"
+        case .scorpio: "they track intensity and what is left unsaid"
+        case .sagittarius: "they need room before they can be honest"
+        case .capricorn: "composure is their default shield"
+        case .aquarius: "they step back to think before naming a feeling"
+        case .pisces: "they absorb the mood of the thread before the facts"
+        }
+    }
+
+    private func risingClause(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries: "they answer quickly, sometimes before deciding"
+        case .taurus: "they steady the conversation before engaging"
+        case .gemini: "they open with a question or a joke"
+        case .cancer: "they check emotional safety first"
+        case .leo: "they lead with warmth and presence"
+        case .virgo: "they sort the details before replying"
+        case .libra: "they manage tone and fairness first"
+        case .scorpio: "they scan for the real motive before answering"
+        case .sagittarius: "they default to candor"
+        case .capricorn: "they hold back until the reply feels controlled"
+        case .aquarius: "they answer from a step of distance"
+        case .pisces: "they respond to the feeling before the words"
+        }
     }
 
     /// Parse Claude's text response into structured prediction data
@@ -207,6 +334,13 @@ nonisolated final class PredictionService {
     func deleteHistoryItem(id: UUID) {
         let filtered = loadHistory().filter { $0.id != id }
         persist(filtered)
+    }
+
+    func setOutcome(_ outcome: PredictionOutcome?, for id: UUID) {
+        var history = loadHistory()
+        guard let index = history.firstIndex(where: { $0.id == id }) else { return }
+        history[index].outcome = outcome
+        persist(history)
     }
 
     func clearHistory() {
