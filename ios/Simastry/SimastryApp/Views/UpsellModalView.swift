@@ -101,7 +101,7 @@ struct UpsellModalView: View {
 
             HStack(spacing: 16) {
                 freeChip("Shareable cards")
-                freeChip("Guides")
+                freeChip("Message tools")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -150,7 +150,7 @@ struct UpsellModalView: View {
                     featureRow("Unlimited messages", icon: "message.fill")
                     featureRow("Up to 3 companions", icon: "person.3.fill")
                     featureRow("Chart-grounded replies", icon: "scope")
-                    featureRow("Full communication guides", icon: "bubble.left.and.bubble.right.fill")
+                    featureRow("Full communication guidance", icon: "bubble.left.and.bubble.right.fill")
                     featureRow("Daily transit readings", icon: "sun.horizon.fill")
                 }
 

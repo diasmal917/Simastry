@@ -32,6 +32,10 @@ class AppViewModel {
     private let socialBioKey = "socialBio"
     private let isDiscoverableKey = "isDiscoverable"
     private let thirdPartyConsentKey = "thirdPartyDataConsent"
+    private let auraWalletPublicAddressKey = "simastry_aura_wallet_public_address"
+    private let auraWalletUseInAuraKey = "simastry_aura_wallet_use_in_aura"
+    private let auraWalletLastCheckedAtKey = "simastry_aura_wallet_last_checked_at"
+    private let privateNotificationsEnabledKey = "simastry_private_notifications_enabled"
 
     var companionSunSign: ZodiacSign?
     var companionMoonSign: ZodiacSign?
@@ -46,6 +50,7 @@ class AppViewModel {
     var companionMessages: [CompanionMessage] = []
     var discoveryMessages: [CompanionMessage] = []
     var savedGuides: [SavedGuide] = []
+    var relationshipPeople: [RelationshipPerson] = []
 
     // MARK: - Social Discovery
     var isDiscoverable: Bool = UserDefaults.standard.bool(forKey: "isDiscoverable") {
@@ -78,6 +83,42 @@ class AppViewModel {
         }
     }
 
+    var auraWalletPublicAddress: String = UserDefaults.standard.string(forKey: "simastry_aura_wallet_public_address") ?? "" {
+        didSet {
+            UserDefaults.standard.set(auraWalletPublicAddress, forKey: auraWalletPublicAddressKey)
+        }
+    }
+
+    var useAuraWalletForAura: Bool = UserDefaults.standard.object(forKey: "simastry_aura_wallet_use_in_aura") == nil
+        ? true
+        : UserDefaults.standard.bool(forKey: "simastry_aura_wallet_use_in_aura") {
+        didSet {
+            UserDefaults.standard.set(useAuraWalletForAura, forKey: auraWalletUseInAuraKey)
+        }
+    }
+
+    var auraWalletLastCheckedAt: Date? = {
+        let timestamp = UserDefaults.standard.double(forKey: "simastry_aura_wallet_last_checked_at")
+        guard timestamp > 0 else { return nil }
+        return Date(timeIntervalSince1970: timestamp)
+    }() {
+        didSet {
+            if let auraWalletLastCheckedAt {
+                UserDefaults.standard.set(auraWalletLastCheckedAt.timeIntervalSince1970, forKey: auraWalletLastCheckedAtKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: auraWalletLastCheckedAtKey)
+            }
+        }
+    }
+
+    var privateNotificationsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_private_notifications_enabled") == nil
+        ? true
+        : UserDefaults.standard.bool(forKey: "simastry_private_notifications_enabled") {
+        didSet {
+            UserDefaults.standard.set(privateNotificationsEnabled, forKey: privateNotificationsEnabledKey)
+        }
+    }
+
     var toastMessage: ToastMessage?
     var isDarkMode: Bool = UserDefaults.standard.object(forKey: "simastry_dark_mode") == nil ? true : UserDefaults.standard.bool(forKey: "simastry_dark_mode") {
         didSet {
@@ -86,6 +127,8 @@ class AppViewModel {
     }
     var showUpsell: Bool = false
     var selectedTab: Int = 0
+    var aiAstrologistsRouteRequest: Int = 0
+    var predictRouteRequest: Int = 0
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -111,6 +154,38 @@ class AppViewModel {
         analytics.track(.subscriptionStarted, key: "pack", value: pack.rawValue)
     }
 
+    func saveAuraWalletPublicAddress(_ address: String) {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isSupportedPublicWalletAddress(trimmed) else {
+            showToast("Wallet not saved", subtitle: "Paste a Solana or EVM public wallet address.", isError: true)
+            return
+        }
+        auraWalletPublicAddress = trimmed
+        auraWalletLastCheckedAt = Date()
+        showToast("Wallet saved", subtitle: "Read-only context will be used for Aura.", isError: false)
+    }
+
+    func clearAuraWalletContext() {
+        auraWalletPublicAddress = ""
+        auraWalletLastCheckedAt = nil
+        showToast("Wallet removed", subtitle: "Aura will use chart signals only.", isError: false)
+    }
+
+    static func isSupportedPublicWalletAddress(_ address: String) -> Bool {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        let hexCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
+        if trimmed.hasPrefix("0x"), trimmed.count == 42 {
+            let hexPart = String(trimmed.dropFirst(2))
+            return hexPart.unicodeScalars.allSatisfy { hexCharacters.contains($0) }
+        }
+
+        let base58Characters = CharacterSet(charactersIn: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+        return (32...60).contains(trimmed.count)
+            && trimmed.unicodeScalars.allSatisfy { base58Characters.contains($0) }
+    }
+
     // MARK: - Safety Gates
     var isAgeVerified: Bool = UserDefaults.standard.bool(forKey: "ageVerified")
     var hasAcceptedThirdPartyConsent: Bool = UserDefaults.standard.bool(forKey: "thirdPartyDataConsent")
@@ -129,9 +204,21 @@ class AppViewModel {
     private let companionMessagesKey = "simastry_companion_messages"
     private let lastMessageGenerationKey = "simastry_last_message_generation"
     private let lastDiscoveryMessageTimestampKey = "simastry_last_discovery_message_timestamp"
+    private let relationshipPeopleStore = RelationshipPeopleStore()
+
+    var hasAuraWalletContext: Bool {
+        !auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var auraWalletShortAddress: String {
+        let trimmed = auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 12 else { return trimmed }
+        return "\(trimmed.prefix(6))...\(trimmed.suffix(4))"
+    }
 
     init() {
         loadReferralInfo()
+        loadRelationshipPeople()
     }
 
     // MARK: - Age Verification
@@ -163,6 +250,56 @@ class AppViewModel {
 
     var primaryCompanion: CompanionData? {
         companions.first
+    }
+
+    func openAIAstrologists() {
+        selectedTab = 0
+        homeSetupPhase = .complete
+        aiAstrologistsRouteRequest += 1
+    }
+
+    func openPredict(with draft: PredictionDraft? = nil) {
+        if let draft {
+            predictionDraft = draft
+        }
+        selectedTab = 0
+        homeSetupPhase = .complete
+        predictRouteRequest += 1
+    }
+
+    func loadRelationshipPeople() {
+        relationshipPeople = relationshipPeopleStore.loadPeople()
+    }
+
+    func addRelationshipPerson(_ person: RelationshipPerson) {
+        relationshipPeople.append(person)
+        saveRelationshipPeople()
+    }
+
+    func updateRelationshipPerson(_ person: RelationshipPerson) {
+        guard let index = relationshipPeople.firstIndex(where: { $0.id == person.id }) else { return }
+        var updated = person
+        updated.updatedAt = .now
+        relationshipPeople[index] = updated
+        saveRelationshipPeople()
+    }
+
+    func deleteRelationshipPerson(_ person: RelationshipPerson) {
+        relationshipPeople.removeAll { $0.id == person.id }
+        saveRelationshipPeople()
+    }
+
+    func relationshipReading(for person: RelationshipPerson) -> RelationshipPersonReading {
+        RelationshipReadingFactory.reading(
+            for: person,
+            userSun: userSunSign,
+            userMoon: userMoonSign,
+            userRising: userRisingSign
+        )
+    }
+
+    private func saveRelationshipPeople() {
+        relationshipPeopleStore.savePeople(relationshipPeople)
     }
 
     var isRevenueCatAvailable: Bool {
@@ -394,6 +531,19 @@ class AppViewModel {
         SharedDefaults.clearAll()
     }
 
+    func clearLocalDeviceData() {
+        notificationService.clearScheduledNotifications()
+        clearPendingOnboardingChart()
+        clearAccountScopedLocalState()
+        SharedDefaults.clearAll()
+        WidgetCenter.shared.reloadAllTimelines()
+        showToast(
+            "Local data cleared",
+            subtitle: "Your account was not deleted. Only this device's local Simastry data was removed.",
+            isError: false
+        )
+    }
+
     func handleIncomingURL(_ url: URL) async {
         if supabase.isAuthCallbackURL(url) {
             do {
@@ -426,14 +576,19 @@ class AppViewModel {
         switch url.host {
         case "home":
             selectedTab = 0
-        case "chat", "companions":
+        case "companions":
+            openAIAstrologists()
+        case "people":
             selectedTab = 1
+        case "chat":
+            selectedTab = 2
         case "messages":
             selectedTab = 2
         case "simulate":
-            selectedTab = 2
+            openPredict()
         case "guides", "astropedia":
-            selectedTab = 4
+            guideFocusSign = nil
+            selectedTab = 0
         case "profile":
             selectedTab = 5
         case "upsell":
@@ -455,18 +610,13 @@ class AppViewModel {
         pendingDeepLink = nil
 
         switch deepLink {
-        case .compatibility(_, let companionSign):
-            // Navigate to the Guides tab and focus on the companion sign
-            if let sign = ZodiacSign(rawValue: companionSign) {
-                guideFocusSign = sign
-            }
-            selectedTab = 4
+        case .compatibility:
+            guideFocusSign = nil
+            selectedTab = 1
 
-        case .guide(let sign):
-            if let zodiac = ZodiacSign(rawValue: sign) {
-                guideFocusSign = zodiac
-            }
-            selectedTab = 4
+        case .guide:
+            guideFocusSign = nil
+            selectedTab = 0
 
         case .home:
             selectedTab = 0
@@ -628,15 +778,24 @@ class AppViewModel {
             return
         }
 
-        _ = sun
-        predictionDraft = nil
-        selectedTab = 2
+        let draft = PredictionDraft(
+            targetName: companion.name,
+            targetSunSign: sun,
+            targetMoonSign: zodiacSign(from: companion.moonSign),
+            targetRisingSign: zodiacSign(from: companion.risingSign),
+            question: question ?? "What will \(companion.name) say next?",
+            conversationText: conversationText
+        )
+        openPredict(with: draft)
     }
 
     func startPrediction(for sign: ZodiacSign, question: String? = nil, conversationText: String? = nil) {
-        _ = sign
-        predictionDraft = nil
-        selectedTab = 2
+        let draft = PredictionDraft(
+            targetSunSign: sign,
+            question: question ?? "What would a \(sign.displayName) say next?",
+            conversationText: conversationText
+        )
+        openPredict(with: draft)
     }
 
     func checkSubscriptionStatus() async {
@@ -794,6 +953,11 @@ class AppViewModel {
 
     func setupNotifications() async {
         guard isAuthenticated else {
+            notificationService.clearScheduledNotifications()
+            return
+        }
+
+        guard privateNotificationsEnabled else {
             notificationService.clearScheduledNotifications()
             return
         }
@@ -1743,6 +1907,7 @@ class AppViewModel {
         companionMessages = []
         discoveryMessages = []
         discoveredProfiles = []
+        relationshipPeople = []
         predictionDraft = nil
         bonusPredictions = 0
         isDiscoverable = false
@@ -1753,6 +1918,10 @@ class AppViewModel {
         hasAcceptedThirdPartyConsent = false
         profileImage = nil
         profileImageURL = nil
+        auraWalletPublicAddress = ""
+        auraWalletLastCheckedAt = nil
+        useAuraWalletForAura = true
+        privateNotificationsEnabled = true
 
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: savedGuidesKey)
@@ -1765,7 +1934,12 @@ class AppViewModel {
         defaults.removeObject(forKey: thirdPartyConsentKey)
         defaults.removeObject(forKey: profileImageURLKey)
         defaults.removeObject(forKey: lastDiscoveryMessageTimestampKey)
+        defaults.removeObject(forKey: auraWalletPublicAddressKey)
+        defaults.removeObject(forKey: auraWalletUseInAuraKey)
+        defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
+        defaults.removeObject(forKey: privateNotificationsEnabledKey)
 
+        relationshipPeopleStore.deleteAll()
         deleteProfileImage()
     }
 
@@ -1960,7 +2134,17 @@ class AppViewModel {
         exportData["settings"] = [
             "isDarkMode": isDarkMode,
             "language": UserDefaults.standard.string(forKey: "appLanguage") ?? "en",
-            "isDiscoverable": isDiscoverable
+            "isDiscoverable": isDiscoverable,
+            "privateNotificationsEnabled": privateNotificationsEnabled,
+            "useAuraWalletForAura": useAuraWalletForAura
+        ]
+
+        exportData["auraWalletContext"] = [
+            "hasPublicWallet": hasAuraWalletContext,
+            "publicAddress": auraWalletPublicAddress,
+            "provider": hasAuraWalletContext ? "Manual public wallet" : "",
+            "readOnlyPurpose": "Aura calculation",
+            "lastCheckedAt": auraWalletLastCheckedAt.map { ISO8601DateFormatter().string(from: $0) } ?? ""
         ]
 
         exportData["exportDate"] = ISO8601DateFormatter().string(from: Date())
@@ -2065,6 +2249,7 @@ extension AppViewModel {
             )
         ]
         discoveryMessages = []
+        relationshipPeople = RelationshipPeopleStore.previewPeople()
 
         savedGuides = [
             SavedGuide(
@@ -2085,12 +2270,13 @@ extension AppViewModel {
 
         selectedTab = debugPreviewTab(from: arguments)
         if selectedTab == 3 {
-            selectedTab = 2
+            selectedTab = 0
         }
         predictionDraft = nil
 
         if selectedTab == 4 {
-            guideFocusSign = .sagittarius
+            selectedTab = 0
+            guideFocusSign = nil
         } else {
             guideFocusSign = nil
         }

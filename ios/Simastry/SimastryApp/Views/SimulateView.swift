@@ -50,6 +50,13 @@ struct SimulateView: View {
     }
 
     private var methodLayerSummary: String {
+        if let type = CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            return "Your \(type.title) communication type sets your side of the exchange. Their sign lens and the pasted message context shape the prediction."
+        }
         if let selectedSunSign {
             return "This prediction reads the message context through \(selectedSunSign.displayName)'s conversation lens. Moon and Rising refine emotional pattern and first instinct when you add them."
         }
@@ -117,6 +124,14 @@ struct SimulateView: View {
                     tint: userSunSign.color
                 )
             )
+        }
+
+        if let typeSignal = CommunicationTypeProfile.methodSignal(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            signals.append(typeSignal)
         }
 
         signals.append(

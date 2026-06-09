@@ -6,25 +6,22 @@ struct MainTabView: View {
     private var tabSelection: Binding<Int> {
         Binding(
             get: {
-                if viewModel.selectedTab == 3 || viewModel.selectedTab == 4 {
-                    return 2
-                }
-                return viewModel.selectedTab
+                normalizedTab(viewModel.selectedTab)
             },
             set: { newValue in
-                viewModel.selectedTab = newValue
+                viewModel.selectedTab = normalizedTab(newValue)
             }
         )
     }
 
     var body: some View {
         TabView(selection: tabSelection) {
-            Tab("Gram", systemImage: "camera.fill", value: 0) {
+            Tab("Home", systemImage: "house.fill", value: 0) {
                 HomeView(viewModel: viewModel)
             }
 
-            Tab("Cast", systemImage: "person.2.fill", value: 1) {
-                CompanionsView(viewModel: viewModel)
+            Tab("People", systemImage: "person.2.fill", value: 1) {
+                PeopleView(viewModel: viewModel)
             }
 
             Tab(value: 2) {
@@ -40,13 +37,20 @@ struct MainTabView: View {
             }
         }
         .tint(SimastryColor.gold)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
         .onAppear {
             normalizeSelection(viewModel.selectedTab)
         }
         .onChange(of: viewModel.selectedTab) { _, newTab in
-            normalizeSelection(newTab)
+            let normalized = normalizedTab(newTab)
+            if normalized != newTab {
+                viewModel.selectedTab = normalized
+                return
+            }
             HapticManager.tabChange()
-            if newTab == 2 {
+            if normalized == 2 {
                 Task {
                     await viewModel.refreshInbox(showErrors: false)
                 }
@@ -54,8 +58,13 @@ struct MainTabView: View {
         }
     }
 
+    private func normalizedTab(_ tab: Int) -> Int {
+        tab == 3 || tab == 4 ? 0 : tab
+    }
+
     private func normalizeSelection(_ tab: Int) {
-        guard tab == 3 || tab == 4 else { return }
-        viewModel.selectedTab = 2
+        let normalized = normalizedTab(tab)
+        guard normalized != tab else { return }
+        viewModel.selectedTab = normalized
     }
 }

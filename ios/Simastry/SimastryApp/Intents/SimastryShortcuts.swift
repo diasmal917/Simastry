@@ -72,7 +72,7 @@ struct GetCommunicationTipIntent: AppIntent {
             "pisces": "Be gentle with your tone. They absorb emotional energy from your words."
         ]
 
-        let tip = tips[signName.rawValue] ?? "Open Simastry for personalized communication guides."
+        let tip = tips[signName.rawValue] ?? "Open Simastry for personalized communication signals."
         return .result(dialog: "\(tip)")
     }
 }
@@ -116,7 +116,7 @@ struct SimastryShortcutsProvider: AppShortcutsProvider {
             phrases: [
                 "How should I talk to a \(\.$signName) in \(.applicationName)",
                 "Communication tip for \(\.$signName) from \(.applicationName)",
-                "\(.applicationName) guide for \(\.$signName)"
+                "\(.applicationName) communication lens for \(\.$signName)"
             ],
             shortTitle: "Communication Tip",
             systemImageName: "bubble.left.and.text.bubble.right"

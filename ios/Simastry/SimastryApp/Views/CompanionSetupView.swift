@@ -52,7 +52,7 @@ struct CompanionSetupView: View {
 
                 progressHeader(
                     title: "Shape your \(viewModel.selectedMode.displayName.lowercased())",
-                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style the companion voice."
+                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style the astrologist voice."
                 )
 
                 stageStrip(activeStep: 0)
@@ -441,7 +441,7 @@ struct CompanionSetupView: View {
     private var namingSubtitle: String {
         switch viewModel.selectedMode {
         case .soulmate:
-            return "Give your romantic match a name that already feels magnetic."
+            return "Give your AI astrologist a name that feels magnetic, warm, and easy to talk to."
         case .bestie:
             return "Pick something warm, easy, and instantly familiar."
         case .simulateAnyone:
@@ -452,7 +452,7 @@ struct CompanionSetupView: View {
     private var nameSuggestions: [String] {
         switch viewModel.selectedMode {
         case .soulmate:
-            return ["Aria", "Luna", "Kai", "Zara", "Orion", "Nova"]
+            return ["Nadia", "Luna", "Kai", "Zara", "Orion", "Nova"]
         case .bestie:
             return ["Sam", "Alex", "Quinn", "Jordan", "River", "Sky"]
         case .simulateAnyone:

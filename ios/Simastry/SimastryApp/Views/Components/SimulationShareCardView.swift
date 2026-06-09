@@ -227,7 +227,7 @@ struct SimulationShareCardView: View {
                 Text("\(result.confidence)%")
                     .font(.system(size: isStoryFormat ? 14 : 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(SimastryColor.gold)
-                Text("match")
+                Text("fit")
                     .font(.system(size: isStoryFormat ? 7 : 5, weight: .medium))
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .textCase(.uppercase)

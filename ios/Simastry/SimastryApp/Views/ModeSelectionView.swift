@@ -15,10 +15,10 @@ struct ModeSelectionView: View {
 
                     OnboardingProgressView(
                         eyebrow: "Begin",
-                        title: "Choose your first connection",
+                        title: "Choose your first astrologist",
                         subtitle: viewModel.hasCompletedSigns
-                            ? "Your signs are ready. Pick the kind of relationship you want to explore first."
-                            : "Start with the kind of relationship you want to explore. We'll discover your signs next.",
+                            ? "Your chart signals are ready. Pick the voice that should translate them into message guidance."
+                            : "Start with the kind of guidance you want. We'll calculate your communication type next.",
                         step: 1,
                         totalSteps: 3,
                         labels: ["Path", "Signs", "Companion"]
@@ -85,7 +85,7 @@ struct ModeSelectionView: View {
                     .foregroundStyle(SimastryColor.gold)
             }
 
-            Text("Choose the connection type, calculate your big three, and create a companion voice grounded in placement logic.")
+            Text("Choose an astrologist path, calculate your big three, and turn Sun, Moon, and Rising into a communication type.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +180,7 @@ struct ModeSelectionView: View {
         case .simulateAnyone:
             "Practice a conversation, rehearse an outcome, or explore a dynamic before it happens."
         case .soulmate:
-            "Build a romantic companion lens shaped by your signs and emotional chemistry."
+            "Choose a charismatic astrologist lens for love, texting, timing, and emotional guidance."
         case .bestie:
             "Create a playful, supportive companion with easy warmth and great banter."
         }

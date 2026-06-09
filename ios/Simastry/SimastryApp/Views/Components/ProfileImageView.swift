@@ -4,12 +4,14 @@ struct ProfileImageView: View {
     let image: UIImage?
     let size: CGFloat
     let showEditBadge: Bool
+    let sunSign: ZodiacSign?
     let sunSignGlyph: String?
 
-    init(image: UIImage?, size: CGFloat, showEditBadge: Bool = false, sunSignGlyph: String? = nil) {
+    init(image: UIImage?, size: CGFloat, showEditBadge: Bool = false, sunSign: ZodiacSign? = nil, sunSignGlyph: String? = nil) {
         self.image = image
         self.size = size
         self.showEditBadge = showEditBadge
+        self.sunSign = sunSign
         self.sunSignGlyph = sunSignGlyph
     }
 
@@ -56,7 +58,9 @@ struct ProfileImageView: View {
                     )
                     .overlay(
                         VStack(spacing: size > 60 ? 4 : 2) {
-                            if let glyph = sunSignGlyph, !glyph.isEmpty {
+                            if let sunSign {
+                                ZodiacIconView(sign: sunSign, size: size * 0.58, showsGlow: true)
+                            } else if let glyph = sunSignGlyph, !glyph.isEmpty {
                                 Text(glyph)
                                     .font(.system(size: size * 0.4))
                                     .foregroundStyle(

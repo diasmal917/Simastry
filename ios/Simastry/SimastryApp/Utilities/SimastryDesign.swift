@@ -31,6 +31,14 @@ struct SimastryColor {
     static let placeholderDark = Color(red: 168/255, green: 159/255, blue: 149/255)
 }
 
+enum SimastryGradient {
+    static let gold = LinearGradient(
+        colors: [SimastryColor.goldLight, SimastryColor.gold],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+}
+
 extension CelestialRole {
     var accentColor: Color {
         Color(red: accentRed, green: accentGreen, blue: accentBlue)
@@ -39,9 +47,35 @@ extension CelestialRole {
 
 extension View {
     @ViewBuilder
+    func simastryToolbarGlass() -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .background(SimastryColor.surface.opacity(0.88))
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.025)), in: .rect(cornerRadius: 0))
+        } else {
+            self
+                .background(SimastryColor.surface.opacity(0.92))
+                .background(.ultraThinMaterial)
+        }
+    }
+
+    @ViewBuilder
     func simastryGlass(cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(in: .rect(cornerRadius: cornerRadius))
+            self
+                .background(SimastryColor.surface.opacity(0.78), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.035)), in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.16), .white.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.6
+                        )
+                )
         } else {
             self
                 .background(Color.white.opacity(0.04), in: .rect(cornerRadius: cornerRadius))
@@ -63,7 +97,20 @@ extension View {
     @ViewBuilder
     func simastryGlassLight(cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(.clear, in: .rect(cornerRadius: cornerRadius))
+            self
+                .background(SimastryColor.surface.opacity(0.58), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.clear, in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.12), .white.opacity(0.04)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
         } else {
             self
                 .background(Color.white.opacity(0.03), in: .rect(cornerRadius: cornerRadius))
@@ -84,7 +131,20 @@ extension View {
     @ViewBuilder
     func simastryGlassPill() -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(in: .capsule)
+            self
+                .background(SimastryColor.surface.opacity(0.74), in: Capsule())
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.035)), in: .capsule)
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.16), .white.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.6
+                        )
+                )
         } else {
             self
                 .background(Color.white.opacity(0.04), in: .capsule)
@@ -106,7 +166,20 @@ extension View {
     @ViewBuilder
     func goldGlassPill() -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.tint(SimastryColor.gold), in: .capsule)
+            self
+                .background(SimastryGradient.gold, in: Capsule())
+                .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.32)), in: .capsule)
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.28), SimastryColor.goldDark.opacity(0.20)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.6
+                        )
+                )
         } else {
             self
                 .background(SimastryColor.gold.opacity(0.15), in: Capsule())
@@ -128,7 +201,21 @@ extension View {
     @ViewBuilder
     func goldGlassRect(cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.tint(SimastryColor.gold), in: .rect(cornerRadius: cornerRadius))
+            self
+                .background(SimastryColor.gold.opacity(0.13), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.84), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.20)), in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [SimastryColor.goldLight.opacity(0.26), SimastryColor.gold.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.6
+                        )
+                )
         } else {
             self
                 .background(SimastryColor.gold.opacity(0.08), in: .rect(cornerRadius: cornerRadius))
@@ -150,7 +237,21 @@ extension View {
     @ViewBuilder
     func tintedGlass(_ color: Color, cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.tint(color), in: .rect(cornerRadius: cornerRadius))
+            self
+                .background(color.opacity(0.10), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.86), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(color.opacity(0.18)), in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.14), color.opacity(0.18), .white.opacity(0.04)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.6
+                        )
+                )
         } else {
             self
                 .background(color.opacity(0.08), in: .rect(cornerRadius: cornerRadius))
@@ -173,7 +274,11 @@ extension View {
         self
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.white.opacity(0.03))
+                    .fill(SimastryColor.surface.opacity(0.74))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color.white.opacity(0.035))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -252,12 +357,55 @@ extension View {
     }
 }
 
+enum SimastryDateFormatter {
+    static let summaryDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
+
+    static let chatDay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
+
+    static let compactDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter
+    }()
+}
+
 struct SpringPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
             .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
     }
+}
+
+struct SimastryPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(SimastryFont.titleSmall)
+            .foregroundStyle(SimastryColor.midnight)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(SimastryGradient.gold, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 1)
+            }
+            .shadow(color: SimastryColor.gold.opacity(0.26), radius: 18, x: 0, y: 10)
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == SimastryPrimaryButtonStyle {
+    static var simastryPrimary: SimastryPrimaryButtonStyle { SimastryPrimaryButtonStyle() }
 }
 
 struct ReducedMotionModifier: ViewModifier {

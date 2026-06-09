@@ -11,7 +11,7 @@ nonisolated enum CompanionMode: String, CaseIterable, Codable, Identifiable, Sen
     var displayName: String {
         switch self {
         case .simulateAnyone: "Simulate Anyone"
-        case .soulmate: "Soulmate"
+        case .soulmate: "AI Astrologist"
         case .bestie: "Bestie"
         }
     }
@@ -19,7 +19,7 @@ nonisolated enum CompanionMode: String, CaseIterable, Codable, Identifiable, Sen
     var subtitle: String {
         switch self {
         case .simulateAnyone: "Practice a real conversation"
-        case .soulmate: "The Perfect Love"
+        case .soulmate: "Your chart-reading companion"
         case .bestie: "The Perfect Friend"
         }
     }

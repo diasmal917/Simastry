@@ -41,7 +41,7 @@ struct CompanionsView: View {
 
                 castDeck
             }
-            .navigationTitle("Cast")
+            .navigationTitle("AI Astrologists")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -69,7 +69,7 @@ struct CompanionsView: View {
                     pendingDeleteCompanion = nil
                 }
             } message: {
-                Text("This removes \(pendingDeleteCompanion?.name ?? "this companion") from your circle.")
+                Text("This removes \(pendingDeleteCompanion?.name ?? "this astrologist") from your circle.")
             }
             .onAppear {
                 if reduceMotion {
@@ -91,11 +91,11 @@ struct CompanionsView: View {
 
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Cast")
+                    Text("AI Astrologists")
                         .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text("Swipe for the companion voice you want in Messages.")
+                    Text("Browse the astrologist lens you want for Messages, Gram, and Predict.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
@@ -139,7 +139,7 @@ struct CompanionsView: View {
                 .padding(.horizontal, 18)
 
                 HStack(spacing: 18) {
-                    castActionButton(systemImage: "xmark", label: "Skip", tint: SimastryColor.mutedSilver) {
+                    castActionButton(systemImage: "xmark", label: "Next", tint: SimastryColor.mutedSilver) {
                         moveToNextCard()
                     }
 
@@ -148,7 +148,7 @@ struct CompanionsView: View {
                         viewModel.selectedTab = 2
                     }
 
-                    castActionButton(systemImage: "heart.fill", label: "Save", tint: SimastryColor.sunCoral) {
+                    castActionButton(systemImage: "sparkles", label: "Choose", tint: SimastryColor.sunCoral) {
                         moveToNextCard()
                     }
                 }
@@ -183,9 +183,7 @@ struct CompanionsView: View {
                         .font(SimastryFont.displayMedium)
                         .foregroundStyle(.white)
 
-                    Text(profile.sign.glyph)
-                        .font(SimastryFont.titleMedium)
-                        .foregroundStyle(profile.sign.color)
+                    ZodiacIconView(sign: profile.sign, size: 32, showsGlow: true)
                 }
 
                 Text(profile.metadataLine)
@@ -297,7 +295,7 @@ struct CompanionsView: View {
             .scaleEffect(appeared ? 1 : 0.8)
 
             VStack(spacing: 8) {
-                Text("Your companion is waiting")
+                Text("Your astrologist is waiting")
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
@@ -309,7 +307,7 @@ struct CompanionsView: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 10)
 
-            GoldButton(viewModel.hasCompletedSigns ? "Create Companion" : "Set Up Your Signs") {
+            GoldButton(viewModel.hasCompletedSigns ? "Choose Astrologist" : "Set Up Your Signs") {
                 viewModel.selectedTab = 0
                 if viewModel.hasCompletedSigns {
                     viewModel.homeSetupPhase = .modeSelection
@@ -383,7 +381,7 @@ struct CompanionsView: View {
                         }
                 }
             } header: {
-                sectionLabel(viewModel.companions.count > 1 ? "Your Circle" : "Your Companion")
+                sectionLabel(viewModel.companions.count > 1 ? "Your Circle" : "Your Astrologist")
             }
 
             Section {
@@ -397,11 +395,11 @@ struct CompanionsView: View {
                             .foregroundStyle(SimastryColor.gold)
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Create New Companion")
+                            Text("Choose New Astrologist")
                                 .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
-                            Text("Shape a new companion, bestie, or simulation lens")
+                            Text("Shape a new astrologist, friend, or simulation lens")
                                 .font(SimastryFont.labelMedium)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }

@@ -1,0 +1,848 @@
+import SwiftUI
+import PhotosUI
+import UIKit
+
+struct PeopleView: View {
+    @Bindable var viewModel: AppViewModel
+    @State private var searchText: String = ""
+    @State private var selectedType: RelationshipType?
+    @State private var isAddingPerson: Bool = false
+
+    private var filteredPeople: [RelationshipPerson] {
+        viewModel.relationshipPeople.filter { person in
+            let matchesSearch = searchText.isEmpty
+                || person.displayName.localizedCaseInsensitiveContains(searchText)
+                || person.sunSign.displayName.localizedCaseInsensitiveContains(searchText)
+                || person.relationshipType.rawValue.localizedCaseInsensitiveContains(searchText)
+            let matchesType = selectedType == nil || person.relationshipType == selectedType
+            return matchesSearch && matchesType
+        }
+    }
+
+    private var needsAttentionPerson: RelationshipPerson? {
+        viewModel.relationshipPeople.first { person in
+            person.relationshipType == .partner || person.relationshipType == .family
+        }
+    }
+
+    private var recentlyReflectedPeople: [RelationshipPerson] {
+        viewModel.relationshipPeople
+            .filter { ($0.notes ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                CelestialBackground()
+
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 18) {
+                        peopleContextStrip
+
+                        if let needsAttentionPerson {
+                            needsAttentionCard(needsAttentionPerson)
+                        }
+
+                        if !recentlyReflectedPeople.isEmpty {
+                            recentSection
+                        }
+
+                        if filteredPeople.isEmpty {
+                            emptyState
+                        } else {
+                            allPeopleSection
+                        }
+
+                        Spacer().frame(height: SimastrySpacing.tabBarClearance + 32)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                }
+                .scrollIndicators(.hidden)
+            }
+            .navigationTitle("People")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .searchable(text: $searchText, prompt: "Search people or signs")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Filter by relationship", selection: $selectedType) {
+                            Text("All people").tag(RelationshipType?.none)
+                            ForEach(RelationshipType.allCases) { type in
+                                Label(type.rawValue, systemImage: type.systemImage)
+                                    .tag(Optional(type))
+                            }
+                        }
+                    } label: {
+                        Label("Filter", systemImage: "line.3.horizontal.decrease")
+                    }
+                    .tint(selectedType == nil ? SimastryColor.mutedSilver : SimastryColor.gold)
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isAddingPerson = true
+                    } label: {
+                        Label("Add person", systemImage: "plus")
+                    }
+                    .tint(SimastryColor.gold)
+                }
+            }
+            .sheet(isPresented: $isAddingPerson) {
+                AddRelationshipPersonView(viewModel: viewModel)
+            }
+            .navigationDestination(for: RelationshipPerson.self) { person in
+                RelationshipPersonDetailView(viewModel: viewModel, person: person)
+            }
+            .onAppear {
+                viewModel.loadRelationshipPeople()
+                #if DEBUG
+                if viewModel.isDebugPreviewStateActive && viewModel.relationshipPeople.isEmpty {
+                    viewModel.relationshipPeople = RelationshipPeopleStore.previewPeople()
+                }
+                #endif
+            }
+        }
+    }
+
+    private var peopleSubtitle: String {
+        if let selectedType {
+            return selectedType.rawValue
+        }
+        let count = viewModel.relationshipPeople.count
+        return count == 1 ? "1 person" : "\(count) people"
+    }
+
+    private var peopleContextStrip: some View {
+        HStack(spacing: 13) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 42, height: 42)
+                .background(SimastryColor.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 0.6)
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("PRIVATE WORKSPACE")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .tracking(1.4)
+
+                Text(peopleSubtitle)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text(peopleContextSubtitle)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(SimastryColor.surface.opacity(0.88), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 0.7)
+        }
+    }
+
+    private var peopleContextSubtitle: String {
+        if let type = CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            return "\(type.title) • private relationship context"
+        }
+        return "Private, manual relationship context"
+    }
+
+    private var allPeopleSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("All people", systemImage: "person.2.fill")
+            ForEach(filteredPeople) { person in
+                NavigationLink(value: person) {
+                    relationshipPersonCard(person)
+                }
+                .buttonStyle(SpringPressStyle())
+            }
+        }
+    }
+
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Recently reflected on", systemImage: "bookmark.fill")
+            ForEach(recentlyReflectedPeople.prefix(2)) { person in
+                NavigationLink(value: person) {
+                    relationshipPersonCard(person)
+                }
+                .buttonStyle(SpringPressStyle())
+            }
+        }
+    }
+
+    private func needsAttentionCard(_ person: RelationshipPerson) -> some View {
+        let reading = viewModel.relationshipReading(for: person)
+        return NavigationLink(value: person) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "moon.haze.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                    Text("Needs attention")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .tracking(1.2)
+                        .textCase(.uppercase)
+                }
+
+                Text("\(person.displayName) may benefit from \(reading.bestEnergy.lowercased()) today.")
+                    .font(SimastryFont.bodyLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(reading.whatToAvoid)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
+            .tintedGlass(SimastryColor.gold, cornerRadius: 22)
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 0.7)
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(SpringPressStyle())
+    }
+
+    private func relationshipPersonCard(_ person: RelationshipPerson) -> some View {
+        let reading = viewModel.relationshipReading(for: person)
+        return HStack(spacing: 14) {
+            RelationshipAvatarView(person: person, size: 56)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 7) {
+                    Text(person.displayName)
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Image(systemName: person.relationshipType.systemImage)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold.opacity(0.82))
+                }
+
+                Text("\(person.relationshipType.rawValue) • \(person.sunSign.displayName) Sun")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                Text(reading.bestEnergy)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.72))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 10)
+
+            ZodiacIconView(sign: person.sunSign, size: 34, showsGlow: false)
+        }
+        .padding(16)
+        .glossyCard(cornerRadius: 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.crop.circle.badge.plus")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+
+            Text(viewModel.relationshipPeople.isEmpty ? "No people yet" : "No matching people")
+                .font(SimastryFont.titleMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+
+            Text(viewModel.relationshipPeople.isEmpty
+                 ? "Add someone important manually. Simastry never needs your contacts."
+                 : "Try a different name, sign, or relationship type.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                isAddingPerson = true
+            } label: {
+                Label("Add person", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(SimastryColor.gold)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .glossyCard(cornerRadius: 22)
+    }
+
+    private func sectionTitle(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+            Text(title)
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.4)
+                .textCase(.uppercase)
+        }
+    }
+}
+
+struct RelationshipPersonDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var viewModel: AppViewModel
+    let person: RelationshipPerson
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var localNotes: String = ""
+    @State private var privateLabel: String = ""
+    @State private var showDeleteConfirmation: Bool = false
+
+    private var currentPerson: RelationshipPerson {
+        viewModel.relationshipPeople.first { $0.id == person.id } ?? person
+    }
+
+    private var reading: RelationshipPersonReading {
+        viewModel.relationshipReading(for: currentPerson)
+    }
+
+    var body: some View {
+        ZStack {
+            CelestialBackground()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    header
+                    relationshipPatternSection
+                    todayReadingSection
+                    methodPanel
+                    notesSection
+                    privacySection
+                    Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .navigationTitle(currentPerson.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .onAppear {
+            localNotes = currentPerson.notes ?? ""
+            privateLabel = currentPerson.privateLabel ?? ""
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self),
+                   let prepared = SimastryPersonPhoto.prepared(data) {
+                    var updated = currentPerson
+                    updated.imageData = prepared
+                    await MainActor.run {
+                        withAnimation(.spring(SimastrySpring.smooth)) {
+                            viewModel.updateRelationshipPerson(updated)
+                        }
+                    }
+                }
+            }
+        }
+        .confirmationDialog("Delete this person?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete person", role: .destructive) {
+                viewModel.deleteRelationshipPerson(currentPerson)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes their local relationship context and notes from this device.")
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(currentPerson.displayName)
+                        .font(SimastryFont.titleLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text("\(currentPerson.relationshipType.rawValue) • \(currentPerson.signLine)")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.gold)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(currentPerson.birthPlace ?? "Private relationship context")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+
+                Spacer()
+
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                    RelationshipAvatarView(person: currentPerson, size: 72)
+                        .overlay(alignment: .bottomTrailing) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(SimastryColor.midnight)
+                                .frame(width: 26, height: 26)
+                                .background(SimastryColor.gold, in: Circle())
+                                .overlay(Circle().stroke(SimastryColor.midnight, lineWidth: 2))
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(18)
+        .glossyCard(cornerRadius: 22)
+    }
+
+    private var relationshipPatternSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Relationship pattern", systemImage: "point.3.connected.trianglepath.dotted")
+            insightRow("Emotional tone", reading.emotionalTone, systemImage: "heart.text.square.fill")
+            insightRow("Communication style", reading.communicationStyle, systemImage: "bubble.left.and.bubble.right.fill")
+            insightRow("Conflict style", reading.conflictStyle, systemImage: "exclamationmark.bubble.fill")
+            insightRow("Repair style", reading.repairStyle, systemImage: "bandage.fill")
+        }
+    }
+
+    private var todayReadingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Today's reading", systemImage: "moon.stars.fill")
+            VStack(alignment: .leading, spacing: 10) {
+                Text(reading.headline)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Text(reading.body)
+                    .font(SimastryFont.bodyLarge)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
+            .glossyCard(cornerRadius: 20)
+        }
+    }
+
+    private var methodPanel: some View {
+        MethodLayerPanel(
+            title: "Why this reading",
+            summary: reading.methodSummary,
+            signals: methodSignals,
+            footer: "Private notes and message context stay on device in this prototype.",
+            accent: SimastryColor.gold
+        )
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Private notes", systemImage: "note.text")
+            VStack(alignment: .leading, spacing: 12) {
+                TextEditor(text: $localNotes)
+                    .frame(minHeight: 110)
+                    .scrollContentBackground(.hidden)
+                    .padding(10)
+                    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Button {
+                    var updated = currentPerson
+                    updated.notes = localNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+                    viewModel.updateRelationshipPerson(updated)
+                } label: {
+                    Label("Save notes", systemImage: "checkmark")
+                }
+                .buttonStyle(.bordered)
+                .tint(SimastryColor.gold)
+            }
+            .padding(18)
+            .glossyCard(cornerRadius: 20)
+        }
+    }
+
+    private var privacySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Data and privacy", systemImage: "lock.shield.fill")
+            VStack(alignment: .leading, spacing: 12) {
+                Text("People are private relationship contexts. Simastry does not need contacts, distance, public visibility, or social discovery for this surface.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                TextField("Private label, optional", text: $privateLabel)
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .padding(12)
+                    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                HStack {
+                    Button {
+                        var updated = currentPerson
+                        updated.privateLabel = privateLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : privateLabel
+                        viewModel.updateRelationshipPerson(updated)
+                    } label: {
+                        Label("Save label", systemImage: "eye.slash")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(SimastryColor.gold)
+
+                    Spacer()
+
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            .padding(18)
+            .glossyCard(cornerRadius: 20)
+        }
+    }
+
+    private var methodSignals: [MethodSignal] {
+        var signals: [MethodSignal] = [
+            MethodSignal(label: "Their Sun", detail: currentPerson.sunSign.displayName, systemImage: "sun.max.fill", tint: currentPerson.sunSign.color)
+        ]
+        if let moon = currentPerson.moonSign {
+            signals.append(MethodSignal(label: "Their Moon", detail: moon.displayName, systemImage: "moon.stars.fill", tint: SimastryColor.celestialBlue))
+        }
+        if let rising = currentPerson.risingSign {
+            signals.append(MethodSignal(label: "Their Rising", detail: rising.displayName, systemImage: "sparkles", tint: SimastryColor.risingViolet))
+        }
+        if let userMoon = viewModel.userMoonSign {
+            signals.append(MethodSignal(label: "Your Moon", detail: userMoon.displayName, systemImage: "moon.fill", tint: SimastryColor.celestialBlue))
+        }
+        if let typeSignal = CommunicationTypeProfile.methodSignal(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            signals.append(typeSignal)
+        }
+        return signals
+    }
+
+    private func insightRow(_ title: String, _ text: String, systemImage: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 30, height: 30)
+                .background(SimastryColor.gold.opacity(0.10), in: Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Text(text)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .glossyCard(cornerRadius: 18)
+    }
+
+    private func sectionTitle(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+            Text(title)
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.4)
+                .textCase(.uppercase)
+        }
+    }
+}
+
+struct AddRelationshipPersonView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var viewModel: AppViewModel
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var imageData: Data?
+    @State private var name: String = ""
+    @State private var privateLabel: String = ""
+    @State private var relationshipType: RelationshipType = .friend
+    @State private var sunSign: ZodiacSign = .libra
+    @State private var moonSign: ZodiacSign?
+    @State private var risingSign: ZodiacSign?
+    @State private var hasBirthDate: Bool = false
+    @State private var birthDate: Date = .now
+    @State private var notes: String = ""
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                CelestialBackground()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        header
+                        identitySection
+                        signsSection
+                        birthSection
+                        notesSection
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("New person")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .tint(SimastryColor.gold)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        savePerson()
+                    }
+                    .disabled(!canSave)
+                    .tint(SimastryColor.gold)
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self),
+                       let prepared = SimastryPersonPhoto.prepared(data) {
+                        await MainActor.run {
+                            withAnimation(.spring(SimastrySpring.smooth)) {
+                                imageData = prepared
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 14) {
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                ZStack {
+                    if let imageData, let image = UIImage(data: imageData) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        ZodiacIconView(sign: sunSign, size: 58, showsGlow: true)
+                            .padding(7)
+                    }
+                }
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(SimastryColor.gold.opacity(0.24), lineWidth: 1))
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(SimastryColor.midnight)
+                        .frame(width: 26, height: 26)
+                        .background(SimastryColor.gold, in: Circle())
+                        .overlay(Circle().stroke(SimastryColor.midnight, lineWidth: 2))
+                }
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Private relationship context")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Text("Manual only. No contact import, public discovery, distance, or dating signals.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .glossyCard(cornerRadius: 22)
+    }
+
+    private var identitySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Identity")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.4)
+                .textCase(.uppercase)
+
+            VStack(spacing: 12) {
+                TextField("Name or nickname", text: $name)
+                    .textContentType(.name)
+                TextField("Private label, optional", text: $privateLabel)
+
+                Picker("Relationship", selection: $relationshipType) {
+                    ForEach(RelationshipType.allCases) { type in
+                        Label(type.rawValue, systemImage: type.systemImage)
+                            .tag(type)
+                    }
+                }
+            }
+            .font(SimastryFont.bodyMedium)
+            .foregroundStyle(SimastryColor.offWhite)
+            .textFieldStyle(.roundedBorder)
+            .padding(18)
+            .glossyCard(cornerRadius: 20)
+        }
+    }
+
+    private var signsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Chart signals")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.4)
+                .textCase(.uppercase)
+
+            VStack(spacing: 12) {
+                signPicker("Sun", selection: Binding(get: { Optional(sunSign) }, set: { if let sign = $0 { sunSign = sign } }))
+                signPicker("Moon", selection: $moonSign)
+                signPicker("Rising", selection: $risingSign)
+            }
+            .padding(18)
+            .glossyCard(cornerRadius: 20)
+        }
+    }
+
+    private var birthSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Use birth date to calculate Sun/Moon", isOn: $hasBirthDate)
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+                .tint(SimastryColor.gold)
+
+            if hasBirthDate {
+                DatePicker("Birth date", selection: $birthDate, displayedComponents: .date)
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .tint(SimastryColor.gold)
+
+                Text("Without exact birth time and coordinates, Simastry keeps Rising lighter.")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .glossyCard(cornerRadius: 20)
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Notes")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.4)
+                .textCase(.uppercase)
+
+            TextEditor(text: $notes)
+                .frame(minHeight: 96)
+                .scrollContentBackground(.hidden)
+                .padding(10)
+                .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .foregroundStyle(SimastryColor.offWhite)
+                .glossyCard(cornerRadius: 20)
+        }
+    }
+
+    private func signPicker(_ title: String, selection: Binding<ZodiacSign?>) -> some View {
+        Picker(title, selection: selection) {
+            if title != "Sun" {
+                Text("Unknown").tag(ZodiacSign?.none)
+            }
+            ForEach(ZodiacSign.allCases) { sign in
+                Text(sign.displayName).tag(Optional(sign))
+            }
+        }
+        .pickerStyle(.menu)
+        .tint(SimastryColor.gold)
+    }
+
+    private func savePerson() {
+        var finalSun = sunSign
+        var finalMoon = moonSign
+        var calculated = false
+
+        if hasBirthDate {
+            let chart = BirthChartService().calculate(
+                birthday: birthDate,
+                birthTime: nil,
+                latitude: nil,
+                longitude: nil,
+                timeZone: .current
+            )
+            finalSun = chart.sunSign
+            finalMoon = chart.moonSign
+            calculated = true
+        }
+
+        let person = RelationshipPerson(
+            id: UUID(),
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            privateLabel: privateLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : privateLabel,
+            relationshipType: relationshipType,
+            birthDate: hasBirthDate ? birthDate : nil,
+            birthTime: nil,
+            birthPlace: nil,
+            sunSign: finalSun,
+            moonSign: finalMoon,
+            risingSign: risingSign,
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes,
+            imageData: imageData,
+            isChartCalculated: calculated,
+            updatedAt: .now
+        )
+        viewModel.addRelationshipPerson(person)
+        dismiss()
+    }
+}
+
+struct RelationshipAvatarView: View {
+    let person: RelationshipPerson
+    var size: CGFloat
+
+    var body: some View {
+        ZStack {
+            if let data = person.imageData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZodiacIconView(sign: person.sunSign, size: size, showsGlow: true)
+                    .padding(size * 0.08)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(SimastryColor.gold.opacity(0.22), lineWidth: 1))
+        .shadow(color: person.sunSign.color.opacity(0.22), radius: size * 0.12, x: 0, y: size * 0.06)
+        .accessibilityLabel("\(person.displayName), \(person.sunSign.displayName) Sun")
+    }
+}

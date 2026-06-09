@@ -116,7 +116,7 @@ final class NotificationService {
         content.title = ["heads up", "chart note", "for today"].randomElement() ?? "heads up"
         content.body = body
         content.sound = .default
-        content.userInfo = ["deeplink": "simastry://guides"]
+        content.userInfo = ["deeplink": "simastry://home"]
 
         var dateComponents = DateComponents()
         dateComponents.hour = 8

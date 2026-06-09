@@ -124,7 +124,7 @@ struct ShareableCardView: View {
 
                 if viewModel.profileImage != nil || viewModel.userSunSign != nil {
                     HStack(spacing: 8) {
-                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSignGlyph: viewModel.userSunSign?.glyph)
+                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSign: viewModel.userSunSign)
                         if let sun = viewModel.userSunSign {
                             Text(sun.displayName)
                                 .font(SimastryFont.labelSmall)
@@ -269,7 +269,7 @@ struct ShareableCardView: View {
 
                 if viewModel.profileImage != nil || viewModel.userSunSign != nil {
                     HStack(spacing: 8) {
-                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSignGlyph: viewModel.userSunSign?.glyph)
+                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSign: viewModel.userSunSign)
                         if let sun = viewModel.userSunSign {
                             Text(sun.displayName)
                                 .font(SimastryFont.labelSmall)

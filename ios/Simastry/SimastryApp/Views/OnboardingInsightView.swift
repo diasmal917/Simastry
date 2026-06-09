@@ -18,6 +18,10 @@ struct OnboardingInsightView: View {
         AstrologyTemplates.personalInsights[sunSign.rawValue] ?? [:]
     }
 
+    private var communicationType: CommunicationTypeProfile? {
+        CommunicationTypeProfile.make(sun: sunSign, moon: moonSign, rising: risingSign)
+    }
+
     var body: some View {
         ZStack {
             CelestialBackground()
@@ -56,6 +60,10 @@ struct OnboardingInsightView: View {
                         .padding(.horizontal, 8)
                         .opacity(bodyAppeared ? 1 : 0)
                         .offset(y: bodyAppeared ? 0 : 14)
+
+                    communicationTypeCard
+                        .opacity(tipAppeared ? 1 : 0)
+                        .offset(y: tipAppeared ? 0 : 16)
 
                     // MARK: - Social Tip Card
                     socialTipCard
@@ -189,10 +197,43 @@ struct OnboardingInsightView: View {
         .accessibilityLabel("Social tip: \(insight["socialTip"] ?? "")")
     }
 
+    @ViewBuilder
+    private var communicationTypeCard: some View {
+        if let communicationType {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(communicationType.accent)
+
+                    Text("Communication Type")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(communicationType.accent)
+                }
+
+                Text(communicationType.title)
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text(communicationType.summary)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
+            .tintedGlass(communicationType.accent.opacity(0.10), cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(communicationType.accent.opacity(0.16), lineWidth: 1)
+            }
+        }
+    }
+
     private var insightMethodLayer: some View {
         MethodLayerPanel(
             title: "Why this insight",
-            summary: "This reads your Sun as core drive, Moon as emotional pattern, and Rising as first instinct, then translates the blend into communication guidance.",
+            summary: "This reads your Sun as core communication drive, Moon as emotional reaction, and Rising as first response, then translates the blend into message guidance.",
             signals: [
                 MethodSignal(
                     label: "Sun",
@@ -211,7 +252,9 @@ struct OnboardingInsightView: View {
                     detail: risingSign.displayName,
                     systemImage: "sparkles",
                     tint: risingSign.color
-                )
+                ),
+                CommunicationTypeProfile.methodSignal(sun: sunSign, moon: moonSign, rising: risingSign)
+                    ?? MethodSignal(label: "Communication type", detail: "Calculating", systemImage: "text.bubble.fill", tint: SimastryColor.gold)
             ],
             footer: "Traditional Western tropical astrology is the interpretive lens.",
             accent: sunSign.color

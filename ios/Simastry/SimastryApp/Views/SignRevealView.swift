@@ -36,6 +36,9 @@ struct SignRevealView: View {
                 }
 
                 if risingRevealed {
+                    communicationTypeCard
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+
                     revealMethodLayer
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                         .padding(.top, -8)
@@ -81,11 +84,44 @@ struct SignRevealView: View {
     private var revealMethodLayer: some View {
         MethodLayerPanel(
             title: "Signals used",
-            summary: "Your birth date, exact time, and birthplace calculate the chart. Sun shows core drive, Moon shows emotional needs, and Rising shows first instinct.",
+            summary: "Your birth date, exact time, and birthplace calculate the chart. Sun shows core communication drive, Moon shows emotional reaction, and Rising shows first response.",
             signals: revealSignals,
             footer: "Astronomy calculates placements. Traditional astrology interprets them. Simastry turns that into communication guidance.",
             accent: SimastryColor.gold
         )
+    }
+
+    @ViewBuilder
+    private var communicationTypeCard: some View {
+        if let profile = CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Communication type")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .tracking(1.3)
+                    .textCase(.uppercase)
+
+                Text(profile.title)
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text(profile.summary)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .tintedGlass(profile.accent.opacity(0.10), cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(profile.accent.opacity(0.16), lineWidth: 0.7)
+            }
+        }
     }
 
     private var revealSignals: [MethodSignal] {
@@ -122,6 +158,14 @@ struct SignRevealView: View {
                     tint: rising.color
                 )
             )
+        }
+
+        if let typeSignal = CommunicationTypeProfile.methodSignal(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            signals.append(typeSignal)
         }
 
         return signals

@@ -180,7 +180,7 @@ struct GuidesView: View {
                         systemImage: "sparkles",
                         accent: SimastryColor.sunCoral
                     ) {
-                        viewModel.selectedTab = 1
+                        viewModel.openAIAstrologists()
                     }
                 }
 
@@ -200,7 +200,7 @@ struct GuidesView: View {
                         systemImage: "sparkles",
                         accent: SimastryColor.sunCoral
                     ) {
-                        viewModel.selectedTab = 1
+                        viewModel.openAIAstrologists()
                     }
                 }
             }

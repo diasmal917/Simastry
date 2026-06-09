@@ -33,9 +33,7 @@ struct ZodiacBadgeView: View {
                         .frame(width: size + 12, height: size + 12)
                 }
 
-                Text(sign.glyph)
-                    .font(.system(size: size * 0.4))
-                    .foregroundStyle(SimastryColor.offWhite)
+                ZodiacIconView(sign: sign, size: size * 0.72, showsGlow: isSelected)
             }
             .opacity(isSelected ? 1.0 : 0.5)
             .scaleEffect(isSelected ? 1.08 : 1.0)
