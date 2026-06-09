@@ -326,6 +326,7 @@ body { background: #05050A; color: #F0F2F5; font-family: 'Inter', sans-serif; ov
     <div class="hidden md:flex items-center gap-8">
       <a href="#features" class="text-silver text-sm font-medium hover:text-offwhite transition-colors">Features</a>
       <a href="#hero" class="text-silver text-sm font-medium hover:text-offwhite transition-colors">Compatibility</a>
+      <a href="#aura" class="text-silver text-sm font-medium hover:text-offwhite transition-colors">Aura</a>
       <a href="#download" class="text-sm font-medium text-offwhite px-5 py-2 rounded-full" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">Download</a>
     </div>
     <button class="md:hidden text-offwhite text-2xl" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')">&#9776;</button>
@@ -333,6 +334,7 @@ body { background: #05050A; color: #F0F2F5; font-family: 'Inter', sans-serif; ov
   <div id="mobileMenu" class="hidden md:hidden mt-4 flex flex-col gap-3 pb-4">
     <a href="#features" class="text-silver text-sm font-medium hover:text-offwhite transition-colors">Features</a>
     <a href="#hero" class="text-silver text-sm font-medium hover:text-offwhite transition-colors">Compatibility</a>
+    <a href="#aura" class="text-silver text-sm font-medium hover:text-offwhite transition-colors">Aura</a>
     <a href="#download" class="text-sm font-medium text-offwhite px-5 py-2 rounded-full text-center" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">Download</a>
   </div>
 </nav>
@@ -554,6 +556,39 @@ body { background: #05050A; color: #F0F2F5; font-family: 'Inter', sans-serif; ov
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- Aura + Zodiacs SDK -->
+<section id="aura" class="relative z-10 py-24 px-4">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <p class="text-gold text-sm font-semibold tracking-widest uppercase mb-3">Aura</p>
+      <h2 class="font-serif italic text-3xl md:text-4xl text-offwhite mb-4">Birth chart, plus the signs you carry.</h2>
+      <p class="text-silver max-w-2xl mx-auto">Simastry Aura can include verified Zodiac ownership from the Zodiacs SDK. Held signs stay read-only and can optionally shape a shared Aura page or AI astrologist conversation.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="glass rounded-3xl p-7">
+        <p class="text-gold text-xs font-semibold tracking-widest uppercase mb-8">01</p>
+        <h3 class="font-serif text-2xl text-offwhite mb-3">Birth chart</h3>
+        <p class="text-silver text-sm leading-relaxed">Born-with placements remain the foundation: date, time, place, Sun, Moon, and Rising.</p>
+      </div>
+      <div class="glass rounded-3xl p-7" style="border-color: rgba(185,155,75,0.22); background: rgba(185,155,75,0.06);">
+        <p class="text-gold text-xs font-semibold tracking-widest uppercase mb-8">02</p>
+        <h3 class="font-serif text-2xl text-offwhite mb-3">Verified signs</h3>
+        <p class="text-silver text-sm leading-relaxed">The Zodiacs SDK reads public ownership from the official registry. No custody. No signing.</p>
+      </div>
+      <div class="glass rounded-3xl p-7">
+        <p class="text-gold text-xs font-semibold tracking-widest uppercase mb-8">03</p>
+        <h3 class="font-serif text-2xl text-offwhite mb-3">Aura and AI</h3>
+        <p class="text-silver text-sm leading-relaxed">A held sign can become context for an Aura page, share card, or AI astrologist conversation.</p>
+      </div>
+    </div>
+
+    <div class="text-center mt-10">
+      <a href="https://zodiacs.org/sdk/" class="inline-flex text-gold text-xs font-semibold tracking-widest uppercase hover:text-gold-light transition-colors">Explore the Zodiacs SDK</a>
     </div>
   </div>
 </section>
