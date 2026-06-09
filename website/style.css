@@ -1826,6 +1826,18 @@ main > section[id] {
   text-underline-offset: 0.18em;
 }
 
+.legal-strip__source {
+  margin: 6px 0 0;
+  color: rgba(246, 239, 230, 0.62);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.legal-strip__source a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
 .site-footer {
   display: flex;
   justify-content: space-between;
