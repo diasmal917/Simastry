@@ -73,45 +73,70 @@ struct MessagesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.5))
+        VStack(spacing: 22) {
+            emptyStateCastStrip
 
-            Text("No messages yet")
-                .font(SimastryFont.titleMedium)
-                .foregroundStyle(SimastryColor.offWhite)
+            VStack(spacing: 8) {
+                Text("Your panel is ready to talk")
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
 
-            Text(AppConfig.socialDiscoveryEnabled
-                 ? "Open an AI Astrologist or send a private intro, and your messages will gather here."
-                 : "Open an AI Astrologist and messages will reflect their sign lens and your chart context.")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-
-            if viewModel.companions.isEmpty {
-                Button {
-                    HapticManager.buttonPress()
-                    viewModel.openAIAstrologists()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Open AI Astrologists")
-                            .font(SimastryFont.labelLarge)
-                    }
-                    .foregroundStyle(SimastryColor.midnight)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(SimastryColor.gold, in: .capsule)
-                }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityHint("Opens AI Astrologists to choose a message lens")
-                .padding(.top, 8)
+                Text(AppConfig.socialDiscoveryEnabled
+                     ? "Open a guide or send a private intro, and your conversations will gather here."
+                     : "Open a guide and every reply will read through their sign lens and your chart.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 40)
             }
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openAIAstrologists()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: SimastryIcon.astrologers)
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Open AI Astrologists")
+                        .font(SimastryFont.labelLarge)
+                }
+                .foregroundStyle(SimastryColor.midnight)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 13)
+                .background(SimastryGradient.gold, in: .capsule)
+                .shadow(color: SimastryColor.gold.opacity(0.25), radius: 14, y: 6)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityHint("Opens AI Astrologists to choose a message lens")
+            .padding(.top, 4)
         }
         .padding(.bottom, 60)
+    }
+
+    /// A fanned row of guide portraits so the empty inbox sells the cast
+    /// instead of showing a lone system glyph.
+    private var emptyStateCastStrip: some View {
+        let profiles = Array(FactoryCompanionCatalog.all.prefix(5))
+
+        return HStack(spacing: -14) {
+            ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 58, height: 58, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(profile.sign.color.opacity(0.6), lineWidth: 1.3)
+                    }
+                    .background {
+                        Circle().fill(SimastryColor.midnight)
+                            .frame(width: 62, height: 62)
+                    }
+                    .zIndex(Double(profiles.count - index))
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -483,7 +508,7 @@ private struct MessageDetailSheet: View {
         if message.source == .discovery {
             return "\(message.companionSign) lens • private chat"
         }
-        return "\(message.companionSign) lens • AI Astrologist"
+        return "\(message.companionSign) Guide • Simastry Method"
     }
 
     private var timestampDivider: some View {
@@ -535,11 +560,7 @@ private struct MessageDetailSheet: View {
             }
         }
         .padding(12)
-        .background(SimastryColor.surface.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke((zodiacSign?.color ?? SimastryColor.gold).opacity(0.14), lineWidth: 0.7)
-        }
+        .surfaceCard(cornerRadius: 18, accent: (zodiacSign?.color ?? SimastryColor.gold).opacity(0.7))
     }
 
     private var messageMethodSignals: [MethodSignal] {
@@ -772,8 +793,8 @@ private struct DMMessageBubble: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    SimastryColor.celestialBlue.opacity(0.94),
-                                    SimastryColor.risingViolet.opacity(0.86)
+                                    SimastryColor.celestialBlue.opacity(0.96),
+                                    Color(red: 56/255, green: 110/255, blue: 205/255)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -781,10 +802,16 @@ private struct DMMessageBubble: View {
                         )
                 } else {
                     RoundedRectangle(cornerRadius: 19, style: .continuous)
-                        .fill(SimastryColor.surface.opacity(0.94))
+                        .fill(
+                            LinearGradient(
+                                colors: [SimastryColor.surfaceElevated, SimastryColor.surface],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                         .overlay {
                             RoundedRectangle(cornerRadius: 19, style: .continuous)
-                                .stroke(.white.opacity(0.08), lineWidth: 0.7)
+                                .stroke(.white.opacity(0.09), lineWidth: 0.7)
                         }
                 }
             }

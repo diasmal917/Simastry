@@ -2478,6 +2478,8 @@ extension AppViewModel {
             homeSetupPhase = .onboardingInsight
         case "modeSelection":
             homeSetupPhase = .modeSelection
+        case "companionSetup":
+            homeSetupPhase = .companionSetup
         case "astrologists":
             // Home must be mounted before the route-request observer fires.
             Task { @MainActor in

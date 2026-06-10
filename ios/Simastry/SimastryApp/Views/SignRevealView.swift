@@ -116,11 +116,7 @@ struct SignRevealView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)
-            .tintedGlass(profile.accent.opacity(0.10), cornerRadius: 20)
-            .overlay {
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(profile.accent.opacity(0.16), lineWidth: 0.7)
-            }
+            .heroGlass(profile.accent, cornerRadius: 20)
         }
     }
 

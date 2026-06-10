@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
     @State private var showStreakMilestone: Bool = false
+    @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
         CommunicationTypeProfile.make(
@@ -59,8 +60,16 @@ struct HomeView: View {
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .aiAstrologist(let profileId):
-                    AIAstrologistsView(viewModel: viewModel, initialProfileId: profileId)
-                        .id(profileId ?? "primary")
+                    // Zoom out of the tapped pane/avatar; route requests
+                    // without a profile have no on-screen source to zoom from.
+                    if let profileId {
+                        AIAstrologistsView(viewModel: viewModel, initialProfileId: profileId)
+                            .id(profileId)
+                            .navigationTransition(.zoom(sourceID: profileId, in: panelHeroNamespace))
+                    } else {
+                        AIAstrologistsView(viewModel: viewModel, initialProfileId: nil)
+                            .id("primary")
+                    }
                 case .predict:
                     SimulateView(viewModel: viewModel)
                 }
@@ -500,6 +509,7 @@ struct HomeView: View {
                     )
             }
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .matchedTransitionSource(id: profile.id, in: panelHeroNamespace)
         }
         .buttonStyle(SpringPressStyle())
         .simultaneousGesture(TapGesture().onEnded {
@@ -529,6 +539,7 @@ struct HomeView: View {
                                 .lineLimit(1)
                         }
                         .frame(width: 60)
+                        .matchedTransitionSource(id: profile.id, in: panelHeroNamespace)
                     }
                     .buttonStyle(SpringPressStyle())
                     .accessibilityLabel("\(profile.name), \(profile.sign.displayName) Guide")

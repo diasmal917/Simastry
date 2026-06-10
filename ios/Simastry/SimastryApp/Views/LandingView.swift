@@ -120,6 +120,24 @@ struct LandingView: View {
                     .clipped()
                     .ignoresSafeArea()
 
+                // Calms the busy artwork where text must read: a light veil
+                // behind the wordmark, untouched art behind the collage, and
+                // progressively solid ground under the feature row and CTA.
+                LinearGradient(
+                    stops: [
+                        .init(color: .black.opacity(0.30), location: 0),
+                        .init(color: .black.opacity(0.05), location: 0.18),
+                        .init(color: .clear, location: 0.34),
+                        .init(color: .black.opacity(0.30), location: 0.62),
+                        .init(color: .black.opacity(0.66), location: 0.78),
+                        .init(color: .black.opacity(0.94), location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
                 shimmerLayer(size: geo.size)
                     .offset(x: motionOffset.width * 0.4, y: motionOffset.height * 0.4)
 
@@ -437,8 +455,10 @@ struct LandingView: View {
         .padding(.top, 20)
         .padding(.bottom, 50)
         .background(
+            // The global scrim already grounds this region; this adds a
+            // gentle local reinforcement without a visible gradient seam.
             LinearGradient(
-                colors: [.clear, .black.opacity(0.7), .black.opacity(0.92)],
+                colors: [.clear, .black.opacity(0.35), .black.opacity(0.55)],
                 startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea(.container, edges: .bottom)
