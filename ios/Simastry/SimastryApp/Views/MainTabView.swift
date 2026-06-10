@@ -15,8 +15,44 @@ struct MainTabView: View {
     }
 
     var body: some View {
+        tabContainer
+            .tint(SimastryColor.gold)
+            .onAppear {
+            normalizeSelection(viewModel.selectedTab)
+        }
+        .onChange(of: viewModel.selectedTab) { _, newTab in
+            let normalized = normalizedTab(newTab)
+            if normalized != newTab {
+                viewModel.selectedTab = normalized
+                return
+            }
+            HapticManager.tabChange()
+            if normalized == 2 {
+                Task {
+                    await viewModel.refreshInbox(showErrors: false)
+                }
+            }
+        }
+    }
+
+    /// On iOS 26 the system tab bar renders its own Liquid Glass — forcing a
+    /// material would paint over it, so only the older OSes get the manual
+    /// translucent treatment.
+    @ViewBuilder
+    private var tabContainer: some View {
+        if #available(iOS 26.0, *) {
+            tabView
+        } else {
+            tabView
+                .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+                .toolbarBackground(.visible, for: .tabBar)
+                .toolbarColorScheme(.dark, for: .tabBar)
+        }
+    }
+
+    private var tabView: some View {
         TabView(selection: tabSelection) {
-            Tab("Home", systemImage: "house.fill", value: 0) {
+            Tab("Today", systemImage: "sun.max.fill", value: 0) {
                 HomeView(viewModel: viewModel)
             }
 
@@ -34,26 +70,6 @@ struct MainTabView: View {
 
             Tab("Me", systemImage: "person.crop.circle.fill", value: 5) {
                 ProfileView(viewModel: viewModel)
-            }
-        }
-        .tint(SimastryColor.gold)
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.dark, for: .tabBar)
-        .onAppear {
-            normalizeSelection(viewModel.selectedTab)
-        }
-        .onChange(of: viewModel.selectedTab) { _, newTab in
-            let normalized = normalizedTab(newTab)
-            if normalized != newTab {
-                viewModel.selectedTab = normalized
-                return
-            }
-            HapticManager.tabChange()
-            if normalized == 2 {
-                Task {
-                    await viewModel.refreshInbox(showErrors: false)
-                }
             }
         }
     }

@@ -14,12 +14,30 @@ struct OnboardingInsightView: View {
     private var moonSign: ZodiacSign { viewModel.userMoonSign ?? .aries }
     private var risingSign: ZodiacSign { viewModel.userRisingSign ?? .aries }
 
-    private var insight: [String: String] {
-        AstrologyTemplates.personalInsights[sunSign.rawValue] ?? [:]
+    private var firstName: String? {
+        let raw = viewModel.profile?.displayName ?? viewModel.onboardingDisplayName
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.lowercased() != "stargazer" else { return nil }
+        return trimmed.components(separatedBy: " ").first
     }
 
     private var communicationType: CommunicationTypeProfile? {
         CommunicationTypeProfile.make(sun: sunSign, moon: moonSign, rising: risingSign)
+    }
+
+    /// One guide per placement, deduped so shared signs surface both
+    /// companions of that sign instead of repeating one.
+    private var panelGuides: [(role: String, sign: ZodiacSign, profile: FactoryCompanionProfile)] {
+        var used = Set<String>()
+        return [("Sun", sunSign), ("Moon", moonSign), ("Rising", risingSign)].compactMap { role, sign in
+            let candidates = FactoryCompanionCatalog.all.filter { $0.sign == sign }
+            guard let pick = candidates.first(where: { !used.contains($0.id) }) ?? candidates.first else {
+                return nil
+            }
+            used.insert(pick.id)
+            return (role, sign, pick)
+        }
     }
 
     var body: some View {
@@ -27,73 +45,38 @@ struct OnboardingInsightView: View {
             CelestialBackground()
 
             ScrollView {
-                VStack(spacing: 28) {
-                    Spacer().frame(height: 32)
+                VStack(spacing: 26) {
+                    Spacer().frame(height: 28)
 
-                    // MARK: - Sun Sign Glyph Header
                     signGlyphHeader
                         .opacity(headerAppeared ? 1 : 0)
                         .scaleEffect(headerAppeared ? 1 : 0.7)
 
-                    // MARK: - Eyebrow
-                    Text("HERE'S WHAT WE SEE IN YOU")
+                    Text("YOUR CHART, READ FOR YOU")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.gold)
                         .tracking(2.4)
                         .opacity(headlineAppeared ? 1 : 0)
                         .offset(y: headlineAppeared ? 0 : 10)
 
-                    // MARK: - Headline
-                    Text(insight["headline"] ?? "Your chart profile")
-                        .font(SimastryFont.displayLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .multilineTextAlignment(.center)
+                    personalReadHeadline
                         .opacity(headlineAppeared ? 1 : 0)
                         .offset(y: headlineAppeared ? 0 : 12)
 
-                    // MARK: - Body Text
-                    Text(insight["body"] ?? "")
-                        .font(SimastryFont.bodyLarge)
-                        .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(4)
-                        .padding(.horizontal, 8)
+                    communicationTypeCard
                         .opacity(bodyAppeared ? 1 : 0)
                         .offset(y: bodyAppeared ? 0 : 14)
 
-                    communicationTypeCard
+                    placementPanels
                         .opacity(tipAppeared ? 1 : 0)
                         .offset(y: tipAppeared ? 0 : 16)
 
-                    // MARK: - Social Tip Card
-                    socialTipCard
-                        .opacity(tipAppeared ? 1 : 0)
-                        .offset(y: tipAppeared ? 0 : 16)
-
-                    // MARK: - Moon & Rising Mini Cards
-                    HStack(spacing: 12) {
-                        miniPlacementCard(
-                            role: "Moon",
-                            sign: moonSign,
-                            description: "How you process emotions"
-                        )
-
-                        miniPlacementCard(
-                            role: "Rising",
-                            sign: risingSign,
-                            description: "How people first experience you"
-                        )
-                    }
-                    .opacity(miniCardsAppeared ? 1 : 0)
-                    .offset(y: miniCardsAppeared ? 0 : 18)
-
-                    insightMethodLayer
+                    advisoryPanelCard
                         .opacity(miniCardsAppeared ? 1 : 0)
                         .offset(y: miniCardsAppeared ? 0 : 18)
 
-                    Spacer().frame(height: 8)
+                    Spacer().frame(height: 4)
 
-                    // MARK: - Sun Sign Disclaimer
                     Text("This is a chart-based starting point. Your choices, context, and lived experience matter more than any placement.")
                         .font(SimastryFont.captionSmall)
                         .italic()
@@ -102,8 +85,7 @@ struct OnboardingInsightView: View {
                         .padding(.horizontal, 8)
                         .opacity(buttonAppeared ? 1 : 0)
 
-                    // MARK: - Continue Button
-                    GoldButton("Continue to Simastry") {
+                    GoldButton("Meet Your Panel") {
                         Task {
                             await viewModel.saveUserSigns()
                             viewModel.homeSetupPhase = .companionSetup
@@ -124,6 +106,78 @@ struct OnboardingInsightView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Your personal insight based on \(sunSign.displayName) Sun sign")
+    }
+
+    // MARK: - Personal Read
+
+    private var personalReadHeadline: some View {
+        let opening: Text = firstName.map { Text("\($0), your ") } ?? Text("Your ")
+
+        return (
+            opening
+            + Text("\(sunSign.displayName) Sun ").foregroundStyle(sunSign.color).bold()
+            + Text("\(sunWant(for: sunSign)). Your ")
+            + Text("\(moonSign.displayName) Moon ").foregroundStyle(moonSign.color).bold()
+            + Text("\(moonRead(for: moonSign)). Your ")
+            + Text("\(risingSign.displayName) Rising ").foregroundStyle(risingSign.color).bold()
+            + Text("\(risingMove(for: risingSign)).")
+        )
+        .font(SimastryFont.displayMedium)
+        .foregroundStyle(SimastryColor.offWhite)
+        .multilineTextAlignment(.center)
+        .lineSpacing(5)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func sunWant(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries: "wants momentum"
+        case .taurus: "wants steadiness"
+        case .gemini: "wants the conversation alive"
+        case .cancer: "wants emotional safety"
+        case .leo: "wants warmth back"
+        case .virgo: "wants precision"
+        case .libra: "wants fairness"
+        case .scorpio: "wants the whole truth"
+        case .sagittarius: "wants honesty"
+        case .capricorn: "wants composure"
+        case .aquarius: "wants room to think"
+        case .pisces: "wants the feeling named"
+        }
+    }
+
+    private func moonRead(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries: "reacts fast, then cools"
+        case .taurus: "opens when things feel steady"
+        case .gemini: "talks feelings into shape"
+        case .cancer: "reads silence deeply"
+        case .leo: "softens with warmth"
+        case .virgo: "repairs in the details"
+        case .libra: "listens for clean tone"
+        case .scorpio: "tracks what goes unsaid"
+        case .sagittarius: "needs room to feel"
+        case .capricorn: "guards its composure"
+        case .aquarius: "feels from a distance"
+        case .pisces: "absorbs the whole room"
+        }
+    }
+
+    private func risingMove(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries: "moves first"
+        case .taurus: "steadies the room first"
+        case .gemini: "asks first"
+        case .cancer: "checks safety first"
+        case .leo: "leads with presence"
+        case .virgo: "sorts the details first"
+        case .libra: "chooses tone first"
+        case .scorpio: "scans for truth first"
+        case .sagittarius: "answers with candor"
+        case .capricorn: "holds back first"
+        case .aquarius: "observes first"
+        case .pisces: "feels it out first"
+        }
     }
 
     // MARK: - Components
@@ -170,128 +224,168 @@ struct OnboardingInsightView: View {
         .accessibilityLabel("\(sunSign.displayName) sign glyph")
     }
 
-    private var socialTipCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-
-                Text("Social Tip")
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(SimastryColor.gold)
-            }
-
-            Text(insight["socialTip"] ?? "")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(18)
-        .simastryGlass(cornerRadius: 20)
-        .overlay {
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(SimastryColor.gold.opacity(0.15), lineWidth: 1)
-        }
-        .accessibilityLabel("Social tip: \(insight["socialTip"] ?? "")")
-    }
-
     @ViewBuilder
     private var communicationTypeCard: some View {
         if let communicationType {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(communicationType.accent)
-
-                    Text("Communication Type")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(communicationType.accent)
-                }
+            VStack(spacing: 12) {
+                Text("COMMUNICATION TYPE")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(communicationType.accent)
+                    .tracking(1.8)
 
                 Text(communicationType.title)
-                    .font(SimastryFont.titleMedium)
+                    .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
+                    .multilineTextAlignment(.center)
+
+                if !communicationType.keywords.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(communicationType.keywords, id: \.self) { keyword in
+                            Text(keyword)
+                                .font(SimastryFont.labelSmall)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                                .padding(.horizontal, 11)
+                                .padding(.vertical, 6)
+                                .background(.white.opacity(0.07), in: Capsule())
+                                .overlay {
+                                    Capsule().strokeBorder(communicationType.accent.opacity(0.25), lineWidth: 0.6)
+                                }
+                        }
+                    }
+                }
 
                 Text(communicationType.summary)
                     .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(18)
-            .tintedGlass(communicationType.accent.opacity(0.10), cornerRadius: 20)
-            .overlay {
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(communicationType.accent.opacity(0.16), lineWidth: 1)
-            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 22)
+            .padding(.horizontal, 18)
+            .heroGlass(communicationType.accent)
         }
     }
 
-    private var insightMethodLayer: some View {
-        MethodLayerPanel(
-            title: "Why this insight",
-            summary: "This reads your Sun as core communication drive, Moon as emotional reaction, and Rising as first response, then translates the blend into message guidance.",
-            signals: [
-                MethodSignal(
-                    label: "Sun",
-                    detail: sunSign.displayName,
-                    systemImage: "sun.max.fill",
-                    tint: sunSign.color
-                ),
-                MethodSignal(
-                    label: "Moon",
-                    detail: moonSign.displayName,
-                    systemImage: "moon.stars.fill",
-                    tint: moonSign.color
-                ),
-                MethodSignal(
-                    label: "Rising",
-                    detail: risingSign.displayName,
-                    systemImage: "sparkles",
-                    tint: risingSign.color
-                ),
-                CommunicationTypeProfile.methodSignal(sun: sunSign, moon: moonSign, rising: risingSign)
-                    ?? MethodSignal(label: "Communication type", detail: "Calculating", systemImage: "text.bubble.fill", tint: SimastryColor.gold)
-            ],
-            footer: "Traditional Western tropical astrology is the interpretive lens.",
-            accent: sunSign.color
-        )
+    private var placementPanels: some View {
+        VStack(spacing: 10) {
+            placementRow(
+                icon: SimastryIcon.dailyRead,
+                tint: SimastryColor.sunCoral,
+                role: "Sun",
+                sign: sunSign,
+                line: communicationType?.sunSignal ?? ""
+            )
+            placementRow(
+                icon: SimastryIcon.moon,
+                tint: SimastryColor.celestialBlue,
+                role: "Moon",
+                sign: moonSign,
+                line: communicationType?.moonSignal ?? ""
+            )
+            placementRow(
+                icon: SimastryIcon.rising,
+                tint: SimastryColor.risingViolet,
+                role: "Rising",
+                sign: risingSign,
+                line: communicationType?.risingSignal ?? ""
+            )
+        }
     }
 
-    private func miniPlacementCard(role: String, sign: ZodiacSign, description: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text(sign.glyph)
-                    .font(.system(size: 20))
-                    .foregroundStyle(sign.color)
+    private func placementRow(icon: String, tint: Color, role: String, sign: ZodiacSign, line: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 36, height: 36)
+                .background(tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
 
-                Text(role)
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .tracking(1.2)
-                    .textCase(.uppercase)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(role.uppercased())
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textTertiary)
+                        .tracking(1.2)
+
+                    Text(sign.displayName)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(sign.color)
+                }
+
+                Text(line)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(sign.displayName)
-                .font(SimastryFont.titleSmall)
-                .foregroundStyle(SimastryColor.offWhite)
-
-            Text(description)
-                .font(SimastryFont.caption)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .tintedGlass(sign.color.opacity(0.10), cornerRadius: 18)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(sign.color.opacity(0.15), lineWidth: 1)
+        .surfaceCard(cornerRadius: 18)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Your \(role) in \(sign.displayName). \(line)")
+    }
+
+    // MARK: - Advisory Panel
+
+    private var advisoryPanelCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 7) {
+                Image(systemName: SimastryIcon.method)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.goldLight)
+
+                Text("YOUR PANEL IS FORMING")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.goldLight)
+                    .tracking(1.6)
+
+                Spacer()
+            }
+
+            Text("Three guides, trained in the Simastry Method, are matched to your placements.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                ForEach(panelGuides, id: \.profile.id) { entry in
+                    VStack(spacing: 7) {
+                        Image(entry.profile.profileImageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 64, height: 64, alignment: .top)
+                            .clipShape(Circle())
+                            .overlay {
+                                Circle().strokeBorder(entry.sign.color.opacity(0.65), lineWidth: 1.5)
+                            }
+                            .shadow(color: entry.sign.color.opacity(0.25), radius: 10, y: 4)
+
+                        VStack(spacing: 1) {
+                            Text(entry.profile.name)
+                                .font(SimastryFont.labelMedium)
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .lineLimit(1)
+
+                            Text("\(entry.role) lens")
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(entry.sign.color)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(entry.profile.name), your \(entry.role) lens guide, \(entry.sign.displayName)")
+                }
+            }
         }
-        .accessibilityLabel("Your \(role) in \(sign.displayName): \(description)")
+        .padding(18)
+        .heroGlass(SimastryColor.gold)
     }
 
     // MARK: - Animation

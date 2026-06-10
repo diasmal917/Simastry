@@ -46,6 +46,16 @@ class AppViewModel {
     var onboardingBirthday: Date?
     var onboardingBirthTime: Date?
     var onboardingBirthplace: String?
+    var onboardingDisplayName: String? = UserDefaults.standard.string(forKey: "simastry_onboarding_display_name") {
+        didSet {
+            let trimmed = onboardingDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let trimmed, !trimmed.isEmpty {
+                UserDefaults.standard.set(trimmed, forKey: "simastry_onboarding_display_name")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "simastry_onboarding_display_name")
+            }
+        }
+    }
 
     var companionMessages: [CompanionMessage] = []
     var discoveryMessages: [CompanionMessage] = []
@@ -1043,6 +1053,7 @@ class AppViewModel {
             p.sunSign = sun.rawValue
             p.moonSign = moon.rawValue
             p.risingSign = rising.rawValue
+            applyOnboardingDisplayNameIfNeeded(to: &p)
             profile = p
             do {
                 try await supabase.upsertProfile(p)
@@ -1055,6 +1066,7 @@ class AppViewModel {
             p.sunSign = sun.rawValue
             p.moonSign = moon.rawValue
             p.risingSign = rising.rawValue
+            applyOnboardingDisplayNameIfNeeded(to: &p)
             profile = p
             do {
                 try await supabase.upsertProfile(p)
@@ -1064,6 +1076,18 @@ class AppViewModel {
             }
         }
         await setupNotifications()
+    }
+
+    /// First name collected during onboarding wins only when the profile has
+    /// no name yet — never overwrites a name the user set elsewhere.
+    private func applyOnboardingDisplayNameIfNeeded(to profile: inout UserProfile) {
+        guard let name = onboardingDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty else { return }
+        let existing = profile.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if existing.isEmpty {
+            profile.displayName = name
+        }
+        onboardingDisplayName = nil
     }
 
     func stageOnboardingBirthChart(_ chart: BirthChartService.BirthChart) {
@@ -2342,6 +2366,14 @@ extension AppViewModel {
             return false
         }
 
+        // Pre-auth screens render without the seeded session.
+        if debugPreviewScreen(from: arguments) == "birthDetails" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            currentScreen = .birthDetails
+            return true
+        }
+
         let userId = UUID(uuidString: "10000000-0000-0000-0000-000000000001") ?? UUID()
         let companionId = UUID(uuidString: "20000000-0000-0000-0000-000000000001") ?? UUID()
         let now = Date()
@@ -2441,7 +2473,31 @@ extension AppViewModel {
             guideFocusSign = nil
         }
 
+        switch debugPreviewScreen(from: arguments) {
+        case "onboardingInsight":
+            homeSetupPhase = .onboardingInsight
+        case "modeSelection":
+            homeSetupPhase = .modeSelection
+        case "astrologists":
+            // Home must be mounted before the route-request observer fires.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openAIAstrologists()
+            }
+        default:
+            break
+        }
+
         return true
+    }
+
+    private func debugPreviewScreen(from arguments: [String]) -> String? {
+        guard let flagIndex = arguments.firstIndex(of: "-SimastryPreviewScreen"),
+              arguments.indices.contains(arguments.index(after: flagIndex)) else {
+            return nil
+        }
+
+        return arguments[arguments.index(after: flagIndex)]
     }
 
     private func debugPreviewTab(from arguments: [String]) -> Int {

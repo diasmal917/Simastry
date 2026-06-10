@@ -3,7 +3,7 @@ import SwiftUI
 private enum AIAstrologistSegment: String, CaseIterable, Identifiable {
     case forYou = "For You"
     case signs = "Signs"
-    case gram = "Bio"
+    case gram = "Profile"
 
     var id: String { rawValue }
 }
@@ -16,14 +16,6 @@ private struct GramPostSelection: Identifiable {
     var id: String {
         "\(profile.id)-post-\(index)"
     }
-}
-
-private struct AstrologistCredential {
-    let lens: String
-    let method: String
-    let reply: String
-    let methods: [String]
-    let qualification: String
 }
 
 struct AIAstrologistsView: View {
@@ -166,7 +158,7 @@ struct AIAstrologistsView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Companion-like charisma, grounded in your communication type.")
+            Text("Every guide is trained in the Simastry Method and reads through one zodiac lens.")
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineLimit(2)
@@ -250,13 +242,12 @@ struct AIAstrologistsView: View {
             }
         }
         .padding(5)
-        .background(SimastryColor.surface.opacity(0.80), in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.08), lineWidth: 0.7))
+        .simastryGlassPill()
         .padding(.horizontal, 20)
     }
 
     private func astrologerDirectory(_ directoryProfiles: [FactoryCompanionProfile]) -> some View {
-        LazyVStack(spacing: 12) {
+        LazyVStack(spacing: 14) {
             ForEach(directoryProfiles) { profile in
                 astrologerDirectoryCard(profile)
             }
@@ -265,179 +256,190 @@ struct AIAstrologistsView: View {
     }
 
     private func astrologerDirectoryCard(_ profile: FactoryCompanionProfile) -> some View {
-        let credential = astrologistCredential(for: profile)
-
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                ZStack(alignment: .bottomTrailing) {
-                    Image(profile.profileImageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 100, height: 128, alignment: .top)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(.white.opacity(0.12), lineWidth: 0.8)
-                        }
-
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 13, height: 13)
-                        .overlay(Circle().stroke(SimastryColor.surface, lineWidth: 2))
-                        .offset(x: 2, y: 2)
-                }
+        VStack(alignment: .leading, spacing: 13) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 96, height: 124, alignment: .top)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [profile.sign.color.opacity(0.50), .white.opacity(0.08)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 1
+                            )
+                    }
+                    .shadow(color: profile.sign.color.opacity(0.16), radius: 12, y: 6)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .center, spacing: 6) {
+                    HStack(alignment: .center, spacing: 7) {
                         Text(profile.name)
                             .font(SimastryFont.titleMedium)
                             .foregroundStyle(SimastryColor.offWhite)
                             .lineLimit(1)
 
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(SimastryColor.gold)
-
-                        Text("AI persona")
+                        Text("AI")
                             .font(SimastryFont.captionSmall.weight(.semibold))
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(.white.opacity(0.06), in: Capsule())
-                            .lineLimit(1)
+                            .background(.white.opacity(0.07), in: Capsule())
 
                         Spacer(minLength: 0)
 
-                        ZodiacIconView(sign: profile.sign, size: 25, showsGlow: false)
+                        ZodiacIconView(sign: profile.sign, size: 26, showsGlow: false)
                     }
 
-                    Text("\(profile.sign.displayName) AI Astrologist")
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.gold)
+                    Text("\(profile.sign.displayName) Guide")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(profile.sign.color)
                         .lineLimit(1)
 
                     HStack(spacing: 5) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                        Text("Always available")
-                        Text("•")
-                            .foregroundStyle(SimastryColor.deepMuted)
-                        Text("replies instantly")
+                        Image(systemName: SimastryIcon.timing)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+                        Text("Always available · replies instantly")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
                     }
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
 
-                    Text(astrologistSpecialty(for: profile))
+                    Text(profile.headline)
                         .font(SimastryFont.bodySmall)
-                        .foregroundStyle(SimastryColor.offWhite.opacity(0.90))
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
                         .lineSpacing(2)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-
-                    HStack(spacing: 6) {
-                        credentialMetric("Focus", credential.lens)
-                        credentialMetric("Method", credential.method)
-                        credentialMetric("Reply", credential.reply)
-                    }
                 }
             }
 
-            HStack(spacing: 7) {
-                ForEach(credential.methods, id: \.self) { method in
-                    Text(method)
-                        .font(SimastryFont.captionSmall.weight(.semibold))
-                        .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
-                        .lineLimit(1)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
-                        .background(.white.opacity(0.065), in: Capsule())
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold)
-
-                    Text("Simastry method check")
-                        .font(SimastryFont.overline)
-                        .foregroundStyle(SimastryColor.gold)
-                        .tracking(1.1)
-                        .textCase(.uppercase)
-                }
-
-                Text(credential.qualification)
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(SimastryColor.gold.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-            Text(profile.personalityBio)
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
-                .lineSpacing(3)
-                .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
+            credentialBlock(profile)
 
             HStack(spacing: 8) {
-                astrologistAction("Message", systemImage: "message.fill", isPrimary: true) {
+                astrologistAction("Message", systemImage: SimastryIcon.message, isPrimary: true) {
                     select(profile)
                     viewModel.selectedTab = 2
                 }
 
-                astrologistAction("Bio", systemImage: "camera.fill", isPrimary: false) {
+                astrologistAction("Profile", systemImage: "person.crop.square", isPrimary: false) {
                     select(profile)
                     selectedSegment = .gram
                 }
 
-                astrologistAction("Predict", systemImage: "wand.and.stars", isPrimary: false) {
+                astrologistAction("Predict", systemImage: SimastryIcon.predict, isPrimary: false) {
                     openPredict(with: profile)
                 }
             }
         }
-        .padding(12)
-        .background(SimastryColor.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [profile.sign.color.opacity(0.26), .white.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
-        }
-        .shadow(color: .black.opacity(0.30), radius: 16, x: 0, y: 10)
+        .padding(14)
+        .surfaceCard(cornerRadius: 24, accent: profile.sign.color.opacity(0.75))
         .onTapGesture {
             select(profile)
         }
     }
 
-    private func credentialMetric(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label)
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.deepMuted)
-                .lineLimit(1)
+    private func credentialBlock(_ profile: FactoryCompanionProfile) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 6) {
+                Image(systemName: SimastryIcon.method)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.goldLight)
 
-            Text(value)
-                .font(SimastryFont.captionSmall.weight(.semibold))
-                .foregroundStyle(SimastryColor.offWhite)
-                .lineLimit(1)
-                .minimumScaleFactor(0.74)
+                Text("SIMASTRY METHOD")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.goldLight)
+                    .tracking(1.3)
+
+                Text(methodLine(for: profile.sign))
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.92))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+
+            credentialRow(label: "Best for", text: astrologistSpecialty(for: profile), tint: profile.sign.color)
+
+            if let relevance = personalRelevance(for: profile) {
+                credentialRow(label: "For you", text: relevance, tint: SimastryColor.gold)
+            }
+
+            Text(astrologistQualification(for: profile))
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(12)
+        .background(SimastryColor.gold.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(SimastryColor.gold.opacity(0.14), lineWidth: 0.6)
+        }
+    }
+
+    private func credentialRow(label: String, text: String, tint: Color) -> some View {
+        HStack(alignment: .top, spacing: 7) {
+            Text(label)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(tint)
+                .frame(width: 52, alignment: .leading)
+                .padding(.top, 0.5)
+
+            Text(text)
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Zodiac-lens specialization, in Simastry Method language.
+    private func methodLine(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries: "bold openings · momentum · directness"
+        case .taurus: "grounding · trust-building · pacing"
+        case .gemini: "banter craft · reframes · timing"
+        case .cancer: "emotional safety · soft repair"
+        case .leo: "confidence · warmth · presence"
+        case .virgo: "precision edits · pattern naming"
+        case .libra: "tone balance · graceful boundaries"
+        case .scorpio: "motive reads · intensity · repair"
+        case .sagittarius: "honesty · space · timing"
+        case .capricorn: "restraint · standards · strategy"
+        case .aquarius: "autonomy · perspective · distance"
+        case .pisces: "empathy · feeling translation"
+        }
+    }
+
+    /// One line on why this guide matters for *this* user's chart.
+    private func personalRelevance(for profile: FactoryCompanionProfile) -> String? {
+        guard let sun = viewModel.userSunSign else { return nil }
+
+        if profile.sign == sun {
+            return "Shares your \(sun.displayName) Sun — reads your first instinct from the inside."
+        }
+        if let moon = viewModel.userMoonSign, profile.sign == moon {
+            return "Matches your \(moon.displayName) Moon — tuned to how you actually feel before you reply."
+        }
+        if let rising = viewModel.userRisingSign, profile.sign == rising {
+            return "Matches your \(rising.displayName) Rising — fluent in the tone you open with."
+        }
+
+        let compatiblePairs: Set<Set<ZodiacElement>> = [[.fire, .air], [.earth, .water]]
+        if profile.sign.element == sun.element {
+            return "Same \(profile.sign.element.rawValue) element as your Sun — an instinctive common language."
+        }
+        if compatiblePairs.contains([profile.sign.element, sun.element]) {
+            return "\(profile.sign.displayName) complements your \(sun.displayName) Sun — adds what your style reaches for."
+        }
+        return "A counterpoint to your \(sun.displayName) Sun — strongest when you need a different lens."
     }
 
     private var signsDirectory: some View {
@@ -467,11 +469,7 @@ struct AIAstrologistsView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
                     .padding(14)
-                    .background(SimastryColor.surface.opacity(0.90), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(sign.color.opacity(0.18), lineWidth: 0.8)
-                    }
+                    .surfaceCard(cornerRadius: 18, accent: sign.color.opacity(0.6))
                 }
                 .buttonStyle(SpringPressStyle())
             }
@@ -501,7 +499,7 @@ struct AIAstrologistsView: View {
                     Text("@\(profile.handle)")
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
-                    Text("\(profile.sign.displayName) AI Astrologist")
+                    Text("\(profile.sign.displayName) Guide · Simastry Method")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.gold)
                 }
@@ -511,8 +509,8 @@ struct AIAstrologistsView: View {
 
             HStack(spacing: 12) {
                 gramStat(value: "\(posts.count)", label: "posts")
-                gramStat(value: "24", label: "astrologists")
-                gramStat(value: profile.sign.displayName, label: "sign")
+                gramStat(value: "24", label: "guides")
+                gramStat(value: profile.sign.displayName, label: "lens")
             }
 
             Text(profile.bio)
@@ -522,10 +520,10 @@ struct AIAstrologistsView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
-                astrologistAction("Message", systemImage: "message.fill", isPrimary: true) {
+                astrologistAction("Message", systemImage: SimastryIcon.message, isPrimary: true) {
                     viewModel.selectedTab = 2
                 }
-                astrologistAction("Predict", systemImage: "wand.and.stars", isPrimary: false) {
+                astrologistAction("Predict", systemImage: SimastryIcon.predict, isPrimary: false) {
                     openPredict(with: profile)
                 }
             }
@@ -533,11 +531,7 @@ struct AIAstrologistsView: View {
             gramGrid(profile, posts)
         }
         .padding(18)
-        .background(SimastryColor.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 0.8)
-        }
+        .surfaceCard(cornerRadius: 24)
         .padding(.horizontal, 20)
     }
 
@@ -567,7 +561,7 @@ struct AIAstrologistsView: View {
     private func gramStat(value: String, label: String) -> some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(SimastryFont.titleSmall)
+                .font(SimastryFont.metricSmall)
                 .foregroundStyle(SimastryColor.offWhite)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
@@ -651,73 +645,6 @@ struct AIAstrologistsView: View {
         return signals
     }
 
-    private func astrologistCredential(for profile: FactoryCompanionProfile) -> AstrologistCredential {
-        // Honest, method-true credentials: no invented human experience or ratings.
-        AstrologistCredential(
-            lens: astrologistFocus(for: profile),
-            method: "Tropical",
-            reply: "Instant",
-            methods: astrologistMethods(for: profile),
-            qualification: astrologistQualification(for: profile)
-        )
-    }
-
-    private func astrologistMethods(for profile: FactoryCompanionProfile) -> [String] {
-        let elementMethod: String = {
-            switch profile.sign.element {
-            case .fire: return "Timing"
-            case .earth: return "Trust"
-            case .air: return "Tone"
-            case .water: return "Emotion"
-            }
-        }()
-
-        let modalityMethod: String = {
-            switch profile.sign.modality {
-            case "cardinal": return "Initiation"
-            case "fixed": return "Pattern reads"
-            case "mutable": return "Adaptation"
-            default: return "Guidance"
-            }
-        }()
-
-        return [elementMethod, modalityMethod, astrologistStyleMethod(for: profile)]
-    }
-
-    private func astrologistFocus(for profile: FactoryCompanionProfile) -> String {
-        switch profile.sign {
-        case .aries: "Initiation"
-        case .taurus: "Trust"
-        case .gemini: "Banter"
-        case .cancer: "Care"
-        case .leo: "Confidence"
-        case .virgo: "Precision"
-        case .libra: "Balance"
-        case .scorpio: "Depth"
-        case .sagittarius: "Honesty"
-        case .capricorn: "Standards"
-        case .aquarius: "Autonomy"
-        case .pisces: "Feeling"
-        }
-    }
-
-    private func astrologistStyleMethod(for profile: FactoryCompanionProfile) -> String {
-        switch profile.sign {
-        case .aries: "First move"
-        case .taurus: "Pacing"
-        case .gemini: "Question craft"
-        case .cancer: "Safety read"
-        case .leo: "Presence reads"
-        case .virgo: "Edits"
-        case .libra: "Diplomacy"
-        case .scorpio: "Motive read"
-        case .sagittarius: "Space"
-        case .capricorn: "Restraint"
-        case .aquarius: "Distance"
-        case .pisces: "Soft boundary"
-        }
-    }
-
     private func astrologistQualification(for profile: FactoryCompanionProfile) -> String {
         switch profile.id {
         case "aries-amara":
@@ -777,7 +704,7 @@ struct AIAstrologistsView: View {
         switch profile.id {
         case "aries-amara": "Fast replies, clean desire, and when to stop waiting."
         case "aries-cassian": "Bold first moves, conflict resets, and chemistry with momentum."
-        case "taurus-ada": "Slow trust, sensual reassurance, and messages that feel steady."
+        case "taurus-ada": "Slow replies, mixed signals, and emotional steadiness."
         case "taurus-theo": "Proof, patience, and wording that makes reliability attractive."
         case "gemini-rina": "Banter, mixed signals, and the question that opens the room."
         case "gemini-arden": "Playful deflection, clever pauses, and keeping heaviness light."
@@ -790,7 +717,7 @@ struct AIAstrologistsView: View {
         case "libra-isolde": "Tone, fairness, and graceful boundaries that still have a spine."
         case "libra-mateo": "Diplomacy, romantic pacing, and phrasing that keeps the room open."
         case "scorpio-vera": "Emotional power, restraint, and truths that do not leak control."
-        case "scorpio-elias": "Hidden motives, quiet intensity, and replies that keep your center."
+        case "scorpio-elias": "Charged conversations, uncertainty, and emotional truth."
         case "sagittarius-nadia": "Honesty, space, timing, and desire without emotional claustrophobia."
         case "sagittarius-rafi": "Direct truth, adventure energy, and saying the thing without making it heavy."
         case "capricorn-naomi": "Mature restraint, standards, and messages that do not chase."
@@ -893,11 +820,11 @@ private struct GramPostDetailSheet: View {
                                 .fixedSize(horizontal: false, vertical: true)
 
                             HStack(spacing: 8) {
-                                postAction("Message", systemImage: "message.fill", isPrimary: true) {
+                                postAction("Message", systemImage: SimastryIcon.message, isPrimary: true) {
                                     dismiss()
                                     onMessage()
                                 }
-                                postAction("Predict", systemImage: "wand.and.stars", isPrimary: false) {
+                                postAction("Predict", systemImage: SimastryIcon.predict, isPrimary: false) {
                                     dismiss()
                                     onPredict()
                                 }
@@ -914,7 +841,7 @@ private struct GramPostDetailSheet: View {
                 }
                 .scrollIndicators(.hidden)
             }
-            .navigationTitle("Bio")
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
