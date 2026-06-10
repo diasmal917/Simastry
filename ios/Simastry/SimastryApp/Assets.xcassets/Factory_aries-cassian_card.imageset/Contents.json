@@ -1,12 +1,12 @@
 {
-  "images": [
-    {
-      "filename": "Factory_aries-cassian_card.jpg",
-      "idiom": "universal"
-    }
-  ],
   "info": {
     "author": "xcode",
     "version": 1
-  }
+  },
+  "images": [
+    {
+      "filename": "Factory_aries-cassian_card.png",
+      "idiom": "universal"
+    }
+  ]
 }

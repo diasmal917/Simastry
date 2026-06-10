@@ -1,12 +1,12 @@
 {
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
   "images": [
     {
       "filename": "Factory_virgo-jonah_post1.jpg",
       "idiom": "universal"
     }
-  ],
-  "info": {
-    "author": "xcode",
-    "version": 1
-  }
+  ]
 }

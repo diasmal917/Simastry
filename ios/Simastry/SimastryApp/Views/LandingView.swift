@@ -40,6 +40,82 @@ private let onboardingPages: [OnboardingPage] = [
     ),
 ]
 
+private struct LandingCompanionWindow: Identifiable {
+    let id: String
+    let imageName: String
+    let name: String
+    let sign: String
+    let widthRatio: CGFloat
+    let heightRatio: CGFloat
+    let xRatio: CGFloat
+    let yRatio: CGFloat
+    let rotation: Double
+    let zIndex: Double
+}
+
+private let landingCompanionWindows: [LandingCompanionWindow] = [
+    LandingCompanionWindow(
+        id: "ada",
+        imageName: "Factory_taurus-ada_card",
+        name: "Ada",
+        sign: "Taurus",
+        widthRatio: 0.45,
+        heightRatio: 0.86,
+        xRatio: 0.50,
+        yRatio: 0.53,
+        rotation: -1,
+        zIndex: 5
+    ),
+    LandingCompanionWindow(
+        id: "nadia",
+        imageName: "Factory_sagittarius-nadia_profile",
+        name: "Nadia",
+        sign: "Sagittarius",
+        widthRatio: 0.31,
+        heightRatio: 0.51,
+        xRatio: 0.19,
+        yRatio: 0.36,
+        rotation: -10,
+        zIndex: 2
+    ),
+    LandingCompanionWindow(
+        id: "maria",
+        imageName: "Factory_gemini-rina_profile",
+        name: "Maria",
+        sign: "Gemini",
+        widthRatio: 0.30,
+        heightRatio: 0.50,
+        xRatio: 0.82,
+        yRatio: 0.37,
+        rotation: 9,
+        zIndex: 3
+    ),
+    LandingCompanionWindow(
+        id: "leyla",
+        imageName: "Factory_virgo-mara_card",
+        name: "Leyla",
+        sign: "Virgo",
+        widthRatio: 0.31,
+        heightRatio: 0.52,
+        xRatio: 0.25,
+        yRatio: 0.72,
+        rotation: 7,
+        zIndex: 1
+    ),
+    LandingCompanionWindow(
+        id: "elias",
+        imageName: "Factory_scorpio-elias_profile",
+        name: "Elias",
+        sign: "Scorpio",
+        widthRatio: 0.32,
+        heightRatio: 0.52,
+        xRatio: 0.78,
+        yRatio: 0.72,
+        rotation: -8,
+        zIndex: 1
+    )
+]
+
 struct LandingView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
@@ -81,10 +157,18 @@ struct LandingView: View {
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : -20)
                         .animation(.spring(SimastrySpring.smooth).delay(0.1), value: appeared)
-                        .padding(.top, 60)
+                        .padding(.top, landingTopPadding(for: geo.size))
 
-                    Spacer()
-                    onboardingCarousel
+                    companionWindowArrangement(size: geo.size)
+                        .frame(height: heroWindowHeight(for: geo.size))
+                        .padding(.top, geo.size.height < 720 ? 0 : 6)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 26)
+                        .animation(.spring(SimastrySpring.bouncy).delay(0.18), value: appeared)
+
+                    Spacer(minLength: geo.size.height < 720 ? 0 : 6)
+
+                    onboardingCarousel(cardHeight: onboardingCarouselCardHeight(for: geo.size))
                     foregroundPanel
                 }
                 .ignoresSafeArea(.container, edges: .bottom)
@@ -108,7 +192,22 @@ struct LandingView: View {
         }
     }
 
-    private var onboardingCarousel: some View {
+    private func landingTopPadding(for size: CGSize) -> CGFloat {
+        size.height < 720 ? 42 : 58
+    }
+
+    private func heroWindowHeight(for size: CGSize) -> CGFloat {
+        if size.height < 700 {
+            return 176
+        }
+        return min(max(size.height * 0.30, 220), 280)
+    }
+
+    private func onboardingCarouselCardHeight(for size: CGSize) -> CGFloat {
+        size.height < 720 ? 138 : 154
+    }
+
+    private func onboardingCarousel(cardHeight: CGFloat) -> some View {
         VStack(spacing: 14) {
             TabView(selection: $currentPage) {
                 ForEach(onboardingPages) { page in
@@ -130,19 +229,94 @@ struct LandingView: View {
         .animation(.spring(SimastrySpring.bouncy).delay(0.2), value: appeared)
     }
 
+    private func companionWindowArrangement(size: CGSize) -> some View {
+        GeometryReader { proxy in
+            let canvas = proxy.size
+
+            ZStack {
+                constellationBackdrop(size: canvas)
+                    .allowsHitTesting(false)
+
+                ForEach(landingCompanionWindows) { window in
+                    companionWindow(window, canvasSize: canvas)
+                        .zIndex(window.zIndex)
+                }
+            }
+            .frame(width: canvas.width, height: canvas.height)
+        }
+        .padding(.horizontal, 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Featured Simastry companions including Ada, Nadia, Maria, Leyla, and Elias")
+    }
+
+    private func constellationBackdrop(size: CGSize) -> some View {
+        Canvas { context, canvasSize in
+            let points = [
+                CGPoint(x: canvasSize.width * 0.18, y: canvasSize.height * 0.24),
+                CGPoint(x: canvasSize.width * 0.40, y: canvasSize.height * 0.17),
+                CGPoint(x: canvasSize.width * 0.62, y: canvasSize.height * 0.29),
+                CGPoint(x: canvasSize.width * 0.82, y: canvasSize.height * 0.22),
+                CGPoint(x: canvasSize.width * 0.72, y: canvasSize.height * 0.74),
+                CGPoint(x: canvasSize.width * 0.48, y: canvasSize.height * 0.83),
+                CGPoint(x: canvasSize.width * 0.25, y: canvasSize.height * 0.70)
+            ]
+
+            var path = Path()
+            for (index, point) in points.enumerated() {
+                if index == 0 {
+                    path.move(to: point)
+                } else {
+                    path.addLine(to: point)
+                }
+            }
+            context.stroke(path, with: .color(SimastryColor.gold.opacity(0.25)), lineWidth: 0.7)
+
+            for point in points {
+                let rect = CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)
+                context.fill(Circle().path(in: rect), with: .color(.white.opacity(0.6)))
+            }
+        }
+    }
+
+    private func companionWindow(_ window: LandingCompanionWindow, canvasSize: CGSize) -> some View {
+        let width = canvasSize.width * window.widthRatio
+        let height = canvasSize.height * window.heightRatio
+        let radius = min(width * 0.14, 22)
+
+        return Image(window.imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: width, height: height, alignment: .top)
+            .clipped()
+        .frame(width: width, height: height)
+        .background(.white.opacity(0.04), in: .rect(cornerRadius: radius))
+        .clipShape(.rect(cornerRadius: radius))
+        .overlay {
+            RoundedRectangle(cornerRadius: radius)
+                .strokeBorder(.white.opacity(window.id == "ada" ? 0.34 : 0.18), lineWidth: window.id == "ada" ? 1.2 : 0.8)
+        }
+        .shadow(color: .black.opacity(0.45), radius: 20, y: 12)
+        .shadow(color: SimastryColor.gold.opacity(window.id == "ada" ? 0.22 : 0.08), radius: 18, y: 0)
+        .rotationEffect(.degrees(window.rotation))
+        .position(
+            x: canvasSize.width * window.xRatio,
+            y: canvasSize.height * window.yRatio
+        )
+    }
+
     private func onboardingCard(page: OnboardingPage) -> some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(.white.opacity(0.1))
-                    .frame(width: 68, height: 68)
+                    .frame(width: 48, height: 48)
                     .overlay {
                         Circle()
                             .stroke(.white.opacity(0.16), lineWidth: 1)
                     }
 
                 Image(systemName: page.icon)
-                    .font(.system(size: 29, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(.white)
                     .symbolEffect(.pulse, options: .repeating.speed(0.5))
             }
@@ -154,7 +328,7 @@ struct LandingView: View {
 
             VStack(spacing: 10) {
                 Text(page.title)
-                    .font(SimastryFont.titleMedium)
+                    .font(SimastryFont.titleSmall)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
@@ -169,12 +343,12 @@ struct LandingView: View {
                     .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 24)
-        .frame(maxWidth: .infinity, minHeight: 196)
-        .background(.black.opacity(0.25), in: .rect(cornerRadius: 28))
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, minHeight: 136)
+        .background(.black.opacity(0.25), in: .rect(cornerRadius: 24))
         .overlay {
-            RoundedRectangle(cornerRadius: 28)
+            RoundedRectangle(cornerRadius: 24)
                 .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
         }
         .padding(.horizontal, 4)

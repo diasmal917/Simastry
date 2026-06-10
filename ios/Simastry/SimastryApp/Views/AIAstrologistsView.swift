@@ -3,7 +3,7 @@ import SwiftUI
 private enum AIAstrologistSegment: String, CaseIterable, Identifiable {
     case forYou = "For You"
     case signs = "Signs"
-    case gram = "Gram"
+    case gram = "Bio"
 
     var id: String { rawValue }
 }
@@ -28,12 +28,19 @@ private struct AstrologistCredential {
 
 struct AIAstrologistsView: View {
     @Bindable var viewModel: AppViewModel
-    @State private var currentCastIndex: Int = 0
+    let initialProfileId: String?
+    @State private var currentCastIndex: Int
     @State private var selectedSegment: AIAstrologistSegment = .forYou
     @State private var hasInitializedCastIndex: Bool = false
     @State private var showPredict: Bool = false
     @State private var selectedGramPost: GramPostSelection?
     @State private var gramComments: [String: [String]] = [:]
+
+    init(viewModel: AppViewModel, initialProfileId: String? = nil) {
+        self.viewModel = viewModel
+        self.initialProfileId = initialProfileId
+        _currentCastIndex = State(initialValue: Self.initialCastIndex(initialProfileId: initialProfileId, viewModel: viewModel))
+    }
 
     private var profiles: [FactoryCompanionProfile] {
         FactoryCompanionCatalog.all
@@ -56,8 +63,22 @@ struct AIAstrologistsView: View {
     }
 
     private var orderedForYouProfiles: [FactoryCompanionProfile] {
-        let preferred = FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
+        let preferred = initialProfile ?? FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
         return [preferred] + profiles.filter { $0.id != preferred.id }
+    }
+
+    private var initialProfile: FactoryCompanionProfile? {
+        guard let initialProfileId else { return nil }
+        return profiles.first { $0.id == initialProfileId }
+    }
+
+    private static func initialCastIndex(initialProfileId: String?, viewModel: AppViewModel) -> Int {
+        if let initialProfileId,
+           let index = FactoryCompanionCatalog.all.firstIndex(where: { $0.id == initialProfileId }) {
+            return index
+        }
+        let fallback = FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
+        return FactoryCompanionCatalog.all.firstIndex(where: { $0.id == fallback.id }) ?? 0
     }
 
     var body: some View {
@@ -118,7 +139,12 @@ struct AIAstrologistsView: View {
                 gramComments = Self.loadGramComments()
             }
             guard !hasInitializedCastIndex else { return }
-            select(FactoryCompanionCatalog.match(for: viewModel.primaryCompanion))
+            selectLaunchProfile()
+            hasInitializedCastIndex = true
+        }
+        .onChange(of: initialProfileId) {
+            guard let initialProfile else { return }
+            select(initialProfile)
             hasInitializedCastIndex = true
         }
     }
@@ -192,7 +218,7 @@ struct AIAstrologistsView: View {
     private func compactSignalLabel(for label: String) -> String {
         switch label {
         case "Companion lens":
-            return "Lens"
+            return "Guide"
         case "Communication type":
             return "Type"
         case "Your Sun":
@@ -242,26 +268,26 @@ struct AIAstrologistsView: View {
         let credential = astrologistCredential(for: profile)
 
         return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
                 ZStack(alignment: .bottomTrailing) {
                     Image(profile.profileImageName)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 82, height: 102)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .frame(width: 100, height: 128, alignment: .top)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(.white.opacity(0.12), lineWidth: 0.8)
                         }
 
                     Circle()
                         .fill(Color.green)
-                        .frame(width: 12, height: 12)
+                        .frame(width: 13, height: 13)
                         .overlay(Circle().stroke(SimastryColor.surface, lineWidth: 2))
                         .offset(x: 2, y: 2)
                 }
 
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .center, spacing: 6) {
                         Text(profile.name)
                             .font(SimastryFont.titleMedium)
@@ -311,7 +337,7 @@ struct AIAstrologistsView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 6) {
-                        credentialMetric("Lens", credential.lens)
+                        credentialMetric("Focus", credential.lens)
                         credentialMetric("Method", credential.method)
                         credentialMetric("Reply", credential.reply)
                     }
@@ -366,7 +392,7 @@ struct AIAstrologistsView: View {
                     viewModel.selectedTab = 2
                 }
 
-                astrologistAction("Gram", systemImage: "camera.fill", isPrimary: false) {
+                astrologistAction("Bio", systemImage: "camera.fill", isPrimary: false) {
                     select(profile)
                     selectedSegment = .gram
                 }
@@ -461,7 +487,7 @@ struct AIAstrologistsView: View {
                 Image(profile.profileImageName)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 82, height: 82)
+                    .frame(width: 82, height: 82, alignment: .top)
                     .clipShape(Circle())
                     .overlay(
                         Circle()
@@ -486,7 +512,7 @@ struct AIAstrologistsView: View {
             HStack(spacing: 12) {
                 gramStat(value: "\(posts.count)", label: "posts")
                 gramStat(value: "24", label: "astrologists")
-                gramStat(value: profile.sign.displayName, label: "lens")
+                gramStat(value: profile.sign.displayName, label: "sign")
             }
 
             Text(profile.bio)
@@ -597,7 +623,7 @@ struct AIAstrologistsView: View {
 
     private func seededComments(for profile: FactoryCompanionProfile, index: Int) -> [String] {
         [
-            "\(profile.sign.displayName) lens is loud here.",
+            "The signal is clear here.",
             "Saving this before I answer my next text."
         ]
     }
@@ -628,7 +654,7 @@ struct AIAstrologistsView: View {
     private func astrologistCredential(for profile: FactoryCompanionProfile) -> AstrologistCredential {
         // Honest, method-true credentials: no invented human experience or ratings.
         AstrologistCredential(
-            lens: profile.sign.displayName,
+            lens: astrologistFocus(for: profile),
             method: "Tropical",
             reply: "Instant",
             methods: astrologistMethods(for: profile),
@@ -655,7 +681,41 @@ struct AIAstrologistsView: View {
             }
         }()
 
-        return [elementMethod, modalityMethod, "\(profile.sign.displayName) lens"]
+        return [elementMethod, modalityMethod, astrologistStyleMethod(for: profile)]
+    }
+
+    private func astrologistFocus(for profile: FactoryCompanionProfile) -> String {
+        switch profile.sign {
+        case .aries: "Initiation"
+        case .taurus: "Trust"
+        case .gemini: "Banter"
+        case .cancer: "Care"
+        case .leo: "Confidence"
+        case .virgo: "Precision"
+        case .libra: "Balance"
+        case .scorpio: "Depth"
+        case .sagittarius: "Honesty"
+        case .capricorn: "Standards"
+        case .aquarius: "Autonomy"
+        case .pisces: "Feeling"
+        }
+    }
+
+    private func astrologistStyleMethod(for profile: FactoryCompanionProfile) -> String {
+        switch profile.sign {
+        case .aries: "First move"
+        case .taurus: "Pacing"
+        case .gemini: "Question craft"
+        case .cancer: "Safety read"
+        case .leo: "Presence reads"
+        case .virgo: "Edits"
+        case .libra: "Diplomacy"
+        case .scorpio: "Motive read"
+        case .sagittarius: "Space"
+        case .capricorn: "Restraint"
+        case .aquarius: "Distance"
+        case .pisces: "Soft boundary"
+        }
     }
 
     private func astrologistQualification(for profile: FactoryCompanionProfile) -> String {
@@ -749,6 +809,10 @@ struct AIAstrologistsView: View {
         }
     }
 
+    private func selectLaunchProfile() {
+        select(initialProfile ?? FactoryCompanionCatalog.match(for: viewModel.primaryCompanion))
+    }
+
     private func openPredict(with profile: FactoryCompanionProfile) {
         select(profile)
         viewModel.predictionDraft = PredictionDraft(
@@ -795,7 +859,7 @@ private struct GramPostDetailSheet: View {
                                     Image(profile.profileImageName)
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(width: 34, height: 34)
+                                        .frame(width: 34, height: 34, alignment: .top)
                                         .clipShape(Circle())
 
                                     VStack(alignment: .leading, spacing: 1) {
@@ -850,7 +914,7 @@ private struct GramPostDetailSheet: View {
                 }
                 .scrollIndicators(.hidden)
             }
-            .navigationTitle("Gram")
+            .navigationTitle("Bio")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {

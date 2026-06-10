@@ -95,7 +95,7 @@ struct CompanionsView: View {
                         .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text("Browse the astrologist lens you want for Messages, Gram, and Predict.")
+                    Text("Browse the astrologist lens you want for Messages, Bio, and Predict.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
@@ -163,7 +163,7 @@ struct CompanionsView: View {
                 .resizable()
                 .scaledToFill()
                 .frame(maxWidth: .infinity)
-                .frame(height: height)
+                .frame(height: height, alignment: .top)
                 .clipped()
 
             LinearGradient(

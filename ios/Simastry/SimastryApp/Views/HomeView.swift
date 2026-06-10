@@ -1,16 +1,20 @@
 import SwiftUI
 
+private enum HomeRoute: Hashable {
+    case aiAstrologist(profileId: String?)
+    case predict
+}
+
 struct HomeView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
     @StateObject private var streakManager = StreakManager.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var navigationPath = NavigationPath()
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
     @State private var showStreakMilestone: Bool = false
-    @State private var showAIAstrologists: Bool = false
-    @State private var showPredict: Bool = false
 
     private var communicationType: CommunicationTypeProfile? {
         CommunicationTypeProfile.make(
@@ -20,8 +24,16 @@ struct HomeView: View {
         )
     }
 
+    private var adaProfile: FactoryCompanionProfile {
+        FactoryCompanionCatalog.all.first { $0.id == "taurus-ada" } ?? FactoryCompanionCatalog.featured
+    }
+
+    private var eliasProfile: FactoryCompanionProfile {
+        FactoryCompanionCatalog.all.first { $0.id == "scorpio-elias" } ?? FactoryCompanionCatalog.featured
+    }
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 CelestialBackground()
 
@@ -43,19 +55,22 @@ struct HomeView: View {
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
             }
-            .navigationDestination(isPresented: $showAIAstrologists) {
-                AIAstrologistsView(viewModel: viewModel)
-            }
-            .navigationDestination(isPresented: $showPredict) {
-                SimulateView(viewModel: viewModel)
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case .aiAstrologist(let profileId):
+                    AIAstrologistsView(viewModel: viewModel, initialProfileId: profileId)
+                        .id(profileId ?? "primary")
+                case .predict:
+                    SimulateView(viewModel: viewModel)
+                }
             }
             .onChange(of: viewModel.aiAstrologistsRouteRequest) {
                 guard viewModel.homeSetupPhase == .complete else { return }
-                showAIAstrologists = true
+                navigationPath.append(HomeRoute.aiAstrologist(profileId: nil))
             }
             .onChange(of: viewModel.predictRouteRequest) {
                 guard viewModel.homeSetupPhase == .complete else { return }
-                showPredict = true
+                navigationPath.append(HomeRoute.predict)
             }
         }
     }
@@ -67,15 +82,15 @@ struct HomeView: View {
 
                 summaryHeader
 
+                predictCard
+
+                topAstrologistButton
+
+                aiAstrologistsHeroCard
+
                 communicationTypeSummaryCard
 
                 dailyBriefCard
-
-                if communicationType == nil {
-                    predictCard
-                }
-
-                aiAstrologistsHeroCard
 
                 summaryMetricGrid
 
@@ -312,7 +327,7 @@ struct HomeView: View {
             )
 
             summaryMetricCard(
-                title: "Lens",
+                title: "Guide",
                 value: profile.sign.displayName,
                 caption: "active astrologist",
                 systemImage: "sparkles",
@@ -321,6 +336,82 @@ struct HomeView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+    }
+
+    private var topAstrologistButton: some View {
+        let profile = eliasProfile
+
+        return Button {
+            HapticManager.buttonPress()
+            navigationPath.append(HomeRoute.aiAstrologist(profileId: profile.id))
+        } label: {
+            HStack(spacing: 12) {
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 74, height: 74, alignment: .top)
+                    .clipShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 21, style: .continuous)
+                            .stroke(SimastryColor.gold.opacity(0.34), lineWidth: 1)
+                    }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text(profile.name)
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text(profile.sign.displayName)
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                            .foregroundStyle(profile.sign.color)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(profile.sign.color.opacity(0.14), in: Capsule())
+                    }
+
+                    Text("Ask Elias for a deeper read before you reply.")
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(width: 34, height: 34)
+                    .background(SimastryGradient.gold, in: Circle())
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [SimastryColor.surface.opacity(0.96), SimastryColor.surface.opacity(0.78)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [profile.sign.color.opacity(0.30), .white.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Open Elias, Scorpio AI Astrologist")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+        .zIndex(2)
     }
 
     private func summaryMetricCard(title: String, value: String, caption: String, systemImage: String, tint: Color) -> some View {
@@ -397,11 +488,11 @@ struct HomeView: View {
                 }
 
                 HStack(spacing: 6) {
+                    Image(systemName: "message.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(SimastryColor.goldLight)
                     Text("Open \(companionName) message")
                         .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.goldLight)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(SimastryColor.goldLight)
                 }
                 .padding(.top, 2)
@@ -427,77 +518,53 @@ struct HomeView: View {
     }
 
     private var aiAstrologistsHeroCard: some View {
-        let profile = FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
+        let profile = adaProfile
 
-        return Button {
-            HapticManager.buttonPress()
-            showAIAstrologists = true
-        } label: {
-            ZStack(alignment: .bottomLeading) {
-                Image(profile.cardImageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 280, alignment: .top)
-                    .clipped()
-                    .overlay {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .black.opacity(0.30), location: 0),
-                                .init(color: .clear, location: 0.24),
-                                .init(color: .clear, location: 0.46),
-                                .init(color: .black.opacity(0.86), location: 1.0)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    }
-
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 11, weight: .bold))
-                    Text("FOR YOU")
-                        .font(SimastryFont.overline)
-                        .tracking(1.1)
+        return NavigationLink(value: HomeRoute.aiAstrologist(profileId: profile.id)) {
+            VStack(alignment: .leading, spacing: 0) {
+                ZStack(alignment: .topLeading) {
+                    homeAdaCollage(profile: profile)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 238)
+                        .clipped()
                 }
-                .foregroundStyle(SimastryColor.gold)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(.black.opacity(0.42), in: Capsule())
-                .padding(14)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("\(profile.sign.displayName) lens • AI Astrologist")
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("\(profile.sign.displayName) guide • AI Astrologist")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.goldLight)
                         .tracking(1.1)
                         .textCase(.uppercase)
                         .lineLimit(1)
+                        .shadow(color: .black.opacity(0.75), radius: 4, y: 1)
 
                     HStack(alignment: .center, spacing: 10) {
                         Text(profile.name)
                             .font(SimastryFont.titleLarge)
                             .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.8), radius: 5, y: 2)
 
                         Spacer()
 
-                        Image(systemName: "arrow.up.right")
+                        Image(systemName: "sparkles")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(SimastryColor.midnight)
                             .frame(width: 36, height: 36)
                             .background(SimastryGradient.gold, in: Circle())
                     }
 
-                    Text("Reads your \(communicationType?.title ?? "communication type") through a \(profile.sign.displayName) lens.")
+                    Text("Reads your \(communicationType?.title ?? "communication type") with \(profile.sign.displayName) timing.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(.white.opacity(0.86))
                         .lineSpacing(3)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
+                        .shadow(color: .black.opacity(0.75), radius: 4, y: 1)
                 }
                 .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.black.opacity(0.78))
             }
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
@@ -506,9 +573,137 @@ struct HomeView: View {
             )
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("AI Astrologists. \(profile.name), \(profile.sign.displayName) lens. Opens the astrologist directory.")
+        .simultaneousGesture(TapGesture().onEnded {
+            HapticManager.buttonPress()
+        })
+        .accessibilityLabel("AI Astrologists. \(profile.name), \(profile.sign.displayName) guide. Opens the astrologist directory.")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
+        .zIndex(1)
+    }
+
+    private func homeAdaCollage(profile: FactoryCompanionProfile) -> some View {
+        GeometryReader { proxy in
+            if #available(iOS 26.0, *) {
+                GlassEffectContainer(spacing: 14) {
+                    homeAdaCollageBody(profile: profile, size: proxy.size)
+                }
+            } else {
+                homeAdaCollageBody(profile: profile, size: proxy.size)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func homeAdaCollageBody(profile: FactoryCompanionProfile, size: CGSize) -> some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    SimastryColor.midnight,
+                    SimastryColor.surface.opacity(0.96),
+                    profile.sign.color.opacity(0.28),
+                    SimastryColor.midnight
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Image(systemName: "sparkles")
+                .font(.system(size: 92, weight: .light))
+                .foregroundStyle(SimastryColor.gold.opacity(0.08))
+                .rotationEffect(.degrees(-10))
+                .position(x: size.width * 0.88, y: size.height * 0.23)
+
+            homeCollageWindow(
+                imageName: "Factory_scorpio-elias_profile",
+                accent: SimastryColor.goldLight,
+                width: size.width * 0.38,
+                height: 126,
+                x: size.width * 0.23,
+                y: size.height * 0.72,
+                rotation: -7,
+                zIndex: 4,
+                imageAlignment: .top,
+                imageOffsetY: -4
+            )
+
+            homeCollageWindow(
+                imageName: "Factory_virgo-mara_card",
+                accent: profile.sign.color,
+                width: size.width * 0.44,
+                height: 168,
+                x: size.width * 0.78,
+                y: size.height * 0.43,
+                rotation: 6,
+                zIndex: 2,
+                imageAlignment: .top,
+                imageOffsetY: -7
+            )
+
+            homeCollageWindow(
+                imageName: profile.profileImageName,
+                accent: SimastryColor.gold,
+                width: size.width * 0.58,
+                height: 206,
+                x: size.width * 0.47,
+                y: size.height * 0.53,
+                rotation: -2,
+                zIndex: 3,
+                imageAlignment: .top,
+                imageOffsetY: -12
+            )
+        }
+        .frame(width: size.width, height: size.height)
+        .overlay {
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.10), location: 0),
+                    .init(color: .clear, location: 0.44),
+                    .init(color: .black.opacity(0.48), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+
+    private func homeCollageWindow(
+        imageName: String,
+        accent: Color,
+        width: CGFloat,
+        height: CGFloat,
+        x: CGFloat,
+        y: CGFloat,
+        rotation: Double,
+        zIndex: Double,
+        imageAlignment: Alignment,
+        imageOffsetY: CGFloat
+    ) -> some View {
+        let radius = min(width * 0.16, 22)
+
+        return Image(imageName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: height + abs(imageOffsetY) * 2, alignment: imageAlignment)
+            .offset(y: imageOffsetY)
+            .frame(width: width, height: height)
+            .clipShape(.rect(cornerRadius: radius))
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.42), .white.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.9
+                    )
+            }
+            .shadow(color: .black.opacity(0.42), radius: 18, y: 12)
+            .shadow(color: accent.opacity(0.14), radius: 14, y: 0)
+            .rotationEffect(.degrees(rotation))
+            .position(x: x, y: y)
+            .zIndex(zIndex)
     }
 
     private var predictCard: some View {
@@ -521,10 +716,10 @@ struct HomeView: View {
                     .background(SimastryColor.risingViolet.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Predict")
+                    Text("Predict their reply")
                         .font(SimastryFont.titleMedium)
                         .foregroundStyle(SimastryColor.offWhite)
-                    Text("Paste a real conversation and model the likely reply through chart signals.")
+                    Text("Paste a text thread. Simastry reads the conversation and chart signals to estimate how they may respond, then helps you choose your next message.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .lineSpacing(3)
@@ -532,13 +727,13 @@ struct HomeView: View {
                 }
             }
 
-            Button {
-                HapticManager.buttonPress()
-                showPredict = true
-            } label: {
-                Label("Predict their response", systemImage: "wand.and.stars")
+            NavigationLink(value: HomeRoute.predict) {
+                Label("Paste conversation", systemImage: "wand.and.stars")
             }
             .buttonStyle(.simastryPrimary)
+            .simultaneousGesture(TapGesture().onEnded {
+                HapticManager.buttonPress()
+            })
         }
         .padding(16)
         .background(SimastryColor.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -608,7 +803,7 @@ struct HomeView: View {
 
                 if let briefMoveLine {
                     HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "arrow.turn.down.right")
+                        Image(systemName: "quote.bubble.fill")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(SimastryColor.gold)
                             .padding(.top, 3)
@@ -623,7 +818,7 @@ struct HomeView: View {
 
                 HStack(spacing: 8) {
                     briefAction("Predict a reply", systemImage: "wand.and.stars", isPrimary: true) {
-                        showPredict = true
+                        navigationPath.append(HomeRoute.predict)
                     }
                     briefAction("Messages", systemImage: "message.fill", isPrimary: false) {
                         viewModel.selectedTab = 2

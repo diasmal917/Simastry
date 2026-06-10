@@ -218,20 +218,6 @@ struct ProfileView: View {
             }
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel("Open settings")
-
-            GlossyOrbView(
-                signColors: viewModel.hasCompletedSigns
-                    ? [
-                        viewModel.userSunSign?.color ?? SimastryColor.gold,
-                        viewModel.userMoonSign?.color ?? SimastryColor.celestialBlue
-                    ]
-                    : [
-                        SimastryColor.placeholderLight,
-                        SimastryColor.placeholderDark
-                    ],
-                state: .idle,
-                size: 56
-            )
         }
         .padding(20)
         .simastryGlass(cornerRadius: 20)
@@ -326,13 +312,10 @@ struct ProfileView: View {
                 .foregroundStyle(SimastryColor.mutedSilver)
 
             HStack(spacing: 14) {
-                GlossyOrbView(
-                    signColors: [
-                        SimastryColor.placeholderLight,
-                        SimastryColor.placeholderDark
-                    ],
-                    state: .idle,
-                    size: 40
+                profileSymbolTile(
+                    systemName: "person.fill.questionmark",
+                    accent: SimastryColor.mutedSilver,
+                    size: 42
                 )
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -462,26 +445,11 @@ struct ProfileView: View {
             activeSheet = .aura
         } label: {
             HStack(spacing: 14) {
-                ZStack {
-                    GlossyOrbView(
-                        signColors: [
-                            viewModel.userSunSign?.color ?? SimastryColor.gold,
-                            viewModel.userMoonSign?.color ?? SimastryColor.celestialBlue
-                        ],
-                        state: .idle,
-                        size: 54
-                    )
-
-                    Circle()
-                        .fill(Color.black.opacity(0.26))
-                        .frame(width: 34, height: 34)
-                        .blur(radius: 5)
-
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(SimastryColor.goldLight)
-                }
-                .shadow(color: (viewModel.userSunSign?.color ?? SimastryColor.gold).opacity(0.32), radius: 16, x: 0, y: 8)
+                profileSymbolTile(
+                    systemName: "sparkles",
+                    accent: viewModel.userSunSign?.color ?? SimastryColor.gold,
+                    size: 54
+                )
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Aura")
@@ -508,6 +476,25 @@ struct ProfileView: View {
         .accessibilityLabel("Open your Aura page")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
+    }
+
+    private func profileSymbolTile(systemName: String, accent: Color, size: CGFloat) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: size * 0.36, weight: .semibold))
+            .foregroundStyle(accent)
+            .frame(width: size, height: size)
+            .background(accent.opacity(0.10), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.22), .white.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            }
     }
 
     private var auraButtonSubtitle: String {
@@ -918,12 +905,9 @@ struct ProfileView: View {
             }) {
                 VStack(spacing: 14) {
                     HStack(spacing: 14) {
-                        GlossyOrbView(
-                            signColors: [
-                                ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
-                                ZodiacSign(rawValue: companion.moonSign)?.color ?? SimastryColor.celestialBlue
-                            ],
-                            state: .idle,
+                        profileSymbolTile(
+                            systemName: "moon.stars.fill",
+                            accent: ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
                             size: 44
                         )
 

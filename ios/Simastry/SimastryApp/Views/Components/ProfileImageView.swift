@@ -39,11 +39,13 @@ struct ProfileImageView: View {
                             )
                     )
             } else {
-                Circle()
+                let cornerRadius = min(size * 0.24, 24)
+
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(Color.white.opacity(0.04))
                     .frame(width: size, height: size)
                     .overlay(
-                        Circle()
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .stroke(
                                 LinearGradient(
                                     colors: [
@@ -58,9 +60,7 @@ struct ProfileImageView: View {
                     )
                     .overlay(
                         VStack(spacing: size > 60 ? 4 : 2) {
-                            if let sunSign {
-                                ZodiacIconView(sign: sunSign, size: size * 0.58, showsGlow: true)
-                            } else if let glyph = sunSignGlyph, !glyph.isEmpty {
+                            if let glyph = sunSignGlyph, !glyph.isEmpty {
                                 Text(glyph)
                                     .font(.system(size: size * 0.4))
                                     .foregroundStyle(
@@ -73,7 +73,7 @@ struct ProfileImageView: View {
                             } else {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: size * 0.2, weight: .medium))
-                                    .foregroundStyle(SimastryColor.gold.opacity(0.6))
+                                    .foregroundStyle((sunSign?.color ?? SimastryColor.gold).opacity(0.78))
                             }
 
                             if size >= 80 && sunSignGlyph == nil {

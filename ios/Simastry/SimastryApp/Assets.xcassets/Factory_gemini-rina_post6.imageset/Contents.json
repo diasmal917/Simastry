@@ -1,12 +1,12 @@
 {
-  "images": [
-    {
-      "filename": "Factory_gemini-rina_post6.jpg",
-      "idiom": "universal"
-    }
-  ],
   "info": {
     "author": "xcode",
     "version": 1
-  }
+  },
+  "images": [
+    {
+      "filename": "Factory_gemini-rina_post6.png",
+      "idiom": "universal"
+    }
+  ]
 }

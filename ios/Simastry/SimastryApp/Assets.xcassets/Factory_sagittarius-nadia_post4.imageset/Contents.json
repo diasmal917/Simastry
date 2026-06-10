@@ -1,12 +1,12 @@
 {
-  "images": [
-    {
-      "filename": "Factory_sagittarius-nadia_post4.jpg",
-      "idiom": "universal"
-    }
-  ],
   "info": {
     "author": "xcode",
     "version": 1
-  }
+  },
+  "images": [
+    {
+      "filename": "Factory_sagittarius-nadia_post4.png",
+      "idiom": "universal"
+    }
+  ]
 }

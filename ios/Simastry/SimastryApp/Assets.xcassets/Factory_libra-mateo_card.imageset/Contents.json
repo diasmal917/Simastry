@@ -1,12 +1,12 @@
 {
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
   "images": [
     {
       "filename": "Factory_libra-mateo_card.jpg",
       "idiom": "universal"
     }
-  ],
-  "info": {
-    "author": "xcode",
-    "version": 1
-  }
+  ]
 }
