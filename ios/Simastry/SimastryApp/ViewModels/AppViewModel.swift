@@ -162,6 +162,13 @@ class AppViewModel {
     /// Bumped to ask MessagesView to present the panel chat.
     var panelChatRouteRequest: Int = 0
 
+    // MARK: - Moments State
+    /// Private on-device photo posts; guides engage via templates (+Moments).
+    var moments: [Moment] = []
+    /// "{momentId}:{profileId}" keys for guides currently "typing" a comment.
+    var momentTypingKeys: Set<String> = []
+    let momentsStore = MomentsStore()
+
     // MARK: - Legacy Consumable Top-Ups
     var bonusPredictions: Int = UserDefaults.standard.integer(forKey: "bonusPredictions") {
         didSet { UserDefaults.standard.set(bonusPredictions, forKey: "bonusPredictions") }
@@ -247,6 +254,7 @@ class AppViewModel {
         loadReferralInfo()
         loadRelationshipPeople()
         loadPanelMessages()
+        loadMoments()
     }
 
     // MARK: - Age Verification
@@ -2105,6 +2113,9 @@ class AppViewModel {
         discoveryMessages = []
         panelMessages = []
         panelTypingParticipantIds = []
+        moments = []
+        momentTypingKeys = []
+        momentsStore.deleteAll()
         discoveredProfiles = []
         relationshipPeople = []
         predictionDraft = nil

@@ -89,6 +89,8 @@ struct ProfileView: View {
                             placeholderCompanionSection
                         }
 
+                        MomentsSection(viewModel: viewModel)
+
                         subscriptionSection
 
                         themeToggle
