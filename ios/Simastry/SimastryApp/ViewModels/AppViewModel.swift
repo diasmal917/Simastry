@@ -2506,6 +2506,8 @@ extension AppViewModel {
             guideFocusSign = nil
         }
 
+        UserDefaults.standard.set("MAYA2626", forKey: Self.personalInviteCodeKey)
+
         switch debugPreviewScreen(from: arguments) {
         case "onboardingInsight":
             homeSetupPhase = .onboardingInsight
@@ -2519,11 +2521,129 @@ extension AppViewModel {
                 try? await Task.sleep(for: .seconds(1))
                 self.openAIAstrologists()
             }
+        case "panelChat":
+            seedDebugPanelMessages(now: now)
+            selectedTab = 2
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.panelChatRouteRequest += 1
+            }
+        case "panelInbox":
+            seedDebugPanelMessages(now: now)
+            selectedTab = 2
+        case "moments":
+            seedDebugMoments(now: now)
+            selectedTab = 5
+        case "invite":
+            selectedTab = 5
         default:
             break
         }
 
         return true
+    }
+
+    /// Deterministic panel thread for screenshots: the Maya chart's guides
+    /// (Nadia · Sun, Mila · Moon, Isolde · Rising) plus one user turn.
+    private func seedDebugPanelMessages(now: Date) {
+        panelMessages = [
+            PanelMessage(
+                senderId: "sagittarius-nadia",
+                content: "Hey Maya — I read with your Sagittarius Sun. When a message has you circling, bring it here.",
+                timestamp: now.addingTimeInterval(-50 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "cancer-mila",
+                content: "I hold your Cancer Moon lens — how it actually feels before you answer. Nothing you say here needs to be polished.",
+                timestamp: now.addingTimeInterval(-49 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "libra-isolde",
+                content: "And I read your Libra Rising — the tone you open with. The three of us see the same thread differently on purpose. Ask us anything.",
+                timestamp: now.addingTimeInterval(-48 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: PanelParticipant.localUserId,
+                content: "They left me on read since yesterday. Do I follow up or wait?",
+                timestamp: now.addingTimeInterval(-31 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "sagittarius-nadia",
+                content: "Good. You said it instead of circling it. If you're asking whether to reach out — that's already your answer. Keep it short.",
+                timestamp: now.addingTimeInterval(-30 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "cancer-mila",
+                content: "Nadia is right about the timing, but feel it once before you send it.",
+                timestamp: now.addingTimeInterval(-29 * 60),
+                isRead: false
+            )
+        ]
+    }
+
+    /// Two generated moments with guide comments for screenshots.
+    private func seedDebugMoments(now: Date) {
+        func solidImageData(_ color: UIColor) -> Data? {
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: 900, height: 900))
+            let image = renderer.image { context in
+                color.setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 900, height: 900))
+            }
+            return image.jpegData(compressionQuality: 0.8)
+        }
+
+        var seeded: [Moment] = []
+
+        if let data = solidImageData(UIColor(red: 0.42, green: 0.33, blue: 0.62, alpha: 1)) {
+            var moment = Moment(
+                caption: "Finally said the honest thing",
+                imageFileName: "preview-moment-1.jpg",
+                createdAt: now.addingTimeInterval(-3 * 60 * 60),
+                reactionCount: 4
+            )
+            momentsStore.writeImage(data, fileName: moment.imageFileName)
+            moment.comments = [
+                MomentComment(
+                    authorKind: .guide(profileId: "sagittarius-nadia"),
+                    authorName: "Nadia",
+                    content: "\u{201C}Finally said the honest thing\u{201D} — that's the whole read, honestly.",
+                    timestamp: now.addingTimeInterval(-175 * 60)
+                ),
+                MomentComment(
+                    authorKind: .guide(profileId: "libra-isolde"),
+                    authorName: "Isolde",
+                    content: "Your Libra Rising chose the tone here — light, but not careless.",
+                    timestamp: now.addingTimeInterval(-170 * 60)
+                )
+            ]
+            seeded.append(moment)
+        }
+
+        if let data = solidImageData(UIColor(red: 0.86, green: 0.62, blue: 0.36, alpha: 1)) {
+            var moment = Moment(
+                caption: nil,
+                imageFileName: "preview-moment-2.jpg",
+                createdAt: now.addingTimeInterval(-26 * 60 * 60),
+                reactionCount: 2
+            )
+            momentsStore.writeImage(data, fileName: moment.imageFileName)
+            moment.comments = [
+                MomentComment(
+                    authorKind: .guide(profileId: "cancer-mila"),
+                    authorName: "Mila",
+                    content: "Something about this one feels settled. Hold onto that.",
+                    timestamp: now.addingTimeInterval(-25 * 60 * 60)
+                )
+            ]
+            seeded.append(moment)
+        }
+
+        moments = seeded
     }
 
     private func debugPreviewScreen(from arguments: [String]) -> String? {

@@ -27,6 +27,32 @@ final class RedesignScrollVerificationTests: XCTestCase {
     }
 
     @MainActor
+    func testScrollProfileForMomentsAndInvite() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "moments"]
+        app.launch()
+        sleep(3)
+
+        attachShot(app, name: "profile-1-top")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "profile-2")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "profile-3-moments")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "profile-4")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "profile-5-invite")
+    }
+
+    @MainActor
     private func attachShot(_ app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name
