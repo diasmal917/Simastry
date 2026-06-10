@@ -101,6 +101,8 @@ struct ProfileView: View {
 
                         astrologerSection
 
+                        InviteFriendsCard(viewModel: viewModel)
+
                         referralCodeSection
 
                         forAstrologersSection
@@ -1371,9 +1373,16 @@ struct ProfileView: View {
                         .textInputAutocapitalization(.characters)
 
                     Button(action: {
-                        guard !referralCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                        viewModel.applyReferralCode(referralCodeInput)
-                        showReferralConfirmation = true
+                        let trimmed = referralCodeInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        // Invite-shaped codes grant the welcome predictions;
+                        // anything else falls back to the legacy referral path.
+                        if InviteCode.isValid(trimmed) {
+                            viewModel.applyInviteCode(trimmed)
+                        } else {
+                            viewModel.applyReferralCode(trimmed)
+                            showReferralConfirmation = true
+                        }
                         referralCodeInput = ""
                     }) {
                         Text("Apply")

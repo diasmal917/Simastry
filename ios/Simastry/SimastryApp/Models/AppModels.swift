@@ -395,11 +395,29 @@ nonisolated struct ReferralInfo: Codable, Equatable, Sendable {
     var referralDate: Date?
 }
 
+// MARK: - Invite Codes
+
+nonisolated enum InviteCode {
+    /// Unambiguous alphabet — no 0/O, 1/I/L lookalikes.
+    static let alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+
+    static func generate(length: Int = 8) -> String {
+        String((0..<length).compactMap { _ in alphabet.randomElement() })
+    }
+
+    static func isValid(_ raw: String) -> Bool {
+        let normalized = raw.uppercased()
+        guard (6...12).contains(normalized.count) else { return false }
+        return normalized.allSatisfy { alphabet.contains($0) }
+    }
+}
+
 // MARK: - Deep Linking
 
 nonisolated enum DeepLink: Equatable, Sendable {
     case compatibility(userSign: String, companionSign: String)
     case guide(sign: String)
+    case invite(code: String)
     case home
 
     /// Attempts to parse a `DeepLink` from either a custom-scheme URL
@@ -446,6 +464,12 @@ nonisolated enum DeepLink: Equatable, Sendable {
             guard ZodiacSign(rawValue: sign) != nil else { return nil }
             return .guide(sign: sign)
 
+        case "invite":
+            guard pathComponents.count >= 2 else { return nil }
+            let code = pathComponents[1].uppercased()
+            guard InviteCode.isValid(code) else { return nil }
+            return .invite(code: code)
+
         default:
             return nil
         }
@@ -458,6 +482,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return URL(string: "simastry://compatibility/\(userSign)/\(companionSign)")!
         case .guide(let sign):
             return URL(string: "simastry://guide/\(sign)")!
+        case .invite(let code):
+            return URL(string: "simastry://invite/\(code)")!
         case .home:
             return URL(string: "simastry://home")!
         }
@@ -470,6 +496,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return URL(string: "https://\(AppConfig.universalLinkHost)/share/compatibility/\(userSign)/\(companionSign)")!
         case .guide(let sign):
             return URL(string: "https://\(AppConfig.universalLinkHost)/share/guide/\(sign)")!
+        case .invite(let code):
+            return URL(string: "https://\(AppConfig.universalLinkHost)/share/invite/\(code)")!
         case .home:
             return AppConfig.websiteURL
         }
@@ -484,6 +512,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return "See the full \(u) & \(c) compatibility reading on Simastry"
         case .guide(let sign):
             return "Discover how to talk to a \(sign.capitalized) \u{2014} full communication guide on Simastry"
+        case .invite:
+            return "Join me on Simastry \u{2014} your chart changes how your texts land. This link gives you 5 free predictions."
         case .home:
             return "Explore astrology-grounded communication on Simastry"
         }

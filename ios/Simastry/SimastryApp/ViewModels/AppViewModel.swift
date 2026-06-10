@@ -654,6 +654,10 @@ class AppViewModel {
             guideFocusSign = nil
             selectedTab = 0
 
+        case .invite(let code):
+            applyInviteCode(code)
+            selectedTab = 0
+
         case .home:
             selectedTab = 0
         }

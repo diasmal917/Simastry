@@ -149,6 +149,10 @@ struct MessagesView: View {
             .buttonStyle(SpringPressStyle())
             .accessibilityHint("Opens AI Astrologists to choose a message lens")
             .padding(.top, 4)
+
+            InviteFriendsCard(viewModel: viewModel, style: .compact)
+                .padding(.horizontal, 32)
+                .padding(.top, 4)
         }
         .padding(.bottom, 60)
     }
