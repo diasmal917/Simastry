@@ -5,6 +5,8 @@ struct MessagesView: View {
     @Bindable var viewModel: AppViewModel
     @State private var selectedMessage: CompanionMessage?
     @State private var appeared: Bool = false
+    @State private var showPanelChat: Bool = false
+    @State private var handledPanelRouteRequest: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -13,7 +15,17 @@ struct MessagesView: View {
 
                 if selectedMessage == nil {
                     if viewModel.inboxMessages.isEmpty {
-                        emptyState
+                        VStack(spacing: 0) {
+                            PanelInboxRow(viewModel: viewModel) {
+                                openPanelChat()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+
+                            Spacer()
+                            emptyState
+                            Spacer()
+                        }
                     } else {
                         messageList
                     }
@@ -26,17 +38,44 @@ struct MessagesView: View {
             .task {
                 await viewModel.refreshInbox(showErrors: false)
             }
+            .onAppear {
+                presentPanelIfRequested()
+            }
+            .onChange(of: viewModel.panelChatRouteRequest) {
+                presentPanelIfRequested()
+            }
             .fullScreenCover(item: $selectedMessage) { message in
                 MessageDetailSheet(
                     message: message,
                     viewModel: viewModel
                 )
             }
+            .fullScreenCover(isPresented: $showPanelChat) {
+                PanelChatView(viewModel: viewModel)
+            }
         }
+    }
+
+    private func openPanelChat() {
+        HapticManager.buttonPress()
+        showPanelChat = true
+    }
+
+    private func presentPanelIfRequested() {
+        guard viewModel.panelChatRouteRequest > handledPanelRouteRequest else { return }
+        handledPanelRouteRequest = viewModel.panelChatRouteRequest
+        showPanelChat = true
     }
 
     private var messageList: some View {
         List {
+            PanelInboxRow(viewModel: viewModel) {
+                openPanelChat()
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
+
             ForEach(viewModel.inboxMessages) { message in
                 MessageRow(message: message)
                     .listRowBackground(Color.clear)
@@ -137,6 +176,88 @@ struct MessagesView: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Panel Inbox Row
+
+/// Pinned group-thread entry at the top of the inbox — the user's three
+/// placement guides in one conversation.
+private struct PanelInboxRow: View {
+    @Bindable var viewModel: AppViewModel
+    let action: () -> Void
+
+    private var previewText: String {
+        guard let latest = viewModel.latestPanelMessage else {
+            return "Meet your three guides — one thread, three lenses."
+        }
+        if latest.senderId == PanelParticipant.localUserId {
+            return "You: \(latest.content)"
+        }
+        let name = viewModel.panelGuideEntry(forParticipantId: latest.senderId)?.profile.name ?? "Guide"
+        return "\(name): \(latest.content)"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                HStack(spacing: -16) {
+                    ForEach(Array(viewModel.panelGuideEntries.enumerated()), id: \.element.id) { index, entry in
+                        Image(entry.profile.profileImageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 40, height: 40, alignment: .top)
+                            .clipShape(Circle())
+                            .overlay {
+                                Circle().strokeBorder(entry.sign.color.opacity(0.6), lineWidth: 1.1)
+                            }
+                            .background {
+                                Circle().fill(SimastryColor.midnight)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .zIndex(Double(viewModel.panelGuideEntries.count - index))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text("Your Panel")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text("Pinned")
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                            .foregroundStyle(SimastryColor.goldLight)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(SimastryColor.gold.opacity(0.13), in: Capsule())
+
+                        Spacer()
+
+                        if viewModel.unreadPanelCount > 0 {
+                            Text("\(viewModel.unreadPanelCount)")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(SimastryColor.midnight)
+                                .frame(minWidth: 20)
+                                .frame(height: 20)
+                                .background(SimastryColor.gold, in: Capsule())
+                        }
+                    }
+
+                    Text(previewText)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(viewModel.unreadPanelCount > 0 ? SimastryColor.offWhite.opacity(0.8) : SimastryColor.deepMuted)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Your Panel, pinned group chat with your three guides. \(previewText)")
     }
 }
 

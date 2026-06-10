@@ -92,11 +92,11 @@ struct HomeView: View {
 
                 todayHeader
 
+                panelCard
+
                 predictHeroCard
 
                 dailyReadCard
-
-                panelCard
 
                 communicationTypeSummaryCard
 
@@ -160,6 +160,11 @@ struct HomeView: View {
                                 .frame(width: 48, height: 48)
                         }
 
+                        // Panel skeleton
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 340)
+
                         // Predict hero skeleton
                         RoundedRectangle(cornerRadius: 28)
                             .fill(SimastryColor.surface)
@@ -168,12 +173,7 @@ struct HomeView: View {
                         // Daily read skeleton
                         RoundedRectangle(cornerRadius: 22)
                             .fill(SimastryColor.surface)
-                            .frame(height: 170)
-
-                        // Panel skeleton
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 300)
+                            .frame(height: 150)
 
                         // Grid skeleton
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
@@ -357,45 +357,51 @@ struct HomeView: View {
                     }
                 }
 
-                HStack(spacing: 8) {
-                    briefAction("Predict a reply", systemImage: SimastryIcon.predict, isPrimary: true) {
-                        navigationPath.append(HomeRoute.predict)
+                if let dailyReadGuide {
+                    Button {
+                        HapticManager.buttonPress()
+                        viewModel.openPanelChatSeededWithDailyRead(line: briefFocusLine, role: briefFocusRole)
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(dailyReadGuide.profile.profileImageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 28, height: 28, alignment: .top)
+                                .clipShape(Circle())
+                                .overlay {
+                                    Circle().strokeBorder(dailyReadGuide.sign.color.opacity(0.6), lineWidth: 1)
+                                }
+
+                            Text("Talk it through with \(dailyReadGuide.profile.name)")
+                                .font(SimastryFont.labelLarge)
+                                .foregroundStyle(SimastryColor.goldLight)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+
+                            Spacer()
+
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(SimastryColor.goldLight.opacity(0.8))
+                        }
+                        .padding(.top, 4)
+                        .contentShape(.rect)
                     }
-                    briefAction("Messages", systemImage: SimastryIcon.message, isPrimary: false) {
-                        viewModel.selectedTab = 2
-                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("Talk today's read through with \(dailyReadGuide.profile.name) in your panel chat")
                 }
-                .padding(.top, 2)
             }
             .padding(17)
             .surfaceCard(accent: SimastryColor.gold.opacity(0.8))
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Your daily read, \(briefFocusRole.displayName) focus. \(briefFocusLine)")
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 10)
         }
     }
 
-    private func briefAction(_ label: String, systemImage: String, isPrimary: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            HapticManager.buttonPress()
-            action()
-        } label: {
-            Label(label, systemImage: systemImage)
-                .font(SimastryFont.labelMedium)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .foregroundStyle(isPrimary ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.88))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
-                .background(
-                    isPrimary
-                        ? SimastryGradient.gold
-                        : LinearGradient(colors: [.white.opacity(0.07), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: Capsule()
-                )
-        }
-        .buttonStyle(SpringPressStyle())
+    /// The guide whose lens matches today's focus rotation.
+    private var dailyReadGuide: PanelMatcher.Entry? {
+        viewModel.panelGuideEntries.first { $0.role == briefFocusRole }
+            ?? viewModel.panelGuideEntries.first
     }
 
     // MARK: - Your Panel
@@ -433,11 +439,69 @@ struct HomeView: View {
             featuredGuidePane(profile)
 
             castRow
+
+            askPanelButton
         }
         .padding(14)
         .surfaceCard(cornerRadius: 24)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+    }
+
+    /// Opens the group thread with the user's three placement guides.
+    private var askPanelButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            viewModel.openPanelChat()
+        } label: {
+            HStack(spacing: 10) {
+                HStack(spacing: -10) {
+                    ForEach(Array(viewModel.panelGuideEntries.enumerated()), id: \.element.id) { index, entry in
+                        Image(entry.profile.profileImageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 26, height: 26, alignment: .top)
+                            .clipShape(Circle())
+                            .overlay {
+                                Circle().strokeBorder(entry.sign.color.opacity(0.6), lineWidth: 1)
+                            }
+                            .background {
+                                Circle().fill(SimastryColor.midnight)
+                                    .frame(width: 29, height: 29)
+                            }
+                            .zIndex(Double(viewModel.panelGuideEntries.count - index))
+                    }
+                }
+
+                Text("Ask your panel")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+
+                Spacer()
+
+                if viewModel.unreadPanelCount > 0 {
+                    Text("\(viewModel.unreadPanelCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(SimastryColor.goldLight)
+                        .frame(minWidth: 19)
+                        .frame(height: 19)
+                        .background(SimastryColor.midnight.opacity(0.85), in: Capsule())
+                }
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.8))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(SimastryGradient.gold, in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
+            }
+            .shadow(color: SimastryColor.gold.opacity(0.22), radius: 12, y: 6)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Ask your panel. Group chat with your three guides.")
     }
 
     private func featuredGuidePane(_ profile: FactoryCompanionProfile) -> some View {

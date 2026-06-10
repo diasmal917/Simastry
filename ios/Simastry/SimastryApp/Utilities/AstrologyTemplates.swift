@@ -863,4 +863,105 @@ nonisolated struct AstrologyTemplates {
             "we're %@%% compatible — different enough to be interesting, similar enough to click",
         ]
     ]
+
+    // MARK: - Panel Chat
+
+    /// Second/third panel voices reacting to the previous guide's take.
+    /// `{name}` = the guide who spoke before. Keyed by ZodiacElement rawValue.
+    static let panelInterGuideBeats: [String: [String]] = [
+        "fire": [
+            "I read it a shade differently than {name} — keep the heat, cut the apology.",
+            "{name} isn't wrong, but I'd move sooner. Waiting is also a message.",
+            "Building on {name}: yes, but say it like you mean it the first time."
+        ],
+        "earth": [
+            "Where {name} sees a spark, I'd want one steady line first.",
+            "{name} has the spirit of it. I'd just slow the delivery by half.",
+            "Agreed with {name} on the what — my note is the pacing."
+        ],
+        "air": [
+            "Adding one angle to what {name} said — answer the subtext, not the sentence.",
+            "{name} read the feeling; I'm reading the pattern. Both say the same thing.",
+            "Take {name}'s line and make it ten percent lighter. That's the version that lands."
+        ],
+        "water": [
+            "{name} is right about the timing, but feel it once before you send it.",
+            "Underneath what {name} said: check what this is actually about for you.",
+            "I'd hold {name}'s advice with one soft edge — leave them room to meet you."
+        ]
+    ]
+
+    /// Panel welcome posts, one per slot (Sun, Moon, Rising guide).
+    /// `{name}` = user first name, `{sign}` = placement sign, `{role}` = Sun/Moon/Rising.
+    static let panelWelcomeOpeners: [String] = [
+        "Hey {name} — I read with your {sign} {role}. When a message has you circling, bring it here.",
+        "I hold your {sign} {role} lens — how it actually feels before you answer. Nothing you say here needs to be polished.",
+        "And I read your {sign} {role} — the tone you open with. The three of us see the same thread differently on purpose. Ask us anything."
+    ]
+
+    /// Panel daily conversation starters. Keyed by CelestialRole rawValue
+    /// ("sun"/"moon"/"rising"); each ends in a question to invite a reply.
+    static let panelDailyStarters: [String: [String]] = [
+        "sun": [
+            "Daily check from your Sun lens: is there a message you're carrying today that wants to be sent?",
+            "Sun read for today: your core drive sets the tone before any wording does. What conversation matters most today?",
+            "Today's Sun focus — say less, mean it more. Anything on your mind worth a read?"
+        ],
+        "moon": [
+            "Moon check-in: how a message feels usually decides how you answer it. Anything land strangely today?",
+            "Today runs on your Moon lens — reaction before reply. Want us to read anything before you respond?",
+            "Moon focus today: notice what you reread twice. What was it?"
+        ],
+        "rising": [
+            "Rising lens today: first impressions are doing the talking. Any opener you want us to tune?",
+            "Today's Rising read — tone first, content second. Is there a conversation you want to start well?",
+            "Your Rising sets the door you open with. Anyone you've been meaning to message?"
+        ]
+    ]
+
+    // MARK: - Moments
+
+    /// Guide comments on a user's private Moment. These riff on the user's
+    /// chart and the act of sharing — the guides cannot see images, and these
+    /// templates must never imply they can. Placeholders: `{name}`, `{sun}`,
+    /// `{rising}`, `{role}`. Keyed by the GUIDE's element.
+    static let momentCommentTemplates: [String: [String]] = [
+        "fire": [
+            "Posting without overthinking it — that's the {sun} Sun doing exactly its job.",
+            "This is the energy I keep telling you to text from, {name}.",
+            "You shared it, you own it. That's the whole move.",
+            "Momentum suits you. Carry this into your next conversation.",
+            "The {role} lens says: this is you at full signal. Keep that."
+        ],
+        "earth": [
+            "Moments like this are how steadiness reads from the outside.",
+            "No performance in this one — that's why it works, {name}.",
+            "Your {sun} Sun builds in quiet ways. This is one of them.",
+            "Keep collecting these. They're proof, not decoration.",
+            "Grounded read: whatever today was, you held it well."
+        ],
+        "air": [
+            "There's a whole story in this one and you told it without a paragraph.",
+            "Noted and filed under: {name} understanding the assignment.",
+            "Your {rising} Rising chose the tone here — light, but not careless.",
+            "This says more than your last three drafts combined.",
+            "The pattern across your moments: you share when you're sure. Respect."
+        ],
+        "water": [
+            "Something about this one feels settled. Hold onto that.",
+            "You share when it means something — your {sun} Sun keeps it honest.",
+            "Reading the feeling here, not the surface. It reads calm.",
+            "This is the version of you your best messages come from.",
+            "Soft proof that you're doing better than your overthinking says."
+        ]
+    ]
+
+    /// Caption-echo comments — quote the user's own words back through the lens.
+    /// `{caption}` = the user's trimmed caption.
+    static let momentCaptionEchoTemplates: [String] = [
+        "\u{201C}{caption}\u{201D} — that's the whole read, honestly.",
+        "You wrote \u{201C}{caption}\u{201D} and that tracks completely with your chart.",
+        "\u{201C}{caption}\u{201D} is exactly the tone I'd tell you to text with.",
+        "Keep \u{201C}{caption}\u{201D} as your opening-line energy this week."
+    ]
 }

@@ -151,6 +151,17 @@ class AppViewModel {
     /// The companion thread the user is looking at, so replies arrive pre-read.
     var openCompanionThreadId: UUID?
 
+    // MARK: - Panel Chat State
+    /// Group thread with the user's Sun/Moon/Rising guides. Messages persist
+    /// locally; participants rebuild from the current chart (see +PanelChat).
+    var panelMessages: [PanelMessage] = []
+    /// Guide participant ids currently "typing" in the panel thread.
+    var panelTypingParticipantIds: Set<String> = []
+    /// True while the panel chat is on screen, so replies arrive pre-read.
+    var isPanelThreadOpen: Bool = false
+    /// Bumped to ask MessagesView to present the panel chat.
+    var panelChatRouteRequest: Int = 0
+
     // MARK: - Legacy Consumable Top-Ups
     var bonusPredictions: Int = UserDefaults.standard.integer(forKey: "bonusPredictions") {
         didSet { UserDefaults.standard.set(bonusPredictions, forKey: "bonusPredictions") }
@@ -235,6 +246,7 @@ class AppViewModel {
     init() {
         loadReferralInfo()
         loadRelationshipPeople()
+        loadPanelMessages()
     }
 
     // MARK: - Age Verification
@@ -1449,6 +1461,7 @@ class AppViewModel {
         loadMessages()
         await loadDiscoveryInboxMessages(showErrors: showErrors)
         generateCompanionMessages()
+        postPanelDailyStarterIfNeeded()
     }
 
     private func loadDiscoveryInboxMessages(showErrors: Bool) async {
@@ -1730,6 +1743,7 @@ class AppViewModel {
         (companionMessages + discoveryMessages)
             .filter { !$0.isRead && $0.direction == .incoming }
             .count
+            + unreadPanelCount
     }
 
     var inboxMessages: [CompanionMessage] {
@@ -2089,6 +2103,8 @@ class AppViewModel {
         savedGuides = []
         companionMessages = []
         discoveryMessages = []
+        panelMessages = []
+        panelTypingParticipantIds = []
         discoveredProfiles = []
         relationshipPeople = []
         predictionDraft = nil
@@ -2109,6 +2125,8 @@ class AppViewModel {
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: savedGuidesKey)
         defaults.removeObject(forKey: companionMessagesKey)
+        defaults.removeObject(forKey: Self.panelMessagesKey)
+        defaults.removeObject(forKey: Self.panelDailyStarterDayKey)
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
         defaults.removeObject(forKey: socialBioKey)
