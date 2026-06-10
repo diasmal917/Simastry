@@ -26,18 +26,8 @@ struct OnboardingInsightView: View {
         CommunicationTypeProfile.make(sun: sunSign, moon: moonSign, rising: risingSign)
     }
 
-    /// One guide per placement, deduped so shared signs surface both
-    /// companions of that sign instead of repeating one.
-    private var panelGuides: [(role: String, sign: ZodiacSign, profile: FactoryCompanionProfile)] {
-        var used = Set<String>()
-        return [("Sun", sunSign), ("Moon", moonSign), ("Rising", risingSign)].compactMap { role, sign in
-            let candidates = FactoryCompanionCatalog.all.filter { $0.sign == sign }
-            guard let pick = candidates.first(where: { !used.contains($0.id) }) ?? candidates.first else {
-                return nil
-            }
-            used.insert(pick.id)
-            return (role, sign, pick)
-        }
+    private var panelGuides: [PanelMatcher.Entry] {
+        PanelMatcher.panelGuides(sun: sunSign, moon: moonSign, rising: risingSign)
     }
 
     var body: some View {
@@ -354,7 +344,7 @@ struct OnboardingInsightView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                ForEach(panelGuides, id: \.profile.id) { entry in
+                ForEach(panelGuides) { entry in
                     VStack(spacing: 7) {
                         Image(entry.profile.profileImageName)
                             .resizable()
@@ -372,7 +362,7 @@ struct OnboardingInsightView: View {
                                 .foregroundStyle(SimastryColor.offWhite)
                                 .lineLimit(1)
 
-                            Text("\(entry.role) lens")
+                            Text("\(entry.role.displayName) lens")
                                 .font(SimastryFont.captionSmall)
                                 .foregroundStyle(entry.sign.color)
                                 .lineLimit(1)
@@ -380,7 +370,7 @@ struct OnboardingInsightView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(entry.profile.name), your \(entry.role) lens guide, \(entry.sign.displayName)")
+                    .accessibilityLabel("\(entry.profile.name), your \(entry.role.displayName) lens guide, \(entry.sign.displayName)")
                 }
             }
         }
