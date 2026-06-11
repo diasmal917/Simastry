@@ -330,6 +330,7 @@ struct RelationshipPersonDetailView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     header
                     loopActionsRow
+                    PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
                     relationshipPatternSection
                     todayReadingSection
                     howToTalkSection

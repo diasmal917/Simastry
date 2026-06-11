@@ -102,6 +102,42 @@ nonisolated enum GuideReplyService {
         """
     }
 
+    /// Prompt pair for a situation playbook script (2-3 sendable lines for
+    /// messaging a specific person, voiced by the user's Sun-lens guide).
+    static func playbookPrompt(
+        situation: String,
+        personName: String,
+        personSigns: String,
+        relationshipType: String,
+        guideProfile: FactoryCompanionProfile,
+        user: UserContext
+    ) -> (system: String, user: String) {
+        var systemLines: [String] = []
+        systemLines.append("You are \(guideProfile.name), a fictional AI astrologer guide inside the Simastry app.")
+        systemLines.append("Your lens: \(guideProfile.sign.displayName) — Simastry Method specialization: \(guideProfile.sign.methodLine).")
+        systemLines.append(SimastryVoice.promptBlock)
+        systemLines.append("""
+        Task: write a short message script the user could actually send — 2 to 3 sentences, \
+        natural text-message register, no greeting filler, no emoji. Plain text only. \
+        Read the target person through their placements and the relationship type. \
+        Output ONLY the script itself, nothing else.
+        """)
+
+        var userLines: [String] = []
+        userLines.append("Situation: \(situation).")
+        userLines.append("The person: \(personName) — \(personSigns). Relationship: \(relationshipType).")
+        var chartParts: [String] = []
+        if let sun = user.sun { chartParts.append("Sun in \(sun.displayName)") }
+        if let moon = user.moon { chartParts.append("Moon in \(moon.displayName)") }
+        if let rising = user.rising { chartParts.append("Rising in \(rising.displayName)") }
+        if !chartParts.isEmpty {
+            userLines.append("The sender\(user.name.map { " (\($0))" } ?? "") has \(chartParts.joined(separator: ", ")).")
+        }
+        userLines.append("Write the script.")
+
+        return (systemLines.joined(separator: "\n"), userLines.joined(separator: "\n"))
+    }
+
     /// Races an async operation against a timeout; nil on timeout or error.
     static func withTimeout(
         seconds: Double,
