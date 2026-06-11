@@ -15,6 +15,11 @@ nonisolated enum PlaybookSituation: String, Codable, CaseIterable, Identifiable,
     case hardConversation
     case setBoundary
     case reconnect
+    // Career lens — appended after the originals so existing variant
+    // rotation indices stay stable.
+    case askForRaise
+    case interviewWithThem
+    case pitchAnIdea
 
     var id: String { rawValue }
 
@@ -28,6 +33,9 @@ nonisolated enum PlaybookSituation: String, Codable, CaseIterable, Identifiable,
         case .hardConversation: "Hard conversation"
         case .setBoundary: "Set a boundary"
         case .reconnect: "Reconnect"
+        case .askForRaise: "Ask for a raise"
+        case .interviewWithThem: "Interview with them"
+        case .pitchAnIdea: "Pitch an idea"
         }
     }
 
@@ -41,6 +49,9 @@ nonisolated enum PlaybookSituation: String, Codable, CaseIterable, Identifiable,
         case .hardConversation: "bubble.left.and.exclamationmark.bubble.right.fill"
         case .setBoundary: "hand.raised.fill"
         case .reconnect: "arrow.uturn.left.circle.fill"
+        case .askForRaise: "chart.line.uptrend.xyaxis"
+        case .interviewWithThem: "briefcase.fill"
+        case .pitchAnIdea: "lightbulb.fill"
         }
     }
 }
@@ -506,6 +517,159 @@ nonisolated enum PlaybookTemplates {
                 "You drifted through my mind today and stayed there. I miss you — how's your heart?",
                 "Some connections don't fade, they just wait. Ours waited long enough — can we catch up soon?"
             ]
+        ],
+        // Career scripts are keyed by the OTHER person's sign: the boss you're
+        // asking, the interviewer across the table, the decision-maker you're
+        // pitching. Same contract as the rest: sayable lines, {name} optional.
+        .askForRaise: [
+            .aries: [
+                "Direct, like you'd want it: I've outgrown my number. Here's what I've taken on — can we set the new one this week?",
+                "I'll skip the warm-up: I'm asking for a raise. The results are on the board — when can we talk terms?"
+            ],
+            .taurus: [
+                "No surprises — I'd like to talk compensation when you have space this week. I'll bring the numbers; you set the pace.",
+                "The scope of my role grew quietly, and I'd like my number to catch up with it. Can we put twenty minutes on the calendar?"
+            ],
+            .gemini: [
+                "Quick frame for you: my role doubled, my comp didn't. I have three bullet points and a number — got fifteen minutes?",
+                "Easy pitch: same person, bigger scope, updated number. When works?"
+            ],
+            .cancer: [
+                "I care about this team and I want to keep building here — which is why I want to get my compensation right. Can we find a quiet moment this week?",
+                "This matters to me, so I'm bringing it to you directly: I'd like to talk about a raise. I'd rather do it with you than around you."
+            ],
+            .leo: [
+                "You back your people, and I want to earn that twice over. I'm asking for a raise — let me show you the case.",
+                "I want to keep doing my best work for you — and I want my number to match what that work has become. Can we talk this week?"
+            ],
+            .virgo: [
+                "I prepared this so it's easy to evaluate: scope, results, market range, one page. I'm asking for a raise — when can I walk you through it?",
+                "Three specifics: my responsibilities grew, here's the measurable impact, here's the market band. I'd like my comp to land inside it."
+            ],
+            .libra: [
+                "I want this to be fair on both sides — my scope grew and my number didn't. Can we look at it together and find the right level?",
+                "I trust you to weigh this fairly: here's what I've taken on, and here's the adjustment I'm asking for. Open to it?"
+            ],
+            .scorpio: [
+                "I'll be straight with you because you'd respect nothing less: I'm underpaid for what I carry now. Let's fix it.",
+                "Plainly, between us: I know my value here, and I'd like the number to reflect it. When can we talk?"
+            ],
+            .sagittarius: [
+                "Honest version, no corporate padding: I've leveled up and my comp hasn't. Let's get it sorted — when's good?",
+                "Big-picture ask: I see a future here, and I want the number that makes staying the easy choice. Can we talk?"
+            ],
+            .capricorn: [
+                "I'll keep it structured: the scope I took on, the results, and the number I'm proposing. I'd like to settle it this quarter.",
+                "You measure people by delivery, so I'll lead with mine. Based on it, I'm requesting a raise — here's the case."
+            ],
+            .aquarius: [
+                "Here's the logic: scope up, market up, my number flat. I'm asking to correct that — want the details?",
+                "My role evolved past its title. I'd like the comp updated to match the actual system, not the org chart."
+            ],
+            .pisces: [
+                "I've put real heart into this work, and I want to keep doing that sustainably — which means getting my compensation right. Can we talk?",
+                "Gently but clearly: I'd like to discuss a raise. I think you already sense it's earned — I just want to say it out loud."
+            ]
+        ],
+        .interviewWithThem: [
+            .aries: [
+                "Straight answer: I'm here because this role is the fastest route to real impact you have open — and I move fast.",
+                "Give me the hardest problem on the team and a month — I'd rather prove it than narrate it."
+            ],
+            .taurus: [
+                "What I bring is compounding reliability — the same standard on day four hundred as day four. Here's what that's built so far.",
+                "I'm not the flashiest candidate you'll meet — I'm the one still delivering when the quarter gets long."
+            ],
+            .gemini: [
+                "Can I ask you one first — what does the best version of this role look like in a year? I'll map my answer to that.",
+                "Short version: I learn fast, I connect dots across teams, and I make meetings shorter. Want an example of each?"
+            ],
+            .cancer: [
+                "What drew me here is the team part — I do my best work where people actually back each other, and I protect that when I find it.",
+                "My last team would tell you I'm the one who notices something's off before it breaks. That's the value I'd bring here."
+            ],
+            .leo: [
+                "Honestly — I want a place where great work gets seen, and from the outside this team does that. Here's what I'd add to it.",
+                "My favorite wins are the ones the whole team gets credit for. I'd like to build a few of those here."
+            ],
+            .virgo: [
+                "Let me give you specifics instead of adjectives: last year I cut our turnaround by forty percent — here's exactly how.",
+                "What I don't know yet I'll name honestly — and then learn faster than expected. Here's the last time that happened."
+            ],
+            .libra: [
+                "I'd want to understand both sides of this role — what success looks like to you, and where the last person struggled. Then I can tell you exactly where I fit.",
+                "Fair answer: my strength is making teams that disagree still ship. Here's an example."
+            ],
+            .scorpio: [
+                "I'll give you the real answer instead of the rehearsed one: I left because the work stopped being honest. I'm looking for somewhere it still is.",
+                "The failure that taught me most — I'll tell it straight, including the part that was mine."
+            ],
+            .sagittarius: [
+                "Honestly? This is the role I'd bet my next three years on — and I don't bet small.",
+                "Big picture first: here's where I think this field is going, and why this team is positioned for it. Then I'll tell you where I fit."
+            ],
+            .capricorn: [
+                "Track record first: three roles, three measurable step-ups. The pattern is the point — I deliver, then I raise the bar.",
+                "Where do I see myself in five years? Running the thing this role feeds into — and I can show you the staircase."
+            ],
+            .aquarius: [
+                "Slightly unconventional answer: I think the role as written solves yesterday's problem. Here's the version I'd actually build.",
+                "What I'd bring is the angle nobody in the room already has. Want a live example on one of your current problems?"
+            ],
+            .pisces: [
+                "The honest why: I want work I don't have to disconnect from to feel like myself. Reading about this team, it felt possible here.",
+                "I tend to sense where a team is drifting before the metrics say it — that read has saved my last two teams real time."
+            ]
+        ],
+        .pitchAnIdea: [
+            .aries: [
+                "{name}, sixty seconds: here's the idea, here's the win, here's what I need from you. Ready?",
+                "This one's a first-mover play — it works because nobody's done it yet. Want in before it's obvious?"
+            ],
+            .taurus: [
+                "Low-risk pitch: small pilot, real numbers in three weeks, easy to unwind if it underwhelms. Worth a look?",
+                "{name}, this builds on what already works instead of replacing it. Here's the steady version of a bold idea."
+            ],
+            .gemini: [
+                "Two lines, then questions: we're missing something, this closes it, and there's a clever twist in the middle. Curious?",
+                "I'll pitch it as a question: what if the thing we do weekly took one hour instead of four? I found the lever."
+            ],
+            .cancer: [
+                "Before the numbers — this one protects the team. Fewer fire drills, less burnout. And yes, it also pays for itself.",
+                "{name}, I built this around what people on the team keep struggling with. Can I show you?"
+            ],
+            .leo: [
+                "This is the kind of idea that gets a team talked about — and you'd be the one who greenlit it. Want the show?",
+                "{name}, picture presenting this at the all-hands. Now let me work backwards from that moment."
+            ],
+            .virgo: [
+                "I stress-tested it before bringing it: three risks, three mitigations, one page. Can I walk you through?",
+                "It fixes the exact failure point from last quarter — here's the data, the fix, and the rollout."
+            ],
+            .libra: [
+                "I've weighed both sides — the case for, the honest case against, and why 'for' wins. You be the judge.",
+                "{name}, this one makes two teams' lives easier at once. Balanced cost, shared upside. Fair hearing?"
+            ],
+            .scorpio: [
+                "No hype version: this idea has one real risk and one big payoff. I'll show you both and you decide.",
+                "{name}, I'll tell you what nobody else will about this idea — including its weak spot. Then you'll trust the strong part."
+            ],
+            .sagittarius: [
+                "Big swing alert: this isn't incremental, and that's the point. Want the version of us that takes it?",
+                "{name}, the honest pitch: high upside, real unknowns, exactly the kind of bet we keep saying we want to make. In?"
+            ],
+            .capricorn: [
+                "Return first: payback in two quarters, then it compounds. The plan's already structured — want the milestones?",
+                "{name}, this isn't a moonshot — it's a ladder. Five steps, each one valuable on its own. Step one costs almost nothing."
+            ],
+            .aquarius: [
+                "This idea breaks the format on purpose — the conventional version already failed twice. Here's the one that works.",
+                "{name}, nobody in our space is doing this yet, which is either a warning or an opening. I think it's an opening — here's why."
+            ],
+            .pisces: [
+                "Start with the feeling: imagine the user's week with this in it. Now here's how we build that.",
+                "{name}, this started as something I couldn't stop picturing. I've got the practical version now — can I paint it for you?"
+            ]
         ]
     ]
 
@@ -559,6 +723,24 @@ nonisolated enum PlaybookTemplates {
             .earth: "Earth signs value the steady return — no guilt theater, just genuine presence and a concrete plan.",
             .air: "Air signs reconnect through curiosity — a great question reopens more than a great apology.",
             .water: "Water signs reconnect through feeling — say you missed them plainly and mean it; they'll feel the difference."
+        ],
+        .askForRaise: [
+            .fire: "Fire-sign decision-makers reward confident asks — hedging the number reads as not believing it yourself.",
+            .earth: "Earth-sign managers fund track records — lead with delivered results and the ask becomes a formality.",
+            .air: "Air-sign managers move on frames, not feelings — hand them a clean logical case they can repeat upward.",
+            .water: "Water-sign managers read loyalty first — anchor the ask in commitment to the team and the number lands softer."
+        ],
+        .interviewWithThem: [
+            .fire: "Fire-sign interviewers decide in the first minutes — open with your boldest material, not your background.",
+            .earth: "Earth-sign interviewers hire proof — specifics and steadiness outrank charisma in this room.",
+            .air: "Air-sign interviewers hire people they enjoy thinking with — make it a dialogue, not a recital.",
+            .water: "Water-sign interviewers hire for trust — authenticity and team-care answers carry more than polish."
+        ],
+        .pitchAnIdea: [
+            .fire: "Fire signs back momentum — pitch the win and the first step, not the full appendix.",
+            .earth: "Earth signs back de-risked ideas — a small pilot with an exit ramp beats a grand vision.",
+            .air: "Air signs back interesting — lead with the twist that separates this from the obvious version.",
+            .water: "Water signs back ideas that protect people — show the human benefit before the numbers."
         ]
     ]
 
@@ -570,7 +752,10 @@ nonisolated enum PlaybookTemplates {
         .hypeThemUp: "Don't make it generic — praise that fits anyone lands on no one.",
         .hardConversation: "Don't open with 'we need to talk' and then go silent — name the topic in the same breath.",
         .setBoundary: "Don't restate the boundary five ways — repetition reads as negotiation.",
-        .reconnect: "Don't spend the first message apologizing for the silence — just be present in it."
+        .reconnect: "Don't spend the first message apologizing for the silence — just be present in it.",
+        .askForRaise: "Don't apologize for asking or float a range you'd settle below — name one number you believe.",
+        .interviewWithThem: "Don't recite the resume they already read — every answer should add something it doesn't say.",
+        .pitchAnIdea: "Don't pitch the whole roadmap — sell the first step and let them ask for the rest."
     ]
 
     /// Appended when the person's Moon is known. `{moon}` slot.

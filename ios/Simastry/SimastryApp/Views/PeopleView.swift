@@ -382,6 +382,7 @@ struct RelationshipPersonDetailView: View {
     @State private var privateLabel: String = ""
     @State private var showDeleteConfirmation: Bool = false
     @State private var showHowToTalk: Bool = false
+    @State private var showCoupleRead: Bool = false
 
     private var currentPerson: RelationshipPerson {
         viewModel.relationshipPeople.first { $0.id == person.id } ?? person
@@ -389,6 +390,56 @@ struct RelationshipPersonDetailView: View {
 
     private var reading: RelationshipPersonReading {
         viewModel.relationshipReading(for: currentPerson)
+    }
+
+    /// Couple Read needs both charts — partner-type people plus the user's Sun.
+    @ViewBuilder
+    private var coupleReadButton: some View {
+        if currentPerson.relationshipType == .partner, let userSun = viewModel.userSunSign {
+            Button {
+                HapticManager.buttonPress()
+                showCoupleRead = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "heart.text.square.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .frame(width: 40, height: 40)
+                        .background(SimastryColor.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Couple Read")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text("Commitment styles, how you fight, repair, and talk money.")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(14)
+                .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.6))
+                .contentShape(.rect)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Open Couple Read with \(currentPerson.displayName)")
+            .sheet(isPresented: $showCoupleRead) {
+                CoupleReadView(
+                    nameA: (viewModel.profile?.displayName ?? "You").components(separatedBy: " ").first ?? "You",
+                    sunA: userSun,
+                    nameB: currentPerson.displayName,
+                    sunB: currentPerson.sunSign
+                )
+            }
+        }
     }
 
     var body: some View {
@@ -400,6 +451,7 @@ struct RelationshipPersonDetailView: View {
                     header
                     loopActionsRow
                     PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
+                    coupleReadButton
                     relationshipPatternSection
                     todayReadingSection
                     howToTalkSection

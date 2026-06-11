@@ -79,6 +79,47 @@ struct PillarFeatureTests {
         #expect(!withoutMoon.whyItWorks.contains("Moon"))
     }
 
+    // MARK: - Life Lenses
+
+    @Test func careerTemplatesCoverAllSigns() {
+        for sign in ZodiacSign.allCases {
+            #expect(CareerTemplates.workStyle[sign]?.isEmpty == false, "workStyle missing for \(sign)")
+            #expect(CareerTemplates.underPressure[sign]?.isEmpty == false, "underPressure missing for \(sign)")
+            #expect(CareerTemplates.firstWeekRead[sign]?.isEmpty == false, "firstWeekRead missing for \(sign)")
+            #expect(CareerTemplates.strengths[sign]?.count == 2, "strengths should be 2 for \(sign)")
+            #expect(CareerTemplates.watchOut[sign]?.isEmpty == false, "watchOut missing for \(sign)")
+        }
+    }
+
+    @Test func coupleReadCoversAllElementPairsAndResolvesSlots() {
+        // Every element pair key must exist in all three pattern sets.
+        for a in ZodiacElement.allCases {
+            for b in ZodiacElement.allCases {
+                let key = TeamReadEngine.bridgeKey(a, b)
+                #expect(CoupleReadTemplates.fight[key] != nil, "fight missing for \(key)")
+                #expect(CoupleReadTemplates.repair[key] != nil, "repair missing for \(key)")
+                #expect(CoupleReadTemplates.moneyTalk[key] != nil, "moneyTalk missing for \(key)")
+            }
+        }
+
+        // Commitment styles cover all signs and resolve the name slot.
+        for sign in ZodiacSign.allCases {
+            let line = CoupleReadComposer.commitmentLine(name: "Maya", sun: sign)
+            #expect(line.contains("Maya"), "commitment line for \(sign) doesn't name the person")
+            #expect(!line.contains("{n}"), "unresolved slot for \(sign)")
+        }
+
+        // Full composition resolves every field for every sign pairing shape.
+        let read = CoupleReadComposer.read(nameA: "Maya", sunA: .sagittarius, nameB: "Leo", sunB: .leo, seed: 4)
+        #expect(!read.fight.isEmpty)
+        #expect(!read.repair.isEmpty)
+        #expect(!read.moneyTalk.isEmpty)
+        #expect(read.headline.contains("Maya") && read.headline.contains("Leo"))
+        if let signal = read.signalLine {
+            #expect(!signal.contains("{a}") && !signal.contains("{b}"))
+        }
+    }
+
     // MARK: - Team Read
 
     @Test func teamReadComposesRolesCountsAndFriction() {

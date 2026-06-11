@@ -2,11 +2,14 @@ import SwiftUI
 
 nonisolated private enum CompanionDetailRoute: Identifiable {
     case share
+    case coupleRead
 
     var id: String {
         switch self {
         case .share:
             "share"
+        case .coupleRead:
+            "coupleRead"
         }
     }
 }
@@ -48,6 +51,15 @@ struct CompanionDetailSheet: View {
             switch route {
             case .share:
                 ShareableCardView(viewModel: viewModel, cardType: .compatibility, companion: companion)
+            case .coupleRead:
+                if let userSun = viewModel.userSunSign, let companionSun {
+                    CoupleReadView(
+                        nameA: (viewModel.profile?.displayName ?? "You").components(separatedBy: " ").first ?? "You",
+                        sunA: userSun,
+                        nameB: companion.name,
+                        sunB: companionSun
+                    )
+                }
             }
         }
         .onAppear {
@@ -181,6 +193,42 @@ struct CompanionDetailSheet: View {
                     .textCase(.uppercase)
                 Spacer()
                 CompatibilityRingView(score: companion.compatibilityScore, size: 52)
+            }
+
+            if viewModel.userSunSign != nil, companionSun != nil {
+                Button {
+                    HapticManager.buttonPress()
+                    activeRoute = .coupleRead
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "heart.text.square.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Couple Read")
+                                .font(SimastryFont.labelLarge)
+                                .foregroundStyle(SimastryColor.offWhite)
+
+                            Text("Commitment, conflict, repair, and money talk")
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .padding(13)
+                    .surfaceCard(cornerRadius: 16, accent: SimastryColor.gold.opacity(0.6))
+                    .contentShape(.rect)
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Open Couple Read with \(companion.name)")
             }
 
             compatibilityMethodLayer

@@ -143,6 +143,8 @@ class AppViewModel {
     var auraRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the consolidated share card.
     var shareCardRouteRequest: Int = 0
+    /// Bumped to ask ProfileView to present the Career Read sheet.
+    var careerReadRouteRequest: Int = 0
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -2648,6 +2650,12 @@ extension AppViewModel {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.shareCardRouteRequest += 1
+            }
+        case "careerRead":
+            selectedTab = 5
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.careerReadRouteRequest += 1
             }
         case "playbook":
             relationshipPeople = RelationshipPeopleStore.previewPeople()

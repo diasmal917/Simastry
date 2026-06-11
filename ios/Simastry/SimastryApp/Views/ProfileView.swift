@@ -11,6 +11,7 @@ nonisolated private enum ProfileSheet: Identifiable {
     case methodology
     case astrologerPartner
     case aura
+    case careerRead
     case settings
 
     var id: String {
@@ -33,6 +34,8 @@ nonisolated private enum ProfileSheet: Identifiable {
             "astrologerPartner"
         case .aura:
             "aura"
+        case .careerRead:
+            "careerRead"
         case .settings:
             "settings"
         }
@@ -60,6 +63,7 @@ struct ProfileView: View {
     @State private var showDiscoveryView: Bool = false
     @State private var handledAuraRouteRequest: Int = 0
     @State private var handledShareCardRouteRequest: Int = 0
+    @State private var handledCareerReadRouteRequest: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -159,6 +163,8 @@ struct ProfileView: View {
                     astrologerPartnerSheet
                 case .aura:
                     AuraView(viewModel: viewModel)
+                case .careerRead:
+                    CareerReadView(viewModel: viewModel)
                 case .settings:
                     SimastrySettingsView(viewModel: viewModel)
                 }
@@ -179,6 +185,9 @@ struct ProfileView: View {
             .onChange(of: viewModel.shareCardRouteRequest) {
                 presentProfileRoutesIfRequested()
             }
+            .onChange(of: viewModel.careerReadRouteRequest) {
+                presentProfileRoutesIfRequested()
+            }
         }
     }
 
@@ -192,6 +201,10 @@ struct ProfileView: View {
         if viewModel.shareCardRouteRequest > handledShareCardRouteRequest {
             handledShareCardRouteRequest = viewModel.shareCardRouteRequest
             activeSheet = .share(.cosmicDNA)
+        }
+        if viewModel.careerReadRouteRequest > handledCareerReadRouteRequest {
+            handledCareerReadRouteRequest = viewModel.careerReadRouteRequest
+            activeSheet = .careerRead
         }
     }
 
@@ -441,6 +454,8 @@ struct ProfileView: View {
             // Communication signals section
             conversationGuideSection(sun: sun)
 
+            careerReadButtonSection
+
             Button(action: {
                 activeSheet = .share(.cosmicDNA)
             }) {
@@ -502,6 +517,45 @@ struct ProfileView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Open your Aura page")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 14)
+    }
+
+    private var careerReadButtonSection: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeSheet = .careerRead
+        } label: {
+            HStack(spacing: 14) {
+                profileSymbolTile(
+                    systemName: "briefcase.fill",
+                    accent: SimastryColor.celestialBlue,
+                    size: 54
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Career Read")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text("How you work, lead, and read to colleagues — plus how to decode your boss.")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .padding(16)
+            .simastryGlass(cornerRadius: 20)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Open your Career Read")
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
     }
