@@ -573,6 +573,75 @@ nonisolated struct AstrologyTemplates {
 
     /// Companion chat openers per element — the first beat of an AI Astrologist reply,
     /// before sign-specific guidance. Keyed by ZodiacElement rawValue.
+    /// What a drafted message will read as to the target's element — the
+    /// Sealed Drafts tone read. "general" covers the no-sign case.
+    static let draftToneRead: [String: String] = [
+        "fire": "To a fire sign, this reads at full volume — they'll answer the energy more than the words. If you want heat back, send it; if you want clarity back, cool one line first.",
+        "earth": "An earth sign will read this twice and take it at face value — every word counts as a commitment. Trim anything you don't fully mean.",
+        "air": "An air sign will respond to the most interesting sentence and skate past the heaviest one. Lead with the thing you actually want addressed.",
+        "water": "A water sign will feel the tone before the content — whatever mood this carries IS the message. Make sure the mood is the one you mean.",
+        "general": "Messages drafted at night carry tomorrow's weight in tonight's mood. Reread the first and last line — those are the two they'll remember."
+    ]
+
+    /// One tightening tip per element (plus general) for the
+    /// "cleaner version" action.
+    static let draftCleanerTips: [String: String] = [
+        "fire": "Cut the wind-up. Your first honest sentence is the message — send that one alone.",
+        "earth": "Keep the promise, cut the pressure: one clear ask, one open timeline.",
+        "air": "Three thoughts are fighting in there. Pick the one you'd say out loud and send only it.",
+        "water": "Name the feeling once, gently — then stop before the third paragraph apologizes for the first.",
+        "general": "Say it in two sentences: the true thing, then the question. Everything else is armor."
+    ]
+
+    /// Decode-a-text: what a received message likely means, by the
+    /// sender's element.
+    static let decodeSubtext: [String: [String]] = [
+        "fire": [
+            "Short and fast means engaged — fire signs text like they talk, in bursts.",
+            "If it ends with energy — a joke, an exclamation — the door is open. Match it, don't measure it.",
+            "A blunt line from a fire sign is usually exactly what it says. No trapdoor underneath."
+        ],
+        "earth": [
+            "Short from an earth sign is economy, not coldness — they spend words like money.",
+            "If there's a plan or a time in it, that IS the affection — logistics are how earth signs lean in.",
+            "A slow, complete reply means they thought about it. Earth signs don't draft casually."
+        ],
+        "air": [
+            "The joke is doing real work — air signs flirt and de-escalate with the same tool.",
+            "A question back means genuine interest — air signs invest with curiosity, not declarations.",
+            "If it's wordy, they're thinking out loud — respond to the theme, not every clause."
+        ],
+        "water": [
+            "The tone IS the content here — read how it feels before what it says.",
+            "A soft, short reply often means they're feeling more than they're showing — gentle beats clever.",
+            "If they mirrored your words back, they're attuned — water signs echo what mattered to them."
+        ]
+    ]
+
+    /// Decode-a-text: the anti-spiral line — what NOT to read into it.
+    static let decodeDontReadInto: [String: [String]] = [
+        "fire": [
+            "Don't read a fast, short reply as dismissal — speed is their warmth.",
+            "Don't treat one blunt word as a fight — fire signs forget the spark before you've finished screenshotting it.",
+            "Punctuation isn't a clue here. Fire signs don't proofread feelings."
+        ],
+        "earth": [
+            "Don't read \"ok\" as anger — earth signs use it as a receipt, not a verdict.",
+            "A slow reply isn't fading interest; it's a queue. You're in it.",
+            "No emoji doesn't mean no feeling — earth signs show up in person, not in punctuation."
+        ],
+        "air": [
+            "Don't decode the joke for hidden meaning — sometimes the joke is the whole sentence.",
+            "A topic change isn't avoidance; air signs surf. The wave comes back around.",
+            "Read receipts mean nothing here — air signs read instantly and reply on a different clock."
+        ],
+        "water": [
+            "Don't read a delay as a door closing — water signs step back to feel, then return softer.",
+            "One dry text isn't a mood about you — they absorb whatever room they're standing in.",
+            "Don't reread it a fifth time — the fourth read was already your worry talking, not their words."
+        ]
+    ]
+
     /// One line per situation status × the person's element, with `{n}` as
     /// the day count. Anti-spiral by design: every line steadies and ends
     /// usable — never "they've moved on" energy.

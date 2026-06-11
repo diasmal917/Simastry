@@ -150,6 +150,57 @@ final class RedesignScrollVerificationTests: XCTestCase {
         attachShot(app, name: "guide-checkin-disclosure")
     }
 
+    /// Today with the Situation card and Sealed Drafts row, plus the
+    /// morning-eyes reread sheet for a released draft.
+    @MainActor
+    func testSituationCardAndSealedDrafts() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "sealedDrafts"]
+        app.launch()
+        sleep(4)
+
+        app.swipeUp()
+        sleep(1)
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "today-situation-and-drafts")
+
+        let released = app.buttons["Unsealed draft, ready to reread"].firstMatch
+        if released.waitForExistence(timeout: 3) {
+            released.tap()
+            sleep(2)
+            attachShot(app, name: "sealed-draft-reread")
+        }
+    }
+
+    /// Decode-a-text result stack (debug preview auto-fills a message).
+    @MainActor
+    func testDecodeTextResult() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launch()
+        sleep(3)
+
+        app.swipeUp()
+        sleep(1)
+
+        let decodeLink = app.buttons["Decode one received text"].firstMatch
+        if decodeLink.waitForExistence(timeout: 3) {
+            decodeLink.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "decode-top")
+
+        let decodeButton = app.buttons["Decode it"].firstMatch
+        if decodeButton.waitForExistence(timeout: 3) {
+            decodeButton.tap()
+            sleep(2)
+        }
+        app.swipeUp()
+        sleep(1)
+        attachShot(app, name: "decode-result")
+    }
+
     /// Lesson one of the Method course posted into the panel thread.
     @MainActor
     func testMethodCourseLessonInPanel() throws {

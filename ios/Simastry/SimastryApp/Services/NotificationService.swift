@@ -233,6 +233,23 @@ final class NotificationService {
 
     static let guideTipIdentifiers = (0..<7).map { "guide_tip_\($0)" }
 
+    /// One-shot morning nudge when a sealed draft unseals. Privacy-safe:
+    /// never includes the draft text.
+    func scheduleSealedDraftRelease(at releaseAt: Date) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["sealed_draft_release"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Morning eyes"
+        content.body = "Your sealed draft is ready to reread. Still true in daylight?"
+        content.sound = .default
+        content.userInfo = ["deeplink": "simastry://home"]
+
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: releaseAt)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        center.add(UNNotificationRequest(identifier: "sealed_draft_release", content: content, trigger: trigger))
+    }
+
     func scheduleEveningCheckIn(companionName: String) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["evening_checkin"])
@@ -342,7 +359,8 @@ final class NotificationService {
                 "inactive_reengagement",
                 "simulation_reminder",
                 "panel_daily_starter",
-                "prediction_outcome_followup"
+                "prediction_outcome_followup",
+                "sealed_draft_release"
             ] + Self.guideTipIdentifiers
         )
     }

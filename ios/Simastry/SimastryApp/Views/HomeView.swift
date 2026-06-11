@@ -3,6 +3,7 @@ import SwiftUI
 private enum HomeRoute: Hashable {
     case aiAstrologist(profileId: String?)
     case predict
+    case decode
 }
 
 struct HomeView: View {
@@ -20,6 +21,9 @@ struct HomeView: View {
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
     @State private var kenBurnsActive: Bool = false
+    @State private var sealedDrafts: [SealedDraft] = []
+    @State private var showSealedDraftCompose: Bool = false
+    @State private var rereadDraft: SealedDraft?
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -79,6 +83,8 @@ struct HomeView: View {
                     }
                 case .predict:
                     SimulateView(viewModel: viewModel)
+                case .decode:
+                    DecodeTextView(viewModel: viewModel)
                 }
             }
             .onAppear {
@@ -124,6 +130,8 @@ struct HomeView: View {
 
                 situationCard
 
+                sealedDraftsRow
+
                 methodCourseCard
 
                 todaysSkyCard
@@ -143,6 +151,7 @@ struct HomeView: View {
             .onAppear {
                 streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
+                sealedDrafts = SealedDraftStore().load()
                 if !reduceMotion {
                     kenBurnsActive = true
                 }
@@ -318,6 +327,18 @@ struct HomeView: View {
             .simultaneousGesture(TapGesture().onEnded {
                 HapticManager.buttonPress()
             })
+
+            NavigationLink(value: HomeRoute.decode) {
+                Text("Just decode one text \u{2192}")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.risingViolet)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                HapticManager.buttonPress()
+            })
+            .accessibilityLabel("Decode one received text")
         }
         .padding(18)
         .heroGlass(SimastryColor.risingViolet)
@@ -566,6 +587,100 @@ struct HomeView: View {
             .accessibilityLabel("The situation with \(person.displayName): \(status.title), day \(day). Opens their page.")
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 10)
+        }
+    }
+
+    // MARK: - Sealed Drafts
+
+    /// The 1am protocol's home on Today: open drafts when they exist, and a
+    /// standing invitation during late-night hours when they don't.
+    @ViewBuilder
+    private var sealedDraftsRow: some View {
+        let store = SealedDraftStore()
+
+        if !sealedDrafts.isEmpty || SealedDraftStore.isLateNight() {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "envelope.badge.clock.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.celestialBlue)
+
+                    Text("SEALED DRAFTS")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+
+                    Spacer()
+
+                    Button {
+                        HapticManager.buttonPress()
+                        showSealedDraftCompose = true
+                    } label: {
+                        Label("Seal one", systemImage: "plus")
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.celestialBlue)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Seal a new draft for morning")
+                }
+
+                if sealedDrafts.isEmpty {
+                    Text("About to send something at this hour? Seal it for morning eyes instead.")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(sealedDrafts) { draft in
+                        Button {
+                            HapticManager.buttonPress()
+                            rereadDraft = draft
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: draft.isReleased() ? "envelope.open.fill" : "envelope.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(draft.isReleased() ? SimastryColor.gold : SimastryColor.mutedSilver)
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(draft.text)
+                                        .font(SimastryFont.labelMedium)
+                                        .foregroundStyle(SimastryColor.offWhite.opacity(draft.isReleased() ? 0.92 : 0.55))
+                                        .lineLimit(1)
+
+                                    Text(draft.isReleased() ? "Unsealed — still true in daylight?" : "Unseals at 8:30")
+                                        .font(SimastryFont.captionSmall)
+                                        .foregroundStyle(draft.isReleased() ? SimastryColor.gold : SimastryColor.textTertiary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(SimastryColor.mutedSilver)
+                            }
+                            .padding(10)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityLabel(draft.isReleased() ? "Unsealed draft, ready to reread" : "Sealed draft, unseals at 8:30")
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.celestialBlue.opacity(0.6))
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+            .sheet(isPresented: $showSealedDraftCompose) {
+                SealedDraftView(viewModel: viewModel) {
+                    sealedDrafts = store.load()
+                }
+            }
+            .sheet(item: $rereadDraft) { draft in
+                SealedDraftView(viewModel: viewModel, existingDraft: draft) {
+                    sealedDrafts = store.load()
+                }
+            }
         }
     }
 

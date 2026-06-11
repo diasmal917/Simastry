@@ -2255,6 +2255,7 @@ class AppViewModel {
         defaults.removeObject(forKey: Self.panelWeeklyRecapWeekKey)
         defaults.removeObject(forKey: Self.panelWelcomeBackDayKey)
         defaults.removeObject(forKey: Self.methodCourseProgressKey)
+        defaults.removeObject(forKey: SealedDraftStore.defaultsKey)
         methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
@@ -2685,6 +2686,21 @@ extension AppViewModel {
                 try? await Task.sleep(for: .seconds(1))
                 self.openMethodCourseLesson()
             }
+        case "sealedDrafts":
+            let draftStore = SealedDraftStore()
+            draftStore.deleteAll()
+            draftStore.add(SealedDraft(
+                text: "I know it's late but I keep thinking about what you said and honestly",
+                targetSign: .scorpio,
+                releaseAt: now.addingTimeInterval(10 * 60 * 60)
+            ))
+            draftStore.add(SealedDraft(
+                text: "Hey. I miss you. Is that crazy to say",
+                targetSign: .leo,
+                createdAt: now.addingTimeInterval(-20 * 60 * 60),
+                releaseAt: now.addingTimeInterval(-2 * 60 * 60)
+            ))
+            selectedTab = 0
         case "playbook":
             relationshipPeople = RelationshipPeopleStore.previewPeople()
             selectedTab = 1

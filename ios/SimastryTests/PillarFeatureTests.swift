@@ -183,6 +183,61 @@ struct PillarFeatureTests {
         #expect(!starter.contains("{personName}") && !starter.contains("{n}"))
     }
 
+    // MARK: - Sealed Drafts & Decode
+
+    @Test func sealedDraftStorePartitionsCapsAndMorningMath() {
+        UserDefaults.standard.removeObject(forKey: SealedDraftStore.defaultsKey)
+        let store = SealedDraftStore()
+        let now = Date()
+
+        let held = SealedDraft(text: "night thought", targetSign: .scorpio, releaseAt: now.addingTimeInterval(3600))
+        let released = SealedDraft(text: "old thought", releaseAt: now.addingTimeInterval(-3600))
+        store.add(held)
+        store.add(released)
+
+        #expect(store.load().count == 2)
+        #expect(store.held(now: now).map(\.id) == [held.id])
+        #expect(store.released(now: now).map(\.id) == [released.id])
+
+        store.delete(id: released.id)
+        #expect(store.load().map(\.id) == [held.id])
+
+        // Vault caps at 5 — newest win.
+        for index in 0..<7 {
+            store.add(SealedDraft(text: "draft \(index)", releaseAt: now.addingTimeInterval(3600)))
+        }
+        #expect(store.load().count == 5)
+
+        // Next-morning math: 23:30 seals to tomorrow 8:30; 07:00 to today 8:30.
+        let calendar = Calendar.current
+        let lateNight = calendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 23, minute: 30))!
+        let afterMidnightRelease = SealedDraftStore.nextMorningRelease(after: lateNight, calendar: calendar)
+        let lateComponents = calendar.dateComponents([.day, .hour, .minute], from: afterMidnightRelease)
+        #expect(lateComponents.day == 12 && lateComponents.hour == 8 && lateComponents.minute == 30)
+
+        let earlyMorning = calendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 7, minute: 0))!
+        let sameDayRelease = SealedDraftStore.nextMorningRelease(after: earlyMorning, calendar: calendar)
+        #expect(calendar.dateComponents([.day, .hour], from: sameDayRelease).day == 11)
+
+        UserDefaults.standard.removeObject(forKey: SealedDraftStore.defaultsKey)
+    }
+
+    @Test func decodeAndDraftTemplatesCoverElements() {
+        for element in ZodiacElement.allCases {
+            #expect(AstrologyTemplates.decodeSubtext[element.rawValue]?.isEmpty == false)
+            #expect(AstrologyTemplates.decodeDontReadInto[element.rawValue]?.isEmpty == false)
+            #expect(AstrologyTemplates.draftToneRead[element.rawValue]?.isEmpty == false)
+            #expect(AstrologyTemplates.draftCleanerTips[element.rawValue]?.isEmpty == false)
+        }
+        #expect(AstrologyTemplates.draftToneRead["general"]?.isEmpty == false)
+        #expect(AstrologyTemplates.draftCleanerTips["general"]?.isEmpty == false)
+
+        // Decode's reply suggestions exist for every sign.
+        for sign in ZodiacSign.allCases {
+            #expect(AstrologyTemplates.suggestedReplies[sign.displayName]?.isEmpty == false)
+        }
+    }
+
     // MARK: - Guide Chat Modes
 
     @Test func guideChatModeShapesPromptAndKeepsTherapyBoundary() {
