@@ -7,6 +7,7 @@ struct PeopleView: View {
     @State private var searchText: String = ""
     @State private var selectedType: RelationshipType?
     @State private var isAddingPerson: Bool = false
+    @State private var showTeamRead: Bool = false
 
     private var filteredPeople: [RelationshipPerson] {
         viewModel.relationshipPeople.filter { person in
@@ -39,6 +40,10 @@ struct PeopleView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
                         peopleContextStrip
+
+                        if viewModel.relationshipPeople.count >= 2 {
+                            teamReadEntryCard
+                        }
 
                         if let needsAttentionPerson {
                             needsAttentionCard(needsAttentionPerson)
@@ -93,6 +98,9 @@ struct PeopleView: View {
             .sheet(isPresented: $isAddingPerson) {
                 AddRelationshipPersonView(viewModel: viewModel)
             }
+            .sheet(isPresented: $showTeamRead) {
+                TeamReadView(viewModel: viewModel)
+            }
             .navigationDestination(for: RelationshipPerson.self) { person in
                 RelationshipPersonDetailView(viewModel: viewModel, person: person)
             }
@@ -105,6 +113,45 @@ struct PeopleView: View {
                 #endif
             }
         }
+    }
+
+    /// Entry to the group communication read — shown once 2+ people exist.
+    private var teamReadEntryCard: some View {
+        Button {
+            HapticManager.buttonPress()
+            showTeamRead = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(width: 42, height: 42)
+                    .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Team Read")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text("How this group communicates — roles, friction, and the play.")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold.opacity(0.7))
+            }
+            .padding(13)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.7))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Team Read. How this group communicates.")
     }
 
     private var peopleSubtitle: String {
