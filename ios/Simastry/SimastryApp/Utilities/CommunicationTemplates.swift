@@ -173,6 +173,68 @@ nonisolated struct CommunicationTemplates {
         "Pisces": "Neptune dissolves boundaries — Pisces needs someone who can hold space without trying to fix everything"
     ]
 
+    // MARK: - Share Card Copy
+
+    /// One-liners for the shareable Simastry card. Written with the SIGN as
+    /// the subject — share cards travel to people who don't know whose card
+    /// it is, so "Sagittarius responds to…" reads clearly where "they" would
+    /// dangle. Kept short enough to render untruncated at post size.
+    nonisolated struct ShareCardCopy: Sendable {
+        let approach: String
+        let avoid: String
+    }
+
+    static let shareCardCopy: [ZodiacSign: ShareCardCopy] = [
+        .aries: ShareCardCopy(
+            approach: "Aries responds to directness and confidence — say it straight, as an equal.",
+            avoid: "Aries pulls away from hints, stalling, and passive-aggression."
+        ),
+        .taurus: ShareCardCopy(
+            approach: "Taurus warms to patience and proof — steady beats flashy every time.",
+            avoid: "Taurus shuts down under pressure and sprung surprises."
+        ),
+        .gemini: ShareCardCopy(
+            approach: "Gemini lights up at curiosity, wit, and a fresh angle.",
+            avoid: "Gemini drifts when the conversation goes flat and repetitive."
+        ),
+        .cancer: ShareCardCopy(
+            approach: "Cancer opens up to warmth, patience, and real check-ins.",
+            avoid: "Cancer retreats from coldness and brushed-off feelings."
+        ),
+        .leo: ShareCardCopy(
+            approach: "Leo glows under genuine admiration and undivided attention.",
+            avoid: "Leo hardens at public criticism and being overlooked."
+        ),
+        .virgo: ShareCardCopy(
+            approach: "Virgo trusts precision, effort, and a thought-through plan.",
+            avoid: "Virgo loses patience with sloppiness and vague promises."
+        ),
+        .libra: ShareCardCopy(
+            approach: "Libra responds to grace, fairness, and a calm tone.",
+            avoid: "Libra withdraws from drama and forced confrontation."
+        ),
+        .scorpio: ShareCardCopy(
+            approach: "Scorpio rewards honesty and depth — bring the real version.",
+            avoid: "Scorpio remembers manipulation and fake charm forever."
+        ),
+        .sagittarius: ShareCardCopy(
+            approach: "Sagittarius responds to honesty, humor, and room to breathe.",
+            avoid: "Sagittarius pulls away from pressure, guilt, and a tight grip."
+        ),
+        .capricorn: ShareCardCopy(
+            approach: "Capricorn respects consistency, results, and follow-through.",
+            avoid: "Capricorn writes off flakiness and empty talk."
+        ),
+        .aquarius: ShareCardCopy(
+            approach: "Aquarius connects through ideas, originality, and space.",
+            avoid: "Aquarius disconnects when boxed into being conventional."
+        ),
+        .pisces: ShareCardCopy(
+            approach: "Pisces opens to softness, imagination, and emotional presence.",
+            avoid: "Pisces bruises under harshness and rushed fixes."
+        )
+    ]
+
     static let avoidReasoning: [String: String] = [
         "Aries": "Being passive triggers their impatience — they'd rather hear a hard truth than deal with indirectness",
         "Taurus": "Sudden changes threaten their sense of security — they need time to adjust, not ultimatums",

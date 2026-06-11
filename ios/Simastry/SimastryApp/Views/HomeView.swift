@@ -30,7 +30,9 @@ struct HomeView: View {
     }
 
     private var featuredProfile: FactoryCompanionProfile {
-        FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
+        // Founder pick: Theo leads the Today tab for everyone.
+        FactoryCompanionCatalog.all.first { $0.id == "taurus-theo" }
+            ?? FactoryCompanionCatalog.match(for: viewModel.primaryCompanion)
     }
 
     private var castRowProfiles: [FactoryCompanionProfile] {
@@ -114,6 +116,8 @@ struct HomeView: View {
                 panelCard
 
                 predictHeroCard
+
+                tipsRow
 
                 dailyReadCard
 
@@ -429,6 +433,114 @@ struct HomeView: View {
     private var dailyReadGuide: PanelMatcher.Entry? {
         viewModel.panelGuideEntries.first { $0.role == briefFocusRole }
             ?? viewModel.panelGuideEntries.first
+    }
+
+    // MARK: - Tips
+
+    private struct DailyGuideTip: Identifiable {
+        let title: String
+        let lesson: String
+        let opener: String
+        let profile: FactoryCompanionProfile
+        var id: String { "\(profile.id)-\(title)" }
+    }
+
+    /// Two micro-lessons per day, rotating through the template set with
+    /// their teaching guides resolved from the catalog.
+    private var todaysTips: [DailyGuideTip] {
+        let tips = AstrologyTemplates.guideTips
+        guard !tips.isEmpty else { return [] }
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let first = (dayOfYear * 2) % tips.count
+        return [first, (first + 1) % tips.count].compactMap { index in
+            let tip = tips[index]
+            guard let profile = FactoryCompanionCatalog.all.first(where: { $0.id == tip.guideId }) else {
+                return nil
+            }
+            return DailyGuideTip(title: tip.title, lesson: tip.body, opener: tip.opener, profile: profile)
+        }
+    }
+
+    @ViewBuilder
+    private var tipsRow: some View {
+        if !todaysTips.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "lightbulb.max.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("TIPS")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+
+                    Spacer()
+
+                    Text("Fresh tomorrow")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.textTertiary)
+                }
+
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(todaysTips) { tip in
+                        tipCard(tip)
+                    }
+                }
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 12)
+        }
+    }
+
+    private func tipCard(_ tip: DailyGuideTip) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            viewModel.openPanelChatWithTip(lesson: tip.lesson, opener: tip.opener, guideId: tip.profile.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(tip.title)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 8) {
+                    Image(tip.profile.profileImageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 28, height: 28, alignment: .top)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle().strokeBorder(tip.profile.sign.color.opacity(0.6), lineWidth: 1)
+                        }
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("with \(tip.profile.name)")
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.goldLight)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+
+                        Text("\(tip.profile.sign.displayName) Guide")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.textTertiary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 136, alignment: .topLeading)
+            .surfaceCard(cornerRadius: 20, accent: tip.profile.sign.color.opacity(0.7))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Tip: \(tip.title). Start a conversation with \(tip.profile.name), \(tip.profile.sign.displayName) guide")
     }
 
     // MARK: - Your Panel

@@ -58,6 +58,8 @@ struct ProfileView: View {
     @State private var exportFileURL: URL?
     @State private var showExportShare: Bool = false
     @State private var showDiscoveryView: Bool = false
+    @State private var handledAuraRouteRequest: Int = 0
+    @State private var handledShareCardRouteRequest: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -108,6 +110,10 @@ struct ProfileView: View {
                         forAstrologersSection
 
                         dataExportSection
+
+                        if viewModel.hasCompletedSigns {
+                            streakSection
+                        }
 
                         footerSection
 
@@ -165,7 +171,27 @@ struct ProfileView: View {
                         appeared = true
                     }
                 }
+                presentProfileRoutesIfRequested()
             }
+            .onChange(of: viewModel.auraRouteRequest) {
+                presentProfileRoutesIfRequested()
+            }
+            .onChange(of: viewModel.shareCardRouteRequest) {
+                presentProfileRoutesIfRequested()
+            }
+        }
+    }
+
+    /// Catch sheet requests fired before this view mounted (deep links,
+    /// preview seeding) — same handled-counter pattern as the Home routes.
+    private func presentProfileRoutesIfRequested() {
+        if viewModel.auraRouteRequest > handledAuraRouteRequest {
+            handledAuraRouteRequest = viewModel.auraRouteRequest
+            activeSheet = .aura
+        }
+        if viewModel.shareCardRouteRequest > handledShareCardRouteRequest {
+            handledShareCardRouteRequest = viewModel.shareCardRouteRequest
+            activeSheet = .share(.cosmicDNA)
         }
     }
 
@@ -406,13 +432,14 @@ struct ProfileView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
 
-            streakSection
-
             auraButtonSection
 
             signEntry(role: .sun, sign: sun, delay: 0)
             signEntry(role: .moon, sign: moon, delay: 0.15)
             signEntry(role: .rising, sign: rising, delay: 0.3)
+
+            // Communication signals section
+            conversationGuideSection(sun: sun)
 
             Button(action: {
                 activeSheet = .share(.cosmicDNA)
@@ -420,13 +447,13 @@ struct ProfileView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "square.and.arrow.up")
                         .font(SimastryFont.labelSmall)
-                    Text("Share Your Cosmic DNA")
+                    Text("Share Your Card")
                         .font(SimastryFont.labelMedium)
                 }
                 .foregroundStyle(SimastryColor.gold)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Share your Cosmic DNA card")
+            .accessibilityLabel("Share your Simastry card")
 
             if AppConfig.socialDiscoveryEnabled {
                 // MARK: Social Accounts
@@ -437,9 +464,6 @@ struct ProfileView: View {
                 // MARK: Find Others Like You
                 discoverySection
             }
-
-            // Communication signals section
-            conversationGuideSection(sun: sun)
         }
     }
 
@@ -769,15 +793,15 @@ struct ProfileView: View {
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 Button {
-                    activeSheet = .share(.conversationGuide)
+                    activeSheet = .share(.cosmicDNA)
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.gold)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Share your communication signals")
-                .accessibilityHint("Creates a share card with your best approach and what to avoid")
+                .accessibilityLabel("Share your Simastry card")
+                .accessibilityHint("Creates a share card with your signs and how to talk to you")
             }
 
             if let guide {

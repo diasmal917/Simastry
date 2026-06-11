@@ -145,6 +145,27 @@ extension AppViewModel {
         openPanelChat()
     }
 
+    /// Drops a Tips-card lesson into the panel thread as that guide's
+    /// icebreaker, then routes to the panel — tapping a tip lands in a
+    /// conversation that has already started. The catalog fallback in
+    /// `panelGuideEntry` lets any of the 24 guides post, not just the
+    /// user's three placement guides. Re-taps of the same tip are deduped.
+    func openPanelChatWithTip(lesson: String, opener: String, guideId: String) {
+        if let entry = panelGuideEntry(forParticipantId: guideId) {
+            let content = "\(lesson) \(opener)"
+            let alreadyPosted = panelMessages.suffix(20).contains {
+                $0.senderId == entry.profile.id && $0.content == content
+            }
+            if !alreadyPosted {
+                panelMessages.append(
+                    PanelMessage(senderId: entry.profile.id, content: content, isRead: isPanelThreadOpen)
+                )
+                savePanelMessages()
+            }
+        }
+        openPanelChat()
+    }
+
     // MARK: Sending
 
     @discardableResult

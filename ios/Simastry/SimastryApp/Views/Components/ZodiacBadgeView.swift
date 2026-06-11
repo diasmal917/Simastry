@@ -19,27 +19,43 @@ struct ZodiacBadgeView: View {
             onTap()
         }) {
             ZStack {
-                Circle()
-                    .fill(sign.color.opacity(isSelected ? 0.4 : 0.2))
-                    .frame(width: size, height: size)
-
-                if isSelected {
-                    Circle()
-                        .stroke(SimastryColor.gold, lineWidth: 2.5)
-                        .frame(width: size + 4, height: size + 4)
-
-                    Circle()
-                        .stroke(SimastryColor.gold.opacity(0.3), lineWidth: 1)
-                        .frame(width: size + 12, height: size + 12)
-                }
+                badgeBackground
 
                 ZodiacIconView(sign: sign, size: size * 0.72, showsGlow: isSelected)
             }
-            .opacity(isSelected ? 1.0 : 0.5)
-            .scaleEffect(isSelected ? 1.08 : 1.0)
+            .opacity(isSelected ? 1.0 : 0.55)
+            .scaleEffect(isSelected ? 1.1 : 1.0)
             .animation(.spring(SimastrySpring.bouncy), value: isSelected)
         }
         .buttonStyle(.plain)
+    }
+
+    // Selection reads as a liquid-glass pane in the sign's color rather
+    // than an outline — no stroke in either state.
+    @ViewBuilder
+    private var badgeBackground: some View {
+        if isSelected {
+            if #available(iOS 26.0, *) {
+                Circle()
+                    .fill(sign.color.opacity(0.18))
+                    .frame(width: size, height: size)
+                    .glassEffect(.regular.tint(sign.color.opacity(0.30)), in: .circle)
+                    .shadow(color: sign.color.opacity(0.35), radius: size * 0.16)
+            } else {
+                Circle()
+                    .fill(sign.color.opacity(0.26))
+                    .frame(width: size, height: size)
+                    .background(.ultraThinMaterial, in: .circle)
+                    .overlay {
+                        Circle().strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
+                    }
+                    .shadow(color: sign.color.opacity(0.35), radius: size * 0.16)
+            }
+        } else {
+            Circle()
+                .fill(sign.color.opacity(0.2))
+                .frame(width: size, height: size)
+        }
     }
 }
 

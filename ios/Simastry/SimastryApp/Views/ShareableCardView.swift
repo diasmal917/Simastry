@@ -100,18 +100,26 @@ struct ShareableCardView: View {
     @ViewBuilder
     private var cardContent: some View {
         switch cardType {
-        case .cosmicDNA:
-            cosmicDNACard
+        case .cosmicDNA, .conversationGuide:
+            // One consolidated card: signs + how to talk. The two types share
+            // it so every entry point produces the same artifact.
+            simastryCard
         case .compatibility:
             compatibilityCard
         case .reading:
             readingCard
-        case .conversationGuide:
-            conversationGuideCard
         }
     }
 
-    private var cosmicDNACard: some View {
+    private var communicationTypeTitle: String? {
+        CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        )?.title
+    }
+
+    private var simastryCard: some View {
         ZStack {
             cardBackground
 
@@ -120,34 +128,39 @@ struct ShareableCardView: View {
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold)
                     .tracking(2)
-                    .padding(.top, isStoryFormat ? 24 : 16)
+                    .padding(.top, isStoryFormat ? 22 : 14)
 
-                if viewModel.profileImage != nil || viewModel.userSunSign != nil {
-                    HStack(spacing: 8) {
-                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSign: viewModel.userSunSign)
-                        if let sun = viewModel.userSunSign {
-                            Text(sun.displayName)
-                                .font(SimastryFont.labelSmall)
-                                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
-                        }
-                    }
-                    .padding(.top, 8)
+                if isStoryFormat, viewModel.profileImage != nil {
+                    ProfileImageView(image: viewModel.profileImage, size: 44, sunSign: viewModel.userSunSign)
+                        .padding(.top, 10)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 if let sun = viewModel.userSunSign,
                    let moon = viewModel.userMoonSign,
                    let rising = viewModel.userRisingSign {
-                    VStack(spacing: isStoryFormat ? 20 : 10) {
-                        cardSignRow(role: .sun, sign: sun)
-                        cardSignRow(role: .moon, sign: moon)
-                        cardSignRow(role: .rising, sign: rising)
+                    VStack(spacing: isStoryFormat ? 16 : 9) {
+                        HStack(spacing: isStoryFormat ? 12 : 8) {
+                            glyphColumn(role: .sun, sign: sun)
+                            glyphColumn(role: .moon, sign: moon)
+                            glyphColumn(role: .rising, sign: rising)
+                        }
+
+                        if let communicationTypeTitle {
+                            Text(communicationTypeTitle)
+                                .font(isStoryFormat ? SimastryFont.titleMedium : SimastryFont.titleSmall)
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        howToTalkBlock(sun: sun)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 if !viewModel.socialLinks.isEmpty {
                     socialLinksRow
@@ -157,9 +170,74 @@ struct ShareableCardView: View {
                 Text(AppConfig.universalLinkHost)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
-                    .padding(.bottom, isStoryFormat ? 20 : 12)
+                    .padding(.bottom, isStoryFormat ? 18 : 10)
             }
         }
+    }
+
+    private func glyphColumn(role: CelestialRole, sign: ZodiacSign) -> some View {
+        VStack(spacing: 5) {
+            ZStack {
+                Circle()
+                    .fill(sign.color.opacity(0.16))
+                Circle()
+                    .strokeBorder(sign.color.opacity(0.45), lineWidth: 1)
+                ZodiacIconView(sign: sign, size: isStoryFormat ? 34 : 26, showsGlow: true)
+            }
+            .frame(
+                width: isStoryFormat ? 58 : 46,
+                height: isStoryFormat ? 58 : 46
+            )
+
+            Text(role.displayName.uppercased())
+                .font(.system(size: 8, weight: .semibold))
+                .tracking(1)
+                .foregroundStyle(role.accentColor)
+
+            Text(sign.displayName)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func howToTalkBlock(sun: ZodiacSign) -> some View {
+        let copy = CommunicationTemplates.shareCardCopy[sun]
+
+        return VStack(spacing: isStoryFormat ? 9 : 7) {
+            Text("How to Talk to a \(sun.displayName)")
+                .font(isStoryFormat ? SimastryFont.titleSmall : SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let copy {
+                shareCallout(title: "Best Approach", body: copy.approach, tint: SimastryColor.gold)
+                if isStoryFormat {
+                    shareCallout(title: "What to Avoid", body: copy.avoid, tint: SimastryColor.amber)
+                }
+            }
+        }
+    }
+
+    private func shareCallout(title: String, body: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(tint)
+                .tracking(1)
+
+            Text(body)
+                .font(isStoryFormat ? SimastryFont.bodySmall : SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 12))
     }
 
     private var compatibilityCard: some View {
@@ -200,7 +278,7 @@ struct ShareableCardView: View {
                             .font(SimastryFont.bodyLarge)
                             .foregroundStyle(SimastryColor.amber)
                             .multilineTextAlignment(.center)
-                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 16)
                         }
                     }
@@ -241,68 +319,12 @@ struct ShareableCardView: View {
                             .font(SimastryFont.bodyLarge)
                             .foregroundStyle(SimastryColor.amber)
                             .multilineTextAlignment(.center)
-                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 20)
                     }
                 }
 
                 Spacer()
-
-                Text(AppConfig.universalLinkHost)
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.gold.opacity(0.5))
-                    .padding(.bottom, isStoryFormat ? 20 : 12)
-            }
-        }
-    }
-
-    private var conversationGuideCard: some View {
-        ZStack {
-            cardBackground
-
-            VStack(spacing: 0) {
-                Text("S I M A S T R Y")
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.gold)
-                    .tracking(2)
-                    .padding(.top, isStoryFormat ? 24 : 16)
-
-                if viewModel.profileImage != nil || viewModel.userSunSign != nil {
-                    HStack(spacing: 8) {
-                        ProfileImageView(image: viewModel.profileImage, size: 40, sunSign: viewModel.userSunSign)
-                        if let sun = viewModel.userSunSign {
-                            Text(sun.displayName)
-                                .font(SimastryFont.labelSmall)
-                                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
-                        }
-                    }
-                    .padding(.top, 8)
-                }
-
-                Spacer()
-
-                if let sun = viewModel.userSunSign,
-                   let guide = CommunicationTemplates.guides[sun] {
-                    VStack(spacing: isStoryFormat ? 16 : 10) {
-                        ZodiacBadgeView(sign: sun, isSelected: true, size: isStoryFormat ? 48 : 36)
-
-                        Text("How to Talk to a \(sun.displayName)")
-                            .font(SimastryFont.titleMedium)
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .multilineTextAlignment(.center)
-
-                        conversationGuideCallout(title: "Best Approach", body: guide.bestApproach, tint: SimastryColor.gold)
-                        conversationGuideCallout(title: "What to Avoid", body: guide.avoid, tint: SimastryColor.amber)
-                    }
-                    .padding(.horizontal, 20)
-                }
-
-                Spacer()
-
-                if !viewModel.socialLinks.isEmpty {
-                    socialLinksRow
-                        .padding(.bottom, 4)
-                }
 
                 Text(AppConfig.universalLinkHost)
                     .font(SimastryFont.captionSmall)
@@ -359,41 +381,6 @@ struct ShareableCardView: View {
 
             StarfieldView()
                 .opacity(0.6)
-        }
-    }
-
-    private func conversationGuideCallout(title: String, body: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased())
-                .font(SimastryFont.overline)
-                .foregroundStyle(tint)
-                .tracking(1)
-
-            Text(body)
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
-                .lineSpacing(2)
-                .lineLimit(isStoryFormat ? 5 : 3)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
-    }
-
-    private func cardSignRow(role: CelestialRole, sign: ZodiacSign) -> some View {
-        HStack(spacing: 10) {
-            CelestialRoleIcon(role: role, size: 32)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(role.displayName) in \(sign.displayName) \(sign.glyph)")
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(role.accentColor)
-                Text(role.subtitle)
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
-            }
-
-            Spacer()
         }
     }
 

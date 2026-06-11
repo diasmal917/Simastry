@@ -64,6 +64,68 @@ final class RedesignScrollVerificationTests: XCTestCase {
         app.swipeUp()
         sleep(2)
         attachShot(app, name: "predict-2-conversation")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "predict-3-signs")
+
+        // Select a sign to capture the liquid-glass selected chip state.
+        let taurusChip = app.buttons["Choose Taurus as Sun sign"]
+        if taurusChip.waitForExistence(timeout: 3) {
+            taurusChip.tap()
+            sleep(1)
+            attachShot(app, name: "predict-3b-sign-selected")
+        }
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "predict-4-action-privacy")
+    }
+
+    /// Today's Tips row sits one swipe below the fold, after the Predict hero.
+    @MainActor
+    func testScrollHomeForTipsRow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launch()
+        sleep(3)
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "home-tips-row")
+    }
+
+    /// Streak now lives at the very bottom of the Me page, above the footer.
+    @MainActor
+    func testScrollProfileToStreakAtBottom() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "moments"]
+        app.launch()
+        sleep(3)
+
+        for _ in 0..<9 {
+            app.swipeUp()
+        }
+        sleep(2)
+        attachShot(app, name: "profile-bottom-streak")
+    }
+
+    /// Both formats of the consolidated share card, fully untruncated.
+    @MainActor
+    func testShareCardStoryAndPostFormats() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "shareCard"]
+        app.launch()
+        sleep(4)
+
+        attachShot(app, name: "share-1-story")
+
+        let postSegment = app.buttons["Post"]
+        if postSegment.waitForExistence(timeout: 3) {
+            postSegment.tap()
+            sleep(1)
+        }
+        attachShot(app, name: "share-2-post")
     }
 
     @MainActor

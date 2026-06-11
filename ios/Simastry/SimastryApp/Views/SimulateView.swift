@@ -218,40 +218,24 @@ struct SimulateView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                GlossyOrbView(
-                    signColors: [
-                        selectedSunSign?.color ?? SimastryColor.risingViolet,
-                        selectedMoonSign?.color ?? SimastryColor.celestialBlue
-                    ],
-                    state: .active,
-                    size: 84
-                )
-                .id(selectedSunSign)
-
-                if let selectedSunSign {
-                    Circle()
-                        .fill(.black.opacity(0.24))
-                        .frame(width: 48, height: 48)
-                        .blur(radius: 6)
-
-                    ZodiacIconView(sign: selectedSunSign, size: 40, showsGlow: true)
-                }
+        VStack(spacing: 8) {
+            if let selectedSunSign {
+                ZodiacIconView(sign: selectedSunSign, size: 36, showsGlow: true)
+                    .accessibilityHidden(true)
+                    .transition(.scale.combined(with: .opacity))
             }
-            .accessibilityHidden(true)
 
-            VStack(spacing: 6) {
-                Text("What Will They Say?")
-                    .font(SimastryFont.titleLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
+            Text("What Will They Say?")
+                .font(SimastryFont.titleLarge)
+                .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Paste a real conversation and read it through chart signals.")
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .multilineTextAlignment(.center)
-            }
+            Text("Paste a real conversation and read it through chart signals.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
+        .animation(.spring(SimastrySpring.snappy), value: selectedSunSign)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
@@ -558,8 +542,30 @@ struct SimulateView: View {
                 .disabled(!canGenerate)
                 .opacity(canGenerate ? 1 : 0.45)
                 .accessibilityLabel("Generate prediction")
+
+                privacyNote
             }
         }
+    }
+
+    // Honest on purpose: readings aren't kept on any server, but a short
+    // redacted history DOES stay on this device — say both.
+    private var privacyNote: some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .padding(.top, 2)
+
+            Text("Your conversations are never stored on our servers — readings happen in the moment. Recent readings stay only on this iPhone, and you can clear them anytime.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, 2)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder

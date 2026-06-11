@@ -54,6 +54,65 @@ struct PanelMomentsInviteTests {
         #expect(empty.first?.profile.id == FactoryCompanionCatalog.featured.id)
     }
 
+    // MARK: - Tips
+
+    @Test func guideTipsAllResolveToCatalogGuides() {
+        #expect(!AstrologyTemplates.guideTips.isEmpty)
+        let catalogIds = Set(FactoryCompanionCatalog.all.map(\.id))
+        for tip in AstrologyTemplates.guideTips {
+            #expect(catalogIds.contains(tip.guideId), "Unknown guide id: \(tip.guideId)")
+            #expect(!tip.title.isEmpty)
+            #expect(!tip.body.isEmpty)
+            #expect(!tip.opener.isEmpty)
+        }
+    }
+
+    @Test func openPanelChatWithTipPostsOnceFromThatGuideAndRoutes() {
+        cleanPanelDefaults()
+        let viewModel = seededViewModel()
+        viewModel.panelMessages = []
+
+        // A non-panel guide (Theo isn't in the Sag/Cancer/Libra panel) must
+        // still be able to post via the catalog fallback.
+        viewModel.openPanelChatWithTip(
+            lesson: "Fixed signs pause to decide.",
+            opener: "Want to check it against someone you know?",
+            guideId: "taurus-theo"
+        )
+
+        #expect(viewModel.selectedTab == 2)
+        #expect(viewModel.panelMessages.count == 1)
+        #expect(viewModel.panelMessages.first?.senderId == "taurus-theo")
+        #expect(viewModel.panelMessages.first?.content.contains("Fixed signs pause") == true)
+
+        // Tapping the same tip again must not duplicate the icebreaker.
+        viewModel.openPanelChatWithTip(
+            lesson: "Fixed signs pause to decide.",
+            opener: "Want to check it against someone you know?",
+            guideId: "taurus-theo"
+        )
+        #expect(viewModel.panelMessages.count == 1)
+
+        cleanPanelDefaults()
+    }
+
+    @Test func shareCardCopyCoversAllSignsWithoutPronouns() {
+        for sign in ZodiacSign.allCases {
+            let copy = CommunicationTemplates.shareCardCopy[sign]
+            #expect(copy != nil, "Missing share copy for \(sign.rawValue)")
+            guard let copy else { continue }
+            // Share cards travel without context — the sign must be the
+            // subject, never "they/them".
+            for line in [copy.approach, copy.avoid] {
+                #expect(line.localizedCaseInsensitiveContains(sign.displayName), "\(sign.rawValue) line doesn't name the sign: \(line)")
+                let lowered = " \(line.lowercased()) "
+                for pronoun in [" they ", " them ", " their ", " they're "] {
+                    #expect(!lowered.contains(pronoun), "\(sign.rawValue) share copy uses a pronoun: \(line)")
+                }
+            }
+        }
+    }
+
     // MARK: - Panel Chat
 
     @Test func sendPanelMessageAppendsPersistsAndDrawsAGuideReply() async throws {

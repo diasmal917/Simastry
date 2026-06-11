@@ -717,6 +717,109 @@ nonisolated struct AstrologyTemplates {
         )
     ]
 
+    /// Micro-lessons for the Today tab Tips row. Each tip is taught by a
+    /// specific guide; tapping the card drops the lesson into the panel
+    /// thread as that guide's icebreaker, so a tip always opens a
+    /// conversation. Two rotate in per day.
+    static let guideTips: [(title: String, body: String, opener: String, guideId: String)] = [
+        (
+            "Why fixed signs go quiet before a decision",
+            "Taurus, Leo, Scorpio, and Aquarius are the fixed signs — silence usually means weighing, not withdrawing. The pause is how the decision gets made.",
+            "Want to check how this plays out with someone you know?",
+            "taurus-theo"
+        ),
+        (
+            "The two-hour rule for charged replies",
+            "When a message stings, the first draft is your Moon talking. Two hours later your Sun gets a vote — and that version usually lands better.",
+            "Want to try it on a real thread?",
+            "cancer-mila"
+        ),
+        (
+            "Read the Rising before the Sun",
+            "First messages mostly show someone's Rising — the social reflex. The Sun shows up once the conversation matters, so early texts are the doorway, not the room.",
+            "Whose first impression should we decode?",
+            "libra-isolde"
+        ),
+        (
+            "Fire signs argue forward",
+            "Aries, Leo, and Sagittarius process out loud and move on fast. The blowup is rarely the verdict — what gets said the next day is.",
+            "Anyone in your life argue like this?",
+            "aries-amara"
+        ),
+        (
+            "Why earth signs ask for the plan",
+            "Taurus, Virgo, and Capricorn hear \"someday\" as \"maybe never.\" A concrete time and place reads as care.",
+            "Want help turning a vague plan into a real one?",
+            "capricorn-naomi"
+        ),
+        (
+            "Air signs flirt with questions",
+            "Gemini, Libra, and Aquarius show interest through curiosity. Questions are their kisses — answer one, then ask one back.",
+            "Want to read a thread through this lens?",
+            "gemini-rina"
+        ),
+        (
+            "Water signs answer the tone, not the text",
+            "Cancer, Scorpio, and Pisces reply to how a message feels. The same sentence lands differently with one warm word in front of it.",
+            "Want to warm up a message together?",
+            "pisces-liora"
+        ),
+        (
+            "The double-text window",
+            "A second text within the hour reads as pressure to a fire sign and as care to a water sign. Same move, opposite meaning — the element decides.",
+            "Should we check what it means for your person?",
+            "scorpio-vera"
+        ),
+        (
+            "Your Moon sign is how you fight",
+            "Conflict style comes from the Moon more than the Sun. A gentle Sun with an Aries Moon still needs to vent first and soothe second.",
+            "Want to map someone's conflict style?",
+            "aries-cassian"
+        ),
+        (
+            "Why Sagittarius jokes in serious moments",
+            "Humor is how Sagittarius keeps honesty breathable. The joke isn't deflection — it's an invitation to keep talking.",
+            "Does someone you know do this?",
+            "sagittarius-nadia"
+        ),
+        (
+            "Cardinal signs start things",
+            "Aries, Cancer, Libra, and Capricorn lead with initiative. If a thread stalls mid-way, restate the goal — cardinal energy re-engages at the start of things.",
+            "Want an opener that restarts a stalled thread?",
+            "libra-mateo"
+        ),
+        (
+            "The mirror trick for mutable signs",
+            "Gemini, Virgo, Sagittarius, and Pisces adapt to the energy they receive. Set the tone you want back, and they'll usually match it.",
+            "Want to test it on tomorrow's first text?",
+            "virgo-mara"
+        ),
+        (
+            "Compliments, aimed by element",
+            "Praise effort with earth, vision with fire, ideas with air, feeling with water. The same compliment, aimed right, lands twice as deep.",
+            "Who should we write one for?",
+            "leo-leona"
+        ),
+        (
+            "Why Capricorn texts short",
+            "Brevity is Capricorn's respect for your time, not coldness. Watch the consistency instead — that's where the warmth lives.",
+            "Want to read someone's texting rhythm?",
+            "capricorn-silas"
+        ),
+        (
+            "Lead Aquarius with the frame",
+            "Open with the idea — \"I want us to figure out weekends\" — then the feelings. Aquarius engages structure first and sentiment second.",
+            "Want to draft one together?",
+            "aquarius-imani"
+        ),
+        (
+            "The repair message most signs accept",
+            "Name the moment, own your line, ask one question. \"I was short yesterday — that's on me. How are you feeling about it?\" travels across the zodiac.",
+            "Want to tailor it to a specific sign?",
+            "cancer-noel"
+        )
+    ]
+
     // MARK: - Personal Insights (post-onboarding)
 
     static let personalInsights: [String: [String: String]] = [

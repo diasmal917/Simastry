@@ -139,6 +139,10 @@ class AppViewModel {
     var selectedTab: Int = 0
     var aiAstrologistsRouteRequest: Int = 0
     var predictRouteRequest: Int = 0
+    /// Bumped to ask ProfileView to present the Aura sheet.
+    var auraRouteRequest: Int = 0
+    /// Bumped to ask ProfileView to present the consolidated share card.
+    var shareCardRouteRequest: Int = 0
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -2632,6 +2636,18 @@ extension AppViewModel {
             selectedTab = 5
         case "invite":
             selectedTab = 5
+        case "aura":
+            selectedTab = 5
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.auraRouteRequest += 1
+            }
+        case "shareCard":
+            selectedTab = 5
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.shareCardRouteRequest += 1
+            }
         case "playbook":
             relationshipPeople = RelationshipPeopleStore.previewPeople()
             selectedTab = 1

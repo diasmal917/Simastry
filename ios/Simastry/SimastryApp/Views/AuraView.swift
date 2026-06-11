@@ -36,10 +36,9 @@ struct AuraView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         auraHero
-                        conceptCard
+                        barsCard
                         AuraSummaryCard(summary: summary)
                         methodPanel
-                        barsCard
                         shareButton
                     }
                     .padding(.horizontal, 20)
@@ -93,9 +92,11 @@ struct AuraView: View {
         return "\(heroSign.displayName) · \(dominant.level.rawValue) aura"
     }
 
+    // Compact on purpose: the meters are the point of this screen, so the
+    // hero stays short enough that they're visible on open.
     private var auraHero: some View {
-        VStack(spacing: 18) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("MY AURA")
                         .font(SimastryFont.overline)
@@ -110,6 +111,11 @@ struct AuraView: View {
                 }
 
                 Spacer(minLength: 8)
+
+                if let heroSign {
+                    ZodiacIconView(sign: heroSign, size: 38, showsGlow: true)
+                        .accessibilityHidden(true)
+                }
 
                 Button {
                     showingInfo = true
@@ -126,40 +132,19 @@ struct AuraView: View {
                 }
             }
 
-            ZStack {
-                GlossyOrbView(signColors: heroOrbColors, state: .idle, size: 168)
+            Text(heroLevelLine)
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.92))
 
-                if let heroSign {
-                    Circle()
-                        .fill(.black.opacity(0.24))
-                        .frame(width: 96, height: 96)
-                        .blur(radius: 10)
-
-                    ZodiacIconView(sign: heroSign, size: 74, showsGlow: true)
-                }
-            }
-            .frame(height: 190)
-            .accessibilityHidden(true)
-
-            VStack(spacing: 5) {
-                Text(heroLevelLine)
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .multilineTextAlignment(.center)
-
-                if let summaryLine = communicationType?.summary {
-                    Text(summaryLine)
-                        .font(SimastryFont.bodySmall)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(3)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+            Text("Your chart is the sky you were born under. Your aura is how that sky comes through when you speak.")
+                .font(.system(.subheadline, design: .serif))
+                .italic()
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.74))
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
-        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
         .tintedGlass(heroOrbColors.first?.opacity(0.10) ?? SimastryColor.gold.opacity(0.10), cornerRadius: 26)
         .overlay {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -175,17 +160,6 @@ struct AuraView: View {
             .padding(16)
             .frame(width: 284)
             .presentationBackground(SimastryColor.surface)
-    }
-
-    private var conceptCard: some View {
-        Text("Your chart shows the signs you were born with. Your aura shows how those signs tend to color the way you communicate.")
-            .font(.system(.subheadline, design: .serif))
-            .italic()
-            .foregroundStyle(SimastryColor.offWhite.opacity(0.74))
-            .lineSpacing(3)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(16)
-            .glossyCard(cornerRadius: 18)
     }
 
     private var methodPanel: some View {
@@ -347,16 +321,32 @@ private struct AuraStatTile: View {
 
 private struct AuraRow: View {
     var aura: ChartAura
+    @State private var showingSignInfo = false
 
     var body: some View {
         HStack(spacing: 13) {
-            ZodiacIconView(sign: aura.sign, size: 38, showsGlow: aura.strength > 0)
+            Button {
+                showingSignInfo = true
+            } label: {
+                ZodiacIconView(sign: aura.sign, size: 38, showsGlow: aura.strength > 0)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("About the \(aura.sign.displayName) aura")
+            .popover(isPresented: $showingSignInfo) {
+                signInfoPopover
+            }
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(aura.sign.displayName)
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
+                    Button {
+                        showingSignInfo = true
+                    } label: {
+                        Text(aura.sign.displayName)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHidden(true)
 
                     Spacer(minLength: 8)
 
@@ -369,6 +359,30 @@ private struct AuraRow: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(aura.sign.displayName), \(aura.level.rawValue) aura")
+    }
+
+    private var signInfoPopover: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
+                ZodiacIconView(sign: aura.sign, size: 22, showsGlow: false)
+                Text("The \(aura.sign.displayName) aura")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
+
+            Text(aura.sign.auraDescription)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("\(aura.level.rawValue) in your chart right now.")
+                .font(SimastryFont.captionSmall.weight(.semibold))
+                .foregroundStyle(aura.strength > 0 ? aura.sign.color : SimastryColor.deepMuted)
+        }
+        .padding(16)
+        .frame(width: 264)
+        .presentationBackground(SimastryColor.surface)
+        .presentationCompactAdaptation(.popover)
     }
 }
 
@@ -408,6 +422,9 @@ private struct AuraWord: View {
             Text(trait.word)
                 .font(SimastryFont.captionSmall.weight(reached ? .semibold : .regular))
                 .foregroundStyle(reached ? SimastryColor.offWhite : SimastryColor.deepMuted)
+                // Dotted underline invites the tap — these words all explain
+                // themselves in a popover.
+                .underline(pattern: .dot, color: (reached ? SimastryColor.gold : SimastryColor.deepMuted).opacity(0.55))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(trait.word), \(reached ? "lit" : "not yet lit")")
@@ -928,6 +945,19 @@ private extension ZodiacElement {
 }
 
 private extension ZodiacSign {
+    /// One-paragraph explanation of what this sign's aura is, composed from
+    /// its trait words plus an element flavor — shown when the sign is tapped.
+    var auraDescription: String {
+        let words = auraTraits.map(\.word)
+        let flavor: String = switch element {
+        case .fire: "heat, momentum, and directness"
+        case .earth: "steadiness, proof, and patience"
+        case .air: "ideas, questions, and social ease"
+        case .water: "feeling, depth, and atmosphere"
+        }
+        return "The \(displayName) aura runs on \(words[0]), \(words[1]), and \(words[2]). When it's lit in a chart, it colors communication with \(flavor)."
+    }
+
     var auraTraits: [AuraTrait] {
         switch self {
         case .aries:
