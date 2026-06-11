@@ -25,13 +25,13 @@ struct SimulationResultView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    predictionBubble
-                    suggestedReplySection
-                    resultMethodLayer
-                    breakdownSection
-                    shareResultButton
+                    cascaded(predictionBubble, step: 0)
+                    cascaded(suggestedReplySection, step: 1)
+                    cascaded(resultMethodLayer, step: 2)
+                    cascaded(breakdownSection, step: 3)
+                    cascaded(shareResultButton, step: 4)
                     if let sign = result.targetSunSign {
-                        guideFollowUpCard(sign: sign)
+                        cascaded(guideFollowUpCard(sign: sign), step: 5)
                     }
                     whatIfSection
                     confidenceFooter
@@ -97,6 +97,18 @@ struct SimulationResultView: View {
                 }
             }
         }
+    }
+
+    /// Step-staggered rise-in so the reading discloses progressively —
+    /// prediction first, then the reply, then the reasoning.
+    private func cascaded(_ view: some View, step: Int) -> some View {
+        view
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+            .animation(
+                reduceMotion ? nil : .spring(SimastrySpring.smooth).delay(Double(step) * 0.09),
+                value: appeared
+            )
     }
 
     /// Closes the meaning loop: rate the prediction against what happened.

@@ -82,7 +82,8 @@ final class RedesignScrollVerificationTests: XCTestCase {
         attachShot(app, name: "predict-4-action-privacy")
     }
 
-    /// Today's Tips row sits one swipe below the fold, after the Predict hero.
+    /// Today's Tips row sits one swipe below the fold, after the Predict
+    /// hero; the Method course card follows the daily read.
     @MainActor
     func testScrollHomeForTipsRow() throws {
         let app = XCUIApplication()
@@ -93,6 +94,71 @@ final class RedesignScrollVerificationTests: XCTestCase {
         app.swipeUp()
         sleep(2)
         attachShot(app, name: "home-tips-row")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "home-course-card")
+    }
+
+    /// Couple Read opens from a partner-type person's detail page.
+    @MainActor
+    func testCoupleReadFromPersonDetail() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "playbook"]
+        app.launch()
+        sleep(4)
+
+        attachShot(app, name: "person-playbook-career-chips")
+
+        let coupleRead = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH 'Open Couple Read'")
+        ).firstMatch
+        if !coupleRead.exists {
+            app.swipeUp()
+            sleep(1)
+        }
+        if coupleRead.waitForExistence(timeout: 3) {
+            coupleRead.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "couple-read")
+    }
+
+    /// Mode chips in a 1:1 guide thread; switching to Check-in posts the
+    /// one-time non-therapy disclosure.
+    @MainActor
+    func testGuideModeChipsAndCheckInDisclosure() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewTab", "2"]
+        app.launch()
+        sleep(4)
+
+        let thread = app.staticTexts["Nadia"].firstMatch
+        if thread.waitForExistence(timeout: 4) {
+            thread.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "guide-mode-chips")
+
+        let checkIn = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH 'Check-in mode'")
+        ).firstMatch
+        if checkIn.waitForExistence(timeout: 3) {
+            checkIn.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "guide-checkin-disclosure")
+    }
+
+    /// Lesson one of the Method course posted into the panel thread.
+    @MainActor
+    func testMethodCourseLessonInPanel() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "methodCourse"]
+        app.launch()
+        sleep(6)
+
+        attachShot(app, name: "method-course-lesson")
     }
 
     /// Streak now lives at the very bottom of the Me page, above the footer.

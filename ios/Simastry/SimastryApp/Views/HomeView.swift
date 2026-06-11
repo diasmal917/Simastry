@@ -19,6 +19,7 @@ struct HomeView: View {
     @State private var predictionScorecard: PredictionScorecard?
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
+    @State private var kenBurnsActive: Bool = false
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -140,6 +141,9 @@ struct HomeView: View {
             .onAppear {
                 streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
+                if !reduceMotion {
+                    kenBurnsActive = true
+                }
                 guard !appeared else { return }
                 if reduceMotion {
                     appeared = true
@@ -557,8 +561,14 @@ struct HomeView: View {
                 }
 
                 HStack(alignment: .top, spacing: 12) {
-                    ForEach(todaysTips) { tip in
+                    ForEach(Array(todaysTips.enumerated()), id: \.element.id) { index, tip in
                         tipCard(tip)
+                            .opacity(appeared ? 1 : 0)
+                            .scaleEffect(appeared ? 1 : 0.96)
+                            .animation(
+                                reduceMotion ? nil : .spring(SimastrySpring.bouncy).delay(0.12 + Double(index) * 0.08),
+                                value: appeared
+                            )
                     }
                 }
             }
@@ -720,12 +730,19 @@ struct HomeView: View {
     private func featuredGuidePane(_ profile: FactoryCompanionProfile) -> some View {
         NavigationLink(value: HomeRoute.aiAstrologist(profileId: profile.id)) {
             ZStack(alignment: .bottom) {
+                // Slow Ken Burns drift keeps the featured portrait alive;
+                // the outer clip shape crops the overflow.
                 Image(profile.cardImageName)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
                     .frame(height: 240, alignment: .top)
                     .clipped()
+                    .scaleEffect(kenBurnsActive ? 1.07 : 1.0, anchor: .top)
+                    .animation(
+                        reduceMotion ? nil : .easeInOut(duration: 14).repeatForever(autoreverses: true),
+                        value: kenBurnsActive
+                    )
 
                 LinearGradient(
                     stops: [

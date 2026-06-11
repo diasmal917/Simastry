@@ -248,8 +248,9 @@ struct AIAstrologistsView: View {
 
     private func astrologerDirectory(_ directoryProfiles: [FactoryCompanionProfile]) -> some View {
         LazyVStack(spacing: 14) {
-            ForEach(directoryProfiles) { profile in
+            ForEach(Array(directoryProfiles.enumerated()), id: \.element.id) { index, profile in
                 astrologerDirectoryCard(profile)
+                    .modifier(DirectoryCardAppear(index: index))
             }
         }
         .padding(.horizontal, 16)
@@ -922,5 +923,29 @@ private struct GramPostDetailSheet: View {
         comments.append(trimmedComment)
         commentDraft = ""
         HapticManager.buttonPress()
+    }
+}
+
+/// Index-staggered rise-in for directory cards. Lazily created cards
+/// (scrolled into view later) animate too, with the delay capped so deep
+/// scrolling never feels laggy.
+private struct DirectoryCardAppear: ViewModifier {
+    let index: Int
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 14)
+            .onAppear {
+                if reduceMotion {
+                    appeared = true
+                } else {
+                    withAnimation(.spring(SimastrySpring.smooth).delay(Double(min(index, 5)) * 0.06)) {
+                        appeared = true
+                    }
+                }
+            }
     }
 }
