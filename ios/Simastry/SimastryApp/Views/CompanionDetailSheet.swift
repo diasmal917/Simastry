@@ -317,7 +317,7 @@ struct CompanionDetailSheet: View {
     private var compatibilityMethodLayer: some View {
         MethodLayerPanel(
             title: "Signals used",
-            summary: "This reading compares your chart with \(companion.name)'s astrologist lens. Sun shows drive, Moon shows emotional pattern, and Rising shows first instinct.",
+            summary: "This reading compares your chart with \(companion.name)'s guide lens. Sun shows drive, Moon shows emotional pattern, and Rising shows first instinct.",
             signals: compatibilityMethodSignals,
             footer: "Astronomy calculates placements. Traditional astrology interprets the pattern. Simastry translates it into compatibility and communication guidance.",
             accent: companionSun?.color ?? SimastryColor.gold

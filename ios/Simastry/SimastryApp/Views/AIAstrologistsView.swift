@@ -97,7 +97,7 @@ struct AIAstrologistsView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .navigationTitle("AI Astrologists")
+        .navigationTitle("Guides")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationDestination(isPresented: $showPredict) {
@@ -261,7 +261,7 @@ struct AIAstrologistsView: View {
                 Image(profile.profileImageName)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 96, height: 124, alignment: .top)
+                    .frame(width: 108, height: 140, alignment: .top)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -603,7 +603,7 @@ struct AIAstrologistsView: View {
         return captions[index % captions.count]
     }
 
-    private func seededComments(for profile: FactoryCompanionProfile, index: Int) -> [String] {
+    private func seededComments(for _: FactoryCompanionProfile, index _: Int) -> [String] {
         [
             "The signal is clear here.",
             "Saving this before I answer my next text."

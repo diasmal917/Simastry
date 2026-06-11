@@ -197,7 +197,7 @@ struct PredictionTopUpView: View {
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(14)
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 16)
+            .surfaceCard(cornerRadius: 16, accent: SimastryColor.risingViolet.opacity(0.6))
             .opacity(appeared ? 1 : 0)
         }
     }

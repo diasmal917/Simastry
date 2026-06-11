@@ -1,8 +1,9 @@
 # Simastry — Launch Checklist
 
-Everything between this build and the App Store, in execution order. Code is
-feature-complete and tested; every item below is configuration, provisioning,
-or content. Check items off as you go.
+Everything between this build and the App Store, in execution order. The core
+app is buildable and test-covered; release still requires configuration,
+device QA, App Store setup, and backend hardening — all captured below.
+Check items off as you go.
 
 ---
 

@@ -52,7 +52,7 @@ struct CompanionSetupView: View {
 
                 progressHeader(
                     title: "Shape your \(shapeTitleNoun)",
-                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style the astrologist voice."
+                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style your guide's voice."
                 )
 
                 stageStrip(activeStep: 0)
@@ -509,7 +509,7 @@ struct CompanionSetupView: View {
     private var namingSubtitle: String {
         switch viewModel.selectedMode {
         case .soulmate:
-            return "Give your AI astrologist a name that feels magnetic, warm, and easy to talk to."
+            return "Give your AI guide a name that feels magnetic, warm, and easy to talk to."
         case .bestie:
             return "Pick something warm, easy, and instantly familiar."
         case .simulateAnyone:

@@ -62,7 +62,7 @@ extension AppViewModel {
             replyingAs: entry.profile.name
         )
 
-        return await GuideReplyService.withTimeout(seconds: 8) { [supabase] in
+        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
             try await supabase.invokeCompanionReply(kind: .chat, system: system, user: user, maxTokens: 300)
         }
     }
@@ -103,7 +103,7 @@ extension AppViewModel {
             replyingAs: companionName
         )
 
-        return await GuideReplyService.withTimeout(seconds: 8) { [supabase] in
+        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
             try await supabase.invokeCompanionReply(kind: .chat, system: system, user: user, maxTokens: 300)
         }
     }

@@ -276,7 +276,7 @@ struct SimulateView: View {
             Spacer()
         }
         .padding(18)
-        .tintedGlass(SimastryColor.risingViolet.opacity(0.16), cornerRadius: 20)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.7))
         .overlay {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 1)
@@ -331,7 +331,7 @@ struct SimulateView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 18)
+            .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.6))
             .accessibilityLabel("Paste your conversation")
 
             HStack(spacing: 5) {
@@ -431,7 +431,7 @@ struct SimulateView: View {
                     .lineSpacing(2)
             }
             .padding(14)
-            .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 16)
+            .surfaceCard(cornerRadius: 16, accent: SimastryColor.gold.opacity(0.6))
             .overlay {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(SimastryColor.gold.opacity(0.12), lineWidth: 0.5)
@@ -450,7 +450,7 @@ struct SimulateView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .foregroundStyle(SimastryColor.offWhite)
-                .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 18)
+                .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.6))
 
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
@@ -533,7 +533,7 @@ struct SimulateView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.18), cornerRadius: 22)
+            .surfaceCard(cornerRadius: 22, accent: SimastryColor.risingViolet.opacity(0.7))
             .overlay {
                 RoundedRectangle(cornerRadius: 22)
                     .stroke(SimastryColor.risingViolet.opacity(0.16), lineWidth: 1)

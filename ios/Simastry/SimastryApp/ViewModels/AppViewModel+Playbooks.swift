@@ -34,7 +34,7 @@ extension AppViewModel {
             user: userContext
         )
 
-        return await GuideReplyService.withTimeout(seconds: 8) { [supabase] in
+        return await GuideReplyService.withTimeout(seconds: GuideReplyService.deliberateReplyTimeout) { [supabase] in
             try await supabase.invokeCompanionReply(
                 kind: .chat,
                 system: prompts.system,

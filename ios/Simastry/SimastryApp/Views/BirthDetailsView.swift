@@ -14,7 +14,6 @@ struct BirthDetailsView: View {
         return Calendar.current.date(from: components) ?? Date()
     }()
     @State private var birthplace: String = ""
-    @State private var appeared: Bool = false
     @State private var birthTimeUnknown: Bool = false
     @State private var showSuggestions: Bool = false
     @State private var selectedFromSuggestion: Bool = false
@@ -92,13 +91,6 @@ struct BirthDetailsView: View {
         .onAppear {
             if let staged = viewModel.onboardingDisplayName, displayName.isEmpty {
                 displayName = staged
-            }
-            if reduceMotion {
-                appeared = true
-            } else {
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
-                    appeared = true
-                }
             }
         }
         .toolbar {

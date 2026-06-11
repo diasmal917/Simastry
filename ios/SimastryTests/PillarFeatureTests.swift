@@ -372,6 +372,53 @@ struct PillarFeatureTests {
         #expect(playbook.user.contains("Teammate"))
     }
 
+    // MARK: - Guide Work Cancellation
+
+    @Test func clearDataCancelsPendingPanelReply() async throws {
+        cleanPanelDefaults()
+        defer { cleanPanelDefaults() }
+
+        let viewModel = seededViewModel()
+        viewModel.panelMessages = []
+
+        _ = await viewModel.sendPanelMessage("Pending reply incoming?")
+        #expect(viewModel.panelMessages.count == 1)
+
+        // Clear while guide replies are still sleeping.
+        viewModel.clearLocalDeviceData()
+        #expect(viewModel.panelMessages.isEmpty)
+
+        // Past every scheduled landing time — nothing may resurrect.
+        // (In-memory state only: UserDefaults is shared across parallel
+        // tests, so asserting the key here would race other panel tests.)
+        try await Task.sleep(for: .milliseconds(3_500))
+        #expect(viewModel.panelMessages.isEmpty)
+        #expect(viewModel.panelTypingParticipantIds.isEmpty)
+        #expect(viewModel.pendingGuideTaskHandles.isEmpty)
+    }
+
+    @Test func clearDataCancelsPendingCompanionReply() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_companion_messages") }
+
+        let viewModel = seededViewModel()
+        viewModel.companionMessages = []
+
+        _ = await viewModel.sendCompanionThreadMessage(
+            companionId: UUID(),
+            companionName: "Nadia",
+            companionSign: "sagittarius",
+            content: "Pending reply incoming?"
+        )
+        #expect(viewModel.companionMessages.count == 1)
+
+        viewModel.clearLocalDeviceData()
+        #expect(viewModel.companionMessages.isEmpty)
+
+        try await Task.sleep(for: .milliseconds(2_500))
+        #expect(viewModel.companionMessages.isEmpty)
+        #expect(viewModel.typingCompanionIds.isEmpty)
+    }
+
     @Test func companionThreadMessageRecordsSharedMemory() async {
         cleanPanelDefaults()
         defer {

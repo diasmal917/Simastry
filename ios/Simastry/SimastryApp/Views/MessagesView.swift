@@ -137,7 +137,7 @@ struct MessagesView: View {
                 HStack(spacing: 8) {
                     Image(systemName: SimastryIcon.astrologers)
                         .font(.system(size: 15, weight: .semibold))
-                    Text("Open AI Astrologists")
+                    Text("Open Guides")
                         .font(SimastryFont.labelLarge)
                 }
                 .foregroundStyle(SimastryColor.midnight)
@@ -147,7 +147,7 @@ struct MessagesView: View {
                 .shadow(color: SimastryColor.gold.opacity(0.25), radius: 14, y: 6)
             }
             .buttonStyle(SpringPressStyle())
-            .accessibilityHint("Opens AI Astrologists to choose a message lens")
+            .accessibilityHint("Opens your guides to choose a message lens")
             .padding(.top, 4)
 
             InviteFriendsCard(viewModel: viewModel, style: .compact)

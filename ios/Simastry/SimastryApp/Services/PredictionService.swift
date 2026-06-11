@@ -27,7 +27,6 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
 }
 
 nonisolated final class PredictionService {
-    private let session: URLSession
     private let privacyService: ConversationPrivacyService
     private let historyKey: String = "simastry_prediction_history"
     private let encoder: JSONEncoder
@@ -39,8 +38,7 @@ nonisolated final class PredictionService {
     var replyChannel: (@Sendable (_ system: String, _ user: String) async throws -> String)?
     var isRemoteChannelAvailable: (@Sendable () -> Bool)?
 
-    init(session: URLSession = .shared, privacyService: ConversationPrivacyService = ConversationPrivacyService()) {
-        self.session = session
+    init(privacyService: ConversationPrivacyService = ConversationPrivacyService()) {
         self.privacyService = privacyService
 
         let encoder = JSONEncoder()

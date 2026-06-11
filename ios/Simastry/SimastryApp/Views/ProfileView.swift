@@ -813,7 +813,7 @@ struct ProfileView: View {
                         .lineSpacing(2)
                 }
                 .padding(12)
-                .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 12)
+                .surfaceCard(cornerRadius: 12, accent: SimastryColor.gold.opacity(0.6))
 
                 // What to avoid
                 VStack(alignment: .leading, spacing: 6) {
@@ -833,7 +833,7 @@ struct ProfileView: View {
                         .lineSpacing(2)
                 }
                 .padding(12)
-                .tintedGlass(SimastryColor.amber.opacity(0.06), cornerRadius: 12)
+                .surfaceCard(cornerRadius: 12, accent: SimastryColor.amber.opacity(0.6))
             }
         }
         .padding(18)

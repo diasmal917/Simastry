@@ -95,8 +95,18 @@ final class MomentsStore {
         directoryURL.appending(path: fileName)
     }
 
+    /// Small companion file decoded by the grid instead of the full image.
+    static func thumbFileName(for fileName: String) -> String {
+        "thumb_\(fileName)"
+    }
+
+    func thumbURL(for fileName: String) -> URL {
+        imageURL(for: Self.thumbFileName(for: fileName))
+    }
+
     func deleteImage(fileName: String) {
         try? FileManager.default.removeItem(at: imageURL(for: fileName))
+        try? FileManager.default.removeItem(at: thumbURL(for: fileName))
     }
 
     func deleteAll() {
@@ -131,5 +141,10 @@ enum MomentPhoto {
             image.draw(in: CGRect(origin: .zero, size: target))
         }
         return resized.jpegData(compressionQuality: 0.82)
+    }
+
+    /// Grid-sized thumbnail so the wall never decodes full images.
+    static func thumbnail(_ data: Data, maxDimension: CGFloat = 240) -> Data? {
+        prepared(data, maxDimension: maxDimension)
     }
 }

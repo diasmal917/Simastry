@@ -170,6 +170,14 @@ class AppViewModel {
     /// Bumped to present the Team Read sheet.
     var teamReadRouteRequest: Int = 0
 
+    // MARK: - Guide Work Lifecycle
+    /// Bumped whenever account-scoped local state is cleared; in-flight
+    /// delayed guide tasks compare their captured generation and bail if
+    /// stale, so a pending reply can never resurrect wiped data.
+    var localStateGeneration: Int = 0
+    /// Handles for delayed guide replies/comments, cancellable on clear.
+    var pendingGuideTaskHandles: [UUID: Task<Void, Never>] = [:]
+
     // MARK: - Moments State
     /// Private on-device photo posts; guides engage via templates (+Moments).
     var moments: [Moment] = []
@@ -1945,29 +1953,33 @@ class AppViewModel {
         let threadCount = companionMessages.filter { $0.companionId == companionId }.count
         let delay = Double(1_400 + (threadCount % 4) * 350)
 
-        Task { @MainActor in
+        let generation = localStateGeneration
+
+        scheduleGuideWork { [weak self] in
             try? await Task.sleep(for: .milliseconds(delay))
+            guard let self, !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
 
             // LLM reply when the edge channel is live; templates otherwise.
-            let llmContent = await generateCompanionReplyViaLLM(
+            let llmContent = await self.generateCompanionReplyViaLLM(
                 companionId: companionId,
                 companionName: companionName,
                 companionSign: companionSign
             )
-            typingCompanionIds.remove(companionId)
+            guard !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+            self.typingCompanionIds.remove(companionId)
 
             let reply = CompanionMessage(
                 companionId: companionId,
                 companionName: companionName,
                 companionSign: companionSign,
-                content: llmContent ?? composeCompanionReply(signName: companionSign, threadCount: threadCount),
+                content: llmContent ?? self.composeCompanionReply(signName: companionSign, threadCount: threadCount),
                 timestamp: Date(),
-                isRead: openCompanionThreadId == companionId,
+                isRead: self.openCompanionThreadId == companionId,
                 source: .companion,
                 direction: .incoming
             )
-            companionMessages.insert(reply, at: 0)
-            saveMessages()
+            self.companionMessages.insert(reply, at: 0)
+            self.saveMessages()
         }
     }
 
@@ -2182,6 +2194,11 @@ class AppViewModel {
     }
 
     private func clearAccountScopedLocalState() {
+        // Invalidate and cancel any delayed guide replies/comments first so
+        // none of them land after the wipe and re-persist cleared data.
+        localStateGeneration += 1
+        cancelPendingGuideWork()
+
         savedGuides = []
         companionMessages = []
         discoveryMessages = []
@@ -2725,6 +2742,9 @@ extension AppViewModel {
                 reactionCount: 4
             )
             momentsStore.writeImage(data, fileName: moment.imageFileName)
+            if let thumb = MomentPhoto.thumbnail(data) {
+                momentsStore.writeImage(thumb, fileName: MomentsStore.thumbFileName(for: moment.imageFileName))
+            }
             moment.comments = [
                 MomentComment(
                     authorKind: .guide(profileId: "sagittarius-nadia"),
@@ -2750,6 +2770,9 @@ extension AppViewModel {
                 reactionCount: 2
             )
             momentsStore.writeImage(data, fileName: moment.imageFileName)
+            if let thumb = MomentPhoto.thumbnail(data) {
+                momentsStore.writeImage(thumb, fileName: MomentsStore.thumbFileName(for: moment.imageFileName))
+            }
             moment.comments = [
                 MomentComment(
                     authorKind: .guide(profileId: "cancer-mila"),

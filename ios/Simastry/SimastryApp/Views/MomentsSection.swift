@@ -145,11 +145,7 @@ struct MomentsSection: View {
             .fill(SimastryColor.surfaceSunken)
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                if let image = UIImage(contentsOfFile: viewModel.momentImageURL(for: moment).path) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                }
+                MomentImageView(url: viewModel.momentThumbURL(for: moment))
             }
             .overlay(alignment: .bottomTrailing) {
                 if !moment.comments.isEmpty {
@@ -228,7 +224,7 @@ struct MomentsSection: View {
                 GoldButton("Post Moment") {
                     if let data = pendingImageData {
                         withAnimation(.spring(SimastrySpring.smooth)) {
-                            viewModel.addMoment(imageData: data, caption: captionDraft)
+                            _ = viewModel.addMoment(imageData: data, caption: captionDraft)
                         }
                     }
                     pendingImageData = nil
@@ -335,11 +331,7 @@ struct MomentDetailSheet: View {
             .fill(SimastryColor.surfaceSunken)
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                if let image = UIImage(contentsOfFile: viewModel.momentImageURL(for: moment).path) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                }
+                MomentImageView(url: viewModel.momentImageURL(for: moment))
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay {

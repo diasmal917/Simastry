@@ -31,6 +31,9 @@ extension AppViewModel {
             showToast("Couldn't save that photo", subtitle: "Check your device storage and try again.", isError: true)
             return nil
         }
+        if let thumb = MomentPhoto.thumbnail(imageData) {
+            momentsStore.writeImage(thumb, fileName: MomentsStore.thumbFileName(for: moment.imageFileName))
+        }
 
         moments.insert(moment, at: 0)
         saveMoments()
@@ -47,6 +50,15 @@ extension AppViewModel {
 
     func momentImageURL(for moment: Moment) -> URL {
         momentsStore.imageURL(for: moment.imageFileName)
+    }
+
+    /// Thumbnail when it exists; the full image as a fallback for moments
+    /// posted before thumbnails were generated.
+    func momentThumbURL(for moment: Moment) -> URL {
+        let thumb = momentsStore.thumbURL(for: moment.imageFileName)
+        return FileManager.default.fileExists(atPath: thumb.path)
+            ? thumb
+            : momentsStore.imageURL(for: moment.imageFileName)
     }
 
     func addUserComment(_ text: String, to momentId: UUID) {
@@ -111,30 +123,33 @@ extension AppViewModel {
         guard !momentTypingKeys.contains(typingKey) else { return }
 
         let typingLeadIn = 1_500
+        let generation = localStateGeneration
 
-        Task { @MainActor in
+        scheduleGuideWork { [weak self] in
             try? await Task.sleep(for: .milliseconds(max(landDelayMilliseconds - typingLeadIn, 300)))
-            guard moments.contains(where: { $0.id == momentId }) else { return }
-            momentTypingKeys.insert(typingKey)
+            guard let self, !Task.isCancelled, self.isCurrentGeneration(generation),
+                  self.moments.contains(where: { $0.id == momentId }) else { return }
+            self.momentTypingKeys.insert(typingKey)
 
             // LLM comment when the edge channel is live (caption + chart only,
             // never the image); template fallback keeps the typing feel.
-            var content = await generateMomentCommentViaLLM(momentId: momentId, entry: entry)
+            var content = await self.generateMomentCommentViaLLM(momentId: momentId, entry: entry)
             if content == nil {
                 try? await Task.sleep(for: .milliseconds(typingLeadIn))
             }
-            momentTypingKeys.remove(typingKey)
+            guard !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+            self.momentTypingKeys.remove(typingKey)
 
-            guard let index = moments.firstIndex(where: { $0.id == momentId }) else { return }
+            guard let index = self.moments.firstIndex(where: { $0.id == momentId }) else { return }
 
             if content == nil {
                 content = Self.composeMomentComment(
                     profile: entry.profile,
                     role: entry.role,
-                    caption: moments[index].caption,
-                    userName: (profile?.displayName ?? "").components(separatedBy: " ").first,
-                    userSun: userSunSign,
-                    userRising: userRisingSign,
+                    caption: self.moments[index].caption,
+                    userName: (self.profile?.displayName ?? "").components(separatedBy: " ").first,
+                    userSun: self.userSunSign,
+                    userRising: self.userRisingSign,
                     beatIndex: beatIndex
                 )
             }
@@ -145,9 +160,9 @@ extension AppViewModel {
                 authorName: entry.profile.name,
                 content: content
             )
-            moments[index].comments.append(comment)
-            moments[index].reactionCount += 1 + beatIndex % 2
-            saveMoments()
+            self.moments[index].comments.append(comment)
+            self.moments[index].reactionCount += 1 + beatIndex % 2
+            self.saveMoments()
         }
     }
 
@@ -174,7 +189,7 @@ extension AppViewModel {
             user: userContext
         )
 
-        return await GuideReplyService.withTimeout(seconds: 8) { [supabase] in
+        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
             try await supabase.invokeCompanionReply(
                 kind: .chat,
                 system: prompts.system,

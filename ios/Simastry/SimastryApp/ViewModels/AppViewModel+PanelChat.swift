@@ -102,6 +102,35 @@ extension AppViewModel {
         }
     }
 
+    // MARK: Guide Work Lifecycle
+
+    /// Runs delayed guide work (replies, comments, welcome posts) as a
+    /// tracked, cancellable task. Bodies must additionally guard with
+    /// `isCurrentGeneration(_:)` before mutating state, covering tasks
+    /// already past their sleep when a clear happens.
+    func scheduleGuideWork(_ body: @escaping @MainActor () async -> Void) {
+        let handleId = UUID()
+        let task = Task { @MainActor [weak self] in
+            await body()
+            self?.pendingGuideTaskHandles.removeValue(forKey: handleId)
+        }
+        pendingGuideTaskHandles[handleId] = task
+    }
+
+    func cancelPendingGuideWork() {
+        for task in pendingGuideTaskHandles.values {
+            task.cancel()
+        }
+        pendingGuideTaskHandles.removeAll()
+        panelTypingParticipantIds.removeAll()
+        typingCompanionIds.removeAll()
+        momentTypingKeys.removeAll()
+    }
+
+    func isCurrentGeneration(_ generation: Int) -> Bool {
+        generation == localStateGeneration
+    }
+
     // MARK: Routing
 
     func openPanelChat() {
@@ -175,6 +204,8 @@ extension AppViewModel {
 
         let responders = Array(ordered.prefix(responderCount))
 
+        let generation = localStateGeneration
+
         for (index, entry) in responders.enumerated() {
             let participantId = entry.profile.id
             guard !panelTypingParticipantIds.contains(participantId) else { continue }
@@ -183,13 +214,14 @@ extension AppViewModel {
             let landDelay = 1_300 + index * 1_500 + (threadCount % 3) * 350
             let previousGuideName = index == 0 ? nil : responders[index - 1].profile.name
 
-            Task { @MainActor in
+            scheduleGuideWork { [weak self] in
                 try? await Task.sleep(for: .milliseconds(max(landDelay - typingLeadIn, 200)))
-                panelTypingParticipantIds.insert(participantId)
+                guard let self, !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+                self.panelTypingParticipantIds.insert(participantId)
 
                 // LLM reply when the edge channel is live; template fallback
                 // keeps the human-feel typing delay and never stalls.
-                var content = await generatePanelReplyViaLLM(
+                var content = await self.generatePanelReplyViaLLM(
                     entry: entry,
                     previousGuideName: previousGuideName
                 )
@@ -203,16 +235,17 @@ extension AppViewModel {
                         previousGuideName: previousGuideName
                     )
                 }
-                panelTypingParticipantIds.remove(participantId)
+                guard !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+                self.panelTypingParticipantIds.remove(participantId)
 
                 let reply = PanelMessage(
                     senderId: participantId,
                     content: content ?? "",
-                    isRead: isPanelThreadOpen
+                    isRead: self.isPanelThreadOpen
                 )
                 guard !reply.content.isEmpty else { return }
-                panelMessages.append(reply)
-                savePanelMessages()
+                self.panelMessages.append(reply)
+                self.savePanelMessages()
             }
         }
     }
@@ -274,6 +307,8 @@ extension AppViewModel {
             .components(separatedBy: " ").first ?? "there"
         let openers = AstrologyTemplates.panelWelcomeOpeners
 
+        let generation = localStateGeneration
+
         for (index, entry) in panelGuideEntries.enumerated() {
             let template = openers[min(index, openers.count - 1)]
             let content = template
@@ -285,19 +320,21 @@ extension AppViewModel {
             let typingLeadIn = 800
             let landDelay = 700 + index * 1_400
 
-            Task { @MainActor in
+            scheduleGuideWork { [weak self] in
                 try? await Task.sleep(for: .milliseconds(max(landDelay - typingLeadIn, 150)))
-                panelTypingParticipantIds.insert(participantId)
+                guard let self, !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+                self.panelTypingParticipantIds.insert(participantId)
 
                 try? await Task.sleep(for: .milliseconds(typingLeadIn))
-                panelTypingParticipantIds.remove(participantId)
+                guard !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+                self.panelTypingParticipantIds.remove(participantId)
 
                 // Bail if the panel got seeded some other way mid-stagger.
-                guard !panelMessages.contains(where: { $0.content == content }) else { return }
-                panelMessages.append(
-                    PanelMessage(senderId: participantId, content: content, isRead: isPanelThreadOpen)
+                guard !self.panelMessages.contains(where: { $0.content == content }) else { return }
+                self.panelMessages.append(
+                    PanelMessage(senderId: participantId, content: content, isRead: self.isPanelThreadOpen)
                 )
-                savePanelMessages()
+                self.savePanelMessages()
             }
         }
     }

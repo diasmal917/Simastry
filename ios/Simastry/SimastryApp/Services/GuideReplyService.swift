@@ -1,6 +1,6 @@
 import Foundation
 
-extension ZodiacSign {
+nonisolated extension ZodiacSign {
     /// Zodiac-lens specialization in Simastry Method language — shared by the
     /// directory cards and the LLM persona prompts.
     var methodLine: String {
@@ -25,6 +25,13 @@ extension ZodiacSign {
 /// sent through the companion-reply edge function. Static and deterministic
 /// so prompt content is unit-testable.
 nonisolated enum GuideReplyService {
+    /// Chat surfaces hold a typing indicator while the LLM races the
+    /// template fallback — keep that race short so chats never feel stuck.
+    static let chatReplyTimeout: Double = 2.5
+    /// Deliberate flows (Predict, Playbooks) show their own progress UI and
+    /// can afford a fuller generation window.
+    static let deliberateReplyTimeout: Double = 8
+
     struct UserContext: Sendable {
         let name: String?
         let sun: ZodiacSign?

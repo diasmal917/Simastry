@@ -41,7 +41,7 @@ struct CompanionsView: View {
 
                 castDeck
             }
-            .navigationTitle("AI Astrologists")
+            .navigationTitle("Guides")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -69,7 +69,7 @@ struct CompanionsView: View {
                     pendingDeleteCompanion = nil
                 }
             } message: {
-                Text("This removes \(pendingDeleteCompanion?.name ?? "this astrologist") from your circle.")
+                Text("This removes \(pendingDeleteCompanion?.name ?? "this guide") from your circle.")
             }
             .onAppear {
                 if reduceMotion {
@@ -91,11 +91,11 @@ struct CompanionsView: View {
 
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("AI Astrologists")
+                    Text("Guides")
                         .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text("Browse the astrologist lens you want for Messages, Bio, and Predict.")
+                    Text("Browse the guide lens you want for Messages, Profile, and Predict.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
@@ -295,7 +295,7 @@ struct CompanionsView: View {
             .scaleEffect(appeared ? 1 : 0.8)
 
             VStack(spacing: 8) {
-                Text("Your astrologist is waiting")
+                Text("Your guide is waiting")
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
@@ -307,7 +307,7 @@ struct CompanionsView: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 10)
 
-            GoldButton(viewModel.hasCompletedSigns ? "Choose Astrologist" : "Set Up Your Signs") {
+            GoldButton(viewModel.hasCompletedSigns ? "Choose a Guide" : "Set Up Your Signs") {
                 viewModel.selectedTab = 0
                 if viewModel.hasCompletedSigns {
                     viewModel.homeSetupPhase = .modeSelection
@@ -381,7 +381,7 @@ struct CompanionsView: View {
                         }
                 }
             } header: {
-                sectionLabel(viewModel.companions.count > 1 ? "Your Circle" : "Your Astrologist")
+                sectionLabel(viewModel.companions.count > 1 ? "Your Circle" : "Your Guide")
             }
 
             Section {
@@ -395,11 +395,11 @@ struct CompanionsView: View {
                             .foregroundStyle(SimastryColor.gold)
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Choose New Astrologist")
+                            Text("Choose a New Guide")
                                 .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
 
-                            Text("Shape a new astrologist, friend, or simulation lens")
+                            Text("Shape a new guide, friend, or simulation lens")
                                 .font(SimastryFont.labelMedium)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                         }

@@ -729,7 +729,7 @@ private struct ProfileDetailSheet: View {
                             .lineSpacing(2)
                     }
                     .padding(12)
-                    .tintedGlass(SimastryColor.gold.opacity(0.06), cornerRadius: 12)
+                    .surfaceCard(cornerRadius: 12, accent: SimastryColor.gold.opacity(0.6))
                 }
             }
         }
