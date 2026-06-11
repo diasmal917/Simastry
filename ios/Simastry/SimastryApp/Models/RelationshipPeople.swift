@@ -21,6 +21,38 @@ nonisolated enum RelationshipType: String, CaseIterable, Identifiable, Codable, 
     }
 }
 
+/// What's currently happening with this person — the ongoing saga the app
+/// follows. Statuses describe communication states, never verdicts.
+nonisolated enum SituationStatus: String, CaseIterable, Identifiable, Codable, Sendable {
+    case newSpark
+    case waitingOnReply
+    case steady
+    case repairing
+    case coolingOff
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .newSpark: "New spark"
+        case .waitingOnReply: "Waiting on a reply"
+        case .steady: "Steady"
+        case .repairing: "Repairing"
+        case .coolingOff: "Cooling off"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .newSpark: "sparkles"
+        case .waitingOnReply: "ellipsis.bubble.fill"
+        case .steady: "checkmark.circle.fill"
+        case .repairing: "bandage.fill"
+        case .coolingOff: "snowflake"
+        }
+    }
+}
+
 nonisolated struct RelationshipPerson: Identifiable, Hashable, Codable, Sendable {
     var id: UUID
     var name: String
@@ -36,10 +68,25 @@ nonisolated struct RelationshipPerson: Identifiable, Hashable, Codable, Sendable
     var imageData: Data?
     var isChartCalculated: Bool
     var updatedAt: Date
+    // Optional with defaults so people saved before situations existed
+    // decode unchanged and existing memberwise call sites keep compiling.
+    var situationStatus: SituationStatus? = nil
+    var situationUpdatedAt: Date? = nil
 
     var displayName: String {
         let label = privateLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return label.isEmpty ? name : label
+    }
+
+    /// 1-based day count of the current situation ("Day 1" on the day it's set).
+    func situationDay(now: Date = Date()) -> Int {
+        guard situationStatus != nil, let start = situationUpdatedAt else { return 1 }
+        let days = Calendar.current.dateComponents(
+            [.day],
+            from: Calendar.current.startOfDay(for: start),
+            to: Calendar.current.startOfDay(for: now)
+        ).day ?? 0
+        return max(1, days + 1)
     }
 
     var signLine: String {
@@ -204,7 +251,9 @@ final class RelationshipPeopleStore {
                 notes: "Warmth is present, but timing matters.",
                 imageData: nil,
                 isChartCalculated: false,
-                updatedAt: .now.addingTimeInterval(-2 * 24 * 60 * 60)
+                updatedAt: .now.addingTimeInterval(-2 * 24 * 60 * 60),
+                situationStatus: .waitingOnReply,
+                situationUpdatedAt: .now.addingTimeInterval(-24 * 60 * 60)
             ),
             RelationshipPerson(
                 id: UUID(),

@@ -392,6 +392,97 @@ struct RelationshipPersonDetailView: View {
         viewModel.relationshipReading(for: currentPerson)
     }
 
+    /// The ongoing saga: what's happening with this person right now. The
+    /// app follows the active situation on Today and in panel starters.
+    private var situationSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                Image(systemName: "point.bottomleft.forward.to.point.topright.scurvepath.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("WHAT'S THE SITUATION?")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.3)
+
+                Spacer()
+
+                if currentPerson.situationStatus != nil {
+                    Text("Day \(currentPerson.situationDay())")
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.gold)
+                }
+            }
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(SituationStatus.allCases) { status in
+                        situationChip(status)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+
+            if let status = currentPerson.situationStatus,
+               let line = AstrologyTemplates.situationLines[status.rawValue]?[currentPerson.sunSign.element.rawValue] {
+                Text(line.replacingOccurrences(of: "{n}", with: "\(currentPerson.situationDay())"))
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.5))
+        .animation(.spring(SimastrySpring.smooth), value: currentPerson.situationStatus)
+    }
+
+    private func situationChip(_ status: SituationStatus) -> some View {
+        let isActive = currentPerson.situationStatus == status
+
+        return Button {
+            HapticManager.buttonPress()
+            var updated = currentPerson
+            if isActive {
+                updated.situationStatus = nil
+                updated.situationUpdatedAt = nil
+            } else {
+                updated.situationStatus = status
+                updated.situationUpdatedAt = Date()
+            }
+            viewModel.updateRelationshipPerson(updated)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: status.systemImage)
+                    .font(.system(size: 10, weight: .semibold))
+
+                Text(status.title)
+                    .font(SimastryFont.labelSmall)
+            }
+            .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.82))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .background(
+                isActive
+                    ? AnyShapeStyle(SimastryGradient.gold)
+                    : AnyShapeStyle(Color.white.opacity(0.06)),
+                in: Capsule()
+            )
+            .overlay {
+                Capsule().strokeBorder(
+                    isActive ? .white.opacity(0.22) : .white.opacity(0.08),
+                    lineWidth: 0.6
+                )
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("\(status.title) situation")
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+
     /// Couple Read needs both charts — partner-type people plus the user's Sun.
     @ViewBuilder
     private var coupleReadButton: some View {
@@ -449,6 +540,7 @@ struct RelationshipPersonDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
+                    situationSection
                     loopActionsRow
                     PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
                     coupleReadButton

@@ -459,6 +459,9 @@ extension AppViewModel {
         let lastPredictionTarget = lastPrediction.flatMap { result in
             PanelMemoryMatcher.mentions(in: result.question, people: relationshipPeople).first?.displayName
         }
+        let situationPerson = relationshipPeople
+            .filter { $0.situationStatus != nil }
+            .max { ($0.situationUpdatedAt ?? .distantPast) < ($1.situationUpdatedAt ?? .distantPast) }
 
         return PanelStarterContext(
             memoryPersonName: panelMemoryNotes.max { $0.createdAt < $1.createdAt }?.personName,
@@ -467,12 +470,16 @@ extension AppViewModel {
             lastPredictionUnrated: lastPrediction.map { $0.outcome == nil } ?? false,
             streak: StreakManager.shared.currentStreak,
             isStreakMilestone: StreakManager.shared.streakMessage != nil,
-            latestMomentCaption: moments.first?.caption
+            latestMomentCaption: moments.first?.caption,
+            situationPersonName: situationPerson?.displayName,
+            situationStatusRaw: situationPerson?.situationStatus?.rawValue,
+            situationDay: situationPerson?.situationDay() ?? 1
         )
     }
 
-    /// Deterministic, testable starter composer. Priority: memory of a person
-    /// → unrated prediction → streak milestone → latest moment → role default.
+    /// Deterministic, testable starter composer. Priority: active situation
+    /// → memory of a person → unrated prediction → streak milestone →
+    /// latest moment → role default.
     nonisolated static func composePanelStarter(
         dayOfYear: Int,
         focusRole: CelestialRole,
@@ -480,6 +487,15 @@ extension AppViewModel {
     ) -> String {
         func pick(_ lines: [String]) -> String? {
             lines.isEmpty ? nil : lines[dayOfYear % lines.count]
+        }
+
+        // The saga the user is actually tracking comes first.
+        if let person = context.situationPersonName,
+           let statusRaw = context.situationStatusRaw,
+           let line = pick(AstrologyTemplates.panelSituationStarters[statusRaw] ?? []) {
+            return line
+                .replacingOccurrences(of: "{personName}", with: person)
+                .replacingOccurrences(of: "{n}", with: "\(context.situationDay)")
         }
 
         if let person = context.memoryPersonName,
@@ -629,4 +645,8 @@ nonisolated struct PanelStarterContext: Equatable, Sendable {
     let streak: Int
     let isStreakMilestone: Bool
     let latestMomentCaption: String?
+    // Active saga — outranks everything else when set.
+    var situationPersonName: String? = nil
+    var situationStatusRaw: String? = nil
+    var situationDay: Int = 1
 }

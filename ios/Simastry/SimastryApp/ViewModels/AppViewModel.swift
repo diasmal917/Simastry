@@ -2607,6 +2607,10 @@ extension AppViewModel {
             )
         ]
 
+        // People power the Situation card on Today and the People tab —
+        // seed them for every preview so those surfaces always render.
+        relationshipPeople = RelationshipPeopleStore.previewPeople()
+
         selectedTab = debugPreviewTab(from: arguments)
         if selectedTab == 3 {
             selectedTab = 0

@@ -573,6 +573,84 @@ nonisolated struct AstrologyTemplates {
 
     /// Companion chat openers per element — the first beat of an AI Astrologist reply,
     /// before sign-specific guidance. Keyed by ZodiacElement rawValue.
+    /// One line per situation status × the person's element, with `{n}` as
+    /// the day count. Anti-spiral by design: every line steadies and ends
+    /// usable — never "they've moved on" energy.
+    static let situationLines: [String: [String: String]] = [
+        "newSpark": [
+            "fire": "Fire signs reward the bold first move — day {n} is exactly the right day to send it.",
+            "earth": "Earth signs warm to consistency, not fireworks — one easy, concrete opener beats a grand one.",
+            "air": "Air signs fall for curiosity first — open with a question only they would have a take on.",
+            "water": "Water signs feel the tone before the words — one warm, unhurried line is the whole move."
+        ],
+        "waitingOnReply": [
+            "fire": "Fire signs reply fast or they reply later with momentum — day {n} of quiet usually means life, not verdicts.",
+            "earth": "Earth signs answer when the answer is solid — day {n} is process, not a verdict.",
+            "air": "Air signs drift mid-thread and circle back like nothing happened — day {n} is normal air-sign weather.",
+            "water": "Water signs go quiet to feel, not to punish — day {n} of space often comes back softer."
+        ],
+        "steady": [
+            "fire": "Steady with a fire sign means the spark gets scheduled — keep one small adventure on the calendar.",
+            "earth": "Steady is an earth sign's love language — notice the maintenance, it's the romance.",
+            "air": "Steady with an air sign runs on conversation — one good question a day keeps it alive.",
+            "water": "Steady with a water sign deepens in the small check-ins — the two-line text matters more than the big night."
+        ],
+        "repairing": [
+            "fire": "Repair with a fire sign moves fast once it starts — one clean, warm message and don't relitigate.",
+            "earth": "Earth signs rebuild through shown behavior — day {n} of consistency is the apology working.",
+            "air": "Air signs repair by talking it through once, fully — then genuinely closing the tab.",
+            "water": "Water signs repair through tenderness before analysis — lead with how it felt, not what happened."
+        ],
+        "coolingOff": [
+            "fire": "Day {n} of quiet — fire burns out of a mood as fast as it burned in. Your evenings are yours again; use one well.",
+            "earth": "Day {n} of quiet — quiet is where earth signs reset. Steady your own routine first; it reads from a distance.",
+            "air": "Day {n} of quiet — air signs return through a side door, usually with a link or a joke. Keep yours light too.",
+            "water": "Day {n} of quiet — water needs the tide out before it comes back in. Tend your own shore today."
+        ]
+    ]
+
+    /// One first-text opener per sign for the New Spark situation —
+    /// sendable as-is.
+    static let newSparkOpeners: [ZodiacSign: String] = [
+        .aries: "Settle a debate for me — best spontaneous thing you've done this month?",
+        .taurus: "Found a place I think you'd actually like. No rush, but it's going on the list.",
+        .gemini: "Okay, random question you'll have a take on: what's the most overrated app on your phone?",
+        .cancer: "This made me think of you today — how's your week actually going?",
+        .leo: "I keep telling people about that thing you said. What's the encore?",
+        .virgo: "I need a competent opinion and you're the most competent person I know. Got 5 minutes?",
+        .libra: "You strike me as someone with great taste — coffee place recommendation? I'll trade you one.",
+        .scorpio: "You're hard to read and I mean that as a compliment. Coffee sometime?",
+        .sagittarius: "Tell me something true: where's the next place you want to travel?",
+        .capricorn: "I respect a full calendar, so I'll be efficient: drinks this week, you pick the day.",
+        .aquarius: "You seem like you'd have an unusual answer to this: what's something everyone loves that you don't get?",
+        .pisces: "What's something you're quietly really into right now? I have a feeling it's interesting."
+    ]
+
+    /// Panel daily starters when a situation is active — top priority,
+    /// `{personName}` and `{n}` slots.
+    static let panelSituationStarters: [String: [String]] = [
+        "newSpark": [
+            "So — {personName}. Day {n} of the new spark. Have you sent the first real message yet, or are we drafting it together?",
+            "Still thinking about {personName}? Good. New things deserve one bold, easy opener — want us to shape it?"
+        ],
+        "waitingOnReply": [
+            "Day {n} waiting on {personName} — before you reread the thread again, want us to read it once for you?",
+            "Checking in on the {personName} wait. The silence has a shape — want to talk about what it probably is and isn't?"
+        ],
+        "steady": [
+            "Things with {personName} are steady — which is exactly when one thoughtful message lands hardest. Want ideas?",
+            "Quiet good news is still news: how are things with {personName} this week?"
+        ],
+        "repairing": [
+            "Day {n} of repairing things with {personName}. Repair is mostly pacing — how did the last exchange feel?",
+            "How's the rebuild with {personName} going? One honest line at a time is the whole method."
+        ],
+        "coolingOff": [
+            "Day {n} of distance from {personName}. You're doing the hard, right thing — what's one good hour you can claim today?",
+            "No news from the {personName} front is allowed to be good news. How are YOU doing in it?"
+        ]
+    ]
+
     /// Mode-specific guidance beats for 1:1 template replies — same
     /// element-keyed scheme as companionReplyGuidance (which stays the
     /// best-friend default). Mentor talks career, teacher ends each beat

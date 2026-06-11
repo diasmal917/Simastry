@@ -122,6 +122,8 @@ struct HomeView: View {
 
                 dailyReadCard
 
+                situationCard
+
                 methodCourseCard
 
                 todaysSkyCard
@@ -460,6 +462,110 @@ struct HomeView: View {
                 return nil
             }
             return DailyGuideTip(title: tip.title, lesson: tip.body, opener: tip.opener, profile: profile)
+        }
+    }
+
+    // MARK: - The Situation
+
+    /// The most recently updated active saga — the card the user actually
+    /// opens the app to check.
+    private var activeSituationPerson: RelationshipPerson? {
+        viewModel.relationshipPeople
+            .filter { $0.situationStatus != nil }
+            .max { ($0.situationUpdatedAt ?? .distantPast) < ($1.situationUpdatedAt ?? .distantPast) }
+    }
+
+    @ViewBuilder
+    private var situationCard: some View {
+        if let person = activeSituationPerson, let status = person.situationStatus {
+            let day = person.situationDay()
+            let line = AstrologyTemplates.situationLines[status.rawValue]?[person.sunSign.element.rawValue]?
+                .replacingOccurrences(of: "{n}", with: "\(day)")
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.selectedTab = 1
+                viewModel.peopleDetailRequestPersonId = person.id
+            } label: {
+                VStack(alignment: .leading, spacing: 11) {
+                    HStack(spacing: 8) {
+                        Image(systemName: status.systemImage)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+
+                        Text("THE SITUATION")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.textSecondary)
+                            .tracking(1.5)
+
+                        Spacer()
+
+                        Text(status.title)
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(SimastryColor.gold.opacity(0.12), in: Capsule())
+                    }
+
+                    HStack(spacing: 8) {
+                        ZodiacIconView(sign: person.sunSign, size: 22, showsGlow: false)
+
+                        Text("\(person.displayName) · Day \(day)")
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+
+                    if let line {
+                        Text(line)
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                    }
+
+                    if status == .newSpark,
+                       let opener = AstrologyTemplates.newSparkOpeners[person.sunSign] {
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("\u{201C}\(opener)\u{201D}")
+                                .font(.system(.footnote, design: .serif))
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer(minLength: 6)
+
+                            Button {
+                                HapticManager.buttonPress()
+                                UIPasteboard.general.string = opener
+                                viewModel.showToast("Opener copied", subtitle: "First move, ready to send", isError: false)
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(SimastryColor.gold)
+                                    .padding(8)
+                                    .background(SimastryColor.gold.opacity(0.12), in: Circle())
+                            }
+                            .buttonStyle(SpringPressStyle())
+                            .accessibilityLabel("Copy the first-text opener")
+                        }
+                        .padding(10)
+                        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .surfaceCard(cornerRadius: 20, accent: person.sunSign.color.opacity(0.7))
+                .contentShape(.rect)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("The situation with \(person.displayName): \(status.title), day \(day). Opens their page.")
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
         }
     }
 

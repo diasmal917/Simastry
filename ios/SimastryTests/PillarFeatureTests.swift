@@ -120,6 +120,69 @@ struct PillarFeatureTests {
         }
     }
 
+    // MARK: - Situations
+
+    @Test func situationStatusRoundTripsAndComputesDay() throws {
+        var person = RelationshipPeopleStore.previewPeople()[1] // Alex, no situation
+        #expect(person.situationStatus == nil)
+        #expect(person.situationDay() == 1)
+
+        let now = Date()
+        person.situationStatus = .waitingOnReply
+        person.situationUpdatedAt = now.addingTimeInterval(-2 * 24 * 60 * 60)
+        #expect(person.situationDay(now: now) == 3)
+
+        // Survives the store's JSON round trip.
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let data = try encoder.encode([person])
+        let decoded = try decoder.decode([RelationshipPerson].self, from: data)
+        #expect(decoded.first?.situationStatus == .waitingOnReply)
+
+        // Pre-situation JSON (fields absent) still decodes.
+        let legacy = """
+        [{"id":"\(UUID().uuidString)","name":"Old","relationshipType":"Friend","sunSign":"leo","isChartCalculated":false,"updatedAt":"2025-01-01T00:00:00Z"}]
+        """
+        let legacyDecoded = try decoder.decode([RelationshipPerson].self, from: Data(legacy.utf8))
+        #expect(legacyDecoded.first?.situationStatus == nil)
+    }
+
+    @Test func situationTemplatesCoverAllStatusElementPairs() {
+        for status in SituationStatus.allCases {
+            for element in ZodiacElement.allCases {
+                #expect(
+                    AstrologyTemplates.situationLines[status.rawValue]?[element.rawValue]?.isEmpty == false,
+                    "situation line missing for \(status.rawValue) x \(element.rawValue)"
+                )
+            }
+            #expect(AstrologyTemplates.panelSituationStarters[status.rawValue]?.isEmpty == false)
+        }
+        for sign in ZodiacSign.allCases {
+            #expect(AstrologyTemplates.newSparkOpeners[sign]?.isEmpty == false)
+        }
+    }
+
+    @Test func panelStarterPrioritizesActiveSituation() {
+        var context = PanelStarterContext(
+            memoryPersonName: "Jordan",
+            lastPredictionTargetName: nil,
+            lastPredictionSign: .leo,
+            lastPredictionUnrated: true,
+            streak: 7,
+            isStreakMilestone: true,
+            latestMomentCaption: "good day"
+        )
+        context.situationPersonName = "Jake"
+        context.situationStatusRaw = SituationStatus.waitingOnReply.rawValue
+        context.situationDay = 2
+
+        let starter = AppViewModel.composePanelStarter(dayOfYear: 4, focusRole: .sun, context: context)
+        #expect(starter.contains("Jake"))
+        #expect(!starter.contains("{personName}") && !starter.contains("{n}"))
+    }
+
     // MARK: - Guide Chat Modes
 
     @Test func guideChatModeShapesPromptAndKeepsTherapyBoundary() {
