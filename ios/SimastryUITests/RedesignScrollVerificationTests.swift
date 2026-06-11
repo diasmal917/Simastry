@@ -110,6 +110,27 @@ final class RedesignScrollVerificationTests: XCTestCase {
         attachShot(app, name: "profile-bottom-streak")
     }
 
+    /// The Aura share card now leads with the same glyph trio as the main card.
+    @MainActor
+    func testAuraShareCardUnifiedDesign() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "aura"]
+        app.launch()
+        sleep(4)
+
+        for _ in 0..<3 {
+            app.swipeUp()
+        }
+        sleep(1)
+
+        let shareButton = app.buttons["Share Aura Card"].firstMatch
+        if shareButton.waitForExistence(timeout: 3) {
+            shareButton.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "aura-share-card")
+    }
+
     /// Both formats of the consolidated share card, fully untruncated.
     @MainActor
     func testShareCardStoryAndPostFormats() throws {

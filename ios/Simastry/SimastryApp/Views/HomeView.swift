@@ -448,12 +448,8 @@ struct HomeView: View {
     /// Two micro-lessons per day, rotating through the template set with
     /// their teaching guides resolved from the catalog.
     private var todaysTips: [DailyGuideTip] {
-        let tips = AstrologyTemplates.guideTips
-        guard !tips.isEmpty else { return [] }
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let first = (dayOfYear * 2) % tips.count
-        return [first, (first + 1) % tips.count].compactMap { index in
-            let tip = tips[index]
+        return AstrologyTemplates.dailyGuideTips(dayOfYear: dayOfYear).compactMap { tip in
             guard let profile = FactoryCompanionCatalog.all.first(where: { $0.id == tip.guideId }) else {
                 return nil
             }

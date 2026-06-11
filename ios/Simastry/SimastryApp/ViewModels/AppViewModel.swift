@@ -1063,6 +1063,7 @@ class AppViewModel {
 
         schedulePanelStarterNotification()
         scheduleDailyBriefNotification()
+        notificationService.scheduleGuideTipNudges()
     }
 
     /// Daily nudge that a guide opened the panel's conversation starter.
@@ -2724,7 +2725,7 @@ extension AppViewModel {
             ),
             PanelMessage(
                 senderId: "sagittarius-nadia",
-                content: "Good. You said it instead of circling it. If you're asking whether to reach out — that's already your answer. Keep it short.",
+                content: "Good. You said it instead of circling it. If you want to follow up, one short, warm line is enough — no essay needed.",
                 timestamp: now.addingTimeInterval(-30 * 60),
                 isRead: true
             ),

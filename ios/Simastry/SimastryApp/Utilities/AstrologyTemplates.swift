@@ -548,7 +548,7 @@ nonisolated struct AstrologyTemplates {
         "fire": [
             "Say the true thing in one sentence, then stop typing. Momentum likes a clean exit.",
             "You don't need a better argument, you need a braver first line. Send the honest one.",
-            "If you're asking whether to reach out — that's already your answer. Keep it short.",
+            "Wanting to reach out is reason enough. One short, warm line — no essay needed.",
             "Don't pad it with apologies. One clear sentence carries further than three soft ones."
         ],
         "earth": [
@@ -819,6 +819,15 @@ nonisolated struct AstrologyTemplates {
             "cancer-noel"
         )
     ]
+
+    /// The day's two Tips-row entries — shared by the Today tab and the
+    /// evening tip notification so both always agree on what "today's tip" is.
+    static func dailyGuideTips(dayOfYear: Int) -> [(title: String, body: String, opener: String, guideId: String)] {
+        let tips = guideTips
+        guard !tips.isEmpty else { return [] }
+        let first = (dayOfYear * 2) % tips.count
+        return [tips[first], tips[(first + 1) % tips.count]]
+    }
 
     // MARK: - Personal Insights (post-onboarding)
 

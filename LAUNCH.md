@@ -112,8 +112,8 @@ baked into the prompts and locked by unit tests.
 - [ ] Full onboarding: name → birth chart (real geocoding) → reveal → panel
 - [ ] Sandbox purchase of Plus and Pro; restore purchases
 - [ ] Universal link tap from Messages (after AASA)
-- [ ] Notification permission flow + the 10:30 panel starter and 22h
-      prediction follow-up arriving
+- [ ] Notification permission flow + the 10:30 panel starter, the 18:00
+      guide tip ("New tip from …"), and the 22h prediction follow-up arriving
 - [ ] OCR import with a real conversation screenshot
 - [ ] Panel chat: 1–3 staggered replies; Moments: comments dripping in
 - [ ] Dynamic Type XXXL spot-check on device

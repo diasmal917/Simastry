@@ -141,11 +141,14 @@ struct ShareableCardView: View {
                    let moon = viewModel.userMoonSign,
                    let rising = viewModel.userRisingSign {
                     VStack(spacing: isStoryFormat ? 16 : 9) {
-                        HStack(spacing: isStoryFormat ? 12 : 8) {
-                            glyphColumn(role: .sun, sign: sun)
-                            glyphColumn(role: .moon, sign: moon)
-                            glyphColumn(role: .rising, sign: rising)
-                        }
+                        ShareGlyphTrio(
+                            sun: sun,
+                            moon: moon,
+                            rising: rising,
+                            circleSize: isStoryFormat ? 58 : 46,
+                            iconSize: isStoryFormat ? 34 : 26,
+                            spacing: isStoryFormat ? 12 : 8
+                        )
 
                         if let communicationTypeTitle {
                             Text(communicationTypeTitle)
@@ -173,34 +176,6 @@ struct ShareableCardView: View {
                     .padding(.bottom, isStoryFormat ? 18 : 10)
             }
         }
-    }
-
-    private func glyphColumn(role: CelestialRole, sign: ZodiacSign) -> some View {
-        VStack(spacing: 5) {
-            ZStack {
-                Circle()
-                    .fill(sign.color.opacity(0.16))
-                Circle()
-                    .strokeBorder(sign.color.opacity(0.45), lineWidth: 1)
-                ZodiacIconView(sign: sign, size: isStoryFormat ? 34 : 26, showsGlow: true)
-            }
-            .frame(
-                width: isStoryFormat ? 58 : 46,
-                height: isStoryFormat ? 58 : 46
-            )
-
-            Text(role.displayName.uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .tracking(1)
-                .foregroundStyle(role.accentColor)
-
-            Text(sign.displayName)
-                .font(SimastryFont.labelSmall)
-                .foregroundStyle(SimastryColor.offWhite)
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private func howToTalkBlock(sun: ZodiacSign) -> some View {
@@ -257,7 +232,7 @@ struct ShareableCardView: View {
                     VStack(spacing: 12) {
                         HStack(spacing: 20) {
                             if let sun = viewModel.userSunSign {
-                                ZodiacBadgeView(sign: sun, isSelected: true, size: 40)
+                                ShareGlyphCircle(sign: sun, circleSize: 44, iconSize: 26)
                             }
 
                             Text("\(companion.compatibilityScore)%")
@@ -265,7 +240,7 @@ struct ShareableCardView: View {
                                 .foregroundStyle(SimastryColor.gold)
 
                             if let compSun = ZodiacSign(rawValue: companion.sunSign) {
-                                ZodiacBadgeView(sign: compSun, isSelected: true, size: 40)
+                                ShareGlyphCircle(sign: compSun, circleSize: 44, iconSize: 26)
                             }
                         }
 
@@ -309,7 +284,7 @@ struct ShareableCardView: View {
 
                 if let sun = viewModel.userSunSign {
                     VStack(spacing: 12) {
-                        ZodiacBadgeView(sign: sun, isSelected: true, size: 48)
+                        ShareGlyphCircle(sign: sun, circleSize: 52, iconSize: 30)
 
                         Text(sun.displayName)
                             .font(SimastryFont.titleMedium)

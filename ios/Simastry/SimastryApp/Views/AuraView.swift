@@ -689,19 +689,40 @@ private struct AuraShareCard: View {
     var summary: ChartAuraSummary
     var revealStrength: Bool
 
+    /// The user's actual placements, recovered from the aura sources, so the
+    /// card can lead with the same glyph trio as the main Simastry card.
+    private var chartSigns: (sun: ZodiacSign, moon: ZodiacSign, rising: ZodiacSign)? {
+        guard let sun = auras.first(where: { $0.sources.contains(.sun) })?.sign,
+              let moon = auras.first(where: { $0.sources.contains(.moon) })?.sign,
+              let rising = auras.first(where: { $0.sources.contains(.rising) })?.sign else {
+            return nil
+        }
+        return (sun, moon, rising)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                Text("SIMASTRY")
-                    .tracking(3)
-                    .font(.subheadline.weight(.heavy))
-            }
-            .foregroundStyle(SimastryGradient.gold)
+            Text("S I M A S T R Y")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(2)
+                .frame(maxWidth: .infinity)
 
             Text("My Aura")
                 .font(.system(.title2, design: .serif).weight(.semibold))
                 .foregroundStyle(SimastryColor.offWhite)
+                .frame(maxWidth: .infinity)
+
+            if let chartSigns {
+                ShareGlyphTrio(
+                    sun: chartSigns.sun,
+                    moon: chartSigns.moon,
+                    rising: chartSigns.rising,
+                    circleSize: 48,
+                    iconSize: 28,
+                    spacing: 10
+                )
+            }
 
             VStack(spacing: 9) {
                 ForEach(auras) { aura in
@@ -719,6 +740,11 @@ private struct AuraShareCard: View {
                 Spacer()
                 metric("Lit bars", "\(summary.litBars)")
             }
+
+            Text(AppConfig.universalLinkHost)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.gold.opacity(0.5))
+                .frame(maxWidth: .infinity)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)

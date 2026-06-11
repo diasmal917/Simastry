@@ -192,6 +192,47 @@ final class NotificationService {
         center.add(request)
     }
 
+    /// Evening nudge with the day's Tips-row headline, attributed to its
+    /// guide ("New tip from Theo"). Scheduled as individual fires for the
+    /// next several evenings so each notification matches that day's
+    /// rotation even if the app stays closed. Privacy-safe: lesson titles
+    /// only, never user content.
+    func scheduleGuideTipNudges(days: Int = 5) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: Self.guideTipIdentifiers)
+
+        let calendar = Calendar.current
+        for offset in 0..<min(days, Self.guideTipIdentifiers.count) {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: Date()) else { continue }
+            var components = calendar.dateComponents([.year, .month, .day], from: day)
+            components.hour = 18
+            components.minute = 0
+            guard let fireDate = calendar.date(from: components), fireDate > Date() else { continue }
+
+            let dayOfYear = calendar.ordinality(of: .day, in: .year, for: day) ?? 1
+            guard let tip = AstrologyTemplates.dailyGuideTips(dayOfYear: dayOfYear).first,
+                  let guide = FactoryCompanionCatalog.all.first(where: { $0.id == tip.guideId }) else {
+                continue
+            }
+
+            let content = UNMutableNotificationContent()
+            content.title = "New tip from \(guide.name)"
+            content.body = tip.title
+            content.sound = .default
+            content.userInfo = ["deeplink": "simastry://home"]
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "guide_tip_\(offset)",
+                content: content,
+                trigger: trigger
+            )
+            center.add(request)
+        }
+    }
+
+    static let guideTipIdentifiers = (0..<7).map { "guide_tip_\($0)" }
+
     func scheduleEveningCheckIn(companionName: String) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["evening_checkin"])
@@ -302,7 +343,7 @@ final class NotificationService {
                 "simulation_reminder",
                 "panel_daily_starter",
                 "prediction_outcome_followup"
-            ]
+            ] + Self.guideTipIdentifiers
         )
     }
 

@@ -67,6 +67,21 @@ struct PanelMomentsInviteTests {
         }
     }
 
+    @Test func dailyGuideTipsRotateDeterministically() {
+        let count = AstrologyTemplates.guideTips.count
+        for dayOfYear in 1...366 {
+            let tips = AstrologyTemplates.dailyGuideTips(dayOfYear: dayOfYear)
+            #expect(tips.count == 2)
+            // Same day always yields the same pair (Today tab and the
+            // evening notification must agree), and the two tips differ.
+            let again = AstrologyTemplates.dailyGuideTips(dayOfYear: dayOfYear)
+            #expect(tips.map(\.title) == again.map(\.title))
+            if count > 1 {
+                #expect(tips[0].title != tips[1].title)
+            }
+        }
+    }
+
     @Test func openPanelChatWithTipPostsOnceFromThatGuideAndRoutes() {
         cleanPanelDefaults()
         let viewModel = seededViewModel()
