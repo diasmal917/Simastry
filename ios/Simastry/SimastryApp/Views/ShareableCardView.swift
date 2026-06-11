@@ -124,10 +124,10 @@ struct ShareableCardView: View {
             cardBackground
 
             VStack(spacing: 0) {
-                Text("S I M A S T R Y")
+                Text("SIMASTRY")
                     .font(SimastryFont.captionSmall)
+                    .italic()
                     .foregroundStyle(SimastryColor.gold)
-                    .tracking(2)
                     .padding(.top, isStoryFormat ? 22 : 14)
 
                 if isStoryFormat, viewModel.profileImage != nil {
@@ -220,10 +220,10 @@ struct ShareableCardView: View {
             cardBackground
 
             VStack(spacing: 0) {
-                Text("S I M A S T R Y")
+                Text("SIMASTRY")
                     .font(SimastryFont.captionSmall)
+                    .italic()
                     .foregroundStyle(SimastryColor.gold)
-                    .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
 
                 Spacer()
@@ -274,10 +274,10 @@ struct ShareableCardView: View {
             cardBackground
 
             VStack(spacing: 0) {
-                Text("S I M A S T R Y")
+                Text("SIMASTRY")
                     .font(SimastryFont.captionSmall)
+                    .italic()
                     .foregroundStyle(SimastryColor.gold)
-                    .tracking(2)
                     .padding(.top, isStoryFormat ? 24 : 16)
 
                 Spacer()

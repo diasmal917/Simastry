@@ -702,10 +702,10 @@ private struct AuraShareCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("S I M A S T R Y")
+            Text("SIMASTRY")
                 .font(SimastryFont.captionSmall)
+                .italic()
                 .foregroundStyle(SimastryColor.gold)
-                .tracking(2)
                 .frame(maxWidth: .infinity)
 
             Text("My Aura")

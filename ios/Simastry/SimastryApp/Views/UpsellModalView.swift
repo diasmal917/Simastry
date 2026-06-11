@@ -125,10 +125,10 @@ struct UpsellModalView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("S I M A S T R Y +")
+                        Text("SIMASTRY+")
                             .font(SimastryFont.overline)
+                            .italic()
                             .foregroundStyle(SimastryColor.gold)
-                            .tracking(2)
 
                         Text(priceText(for: "plus", fallback: "$6.99 / month"))
                             .font(SimastryFont.titleMedium)
@@ -177,10 +177,10 @@ struct UpsellModalView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
-                            Text("S I M A S T R Y  P R O")
+                            Text("SIMASTRY PRO")
                                 .font(SimastryFont.overline)
+                                .italic()
                                 .foregroundStyle(SimastryColor.gold)
-                                .tracking(2)
 
                             Text("BEST VALUE")
                                 .font(SimastryFont.captionSmall)
