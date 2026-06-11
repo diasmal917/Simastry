@@ -78,8 +78,9 @@ struct PanelMomentsInviteTests {
             #expect(decoded.count == 1)
         }
 
-        // First staggered guide reply lands ~1.3s after sending.
-        try await Task.sleep(for: .milliseconds(1_800))
+        // First staggered guide reply lands ~1.3s after sending; generous
+        // margin because the suite's async tests share the main actor.
+        try await Task.sleep(for: .milliseconds(3_200))
         #expect(viewModel.panelMessages.count >= 2)
         #expect(viewModel.panelMessages.last?.senderId != PanelParticipant.localUserId)
     }

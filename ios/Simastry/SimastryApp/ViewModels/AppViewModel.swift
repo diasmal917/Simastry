@@ -1895,6 +1895,8 @@ class AppViewModel {
         )
         companionMessages.insert(outgoing, at: 0)
         saveMessages()
+        // Guides share one memory — 1:1 mentions inform panel follow-ups too.
+        recordPanelMemoryIfNeeded(from: content)
 
         // Keep relationship metrics in sync when a companion record exists.
         if let index = companions.firstIndex(where: { $0.id == companionId }) {

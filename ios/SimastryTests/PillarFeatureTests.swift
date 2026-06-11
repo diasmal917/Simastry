@@ -372,6 +372,55 @@ struct PillarFeatureTests {
         #expect(playbook.user.contains("Teammate"))
     }
 
+    @Test func companionThreadMessageRecordsSharedMemory() async {
+        cleanPanelDefaults()
+        defer {
+            cleanPanelDefaults()
+            UserDefaults.standard.removeObject(forKey: "simastry_companion_messages")
+        }
+
+        let viewModel = seededViewModel()
+        viewModel.relationshipPeople = RelationshipPeopleStore.previewPeople()
+        viewModel.panelMemoryNotes = []
+
+        _ = await viewModel.sendCompanionThreadMessage(
+            companionId: UUID(),
+            companionName: "Nadia",
+            companionSign: "sagittarius",
+            content: "Nadia, how do I give Jordan feedback without it landing wrong?"
+        )
+
+        #expect(viewModel.panelMemoryNotes.contains { $0.personName == "Jordan" })
+    }
+
+    @Test func momentPromptEnforcesNoVisionRule() {
+        guard let profile = FactoryCompanionCatalog.all.first(where: { $0.id == "cancer-mila" }) else {
+            Issue.record("Expected cast member missing")
+            return
+        }
+        let user = GuideReplyService.UserContext(
+            name: "Maya", sun: .sagittarius, moon: .cancer, rising: .libra, communicationType: nil
+        )
+
+        let withCaption = GuideReplyService.momentCommentPrompt(
+            caption: "finally said the honest thing",
+            guideProfile: profile,
+            role: .moon,
+            user: user
+        )
+        #expect(withCaption.system.contains("CANNOT see the photo"))
+        #expect(withCaption.system.contains(SimastryVoice.promptBlock))
+        #expect(withCaption.user.contains("finally said the honest thing"))
+
+        let withoutCaption = GuideReplyService.momentCommentPrompt(
+            caption: "   ",
+            guideProfile: profile,
+            role: nil,
+            user: user
+        )
+        #expect(withoutCaption.user.contains("no caption"))
+    }
+
     @Test func voiceAuditBansDoomLanguage() {
         let bannedPhrases = [
             "they've already decided",

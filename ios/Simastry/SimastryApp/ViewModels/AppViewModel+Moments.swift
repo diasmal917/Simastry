@@ -117,15 +117,18 @@ extension AppViewModel {
             guard moments.contains(where: { $0.id == momentId }) else { return }
             momentTypingKeys.insert(typingKey)
 
-            try? await Task.sleep(for: .milliseconds(typingLeadIn))
+            // LLM comment when the edge channel is live (caption + chart only,
+            // never the image); template fallback keeps the typing feel.
+            var content = await generateMomentCommentViaLLM(momentId: momentId, entry: entry)
+            if content == nil {
+                try? await Task.sleep(for: .milliseconds(typingLeadIn))
+            }
             momentTypingKeys.remove(typingKey)
 
             guard let index = moments.firstIndex(where: { $0.id == momentId }) else { return }
 
-            let comment = MomentComment(
-                authorKind: .guide(profileId: entry.profile.id),
-                authorName: entry.profile.name,
-                content: Self.composeMomentComment(
+            if content == nil {
+                content = Self.composeMomentComment(
                     profile: entry.profile,
                     role: entry.role,
                     caption: moments[index].caption,
@@ -134,10 +137,50 @@ extension AppViewModel {
                     userRising: userRisingSign,
                     beatIndex: beatIndex
                 )
+            }
+
+            guard let content, !content.isEmpty else { return }
+            let comment = MomentComment(
+                authorKind: .guide(profileId: entry.profile.id),
+                authorName: entry.profile.name,
+                content: content
             )
             moments[index].comments.append(comment)
             moments[index].reactionCount += 1 + beatIndex % 2
             saveMoments()
+        }
+    }
+
+    /// LLM comment for a moment, or nil (caller falls back to templates).
+    private func generateMomentCommentViaLLM(
+        momentId: UUID,
+        entry: PanelMatcher.Entry
+    ) async -> String? {
+        guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply,
+              let moment = moments.first(where: { $0.id == momentId }) else { return nil }
+
+        let userContext = GuideReplyService.UserContext(
+            name: (profile?.displayName ?? "").components(separatedBy: " ").first,
+            sun: userSunSign,
+            moon: userMoonSign,
+            rising: userRisingSign,
+            communicationType: nil
+        )
+
+        let prompts = GuideReplyService.momentCommentPrompt(
+            caption: moment.caption,
+            guideProfile: entry.profile,
+            role: entry.role,
+            user: userContext
+        )
+
+        return await GuideReplyService.withTimeout(seconds: 8) { [supabase] in
+            try await supabase.invokeCompanionReply(
+                kind: .chat,
+                system: prompts.system,
+                user: prompts.user,
+                maxTokens: 120
+            )
         }
     }
 

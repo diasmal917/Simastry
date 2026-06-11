@@ -145,6 +145,44 @@ nonisolated enum GuideReplyService {
         return (systemLines.joined(separator: "\n"), userLines.joined(separator: "\n"))
     }
 
+    /// Prompt pair for a guide's comment on a user's Moment. The model never
+    /// sees the photo — the hard no-vision rule is part of the system prompt.
+    static func momentCommentPrompt(
+        caption: String?,
+        guideProfile: FactoryCompanionProfile,
+        role: CelestialRole?,
+        user: UserContext
+    ) -> (system: String, user: String) {
+        var systemLines: [String] = []
+        systemLines.append("You are \(guideProfile.name), a fictional AI astrologer guide inside the Simastry app, commenting on a photo the user posted to their private Moments wall.")
+        systemLines.append("Your lens: \(guideProfile.sign.displayName) — Simastry Method specialization: \(guideProfile.sign.methodLine).")
+        if let role {
+            systemLines.append("On the user's advisory panel you hold their \(role.displayName) lens.")
+        }
+        systemLines.append(SimastryVoice.promptBlock)
+        systemLines.append("""
+        Hard rule: you CANNOT see the photo. Never describe, guess, or imply anything about \
+        the image content. Respond only to the user's caption and their chart energy. \
+        One warm sentence, in character, plain text only — no emoji, no hashtags.
+        """)
+
+        var userLines: [String] = []
+        if let caption = caption?.trimmingCharacters(in: .whitespacesAndNewlines), !caption.isEmpty {
+            userLines.append("Their caption: \u{201C}\(caption)\u{201D}")
+        } else {
+            userLines.append("They posted with no caption.")
+        }
+        var chartParts: [String] = []
+        if let sun = user.sun { chartParts.append("Sun in \(sun.displayName)") }
+        if let rising = user.rising { chartParts.append("Rising in \(rising.displayName)") }
+        if !chartParts.isEmpty {
+            userLines.append("The user\(user.name.map { " (\($0))" } ?? "") has \(chartParts.joined(separator: ", ")).")
+        }
+        userLines.append("Write your one-sentence comment.")
+
+        return (systemLines.joined(separator: "\n"), userLines.joined(separator: "\n"))
+    }
+
     /// Races an async operation against a timeout; nil on timeout or error.
     static func withTimeout(
         seconds: Double,

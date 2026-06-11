@@ -7,6 +7,18 @@ import Foundation
 // composer on error or timeout, so chats never stall.
 
 extension AppViewModel {
+    /// The two most recent memory notes as prompt context lines.
+    private var llmMemoryLines: [String] {
+        let now = Date()
+        return panelMemoryNotes
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(2)
+            .map { note in
+                let days = max(0, Int(now.timeIntervalSince(note.createdAt) / 86_400))
+                return "asked about \(note.personName) (\(days == 0 ? "today" : "\(days)d ago"))"
+            }
+    }
+
     private var llmUserContext: GuideReplyService.UserContext {
         GuideReplyService.UserContext(
             name: (profile?.displayName ?? "").components(separatedBy: " ").first,
@@ -37,22 +49,13 @@ extension AppViewModel {
             )
         }
 
-        let now = Date()
-        let memoryLines = panelMemoryNotes
-            .sorted { $0.createdAt > $1.createdAt }
-            .prefix(2)
-            .map { note in
-                let days = max(0, Int(now.timeIntervalSince(note.createdAt) / 86_400))
-                return "asked about \(note.personName) (\(days == 0 ? "today" : "\(days)d ago"))"
-            }
-
         let system = GuideReplyService.personaSystemPrompt(
             profile: entry.profile,
             role: entry.role,
             user: llmUserContext,
             isPanel: true,
             previousGuideName: previousGuideName,
-            memoryLines: Array(memoryLines)
+            memoryLines: llmMemoryLines
         )
         let user = GuideReplyService.threadUserPrompt(
             transcript: Array(transcript),
@@ -92,7 +95,8 @@ extension AppViewModel {
             profile: matched,
             role: nil,
             user: llmUserContext,
-            isPanel: false
+            isPanel: false,
+            memoryLines: llmMemoryLines
         )
         let user = GuideReplyService.threadUserPrompt(
             transcript: Array(transcript),
