@@ -33,6 +33,12 @@ nonisolated final class PredictionService {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
+    /// Server-proxied generation channel (the companion-reply edge function).
+    /// The Anthropic key lives only in edge-function secrets — never in the
+    /// app binary. Injected by AppViewModel; nil in isolation (tests).
+    var replyChannel: (@Sendable (_ system: String, _ user: String) async throws -> String)?
+    var isRemoteChannelAvailable: (@Sendable () -> Bool)?
+
     init(session: URLSession = .shared, privacyService: ConversationPrivacyService = ConversationPrivacyService()) {
         self.session = session
         self.privacyService = privacyService
@@ -47,7 +53,7 @@ nonisolated final class PredictionService {
     }
 
     var isConfigured: Bool {
-        !Config.ANTHROPIC_API_KEY.isEmpty
+        replyChannel != nil && (isRemoteChannelAvailable?() ?? false)
     }
 
     func generatePrediction(request: PredictionRequest, tier: String) async throws -> PredictionResult {
@@ -88,43 +94,18 @@ nonisolated final class PredictionService {
             preparedHypotheticalReply: preparedHypotheticalReply
         )
 
-        guard let anthropicURL = URL(string: "https://api.anthropic.com/v1/messages") else {
-            throw PredictionServiceError.invalidRequest
-        }
-        var urlRequest = URLRequest(url: anthropicURL)
-        urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = 60
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue(Config.ANTHROPIC_API_KEY, forHTTPHeaderField: "x-api-key")
-        urlRequest.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-
-        let anthropicPayload: [String: Any] = [
-            "model": "claude-sonnet-4-6-20250217",
-            "max_tokens": 1024,
-            "system": systemPrompt,
-            "messages": [
-                ["role": "user", "content": userPrompt]
-            ]
-        ]
-
-        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: anthropicPayload)
-
-        let (data, response) = try await session.data(for: urlRequest)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw PredictionServiceError.invalidResponse
+        guard let replyChannel else {
+            throw PredictionServiceError.serviceUnavailable
         }
 
-        guard 200..<300 ~= httpResponse.statusCode else {
-            let serverMessage = decodeServerMessage(from: data)
-            throw PredictionServiceError.serverError(serverMessage ?? "The prediction request failed. Please try again.")
-        }
-
-        // Parse Anthropic response
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let content = json["content"] as? [[String: Any]],
-              let firstBlock = content.first,
-              let text = firstBlock["text"] as? String else {
-            throw PredictionServiceError.invalidResponse
+        let text: String
+        do {
+            text = try await replyChannel(systemPrompt, userPrompt)
+        } catch {
+            throw PredictionServiceError.serverError(
+                (error as? LocalizedError)?.errorDescription
+                    ?? "The prediction request failed. Please try again."
+            )
         }
 
         // Parse the structured response from Claude
@@ -358,18 +339,6 @@ nonisolated final class PredictionService {
         UserDefaults.standard.set(data, forKey: historyKey)
     }
 
-    private func decodeServerMessage(from data: Data) -> String? {
-        if let envelope = try? decoder.decode(ErrorEnvelope.self, from: data) {
-            return envelope.error?.message ?? envelope.message
-        }
-
-        if let raw = String(data: data, encoding: .utf8), !raw.isEmpty {
-            return raw
-        }
-
-        return nil
-    }
-
     private func makeSystemPrompt(for request: PredictionRequest) -> String {
         let sunDescription = AstrologyTemplates.sunSign[request.targetSunSign.rawValue] ?? ""
         let moonDescription = request.targetMoonSign.flatMap { AstrologyTemplates.moonSign[$0.rawValue] }
@@ -499,11 +468,3 @@ nonisolated private struct PredictionProxyResponse: Decodable, Sendable {
     }
 }
 
-nonisolated private struct ErrorEnvelope: Decodable, Sendable {
-    let message: String?
-    let error: ErrorMessage?
-}
-
-nonisolated private struct ErrorMessage: Decodable, Sendable {
-    let message: String?
-}

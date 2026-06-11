@@ -53,6 +53,20 @@ final class RedesignScrollVerificationTests: XCTestCase {
     }
 
     @MainActor
+    func testScrollPredictForImportAffordance() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "predict"]
+        app.launch()
+        sleep(4)
+
+        attachShot(app, name: "predict-1-top")
+
+        app.swipeUp()
+        sleep(2)
+        attachShot(app, name: "predict-2-conversation")
+    }
+
+    @MainActor
     private func attachShot(_ app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name

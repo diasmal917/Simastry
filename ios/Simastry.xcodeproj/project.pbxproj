@@ -418,16 +418,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleTypeRole = Editor;
-						CFBundleURLName = "$(PRODUCT_BUNDLE_IDENTIFIER)";
-						CFBundleURLSchemes = (
-							simastry,
-							"$(PRODUCT_BUNDLE_IDENTIFIER)",
-						);
-					},
-				);
+				INFOPLIST_FILE = "SupportingFiles/Simastry-Info.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMotionUsageDescription = "Create a subtle parallax effect that responds to how you move your device";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save shareable astrology cards to your photo library";
@@ -464,16 +455,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleTypeRole = Editor;
-						CFBundleURLName = "$(PRODUCT_BUNDLE_IDENTIFIER)";
-						CFBundleURLSchemes = (
-							simastry,
-							"$(PRODUCT_BUNDLE_IDENTIFIER)",
-						);
-					},
-				);
+				INFOPLIST_FILE = "SupportingFiles/Simastry-Info.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMotionUsageDescription = "Create a subtle parallax effect that responds to how you move your device";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save shareable astrology cards to your photo library";

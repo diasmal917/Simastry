@@ -183,20 +183,30 @@ extension AppViewModel {
                 try? await Task.sleep(for: .milliseconds(max(landDelay - typingLeadIn, 200)))
                 panelTypingParticipantIds.insert(participantId)
 
-                try? await Task.sleep(for: .milliseconds(typingLeadIn))
-                panelTypingParticipantIds.remove(participantId)
-
-                let reply = PanelMessage(
-                    senderId: participantId,
-                    content: Self.composePanelReply(
+                // LLM reply when the edge channel is live; template fallback
+                // keeps the human-feel typing delay and never stalls.
+                var content = await generatePanelReplyViaLLM(
+                    entry: entry,
+                    previousGuideName: previousGuideName
+                )
+                if content == nil {
+                    try? await Task.sleep(for: .milliseconds(typingLeadIn))
+                    content = Self.composePanelReply(
                         profile: entry.profile,
                         role: entry.role,
                         threadCount: threadCount,
                         replyIndex: index,
                         previousGuideName: previousGuideName
-                    ),
+                    )
+                }
+                panelTypingParticipantIds.remove(participantId)
+
+                let reply = PanelMessage(
+                    senderId: participantId,
+                    content: content ?? "",
                     isRead: isPanelThreadOpen
                 )
+                guard !reply.content.isEmpty else { return }
                 panelMessages.append(reply)
                 savePanelMessages()
             }

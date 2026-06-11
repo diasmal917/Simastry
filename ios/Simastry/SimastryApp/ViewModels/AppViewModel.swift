@@ -255,6 +255,15 @@ class AppViewModel {
         loadRelationshipPeople()
         loadPanelMessages()
         loadMoments()
+
+        // Server-proxied AI channel: predictions route through the
+        // companion-reply edge function when Supabase is configured.
+        predictionService.replyChannel = { [supabase] system, user in
+            try await supabase.invokeCompanionReply(kind: .prediction, system: system, user: user)
+        }
+        predictionService.isRemoteChannelAvailable = { [supabase] in
+            supabase.canInvokeCompanionReply
+        }
     }
 
     // MARK: - Age Verification
@@ -620,6 +629,8 @@ class AppViewModel {
             selectedTab = 2
         case "messages":
             selectedTab = 2
+        case "panel":
+            openPanelChat()
         case "simulate":
             openPredict()
         case "guides", "astropedia":
@@ -1014,10 +1025,38 @@ class AppViewModel {
         notificationService.scheduleSimulationReminder(companionName: primaryCompanion?.name ?? "")
 
         if let rising = profile?.risingSign, let tier = profile?.tier {
-            notificationService.scheduleDailyTransit(risingSign: rising, tier: tier)
+            // Tomorrow morning's notification carries tomorrow's computed sky.
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            let reading = TransitEngine.dailyReading(
+                sun: userSunSign,
+                moon: userMoonSign,
+                rising: userRisingSign,
+                on: tomorrow
+            )
+            notificationService.scheduleDailyTransit(
+                risingSign: rising,
+                tier: tier,
+                readingBody: reading.map { "\($0.headline) — \($0.guidance)" }
+            )
         }
 
+        schedulePanelStarterNotification()
         scheduleDailyBriefNotification()
+    }
+
+    /// Daily nudge that a guide opened the panel's conversation starter.
+    /// Privacy-safe: names the guide and focus lens, never message content.
+    private func schedulePanelStarterNotification() {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        // Tomorrow's focus role, matching the daily-starter rotation.
+        let focusRole = [CelestialRole.sun, .moon, .rising][(dayOfYear + 1) % 3]
+        guard let entry = panelGuideEntries.first(where: { $0.role == focusRole }) ?? panelGuideEntries.first else {
+            return
+        }
+        notificationService.schedulePanelStarter(
+            guideName: entry.profile.name,
+            focusName: focusRole.displayName
+        )
     }
 
     /// Mirrors Home's rotating daily brief. The notification fires the next
@@ -1884,13 +1923,20 @@ class AppViewModel {
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(delay))
+
+            // LLM reply when the edge channel is live; templates otherwise.
+            let llmContent = await generateCompanionReplyViaLLM(
+                companionId: companionId,
+                companionName: companionName,
+                companionSign: companionSign
+            )
             typingCompanionIds.remove(companionId)
 
             let reply = CompanionMessage(
                 companionId: companionId,
                 companionName: companionName,
                 companionSign: companionSign,
-                content: composeCompanionReply(signName: companionSign, threadCount: threadCount),
+                content: llmContent ?? composeCompanionReply(signName: companionSign, threadCount: threadCount),
                 timestamp: Date(),
                 isRead: openCompanionThreadId == companionId,
                 source: .companion,
@@ -2520,6 +2566,11 @@ extension AppViewModel {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.openAIAstrologists()
+            }
+        case "predict":
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openPredict()
             }
         case "panelChat":
             seedDebugPanelMessages(now: now)

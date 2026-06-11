@@ -1,11 +1,14 @@
 import SwiftUI
 import Foundation
+import PhotosUI
 
 struct SimulateView: View {
     @Bindable var viewModel: AppViewModel
 
     @State private var conversationText: String = ""
     @State private var questionText: String = ""
+    @State private var screenshotPickerItem: PhotosPickerItem?
+    @State private var isRecognizingScreenshot: Bool = false
     @State private var selectedSunSign: ZodiacSign?
     @State private var selectedMoonSign: ZodiacSign?
     @State private var selectedRisingSign: ZodiacSign?
@@ -146,64 +149,66 @@ struct SimulateView: View {
         return signals
     }
 
+    // NOTE: no inner NavigationStack — this view is always pushed into an
+    // existing stack (Home routes, directory), and a nested stack makes the
+    // value-based push silently fail.
     var body: some View {
-        NavigationStack {
-            ZStack {
-                CelestialBackground()
+        ZStack {
+            CelestialBackground()
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        header
-                        modeCard
-                        methodLayerCard
-                        conversationSection
-                        signSection
-                        textingStyleTip
-                        questionSection
-                        actionSection
-                        historySection
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, SimastrySpacing.tabBarClearance)
+            ScrollView {
+                VStack(spacing: 24) {
+                    header
+                    modeCard
+                    methodLayerCard
+                    conversationSection
+                    signSection
+                    textingStyleTip
+                    questionSection
+                    actionSection
+                    historySection
                 }
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, SimastrySpacing.tabBarClearance)
             }
-            .navigationTitle("Predict")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showTopUpSheet) {
-                PredictionTopUpView(viewModel: viewModel)
-            }
-            .sheet(item: $selectedResult) { result in
-                SimulationResultView(
-                    result: result,
-                    isRegenerating: isRegenerating,
-                    onRegenerate: { alternativeReply in
-                        Task {
-                            await regenerate(from: result, with: alternativeReply)
-                        }
-                    },
-                    onOpenGuide: nil,
-                    userSunSign: viewModel.userSunSign
-                )
-            }
-            .task {
-                loadHistory()
-                applyPredictionDraftIfNeeded()
-                if reduceMotion {
+            .scrollIndicators(.hidden)
+        }
+        .navigationTitle("Predict")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $showTopUpSheet) {
+            PredictionTopUpView(viewModel: viewModel)
+        }
+        .sheet(item: $selectedResult) { result in
+            SimulationResultView(
+                result: result,
+                isRegenerating: isRegenerating,
+                onRegenerate: { alternativeReply in
+                    Task {
+                        await regenerate(from: result, with: alternativeReply)
+                    }
+                },
+                onOpenGuide: nil,
+                userSunSign: viewModel.userSunSign
+            )
+        }
+        .task {
+            loadHistory()
+            applyPredictionDraftIfNeeded()
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth)) {
                     appeared = true
-                } else {
-                    withAnimation(.spring(SimastrySpring.smooth)) {
-                        appeared = true
-                    }
                 }
             }
-            .onDisappear {
-                stopProgressCycle()
-            }
-            .onChange(of: viewModel.predictionDraft?.id) { _, _ in
-                applyPredictionDraftIfNeeded()
-            }
+        }
+        .onDisappear {
+            stopProgressCycle()
+        }
+        .onChange(of: viewModel.predictionDraft?.id) { _, _ in
+            applyPredictionDraftIfNeeded()
         }
     }
 
@@ -296,7 +301,13 @@ struct SimulateView: View {
 
     private var conversationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionLabel("Paste your conversation")
+            HStack(alignment: .center) {
+                sectionLabel("Paste your conversation")
+
+                Spacer()
+
+                importScreenshotButton
+            }
 
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $conversationText)
@@ -307,7 +318,7 @@ struct SimulateView: View {
                     .background(.clear)
 
                 if conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Paste the text conversation here…")
+                    Text("Paste the text conversation here, or import a screenshot…")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .padding(.horizontal, 18)
@@ -317,9 +328,73 @@ struct SimulateView: View {
             }
             .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 18)
             .accessibilityLabel("Paste your conversation")
+
+            HStack(spacing: 5) {
+                Image(systemName: SimastryIcon.privacy)
+                    .font(.system(size: 9, weight: .medium))
+                Text("Screenshots are read with Apple Vision on this device — the image never leaves your iPhone.")
+                    .font(SimastryFont.captionSmall)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(SimastryColor.deepMuted)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
+        .onChange(of: screenshotPickerItem) {
+            guard let item = screenshotPickerItem else { return }
+            screenshotPickerItem = nil
+            importScreenshot(item)
+        }
+    }
+
+    private var importScreenshotButton: some View {
+        PhotosPicker(selection: $screenshotPickerItem, matching: .images) {
+            HStack(spacing: 6) {
+                if isRecognizingScreenshot {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(SimastryColor.gold)
+                } else {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+
+                Text(isRecognizingScreenshot ? "Reading…" : "Import screenshot")
+                    .font(SimastryFont.labelSmall)
+            }
+            .foregroundStyle(SimastryColor.goldLight)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(SimastryColor.gold.opacity(0.11), in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(SimastryColor.gold.opacity(0.26), lineWidth: 0.6)
+            }
+        }
+        .disabled(isRecognizingScreenshot)
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Import a conversation screenshot from your photo library")
+    }
+
+    private func importScreenshot(_ item: PhotosPickerItem) {
+        isRecognizingScreenshot = true
+        Task {
+            defer { isRecognizingScreenshot = false }
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw ConversationOCRError.unreadableImage
+                }
+                let recognized = try await ConversationOCRService.recognizeText(in: data)
+                let existing = conversationText.trimmingCharacters(in: .whitespacesAndNewlines)
+                conversationText = existing.isEmpty ? recognized : existing + "\n" + recognized
+                HapticManager.signConfirmed()
+            } catch {
+                viewModel.showToast(
+                    "Couldn't read that screenshot",
+                    subtitle: error.localizedDescription,
+                    isError: true
+                )
+            }
+        }
     }
 
     private var signSection: some View {

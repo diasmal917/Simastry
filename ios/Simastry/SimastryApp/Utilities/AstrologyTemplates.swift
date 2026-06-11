@@ -964,4 +964,72 @@ nonisolated struct AstrologyTemplates {
         "\u{201C}{caption}\u{201D} is exactly the tone I'd tell you to text with.",
         "Keep \u{201C}{caption}\u{201D} as your opening-line energy this week."
     ]
+
+    // MARK: - Transit Timing
+
+    /// Daily timing guidance keyed by "{body}.{family}" where family is
+    /// flow (trine/sextile), friction (square/opposition), or
+    /// emphasis (conjunction). Message-timing voice, not horoscope filler.
+    static let transitGuidance: [String: [String]] = [
+        "mercury.flow": [
+            "Wording comes clean today — the honest text writes itself. Send it.",
+            "Good day for the conversation you've been drafting. Say it plainly."
+        ],
+        "mercury.friction": [
+            "Messages bend out of shape today. Draft now, reread once, send later.",
+            "Easy to be misread right now — keep texts short and literal."
+        ],
+        "mercury.emphasis": [
+            "Words carry extra weight today. One clear sentence does the work of five.",
+            "Everything you send today gets reread. Make the first line count."
+        ],
+        "venus.flow": [
+            "Warmth lands easily today — a kind message goes further than usual.",
+            "Good timing for affection, repair, or the soft follow-up."
+        ],
+        "venus.friction": [
+            "Affection can read as pressure today. Offer warmth, don't ask for proof.",
+            "Don't measure their reply speed against your effort today."
+        ],
+        "venus.emphasis": [
+            "Tone is the message today. How you say it will outlive what you said.",
+            "Lead with warmth today — it sets the price of the whole conversation."
+        ],
+        "mars.flow": [
+            "Momentum favors the first move. Open the conversation you've been circling.",
+            "Directness lands as confidence today, not aggression. Use it."
+        ],
+        "mars.friction": [
+            "Short fuses in the air — don't send the reply you typed while annoyed.",
+            "Friction day: win by staying measured while the thread runs hot."
+        ],
+        "mars.emphasis": [
+            "Energy wants an outlet today — aim it at one honest message, not five impulsive ones.",
+            "Bold reads as decisive today. Pick the one move that matters."
+        ],
+        "sun.flow": [
+            "You read as yourself today — good light for the conversation that needs the real you.",
+            "Visibility is high and kind today. Show up in the thread that matters."
+        ],
+        "sun.friction": [
+            "Ego stakes feel inflated today. Argue the point, not the identity.",
+            "Don't make today's message a referendum on who's right."
+        ],
+        "sun.emphasis": [
+            "A reset day for how you show up. Open the thread the way you'd want it remembered.",
+            "Today resets the tone going forward — choose your opening carefully."
+        ],
+        "moon.flow": [
+            "Feelings are readable today — yours and theirs. Trust the first read.",
+            "Emotionally clear air today. A sincere message will be received as sent."
+        ],
+        "moon.friction": [
+            "Moods swing fast today — let a charged message sit for an hour before sending.",
+            "What feels urgent this morning won't by tonight. Time your reply accordingly."
+        ],
+        "moon.emphasis": [
+            "The feeling under the words is loud today. Name yours before you reply to theirs.",
+            "Lead with how it felt, not what they did. Today that distinction lands."
+        ]
+    ]
 }

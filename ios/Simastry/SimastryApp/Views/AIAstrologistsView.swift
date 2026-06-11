@@ -401,21 +401,9 @@ struct AIAstrologistsView: View {
     }
 
     /// Zodiac-lens specialization, in Simastry Method language.
+    /// (Shared copy lives on ZodiacSign so the LLM persona prompts match.)
     private func methodLine(for sign: ZodiacSign) -> String {
-        switch sign {
-        case .aries: "bold openings · momentum · directness"
-        case .taurus: "grounding · trust-building · pacing"
-        case .gemini: "banter craft · reframes · timing"
-        case .cancer: "emotional safety · soft repair"
-        case .leo: "confidence · warmth · presence"
-        case .virgo: "precision edits · pattern naming"
-        case .libra: "tone balance · graceful boundaries"
-        case .scorpio: "motive reads · intensity · repair"
-        case .sagittarius: "honesty · space · timing"
-        case .capricorn: "restraint · standards · strategy"
-        case .aquarius: "autonomy · perspective · distance"
-        case .pisces: "empathy · feeling translation"
-        }
+        sign.methodLine
     }
 
     /// One line on why this guide matters for *this* user's chart.

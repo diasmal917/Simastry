@@ -105,12 +105,13 @@ final class NotificationService {
         }
     }
 
-    func scheduleDailyTransit(risingSign: String, tier: String) {
+    func scheduleDailyTransit(risingSign: String, tier: String, readingBody: String? = nil) {
         guard tier == "plus" || tier == "pro" else { return }
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["daily_transit"])
 
-        let body = transitMessages.randomElement() ?? transitMessages[0]
+        // Prefer the real computed transit read; fall back to generic copy.
+        let body = readingBody ?? transitMessages.randomElement() ?? transitMessages[0]
 
         let content = UNMutableNotificationContent()
         content.title = ["heads up", "chart note", "for today"].randomElement() ?? "heads up"
@@ -124,6 +125,27 @@ final class NotificationService {
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
         let request = UNNotificationRequest(identifier: "daily_transit", content: content, trigger: trigger)
+        center.add(request)
+    }
+
+    /// Daily nudge that the panel posted its conversation starter.
+    /// Privacy-safe: names the guide and the focus lens, never message content.
+    func schedulePanelStarter(guideName: String, focusName: String) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["panel_daily_starter"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Your panel"
+        content.body = "\(guideName) opened today's \(focusName) read for your panel."
+        content.sound = .default
+        content.userInfo = ["deeplink": "simastry://panel"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = 10
+        dateComponents.minute = 30
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+
+        let request = UNNotificationRequest(identifier: "panel_daily_starter", content: content, trigger: trigger)
         center.add(request)
     }
 
@@ -255,7 +277,8 @@ final class NotificationService {
                 "evening_checkin",
                 "companion_hook",
                 "inactive_reengagement",
-                "simulation_reminder"
+                "simulation_reminder",
+                "panel_daily_starter"
             ]
         )
     }

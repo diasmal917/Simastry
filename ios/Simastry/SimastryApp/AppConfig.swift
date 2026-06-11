@@ -29,6 +29,14 @@ nonisolated enum AppConfig {
         !EXPO_PUBLIC_SUPABASE_ANON_KEY.isEmpty &&
         Config.EXPO_PUBLIC_SOCIAL_DISCOVERY_ENABLED.lowercased() == "true"
 
+    /// LLM-generated guide replies (panel + 1:1) via the companion-reply edge
+    /// function. Off until the function is deployed; template replies remain
+    /// the permanent fallback either way.
+    static let llmChatEnabled =
+        !EXPO_PUBLIC_SUPABASE_URL.isEmpty &&
+        !EXPO_PUBLIC_SUPABASE_ANON_KEY.isEmpty &&
+        Config.EXPO_PUBLIC_LLM_CHAT_ENABLED.lowercased() == "true"
+
     // Legal URLs — update these before App Store submission
     static let privacyPolicyURL = URL(string: "https://simastry.com/privacy")!
     static let termsOfServiceURL = URL(string: "https://simastry.com/terms")!

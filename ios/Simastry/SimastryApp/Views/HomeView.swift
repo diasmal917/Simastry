@@ -15,6 +15,9 @@ struct HomeView: View {
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
     @State private var showStreakMilestone: Bool = false
+    @State private var transitReading: DailyTransitReading?
+    @State private var handledAstrologistsRouteRequest: Int = 0
+    @State private var handledPredictRouteRequest: Int = 0
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -74,14 +77,29 @@ struct HomeView: View {
                     SimulateView(viewModel: viewModel)
                 }
             }
+            .onAppear {
+                // Catch route requests fired before this view mounted
+                // (cold-start deep links, preview seeding).
+                presentRoutesIfRequested()
+            }
             .onChange(of: viewModel.aiAstrologistsRouteRequest) {
-                guard viewModel.homeSetupPhase == .complete else { return }
-                navigationPath.append(HomeRoute.aiAstrologist(profileId: nil))
+                presentRoutesIfRequested()
             }
             .onChange(of: viewModel.predictRouteRequest) {
-                guard viewModel.homeSetupPhase == .complete else { return }
-                navigationPath.append(HomeRoute.predict)
+                presentRoutesIfRequested()
             }
+        }
+    }
+
+    private func presentRoutesIfRequested() {
+        guard viewModel.homeSetupPhase == .complete else { return }
+        if viewModel.aiAstrologistsRouteRequest > handledAstrologistsRouteRequest {
+            handledAstrologistsRouteRequest = viewModel.aiAstrologistsRouteRequest
+            navigationPath.append(HomeRoute.aiAstrologist(profileId: nil))
+        }
+        if viewModel.predictRouteRequest > handledPredictRouteRequest {
+            handledPredictRouteRequest = viewModel.predictRouteRequest
+            navigationPath.append(HomeRoute.predict)
         }
     }
 
@@ -97,6 +115,8 @@ struct HomeView: View {
                 predictHeroCard
 
                 dailyReadCard
+
+                todaysSkyCard
 
                 communicationTypeSummaryCard
 
@@ -192,6 +212,11 @@ struct HomeView: View {
             }
         }
         .task {
+            transitReading = TransitEngine.dailyReading(
+                sun: viewModel.userSunSign,
+                moon: viewModel.userMoonSign,
+                rising: viewModel.userRisingSign
+            )
             try? await Task.sleep(for: .milliseconds(600))
             withAnimation(.easeOut(duration: 0.3)) {
                 isLoading = false
@@ -612,6 +637,65 @@ struct HomeView: View {
             .padding(.vertical, 2)
         }
         .scrollIndicators(.hidden)
+    }
+
+    // MARK: - Today's Sky
+
+    /// Real transit read: current planetary positions (Swiss Ephemeris)
+    /// against the user's natal signs, voiced as message timing.
+    @ViewBuilder
+    private var todaysSkyCard: some View {
+        if let reading = transitReading {
+            let (chipLabel, accent): (String, Color) = switch reading.aspect.family {
+            case "flow": ("Flow", SimastryColor.gold)
+            case "emphasis": ("Emphasis", SimastryColor.celestialBlue)
+            default: ("Friction", SimastryColor.sunCoral)
+            }
+
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(spacing: 8) {
+                    Text(reading.body.glyph)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(accent)
+
+                    Text("TODAY'S SKY")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+
+                    Spacer()
+
+                    Text(chipLabel)
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(accent.opacity(0.12), in: Capsule())
+                }
+
+                Text(reading.headline)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text(reading.detailLine)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(reading.guidance)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(15)
+            .surfaceCard(accent: accent.opacity(0.7))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Today's sky. \(reading.headline). \(reading.guidance)")
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+        }
     }
 
     // MARK: - Communication Type
