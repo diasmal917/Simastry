@@ -37,12 +37,22 @@ extension AppViewModel {
             )
         }
 
+        let now = Date()
+        let memoryLines = panelMemoryNotes
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(2)
+            .map { note in
+                let days = max(0, Int(now.timeIntervalSince(note.createdAt) / 86_400))
+                return "asked about \(note.personName) (\(days == 0 ? "today" : "\(days)d ago"))"
+            }
+
         let system = GuideReplyService.personaSystemPrompt(
             profile: entry.profile,
             role: entry.role,
             user: llmUserContext,
             isPanel: true,
-            previousGuideName: previousGuideName
+            previousGuideName: previousGuideName,
+            memoryLines: Array(memoryLines)
         )
         let user = GuideReplyService.threadUserPrompt(
             transcript: Array(transcript),

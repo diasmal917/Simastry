@@ -161,6 +161,14 @@ class AppViewModel {
     var isPanelThreadOpen: Bool = false
     /// Bumped to ask MessagesView to present the panel chat.
     var panelChatRouteRequest: Int = 0
+    /// What the panel remembers — People mentioned in conversation (+PanelChat).
+    var panelMemoryNotes: [MemoryNote] = []
+
+    // MARK: - People Routing
+    /// Set to push a person's detail screen (debug previews, deep links).
+    var peopleDetailRequestPersonId: UUID?
+    /// Bumped to present the Team Read sheet.
+    var teamReadRouteRequest: Int = 0
 
     // MARK: - Moments State
     /// Private on-device photo posts; guides engage via templates (+Moments).
@@ -254,6 +262,7 @@ class AppViewModel {
         loadReferralInfo()
         loadRelationshipPeople()
         loadPanelMessages()
+        loadPanelMemoryNotes()
         loadMoments()
 
         // Server-proxied AI channel: predictions route through the
@@ -1513,6 +1522,7 @@ class AppViewModel {
         await loadDiscoveryInboxMessages(showErrors: showErrors)
         generateCompanionMessages()
         postPanelDailyStarterIfNeeded()
+        postPanelWeeklyRecapIfNeeded()
     }
 
     private func loadDiscoveryInboxMessages(showErrors: Bool) async {
@@ -1889,15 +1899,27 @@ class AppViewModel {
         // Keep relationship metrics in sync when a companion record exists.
         if let index = companions.firstIndex(where: { $0.id == companionId }) {
             var updated = companions[index]
+            let previousLevel = updated.relationshipLevel
             updated.conversationCount += 1
             if updated.firstConversationAt == nil {
                 updated.firstConversationAt = Date()
             }
-            updated.relationshipLevel = RelationshipLevel.from(messageCount: updated.conversationCount).rawValue
+            let newLevel = RelationshipLevel.from(messageCount: updated.conversationCount)
+            updated.relationshipLevel = newLevel.rawValue
             if updated.compatibilityScore < 97 {
                 updated.compatibilityScore += 1
             }
             companions[index] = updated
+
+            // Surface the bond deepening — progression should feel like an event.
+            if newLevel.rawValue > previousLevel {
+                HapticManager.soulFlash()
+                showToast(
+                    "Bond deepened",
+                    subtitle: "\(updated.name) and you reached \(newLevel.name).",
+                    isError: false
+                )
+            }
 
             #if DEBUG
             let skipRemote = isDebugPreviewStateActive
@@ -2163,6 +2185,7 @@ class AppViewModel {
         discoveryMessages = []
         panelMessages = []
         panelTypingParticipantIds = []
+        panelMemoryNotes = []
         moments = []
         momentTypingKeys = []
         momentsStore.deleteAll()
@@ -2188,6 +2211,9 @@ class AppViewModel {
         defaults.removeObject(forKey: companionMessagesKey)
         defaults.removeObject(forKey: Self.panelMessagesKey)
         defaults.removeObject(forKey: Self.panelDailyStarterDayKey)
+        defaults.removeObject(forKey: Self.panelMemoryNotesKey)
+        defaults.removeObject(forKey: Self.panelWeeklyRecapWeekKey)
+        defaults.removeObject(forKey: Self.panelWelcomeBackDayKey)
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
         defaults.removeObject(forKey: socialBioKey)
@@ -2587,6 +2613,45 @@ extension AppViewModel {
             selectedTab = 5
         case "invite":
             selectedTab = 5
+        case "playbook":
+            relationshipPeople = RelationshipPeopleStore.previewPeople()
+            selectedTab = 1
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.peopleDetailRequestPersonId = self.relationshipPeople.first?.id
+            }
+        case "teamRead":
+            relationshipPeople = RelationshipPeopleStore.previewPeople()
+            selectedTab = 1
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.teamReadRouteRequest += 1
+            }
+        case "recap":
+            seedDebugPanelMessages(now: now)
+            relationshipPeople = RelationshipPeopleStore.previewPeople()
+            let recapStats = WeeklyRecapStats(
+                predictionsMade: 4,
+                predictionsRated: 3,
+                predictionsLanded: 2,
+                panelMessagesSent: 6,
+                momentsPosted: 2,
+                streak: 5,
+                topGuideName: "Nadia"
+            )
+            panelMessages.append(
+                PanelMessage(
+                    senderId: "sagittarius-nadia",
+                    content: WeeklyRecapComposer.recapMessage(stats: recapStats, guideName: "Nadia", userFirstName: "Maya"),
+                    timestamp: now.addingTimeInterval(-5 * 60),
+                    isRead: false
+                )
+            )
+            selectedTab = 2
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.panelChatRouteRequest += 1
+            }
         default:
             break
         }

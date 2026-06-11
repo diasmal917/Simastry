@@ -582,6 +582,10 @@ private struct MessageDetailSheet: View {
                     if let zodiacSign {
                         ZodiacIconView(sign: zodiacSign, size: 18, showsGlow: false)
                     }
+
+                    if let bondLevel {
+                        RelationshipLevelChip(level: bondLevel)
+                    }
                 }
 
                 Text(headerSubtitle)
@@ -634,6 +638,16 @@ private struct MessageDetailSheet: View {
             return "\(message.companionSign) lens • private chat"
         }
         return "\(message.companionSign) Guide • Simastry Method"
+    }
+
+    /// Bond level with this guide — companion threads only.
+    private var bondLevel: RelationshipLevel? {
+        guard message.source == .companion,
+              let companion = viewModel.companions.first(where: { $0.id == message.companionId }) else {
+            return nil
+        }
+        return RelationshipLevel(rawValue: companion.relationshipLevel)
+            ?? RelationshipLevel.from(messageCount: companion.conversationCount)
     }
 
     private var timestampDivider: some View {

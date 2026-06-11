@@ -69,6 +69,7 @@ struct PanelChatView: View {
         }
         .task {
             viewModel.isPanelThreadOpen = true
+            viewModel.postPanelWelcomeBackIfNeeded()
             viewModel.markPanelThreadRead()
             viewModel.seedPanelWelcomeIfNeeded()
         }

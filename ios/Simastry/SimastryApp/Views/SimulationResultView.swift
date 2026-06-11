@@ -7,12 +7,14 @@ struct SimulationResultView: View {
     let onRegenerate: (String) -> Void
     var onOpenGuide: ((ZodiacSign) -> Void)?
     var userSunSign: ZodiacSign?
+    var onSetOutcome: ((PredictionOutcome?) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @State private var alternativeReply: String = ""
     @State private var showShareCard: Bool = false
     @State private var appeared: Bool = false
     @State private var copiedSuggestion: Bool = false
+    @State private var localOutcome: PredictionOutcome?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accentColor: Color {
@@ -33,6 +35,10 @@ struct SimulationResultView: View {
                     }
                     whatIfSection
                     confidenceFooter
+
+                    if onSetOutcome != nil {
+                        outcomeSection
+                    }
 
                     // Real conversation nudge
                     Text("Use this as preparation, then have the real conversation.")
@@ -79,8 +85,10 @@ struct SimulationResultView: View {
         .presentationContentInteraction(.scrolls)
         .onChange(of: result.id) { _, _ in
             alternativeReply = ""
+            localOutcome = result.outcome
         }
         .task {
+            localOutcome = result.outcome
             if reduceMotion {
                 appeared = true
             } else {
@@ -89,6 +97,26 @@ struct SimulationResultView: View {
                 }
             }
         }
+    }
+
+    /// Closes the meaning loop: rate the prediction against what happened.
+    private var outcomeSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            OutcomeChipRow(currentOutcome: localOutcome) { outcome in
+                withAnimation(.spring(SimastrySpring.snappy)) {
+                    localOutcome = outcome
+                }
+                onSetOutcome?(outcome)
+            }
+
+            if localOutcome == nil {
+                Text("Come back after they reply — this trains your panel's accuracy stat.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+            }
+        }
+        .padding(13)
+        .surfaceCard(cornerRadius: 16)
     }
 
     private var predictionBubble: some View {

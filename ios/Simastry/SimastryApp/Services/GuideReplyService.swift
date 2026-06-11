@@ -43,7 +43,8 @@ nonisolated enum GuideReplyService {
         role: CelestialRole?,
         user: UserContext,
         isPanel: Bool,
-        previousGuideName: String? = nil
+        previousGuideName: String? = nil,
+        memoryLines: [String] = []
     ) -> String {
         var lines: [String] = []
 
@@ -72,6 +73,12 @@ nonisolated enum GuideReplyService {
                 lines.append("\(previousGuideName) replied just before you — you may briefly build on or differ from their take, in one clause.")
             }
         }
+
+        if !memoryLines.isEmpty {
+            lines.append("Recent context you remember: " + memoryLines.joined(separator: "; ") + ".")
+        }
+
+        lines.append(SimastryVoice.promptBlock)
 
         lines.append("""
         Rules: reply in 1-3 short sentences in a warm text-message register, in character. \

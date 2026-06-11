@@ -190,7 +190,12 @@ struct SimulateView: View {
                     }
                 },
                 onOpenGuide: nil,
-                userSunSign: viewModel.userSunSign
+                userSunSign: viewModel.userSunSign,
+                onSetOutcome: { outcome in
+                    viewModel.predictionService.setOutcome(outcome, for: result.id)
+                    viewModel.notificationService.cancelPredictionOutcomeFollowUp()
+                    loadHistory()
+                }
             )
         }
         .task {
@@ -565,6 +570,15 @@ struct SimulateView: View {
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.mutedSilver)
 
+                if let scoreLine = PredictionScorecard.from(history).line {
+                    Text(scoreLine)
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.gold)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(SimastryColor.gold.opacity(0.11), in: Capsule())
+                }
+
                 Spacer()
 
                 if !history.isEmpty {
@@ -719,44 +733,14 @@ struct SimulateView: View {
     }
 
     private func outcomeStrip(_ item: PredictionResult) -> some View {
-        HStack(spacing: 8) {
-            Text(item.outcome == nil ? "Did this land?" : "Outcome")
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.deepMuted)
-
-            Spacer(minLength: 0)
-
-            outcomeChip(.landed, for: item)
-            outcomeChip(.missed, for: item)
-        }
-        .padding(.horizontal, 6)
-    }
-
-    private func outcomeChip(_ outcome: PredictionOutcome, for item: PredictionResult) -> some View {
-        let isSelected = item.outcome == outcome
-        let tint = outcome == .landed ? SimastryColor.gold : SimastryColor.deepMuted
-
-        return Button {
-            HapticManager.buttonPress()
-            viewModel.predictionService.setOutcome(isSelected ? nil : outcome, for: item.id)
+        OutcomeChipRow(currentOutcome: item.outcome) { outcome in
+            viewModel.predictionService.setOutcome(outcome, for: item.id)
+            viewModel.notificationService.cancelPredictionOutcomeFollowUp()
             withAnimation(.spring(SimastrySpring.snappy)) {
                 loadHistory()
             }
-        } label: {
-            Label(outcome.title, systemImage: outcome.systemImage)
-                .font(SimastryFont.captionSmall.weight(.semibold))
-                .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(isSelected ? tint : Color.white.opacity(0.05), in: Capsule())
-                .overlay {
-                    Capsule()
-                        .stroke(isSelected ? tint.opacity(0.6) : .white.opacity(0.09), lineWidth: 0.6)
-                }
         }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("\(outcome.title)\(isSelected ? ", selected" : "")")
-        .accessibilityHint("Marks whether this prediction matched what happened")
+        .padding(.horizontal, 6)
     }
 
     private func sectionLabel(_ title: String) -> some View {
@@ -864,6 +848,9 @@ struct SimulateView: View {
             ReviewPromptService.shared.recordPositiveAction()
             loadHistory()
             selectedResult = result
+            if viewModel.privateNotificationsEnabled {
+                viewModel.notificationService.schedulePredictionOutcomeFollowUp()
+            }
         } catch {
             CrashReporter.log(error, context: "generatePrediction")
             stopProgressCycle()

@@ -14,13 +14,13 @@ final class NotificationService {
         ("quick check-in", "Want a private chart-signal read before you reply?"),
         ("hey", "Your Moon pattern may need a softer answer tonight."),
         ("quick check-in", "A small timing shift could change the tone of your next message."),
-        ("hey", "Before you text back, separate the tone from the fear."),
+        ("hey", "Before you text back, reread theirs once — tone first, content second."),
         ("quick check-in", "Your chart lens has a note about emotional pacing today."),
         ("hey", "A short pause might help your reply land better."),
         ("quick check-in", "There may be timing pressure in the conversation. Want to read it?"),
         ("hey", "Before bed, save the message you almost sent and check the tone."),
         ("quick check-in", "Your element pattern may explain why this felt louder than it was."),
-        ("hey", "Today was harder than needed. A placement read may help you reset."),
+        ("hey", "End-of-day reset: one placement read can shrink today before tomorrow."),
     ]
 
     private let reEngagementMessages: [(title: String, body: String)] = [
@@ -126,6 +126,28 @@ final class NotificationService {
 
         let request = UNNotificationRequest(identifier: "daily_transit", content: content, trigger: trigger)
         center.add(request)
+    }
+
+    /// One-shot follow-up after a prediction: come back and rate the outcome.
+    /// Privacy-safe — never references conversation content.
+    func schedulePredictionOutcomeFollowUp(delayHours: Double = 22) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["prediction_outcome_followup"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Your panel is curious"
+        content.body = "Did they reply like the panel said? Tap to log it."
+        content.sound = .default
+        content.userInfo = ["deeplink": "simastry://simulate"]
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delayHours * 3600, repeats: false)
+        let request = UNNotificationRequest(identifier: "prediction_outcome_followup", content: content, trigger: trigger)
+        center.add(request)
+    }
+
+    func cancelPredictionOutcomeFollowUp() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: ["prediction_outcome_followup"])
     }
 
     /// Daily nudge that the panel posted its conversation starter.
@@ -278,7 +300,8 @@ final class NotificationService {
                 "companion_hook",
                 "inactive_reengagement",
                 "simulation_reminder",
-                "panel_daily_starter"
+                "panel_daily_starter",
+                "prediction_outcome_followup"
             ]
         )
     }

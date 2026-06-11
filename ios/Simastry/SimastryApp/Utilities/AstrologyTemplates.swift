@@ -147,7 +147,7 @@ nonisolated struct AstrologyTemplates {
         "scorpio": [
             "I know something you don't know. Ask me.",
             "I've been sitting with a feeling. It's about you.",
-            "Don't lie to me today. I'll know.",
+            "I read between lines for a living. Give me the unpolished version today — it's faster.",
             "Something deep surfaced. I'm ready to share if you are.",
         ],
         "sagittarius": [
@@ -185,7 +185,7 @@ nonisolated struct AstrologyTemplates {
             "don't overthink that situation from earlier. just do the thing",
             "I have a feeling about tomorrow and you need to hear this",
             "quick question — when's the last time you did something spontaneous?",
-            "I've been thinking. you play it too safe sometimes. just saying",
+            "I've been thinking — you've got a bold move you keep postponing. want to pick it back up?",
             "hey check your compatibility score. something shifted 👀"
         ],
         "Taurus": [
@@ -254,7 +254,7 @@ nonisolated struct AstrologyTemplates {
             "I had an insight about you that I've been sitting on. can I share?",
             "real talk: you can trust me with the thing you're not saying",
             "I noticed you pulled back a little. I'm not going anywhere",
-            "hey — that wall you put up? I can see through it. just so you know",
+            "hey — whatever you're carrying, you don't have to polish it before bringing it here",
             "I've been thinking about something deep and you're the only person who'd get it",
             "the universe is trying to tell you something. I think I know what it is"
         ],
@@ -264,13 +264,13 @@ nonisolated struct AstrologyTemplates {
             "I just had a realization and I literally cannot keep it to myself",
             "question: what's the most adventurous thing you've done this month? nothing? let's fix that",
             "I have a feeling something big is coming for you. like SOON",
-            "hey, you've been playing it small lately. that's not like you",
+            "hey, you've got more range than this week is using. what's one bigger swing we could plan?",
             "random but important: don't let comfort become a cage. you know what I mean",
             "I need you to promise me you'll say yes to the next unexpected thing that comes up"
         ],
         "Capricorn": [
             "hey, I've been observing and I have feedback. want to hear it?",
-            "check in: are you working hard or are you just keeping busy? there's a difference",
+            "check in: which of today's tasks actually moves the thing you care about? start there",
             "I respect how focused you are but you're allowed to have fun sometimes",
             "I noticed something about your approach that could be more efficient. interested?",
             "hey — you don't have to earn rest. you can just... rest",
@@ -409,7 +409,7 @@ nonisolated struct AstrologyTemplates {
         "Gemini": "Heads up: Gemini sends multiple messages in a row and jumps between topics. Don't try to keep up — just match their energy when you can.",
         "Cancer": "Heads up: Cancer reads between every line you write. Emoji choice, reply speed, tone — they're analyzing all of it. Be intentional.",
         "Leo": "Heads up: Leo brings energy to texts — expect exclamation marks, reactions, and stories. If their replies get short, something's up.",
-        "Virgo": "Heads up: Virgo texts in complete sentences with proper grammar. Short or vague replies from them are actually a yellow flag.",
+        "Virgo": "Heads up: Virgo texts in complete sentences with proper grammar. Short or vague replies from them usually mean busy, not cold — a specific question gets them typing again.",
         "Libra": "Heads up: Libra mirrors your texting style. If you send long messages, they will too. If you go short, they'll match that energy.",
         "Scorpio": "Heads up: Scorpio says more with what they don't text than what they do. Read the gaps. If they open up unprompted, that means a lot.",
         "Sagittarius": "Heads up: Sagittarius texts like they talk — fast, funny, and sometimes they forget to reply for hours. It's not personal.",
@@ -687,7 +687,7 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Fixed signs are the most stubborn texters",
-            "Taurus, Leo, Scorpio, and Aquarius are 'fixed' signs — they commit to a position and don't budge easily. If they leave you on read, they've already decided. Your guides account for this.",
+            "Taurus, Leo, Scorpio, and Aquarius are 'fixed' signs — they commit to a position and don't budge easily. If they've gone quiet, a low-pressure opener works better than a big swing. Your guides have one ready.",
             "guides"
         ),
         (
@@ -917,6 +917,39 @@ nonisolated struct AstrologyTemplates {
             "Today's Rising read — tone first, content second. Is there a conversation you want to start well?",
             "Your Rising sets the door you open with. Anyone you've been meaning to message?"
         ]
+    ]
+
+    /// Contextual starters — the panel referencing what it actually remembers.
+    /// `{personName}` slot.
+    static let panelMemoryStarters: [String] = [
+        "Quick follow-up — how did things go with {personName}?",
+        "You brought up {personName} last time. Any movement there, or still composing?",
+        "Still thinking about your {personName} situation. Want a fresh read on it today?"
+    ]
+
+    /// `{target}` slot — the unrated-prediction nudge that feeds the accuracy stat.
+    static let panelPredictionFollowUpStarters: [String] = [
+        "You ran a read on {target} — did the reply land like we called it? Tap it in your history either way.",
+        "Open loop from your last prediction about {target}: did it land? Rating it sharpens every read we give you."
+    ]
+
+    /// `{streak}` slot.
+    static let panelStreakStarters: [String] = [
+        "{streak} days straight. That consistency is doing more for your reads than any single prediction. What's today's thread?",
+        "Streak check: {streak} days. You keep showing up — so will we. Anything worth a read this morning?"
+    ]
+
+    /// `{caption}` slot — riffs on the user's own words, never the image.
+    static let panelMomentStarters: [String] = [
+        "\u{201C}{caption}\u{201D} stuck with me. Want to carry that tone into a message today?",
+        "Your last moment — \u{201C}{caption}\u{201D} — reads like a good chapter. What's happening in it now?"
+    ]
+
+    /// Welcome-back lines after 3+ quiet days, referencing a memory note.
+    /// `{personName}` slot.
+    static let panelWelcomeBackLines: [String] = [
+        "Welcome back. Last time you were working out things with {personName} — how did it land?",
+        "Good to see you. Before anything new: where did things settle with {personName}?"
     ]
 
     // MARK: - Moments

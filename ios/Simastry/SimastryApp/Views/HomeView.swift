@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var isLoading: Bool = true
     @State private var showStreakMilestone: Bool = false
     @State private var transitReading: DailyTransitReading?
+    @State private var predictionScorecard: PredictionScorecard?
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
     @Namespace private var panelHeroNamespace
@@ -217,6 +218,7 @@ struct HomeView: View {
                 moon: viewModel.userMoonSign,
                 rising: viewModel.userRisingSign
             )
+            predictionScorecard = PredictionScorecard.from(viewModel.predictionService.loadHistory())
             try? await Task.sleep(for: .milliseconds(600))
             withAnimation(.easeOut(duration: 0.3)) {
                 isLoading = false
@@ -790,7 +792,7 @@ struct HomeView: View {
             summaryMetricCard(
                 title: "Predict",
                 value: remainingPredictionsDisplay,
-                caption: remainingPredictionsCaption,
+                caption: predictionScorecard?.captionLine ?? remainingPredictionsCaption,
                 systemImage: SimastryIcon.predict,
                 tint: SimastryColor.risingViolet
             )

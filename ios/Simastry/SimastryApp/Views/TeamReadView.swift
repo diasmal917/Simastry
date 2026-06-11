@@ -183,8 +183,12 @@ struct TeamReadView: View {
             .map { TeamReadMember(name: $0.displayName, sun: $0.sunSign, moon: $0.moonSign, isUser: false) }
 
         if includeMe, let sun = viewModel.userSunSign {
-            let firstName = (viewModel.profile?.displayName ?? "You")
+            var firstName = (viewModel.profile?.displayName ?? "You")
                 .components(separatedBy: " ").first ?? "You"
+            // Disambiguate when a selected person shares the user's name.
+            if members.contains(where: { $0.name.caseInsensitiveCompare(firstName) == .orderedSame }) {
+                firstName += " (you)"
+            }
             members.insert(
                 TeamReadMember(name: firstName, sun: sun, moon: viewModel.userMoonSign, isUser: true),
                 at: 0
@@ -243,7 +247,7 @@ struct TeamReadView: View {
             VStack(alignment: .leading, spacing: 10) {
                 sectionLabel("WHO PLAYS WHAT", icon: "person.3.fill", tint: SimastryColor.celestialBlue)
 
-                ForEach(read.roles, id: \.memberName) { role in
+                ForEach(Array(read.roles.enumerated()), id: \.offset) { _, role in
                     HStack(alignment: .top, spacing: 10) {
                         Text(role.title)
                             .font(SimastryFont.labelSmall)

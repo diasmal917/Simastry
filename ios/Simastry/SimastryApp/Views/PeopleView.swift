@@ -8,6 +8,8 @@ struct PeopleView: View {
     @State private var selectedType: RelationshipType?
     @State private var isAddingPerson: Bool = false
     @State private var showTeamRead: Bool = false
+    @State private var navigationPath = NavigationPath()
+    @State private var handledTeamReadRouteRequest: Int = 0
 
     private var filteredPeople: [RelationshipPerson] {
         viewModel.relationshipPeople.filter { person in
@@ -33,7 +35,7 @@ struct PeopleView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 CelestialBackground()
 
@@ -111,7 +113,27 @@ struct PeopleView: View {
                     viewModel.relationshipPeople = RelationshipPeopleStore.previewPeople()
                 }
                 #endif
+                presentRoutesIfRequested()
             }
+            .onChange(of: viewModel.peopleDetailRequestPersonId) {
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.teamReadRouteRequest) {
+                presentRoutesIfRequested()
+            }
+        }
+    }
+
+    private func presentRoutesIfRequested() {
+        if let personId = viewModel.peopleDetailRequestPersonId {
+            viewModel.peopleDetailRequestPersonId = nil
+            if let person = viewModel.relationshipPeople.first(where: { $0.id == personId }) {
+                navigationPath.append(person)
+            }
+        }
+        if viewModel.teamReadRouteRequest > handledTeamReadRouteRequest {
+            handledTeamReadRouteRequest = viewModel.teamReadRouteRequest
+            showTeamRead = true
         }
     }
 

@@ -237,6 +237,22 @@ final class RelationshipPeopleStore {
                 imageData: nil,
                 isChartCalculated: false,
                 updatedAt: .now.addingTimeInterval(-5 * 24 * 60 * 60)
+            ),
+            RelationshipPerson(
+                id: UUID(),
+                name: "Jordan",
+                privateLabel: nil,
+                relationshipType: .teammate,
+                birthDate: nil,
+                birthTime: nil,
+                birthPlace: "Boston",
+                sunSign: .aquarius,
+                moonSign: .aries,
+                risingSign: nil,
+                notes: "Leads with ideas; give the plan room to breathe.",
+                imageData: nil,
+                isChartCalculated: false,
+                updatedAt: .now.addingTimeInterval(-26 * 60 * 60)
             )
         ]
     }

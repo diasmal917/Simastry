@@ -8,6 +8,9 @@ import Foundation
 extension AppViewModel {
     static let panelMessagesKey = "simastry_panel_messages"
     static let panelDailyStarterDayKey = "simastry_panel_daily_starter_day"
+    static let panelMemoryNotesKey = "simastry_panel_memory_notes"
+    static let panelWeeklyRecapWeekKey = "simastry_panel_weekly_recap_week"
+    static let panelWelcomeBackDayKey = "simastry_panel_welcome_back_day"
 
     // MARK: Participants
 
@@ -137,6 +140,7 @@ extension AppViewModel {
         )
         panelMessages.append(outgoing)
         savePanelMessages()
+        recordPanelMemoryIfNeeded(from: trimmed)
 
         #if DEBUG
         let skipRemote = isDebugPreviewStateActive
@@ -299,7 +303,9 @@ extension AppViewModel {
     }
 
     /// One guide opens a conversation per calendar day, rotating through the
-    /// Sun/Moon/Rising lenses in step with the Home daily read.
+    /// Sun/Moon/Rising lenses in step with the Home daily read — and pulling
+    /// in real context (memory, unrated predictions, streaks, moments) so the
+    /// panel feels like it's been paying attention.
     func postPanelDailyStarterIfNeeded(line: String? = nil, role: CelestialRole? = nil) {
         // The welcome sequence owns the empty thread.
         guard !panelMessages.isEmpty else { return }
@@ -319,9 +325,11 @@ extension AppViewModel {
             let followUp = starters.isEmpty ? "Want to talk it through?" : starters[dayOfYear % starters.count]
             starter = "Today's read: \(line) \(followUp)"
         } else {
-            let starters = AstrologyTemplates.panelDailyStarters[focusRole.rawValue] ?? []
-            guard !starters.isEmpty else { return }
-            starter = starters[dayOfYear % starters.count]
+            starter = Self.composePanelStarter(
+                dayOfYear: dayOfYear,
+                focusRole: focusRole,
+                context: currentPanelStarterContext()
+            )
         }
 
         UserDefaults.standard.set(dayStamp, forKey: Self.panelDailyStarterDayKey)
@@ -335,4 +343,182 @@ extension AppViewModel {
         let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
         return "\(components.year ?? 0)-\(components.month ?? 0)-\(components.day ?? 0)"
     }
+
+    // MARK: - Contextual Initiative
+
+    private func currentPanelStarterContext() -> PanelStarterContext {
+        let lastPrediction = predictionService.loadHistory().first
+        let lastPredictionTarget = lastPrediction.flatMap { result in
+            PanelMemoryMatcher.mentions(in: result.question, people: relationshipPeople).first?.displayName
+        }
+
+        return PanelStarterContext(
+            memoryPersonName: panelMemoryNotes.max { $0.createdAt < $1.createdAt }?.personName,
+            lastPredictionTargetName: lastPredictionTarget,
+            lastPredictionSign: lastPrediction?.targetSunSign,
+            lastPredictionUnrated: lastPrediction.map { $0.outcome == nil } ?? false,
+            streak: StreakManager.shared.currentStreak,
+            isStreakMilestone: StreakManager.shared.streakMessage != nil,
+            latestMomentCaption: moments.first?.caption
+        )
+    }
+
+    /// Deterministic, testable starter composer. Priority: memory of a person
+    /// → unrated prediction → streak milestone → latest moment → role default.
+    nonisolated static func composePanelStarter(
+        dayOfYear: Int,
+        focusRole: CelestialRole,
+        context: PanelStarterContext
+    ) -> String {
+        func pick(_ lines: [String]) -> String? {
+            lines.isEmpty ? nil : lines[dayOfYear % lines.count]
+        }
+
+        if let person = context.memoryPersonName,
+           let line = pick(AstrologyTemplates.panelMemoryStarters) {
+            return line.replacingOccurrences(of: "{personName}", with: person)
+        }
+
+        if context.lastPredictionUnrated,
+           let line = pick(AstrologyTemplates.panelPredictionFollowUpStarters) {
+            let target = context.lastPredictionTargetName
+                ?? context.lastPredictionSign.map { "your last \($0.displayName) read" }
+                ?? "your last read"
+            return line.replacingOccurrences(of: "{target}", with: target)
+        }
+
+        if context.isStreakMilestone, context.streak > 1,
+           let line = pick(AstrologyTemplates.panelStreakStarters) {
+            return line.replacingOccurrences(of: "{streak}", with: "\(context.streak)")
+        }
+
+        if let caption = context.latestMomentCaption, !caption.isEmpty,
+           let line = pick(AstrologyTemplates.panelMomentStarters) {
+            return line.replacingOccurrences(of: "{caption}", with: String(caption.prefix(40)))
+        }
+
+        let defaults = AstrologyTemplates.panelDailyStarters[focusRole.rawValue] ?? []
+        return pick(defaults) ?? "What's today's thread — anything you're composing in your head?"
+    }
+
+    // MARK: - Panel Memory
+
+    func loadPanelMemoryNotes() {
+        guard let data = UserDefaults.standard.data(forKey: Self.panelMemoryNotesKey) else {
+            panelMemoryNotes = []
+            return
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        panelMemoryNotes = (try? decoder.decode([MemoryNote].self, from: data)) ?? []
+    }
+
+    func savePanelMemoryNotes() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(panelMemoryNotes) else { return }
+        UserDefaults.standard.set(data, forKey: Self.panelMemoryNotesKey)
+    }
+
+    /// Records which People the user just mentioned, so later starters and
+    /// LLM replies can follow up like someone who was listening.
+    func recordPanelMemoryIfNeeded(from text: String) {
+        let mentioned = PanelMemoryMatcher.mentions(in: text, people: relationshipPeople)
+        guard !mentioned.isEmpty else { return }
+
+        for person in mentioned {
+            panelMemoryNotes.append(
+                MemoryNote(personName: person.displayName, personId: person.id)
+            )
+        }
+        panelMemoryNotes = Self.pruned(panelMemoryNotes, now: Date())
+        savePanelMemoryNotes()
+    }
+
+    /// Cap 20 notes; drop anything older than 30 days.
+    nonisolated static func pruned(_ notes: [MemoryNote], now: Date) -> [MemoryNote] {
+        let cutoff = now.addingTimeInterval(-30 * 24 * 60 * 60)
+        let fresh = notes.filter { $0.createdAt >= cutoff }
+        return Array(fresh.suffix(20))
+    }
+
+    /// When the thread has been quiet for 3+ days and the panel remembers
+    /// something, a guide reaches out about it — once per day at most.
+    func postPanelWelcomeBackIfNeeded(now: Date = Date()) {
+        guard let latest = latestPanelMessage,
+              now.timeIntervalSince(latest.timestamp) > 3 * 24 * 60 * 60,
+              let note = panelMemoryNotes.max(by: { $0.createdAt < $1.createdAt }) else {
+            return
+        }
+
+        let dayStamp = Self.panelDayStamp(for: now)
+        guard UserDefaults.standard.string(forKey: Self.panelWelcomeBackDayKey) != dayStamp else { return }
+
+        let lines = AstrologyTemplates.panelWelcomeBackLines
+        guard !lines.isEmpty,
+              let entry = panelGuideEntries.first(where: { $0.role == .moon }) ?? panelGuideEntries.first else {
+            return
+        }
+
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: now) ?? 1
+        let content = lines[dayOfYear % lines.count]
+            .replacingOccurrences(of: "{personName}", with: note.personName)
+
+        UserDefaults.standard.set(dayStamp, forKey: Self.panelWelcomeBackDayKey)
+        panelMessages.append(
+            PanelMessage(senderId: entry.profile.id, content: content, isRead: isPanelThreadOpen)
+        )
+        savePanelMessages()
+    }
+
+    // MARK: - Weekly Recap
+
+    /// Sunday ritual: the Sun-lens guide reads the week back, once per week.
+    func postPanelWeeklyRecapIfNeeded(date: Date = Date()) {
+        guard !panelMessages.isEmpty else { return }
+        guard Calendar.current.component(.weekday, from: date) == 1 else { return }
+
+        let stamp = WeeklyRecapComposer.weekStamp(for: date)
+        guard UserDefaults.standard.string(forKey: Self.panelWeeklyRecapWeekKey) != stamp else { return }
+
+        guard let entry = panelGuideEntries.first(where: { $0.role == .sun }) ?? panelGuideEntries.first else {
+            return
+        }
+
+        let stats = WeeklyRecapComposer.stats(
+            history: predictionService.loadHistory(),
+            panelMessages: panelMessages,
+            moments: moments,
+            streak: StreakManager.shared.currentStreak,
+            guideName: { [weak self] senderId in
+                self?.panelGuideEntry(forParticipantId: senderId)?.profile.name
+            },
+            weekEnding: date
+        )
+
+        let firstName = (profile?.displayName ?? "")
+            .components(separatedBy: " ").first
+        let message = WeeklyRecapComposer.recapMessage(
+            stats: stats,
+            guideName: entry.profile.name,
+            userFirstName: (firstName?.isEmpty ?? true) ? nil : firstName
+        )
+
+        UserDefaults.standard.set(stamp, forKey: Self.panelWeeklyRecapWeekKey)
+        panelMessages.append(
+            PanelMessage(senderId: entry.profile.id, content: message, isRead: isPanelThreadOpen)
+        )
+        savePanelMessages()
+    }
+}
+
+/// Everything the panel can reference when it speaks first.
+nonisolated struct PanelStarterContext: Equatable, Sendable {
+    let memoryPersonName: String?
+    let lastPredictionTargetName: String?
+    let lastPredictionSign: ZodiacSign?
+    let lastPredictionUnrated: Bool
+    let streak: Int
+    let isStreakMilestone: Bool
+    let latestMomentCaption: String?
 }

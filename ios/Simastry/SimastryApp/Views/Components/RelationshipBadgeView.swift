@@ -11,7 +11,8 @@ struct RelationshipBadgeView: View {
         self.size = size
     }
 
-    private var ringColor: Color {
+    /// Shared ring tint so compact chips and the full badge can't drift.
+    static func ringColor(for level: RelationshipLevel) -> Color {
         switch level {
         case .stranger: SimastryColor.mutedSilver.opacity(0.4)
         case .acquaintance: Color(red: 180/255, green: 140/255, blue: 90/255)
@@ -20,6 +21,10 @@ struct RelationshipBadgeView: View {
         case .bonded: SimastryColor.gold
         case .soulbound: SimastryColor.gold
         }
+    }
+
+    private var ringColor: Color {
+        Self.ringColor(for: level)
     }
 
     private var showShimmer: Bool {
@@ -69,5 +74,26 @@ struct RelationshipBadgeView: View {
                 .frame(height: 4)
             }
         }
+    }
+}
+
+/// One-line level chip for thread headers — name + tinted dot.
+struct RelationshipLevelChip: View {
+    let level: RelationshipLevel
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(RelationshipBadgeView.ringColor(for: level))
+                .frame(width: 5, height: 5)
+
+            Text(level.name)
+                .font(SimastryFont.captionSmall.weight(.semibold))
+                .foregroundStyle(RelationshipBadgeView.ringColor(for: level))
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(RelationshipBadgeView.ringColor(for: level).opacity(0.12), in: Capsule())
+        .accessibilityLabel("Bond level: \(level.name)")
     }
 }
