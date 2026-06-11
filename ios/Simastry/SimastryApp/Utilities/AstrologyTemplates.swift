@@ -573,6 +573,91 @@ nonisolated struct AstrologyTemplates {
 
     /// Companion chat openers per element — the first beat of an AI Astrologist reply,
     /// before sign-specific guidance. Keyed by ZodiacElement rawValue.
+    /// Mode-specific guidance beats for 1:1 template replies — same
+    /// element-keyed scheme as companionReplyGuidance (which stays the
+    /// best-friend default). Mentor talks career, teacher ends each beat
+    /// with an applying question, check-in mirrors without advising.
+    static let mentorReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Career lens: name the outcome you want from this week, then take the visible swing — momentum is a strategy.",
+            "Mentor note: the bold version of your ask is usually the honest one. Draft it like you've already earned it.",
+            "Pick the one task that scares you slightly — that's the growth edge. Start there tomorrow morning.",
+            "Don't wait to be picked for it. Claim the project out loud and let the follow-through defend you."
+        ],
+        "earth": [
+            "Career lens: progress here is brick by brick — what's the one brick you can lay before Friday?",
+            "Mentor note: write the win down where your manager will see it. Quiet competence needs a paper trail.",
+            "The steady route wins this one: one deliverable fully landed beats three half-starts.",
+            "Negotiate from evidence — list what changed since your last review and let the list do the talking."
+        ],
+        "air": [
+            "Career lens: your edge is the framing — rewrite the problem in one sentence before you solve it.",
+            "Mentor note: the right question in the right meeting is a promotion engine. Prepare two for tomorrow.",
+            "Talk to one person outside your team this week — your next move usually comes through a side door.",
+            "Turn the idea into a one-pager; thinking out loud lands better with a page underneath it."
+        ],
+        "water": [
+            "Career lens: your read on the room is data — trust it, then verify it with one direct question.",
+            "Mentor note: the relationship you tend this month is the opportunity that calls next year.",
+            "Protect your deep-work hours like meetings — your intuition needs quiet to compound.",
+            "Before the big conversation, decide how you want to feel walking out — then work backwards."
+        ]
+    ]
+
+    static let teacherReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Quick lesson: fire signs process out loud and forward — the first reaction is rarely the final position. Where have you seen that this week?",
+            "Today's one-liner: Aries, Leo, and Sagittarius share an element, not a personality — the modality is what splits them. Want the breakdown?",
+            "Lesson: a fire Moon needs the vent before the solve. Who in your life makes more sense through that rule?",
+            "A pattern worth testing: fire energy reads silence as a verdict. Notice it anywhere lately?"
+        ],
+        "earth": [
+            "Quick lesson: earth signs trust what repeats — one kept promise outweighs five warm speeches. Where could you apply that?",
+            "Today's one-liner: Taurus holds, Virgo refines, Capricorn climbs — same element, three different jobs. Which one is in your life?",
+            "Lesson: an earth Moon processes slowly and privately — tomorrow's answer is the real one. Recognize anyone?",
+            "A pattern worth testing: earth energy says it's fine while still deciding. Seen it this week?"
+        ],
+        "air": [
+            "Quick lesson: air signs metabolize feeling through words — the talking IS the processing. Who does that around you?",
+            "Today's one-liner: Gemini collects, Libra weighs, Aquarius reframes — three kinds of thinking, one element. Which do you lean on?",
+            "Lesson: an air Moon needs to think out loud without being held to the draft. Useful for anyone you know?",
+            "A pattern worth testing: air energy under stress gets more talkative, not less. Notice it anywhere?"
+        ],
+        "water": [
+            "Quick lesson: water signs answer the tone before the text — one warm word up front changes everything after. Where could you try it?",
+            "Today's one-liner: Cancer protects, Scorpio probes, Pisces absorbs — same element, three different depths. Which one is near you?",
+            "Lesson: a water Moon remembers how it felt long after the words fade. Does that explain anyone's reaction lately?",
+            "A pattern worth testing: water energy goes quiet to feel, not to punish. Seen that this week?"
+        ]
+    ]
+
+    static let checkInReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Heard. Sit with it for a second — what's the strongest feeling in it right now?",
+            "That's a lot of motion for one week. If you named the engine under it, what would you call it?",
+            "Okay — no fixing yet. What part of this feels most yours, and what part feels handed to you?",
+            "Take a breath with that one. If it had a headline, what would it say?"
+        ],
+        "earth": [
+            "That sounds heavy to carry steadily. Where does it sit when you think about it?",
+            "No rush here. What would enough-for-today look like?",
+            "Noted, gently. Which part of this is actually in your hands?",
+            "Let's slow it down. What's one true sentence about how this week really felt?"
+        ],
+        "air": [
+            "Let's untangle it one thread at a time — which thread first?",
+            "Interesting. If your best friend described this back to you, what would they emphasize?",
+            "Say the messy version — drafts are welcome here. What's the thought underneath the thought?",
+            "Let's name it without solving it. What word keeps coming back?"
+        ],
+        "water": [
+            "I'm here for the unpolished version. How did it actually feel?",
+            "That landed somewhere deep, sounds like. Where?",
+            "No need to be okay here. What does the feeling need first — naming, or just company?",
+            "Gently: what would you tell someone you love who felt this way?"
+        ]
+    ]
+
     static let companionReplyOpeners: [String: [String]] = [
         "fire": [
             "Good. You said it instead of circling it.",

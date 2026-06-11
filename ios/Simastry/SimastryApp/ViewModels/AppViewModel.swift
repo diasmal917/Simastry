@@ -145,6 +145,8 @@ class AppViewModel {
     var shareCardRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the Career Read sheet.
     var careerReadRouteRequest: Int = 0
+    /// Bumped whenever Method course progress changes so cards re-render.
+    var methodCourseVersion: Int = 0
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -1979,7 +1981,11 @@ class AppViewModel {
                 companionId: companionId,
                 companionName: companionName,
                 companionSign: companionSign,
-                content: llmContent ?? self.composeCompanionReply(signName: companionSign, threadCount: threadCount),
+                content: llmContent ?? self.composeCompanionReply(
+                    signName: companionSign,
+                    threadCount: threadCount,
+                    mode: self.guideChatMode(for: companionId)
+                ),
                 timestamp: Date(),
                 isRead: self.openCompanionThreadId == companionId,
                 source: .companion,
@@ -1992,13 +1998,21 @@ class AppViewModel {
 
     /// Composes a companion reply from the persona's sign lens: an element-keyed opener
     /// plus one guidance beat, rotated by thread length so it doesn't repeat.
-    private func composeCompanionReply(signName: String, threadCount: Int) -> String {
+    /// The active chat mode picks the guidance register; check-in skips the
+    /// opener entirely — reflective replies shouldn't start with banter.
+    private func composeCompanionReply(signName: String, threadCount: Int, mode: GuideChatMode = .bestFriend) -> String {
         let sign = ZodiacSign(rawValue: signName.lowercased())
             ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == signName.lowercased() }
             ?? .sagittarius
 
-        let openers = AstrologyTemplates.companionReplyOpeners[sign.element.rawValue] ?? []
-        let guidance = AstrologyTemplates.companionReplyGuidance[sign.element.rawValue] ?? []
+        let element = sign.element.rawValue
+        let openers = mode == .checkIn ? [] : (AstrologyTemplates.companionReplyOpeners[element] ?? [])
+        let guidance: [String] = switch mode {
+        case .bestFriend: AstrologyTemplates.companionReplyGuidance[element] ?? []
+        case .mentor: AstrologyTemplates.mentorReplyGuidance[element] ?? []
+        case .teacher: AstrologyTemplates.teacherReplyGuidance[element] ?? []
+        case .checkIn: AstrologyTemplates.checkInReplyGuidance[element] ?? []
+        }
 
         let opener = openers.isEmpty ? "" : openers[threadCount % openers.count]
         let beat = guidance.isEmpty
@@ -2240,6 +2254,8 @@ class AppViewModel {
         defaults.removeObject(forKey: Self.panelMemoryNotesKey)
         defaults.removeObject(forKey: Self.panelWeeklyRecapWeekKey)
         defaults.removeObject(forKey: Self.panelWelcomeBackDayKey)
+        defaults.removeObject(forKey: Self.methodCourseProgressKey)
+        methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
         defaults.removeObject(forKey: socialBioKey)
@@ -2656,6 +2672,14 @@ extension AppViewModel {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.careerReadRouteRequest += 1
+            }
+        case "methodCourse":
+            seedDebugPanelMessages(now: now)
+            UserDefaults.standard.removeObject(forKey: Self.methodCourseProgressKey)
+            selectedTab = 2
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openMethodCourseLesson()
             }
         case "playbook":
             relationshipPeople = RelationshipPeopleStore.previewPeople()

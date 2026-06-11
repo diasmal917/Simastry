@@ -411,6 +411,7 @@ private struct MessageDetailSheet: View {
     @State private var isSendingReply: Bool = false
     @State private var showSafetyOptions: Bool = false
     @State private var showBlockConfirmation: Bool = false
+    @State private var selectedMode: GuideChatMode = .bestFriend
     @FocusState private var replyFocused: Bool
 
     private var isCompanionTyping: Bool {
@@ -453,6 +454,10 @@ private struct MessageDetailSheet: View {
 
             VStack(spacing: 0) {
                 dmHeader
+
+                if message.source == .companion {
+                    modeChipsRow
+                }
 
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -566,6 +571,67 @@ private struct MessageDetailSheet: View {
         }
         let thread = viewModel.companionConversation(with: message.companionId)
         return thread.isEmpty ? [message] : thread
+    }
+
+    /// One guide, four registers — best friend, mentor, teacher, check-in.
+    private var modeChipsRow: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(GuideChatMode.allCases) { mode in
+                    let isActive = selectedMode == mode
+
+                    Button {
+                        HapticManager.buttonPress()
+                        selectedMode = mode
+                        viewModel.setGuideChatMode(
+                            mode,
+                            for: message.companionId,
+                            companionName: message.companionName,
+                            companionSign: message.companionSign
+                        )
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: mode.systemImage)
+                                .font(.system(size: 10, weight: .semibold))
+
+                            Text(mode.title)
+                                .font(SimastryFont.labelSmall)
+                        }
+                        .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.82))
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(
+                            isActive
+                                ? AnyShapeStyle(SimastryGradient.gold)
+                                : AnyShapeStyle(Color.white.opacity(0.06)),
+                            in: Capsule()
+                        )
+                        .overlay {
+                            Capsule().strokeBorder(
+                                isActive ? .white.opacity(0.22) : .white.opacity(0.08),
+                                lineWidth: 0.6
+                            )
+                        }
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("\(mode.title) mode. \(mode.blurb)")
+                    .accessibilityAddTraits(isActive ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+        }
+        .scrollIndicators(.hidden)
+        .background(.black.opacity(0.18))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.06))
+                .frame(height: 0.5)
+        }
+        .onAppear {
+            selectedMode = viewModel.guideChatMode(for: message.companionId)
+        }
+        .animation(.spring(SimastrySpring.snappy), value: selectedMode)
     }
 
     private var dmHeader: some View {

@@ -121,6 +121,8 @@ struct HomeView: View {
 
                 dailyReadCard
 
+                methodCourseCard
+
                 todaysSkyCard
 
                 communicationTypeSummaryCard
@@ -455,6 +457,82 @@ struct HomeView: View {
             }
             return DailyGuideTip(title: tip.title, lesson: tip.body, opener: tip.opener, profile: profile)
         }
+    }
+
+    // MARK: - Simastry Method course
+
+    /// Seven lessons taught in the panel, one a day. The card tracks
+    /// progress and flips to a graduate state after lesson seven.
+    private var methodCourseCard: some View {
+        // Establishes an observation on course progress so the card
+        // re-renders after a lesson posts.
+        let _ = viewModel.methodCourseVersion
+        let state = viewModel.methodCourseState
+
+        return Button {
+            HapticManager.buttonPress()
+            viewModel.openMethodCourseLesson()
+        } label: {
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(spacing: 8) {
+                    Image(systemName: "graduationcap.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("THE SIMASTRY METHOD")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        ForEach(MethodCourseTemplates.lessons) { lesson in
+                            Circle()
+                                .fill(state.postedLessons.contains(lesson.number)
+                                      ? SimastryColor.gold
+                                      : SimastryColor.offWhite.opacity(0.14))
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .accessibilityLabel("\(state.postedLessons.count) of \(MethodCourseTemplates.lessons.count) lessons complete")
+                }
+
+                if state.isComplete {
+                    Text("Method Graduate")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text("All seven lessons live in your panel — revisit them any time.")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let lesson = state.currentLesson {
+                    Text("Lesson \(lesson.number) of \(MethodCourseTemplates.lessons.count) · \(lesson.title)")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+
+                    Text(viewModel.canPostMethodLessonToday
+                         ? "A two-minute lesson, taught by your panel. Tap to take it."
+                         : "Today's lesson is in your panel — the next one unlocks tomorrow.")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(state.isComplete
+            ? "Simastry Method complete. Open your panel."
+            : "Simastry Method course. Take the next lesson with your panel.")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
     }
 
     @ViewBuilder

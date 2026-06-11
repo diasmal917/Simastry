@@ -7,6 +7,45 @@ import Foundation
 // composer on error or timeout, so chats never stall.
 
 extension AppViewModel {
+    // MARK: Guide Chat Modes
+
+    /// The user's chosen register for a 1:1 guide thread (best friend by
+    /// default). Per-companion, device-local.
+    func guideChatMode(for companionId: UUID) -> GuideChatMode {
+        UserDefaults.standard.string(forKey: GuideChatMode.storageKey(for: companionId))
+            .flatMap(GuideChatMode.init(rawValue:)) ?? .bestFriend
+    }
+
+    /// Switches the register and, on the first ever switch into Check-in for
+    /// this companion, posts the non-therapy disclosure as the guide's own
+    /// message so the boundary is stated before the first exchange.
+    func setGuideChatMode(
+        _ mode: GuideChatMode,
+        for companionId: UUID,
+        companionName: String,
+        companionSign: String
+    ) {
+        UserDefaults.standard.set(mode.rawValue, forKey: GuideChatMode.storageKey(for: companionId))
+
+        guard mode == .checkIn else { return }
+        let disclosureKey = GuideChatMode.disclosureKey(for: companionId)
+        guard !UserDefaults.standard.bool(forKey: disclosureKey) else { return }
+        UserDefaults.standard.set(true, forKey: disclosureKey)
+
+        let disclosure = CompanionMessage(
+            companionId: companionId,
+            companionName: companionName,
+            companionSign: companionSign,
+            content: GuideChatMode.checkInDisclosure,
+            timestamp: Date(),
+            isRead: openCompanionThreadId == companionId,
+            source: .companion,
+            direction: .incoming
+        )
+        companionMessages.insert(disclosure, at: 0)
+        saveMessages()
+    }
+
     /// The two most recent memory notes as prompt context lines.
     private var llmMemoryLines: [String] {
         let now = Date()
@@ -96,7 +135,8 @@ extension AppViewModel {
             role: nil,
             user: llmUserContext,
             isPanel: false,
-            memoryLines: llmMemoryLines
+            memoryLines: llmMemoryLines,
+            mode: guideChatMode(for: companionId)
         )
         let user = GuideReplyService.threadUserPrompt(
             transcript: Array(transcript),

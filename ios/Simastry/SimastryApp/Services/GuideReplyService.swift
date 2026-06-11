@@ -51,7 +51,8 @@ nonisolated enum GuideReplyService {
         user: UserContext,
         isPanel: Bool,
         previousGuideName: String? = nil,
-        memoryLines: [String] = []
+        memoryLines: [String] = [],
+        mode: GuideChatMode = .bestFriend
     ) -> String {
         var lines: [String] = []
 
@@ -79,6 +80,9 @@ nonisolated enum GuideReplyService {
             if let previousGuideName {
                 lines.append("\(previousGuideName) replied just before you — you may briefly build on or differ from their take, in one clause.")
             }
+        } else {
+            // 1:1 threads carry the user's chosen register for this guide.
+            lines.append(mode.promptBlock)
         }
 
         if !memoryLines.isEmpty {

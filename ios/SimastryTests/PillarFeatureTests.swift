@@ -120,6 +120,105 @@ struct PillarFeatureTests {
         }
     }
 
+    // MARK: - Guide Chat Modes
+
+    @Test func guideChatModeShapesPromptAndKeepsTherapyBoundary() {
+        let profile = FactoryCompanionCatalog.featured
+        let user = GuideReplyService.UserContext(
+            name: "Maya", sun: .sagittarius, moon: .cancer, rising: .libra, communicationType: nil
+        )
+
+        let checkIn = GuideReplyService.personaSystemPrompt(
+            profile: profile, role: nil, user: user, isPanel: false, mode: .checkIn
+        )
+        #expect(checkIn.contains("NOT a therapist"))
+        #expect(checkIn.contains("crisis"))
+
+        let mentor = GuideReplyService.personaSystemPrompt(
+            profile: profile, role: nil, user: user, isPanel: false, mode: .mentor
+        )
+        #expect(mentor.contains("Mode: mentor"))
+
+        // Panel prompts never carry a 1:1 mode register.
+        let panel = GuideReplyService.personaSystemPrompt(
+            profile: profile, role: .sun, user: user, isPanel: true, mode: .checkIn
+        )
+        #expect(!panel.contains("Mode:"))
+    }
+
+    @Test func modeReplyGuidanceCoversAllElements() {
+        for element in ZodiacElement.allCases {
+            #expect(AstrologyTemplates.mentorReplyGuidance[element.rawValue]?.isEmpty == false)
+            #expect(AstrologyTemplates.teacherReplyGuidance[element.rawValue]?.isEmpty == false)
+            #expect(AstrologyTemplates.checkInReplyGuidance[element.rawValue]?.isEmpty == false)
+        }
+    }
+
+    @Test func checkInModePostsDisclosureExactlyOnceAndPersists() {
+        let viewModel = seededViewModel()
+        viewModel.companionMessages = []
+        let companionId = UUID()
+
+        viewModel.setGuideChatMode(.checkIn, for: companionId, companionName: "Nadia", companionSign: "sagittarius")
+        #expect(viewModel.guideChatMode(for: companionId) == .checkIn)
+        #expect(viewModel.companionMessages.count == 1)
+        #expect(viewModel.companionMessages.first?.content == GuideChatMode.checkInDisclosure)
+
+        // Switching away and back never re-posts the disclosure.
+        viewModel.setGuideChatMode(.bestFriend, for: companionId, companionName: "Nadia", companionSign: "sagittarius")
+        viewModel.setGuideChatMode(.checkIn, for: companionId, companionName: "Nadia", companionSign: "sagittarius")
+        #expect(viewModel.companionMessages.count == 1)
+
+        UserDefaults.standard.removeObject(forKey: GuideChatMode.storageKey(for: companionId))
+        UserDefaults.standard.removeObject(forKey: GuideChatMode.disclosureKey(for: companionId))
+    }
+
+    // MARK: - Simastry Method Course
+
+    @Test func methodCourseHasSevenCompleteLessons() {
+        let lessons = MethodCourseTemplates.lessons
+        #expect(lessons.count == 7)
+        #expect(lessons.map(\.number) == Array(1...7))
+        for lesson in lessons {
+            #expect(!lesson.title.isEmpty)
+            #expect(!lesson.lesson.isEmpty)
+            #expect(!lesson.exercise.isEmpty)
+            #expect(!lesson.checkQuestion.isEmpty)
+            #expect(lesson.panelMessage.contains("Lesson \(lesson.number) of 7"))
+        }
+    }
+
+    @Test func methodCoursePostsOnePerDayAndAdvances() {
+        cleanPanelDefaults()
+        UserDefaults.standard.removeObject(forKey: AppViewModel.methodCourseProgressKey)
+        let viewModel = seededViewModel()
+        viewModel.panelMessages = []
+
+        viewModel.openMethodCourseLesson()
+        let lessonMessages = { viewModel.panelMessages.filter { $0.content.contains("Lesson ") } }
+        #expect(lessonMessages().count == 1)
+        #expect(lessonMessages().first?.content.contains("Lesson 1 of 7") == true)
+        #expect(viewModel.methodCourseState.postedLessons == [1])
+        #expect(viewModel.selectedTab == 2)
+
+        // Same day: re-tap routes but never double-posts.
+        viewModel.openMethodCourseLesson()
+        #expect(lessonMessages().count == 1)
+
+        // Next day (simulated by aging the stamp): lesson 2 posts.
+        var aged = viewModel.methodCourseState
+        aged.lastPostDay = "1999-01-01"
+        if let data = try? JSONEncoder().encode(aged) {
+            UserDefaults.standard.set(data, forKey: AppViewModel.methodCourseProgressKey)
+        }
+        viewModel.openMethodCourseLesson()
+        #expect(lessonMessages().count == 2)
+        #expect(viewModel.methodCourseState.postedLessons == [1, 2])
+
+        UserDefaults.standard.removeObject(forKey: AppViewModel.methodCourseProgressKey)
+        cleanPanelDefaults()
+    }
+
     // MARK: - Team Read
 
     @Test func teamReadComposesRolesCountsAndFriction() {

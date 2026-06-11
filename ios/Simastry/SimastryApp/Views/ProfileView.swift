@@ -430,11 +430,33 @@ struct ProfileView: View {
                 currentStreak: streakManager.currentStreak,
                 lastCheckIn: streakManager.lastCheckIn
             )
+
+            methodCourseLine
         }
         .padding(20)
         .glossyCard(cornerRadius: 22)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+    }
+
+    private var methodCourseLine: some View {
+        let _ = viewModel.methodCourseVersion
+        let state = viewModel.methodCourseState
+
+        return HStack(spacing: 7) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+
+            Text(state.isComplete
+                 ? "Simastry Method Graduate"
+                 : "Simastry Method · \(state.postedLessons.count) of \(MethodCourseTemplates.lessons.count) lessons")
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(state.isComplete ? SimastryColor.gold : SimastryColor.mutedSilver)
+
+            Spacer()
+        }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - About You Section

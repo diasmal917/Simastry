@@ -11,6 +11,7 @@ extension AppViewModel {
     static let panelMemoryNotesKey = "simastry_panel_memory_notes"
     static let panelWeeklyRecapWeekKey = "simastry_panel_weekly_recap_week"
     static let panelWelcomeBackDayKey = "simastry_panel_welcome_back_day"
+    static let methodCourseProgressKey = "simastry_method_course_progress"
 
     // MARK: Participants
 
@@ -142,6 +143,55 @@ extension AppViewModel {
     /// conversation literally begins from the Home daily-read card.
     func openPanelChatSeededWithDailyRead(line: String, role: CelestialRole) {
         postPanelDailyStarterIfNeeded(line: line, role: role)
+        openPanelChat()
+    }
+
+    // MARK: Simastry Method Course
+
+    var methodCourseState: MethodCourseState {
+        guard let data = UserDefaults.standard.data(forKey: Self.methodCourseProgressKey),
+              let state = try? JSONDecoder().decode(MethodCourseState.self, from: data) else {
+            return MethodCourseState()
+        }
+        return state
+    }
+
+    private func saveMethodCourseState(_ state: MethodCourseState) {
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        UserDefaults.standard.set(data, forKey: Self.methodCourseProgressKey)
+        methodCourseVersion += 1
+    }
+
+    /// True when tapping the course card posts a NEW lesson — one new
+    /// lesson per day, never past lesson seven.
+    var canPostMethodLessonToday: Bool {
+        let state = methodCourseState
+        guard state.currentLesson != nil else { return false }
+        return state.lastPostDay != Self.panelDayStamp(for: Date())
+    }
+
+    /// Posts the current lesson into the panel as a rotating guide's
+    /// message, then routes to the panel. Re-taps on the same day just
+    /// open the thread — the lesson is already there.
+    func openMethodCourseLesson() {
+        var state = methodCourseState
+        let today = Self.panelDayStamp(for: Date())
+
+        if let lesson = state.currentLesson, state.lastPostDay != today {
+            let guides = panelGuideEntries
+            let senderId = guides.isEmpty
+                ? FactoryCompanionCatalog.featured.id
+                : guides[(lesson.number - 1) % guides.count].profile.id
+            panelMessages.append(
+                PanelMessage(senderId: senderId, content: lesson.panelMessage, isRead: isPanelThreadOpen)
+            )
+            savePanelMessages()
+
+            state.postedLessons.append(lesson.number)
+            state.lastPostDay = today
+            saveMethodCourseState(state)
+        }
+
         openPanelChat()
     }
 
