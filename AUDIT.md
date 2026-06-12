@@ -14,8 +14,10 @@ but still ship in this build.
 > definitive sign-out wipes local state; H2 — `$(PRODUCT_BUNDLE_IDENTIFIER)`
 > restored to `CFBundleURLSchemes`; H3 — both Simulate paths now decide the
 > funding source up front and charge exactly one pool, only after success;
-> H5 — the developer menu trigger is `#if DEBUG`-gated. The remaining
-> findings below are unfixed.
+> H5 — the developer menu trigger is `#if DEBUG`-gated. H4 — the catalog's
+> opaque PNGs were re-encoded as JPEG q90 (364 MB → 105 MB; the 38
+> byte-duplicate files remain, now small). The remaining findings below
+> are unfixed.
 
 ---
 
