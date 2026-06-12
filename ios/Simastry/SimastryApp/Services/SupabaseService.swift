@@ -129,13 +129,24 @@ nonisolated final class SupabaseService {
         try await client.auth.signOut()
     }
 
-    func isAuthenticated() async -> Bool {
-        guard let client else { return false }
+    enum AuthState: Sendable {
+        /// A valid (possibly just refreshed) session exists.
+        case authenticated
+        /// No session is stored on this device — a definitive sign-out.
+        case signedOut
+        /// A session is stored but could not be verified or refreshed right
+        /// now (offline, Supabase unreachable). Callers must not treat this
+        /// as a sign-out: account-scoped local data has to survive it.
+        case unverified
+    }
+
+    func authState() async -> AuthState {
+        guard let client else { return .signedOut }
         do {
             _ = try await client.auth.session
-            return true
+            return .authenticated
         } catch {
-            return false
+            return client.auth.currentSession == nil ? .signedOut : .unverified
         }
     }
 

@@ -1719,11 +1719,15 @@ struct ProfileView: View {
             .buttonStyle(SpringPressStyle())
 
             Button {
+                // The tier-override developer menu must never ship reachable
+                // in release builds — it bypasses RevenueCat entitlements.
+                #if DEBUG
                 tapCount += 1
                 if tapCount >= 3 {
                     activeSheet = .developerMenu
                     tapCount = 0
                 }
+                #endif
             } label: {
                 Text("Simastry v1.0.0")
                     .font(SimastryFont.caption)

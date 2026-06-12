@@ -16,6 +16,11 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>simastry</string>
+				<!-- SupabaseService builds the OAuth redirect from the bundle
+				     identifier (app.rork.simastry://auth/callback); without
+				     this scheme the browser can't return after Google
+				     sign-in. -->
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			</array>
 		</dict>
 	</array>

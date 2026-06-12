@@ -385,8 +385,11 @@ class AppViewModel {
     func checkAuthState() async {
         await notificationService.checkAuthorizationStatus()
 
-        let authed = await supabase.isAuthenticated()
-        guard authed else {
+        // Only a definitive sign-out may wipe account-scoped local state.
+        // An unverifiable session (offline launch, expired token that can't
+        // refresh yet) keeps local data and proceeds with cached state.
+        let authState = await supabase.authState()
+        guard authState != .signedOut else {
             isAuthenticated = false
             profile = nil
             companions = []

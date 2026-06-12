@@ -9,6 +9,14 @@ every finding below was verified against surrounding code, not just
 pattern-matched. Items marked **(pre-existing)** were already on `main`
 but still ship in this build.
 
+> **Fixes applied on this branch** (commit after the report): H1 — auth
+> check is now tri-state (`SupabaseService.authState()`) and only a
+> definitive sign-out wipes local state; H2 — `$(PRODUCT_BUNDLE_IDENTIFIER)`
+> restored to `CFBundleURLSchemes`; H3 — both Simulate paths now decide the
+> funding source up front and charge exactly one pool, only after success;
+> H5 — the developer menu trigger is `#if DEBUG`-gated. The remaining
+> findings below are unfixed.
+
 ---
 
 ## High

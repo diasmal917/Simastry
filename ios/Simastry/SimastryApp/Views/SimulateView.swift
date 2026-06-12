@@ -821,13 +821,16 @@ struct SimulateView: View {
             return
         }
 
-        if !viewModel.canUsePrediction() {
-            if viewModel.hasBonusPredictions {
-                viewModel.bonusPredictions -= 1
-            } else {
-                showTopUpSheet = true
-                return
-            }
+        // Decide how this prediction is funded; nothing is charged until
+        // generation succeeds, so a failed request can't burn a paid credit.
+        let usesBonusPrediction: Bool
+        if viewModel.canUsePrediction() {
+            usesBonusPrediction = false
+        } else if viewModel.hasBonusPredictions {
+            usesBonusPrediction = true
+        } else {
+            showTopUpSheet = true
+            return
         }
 
         let request = PredictionRequest(
@@ -846,7 +849,11 @@ struct SimulateView: View {
         do {
             let result = try await viewModel.predictionService.generatePrediction(request: request, tier: currentTier)
             await viewModel.predictionRateLimiter.recordAction()
-            await viewModel.consumePrediction()
+            if usesBonusPrediction {
+                viewModel.bonusPredictions -= 1
+            } else {
+                await viewModel.consumePrediction()
+            }
             stopProgressCycle()
             isGenerating = false
             HapticManager.soulFlash()
@@ -885,13 +892,16 @@ struct SimulateView: View {
             return
         }
 
-        if !viewModel.canUsePrediction() {
-            if viewModel.hasBonusPredictions {
-                viewModel.bonusPredictions -= 1
-            } else {
-                showTopUpSheet = true
-                return
-            }
+        // Decide how this prediction is funded; nothing is charged until
+        // generation succeeds, so a failed request can't burn a paid credit.
+        let usesBonusPrediction: Bool
+        if viewModel.canUsePrediction() {
+            usesBonusPrediction = false
+        } else if viewModel.hasBonusPredictions {
+            usesBonusPrediction = true
+        } else {
+            showTopUpSheet = true
+            return
         }
 
         isRegenerating = true
@@ -909,7 +919,11 @@ struct SimulateView: View {
         do {
             let updatedResult = try await viewModel.predictionService.generatePrediction(request: request, tier: currentTier)
             await viewModel.predictionRateLimiter.recordAction()
-            await viewModel.consumePrediction()
+            if usesBonusPrediction {
+                viewModel.bonusPredictions -= 1
+            } else {
+                await viewModel.consumePrediction()
+            }
             HapticManager.soulFlash()
             loadHistory()
             selectedResult = updatedResult
