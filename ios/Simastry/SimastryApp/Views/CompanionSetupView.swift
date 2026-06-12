@@ -51,8 +51,8 @@ struct CompanionSetupView: View {
                 Spacer().frame(height: 12)
 
                 progressHeader(
-                    title: "Shape your \(viewModel.selectedMode.displayName.lowercased())",
-                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style the companion voice."
+                    title: "Shape your \(shapeTitleNoun)",
+                    subtitle: "Pick their Sun, Moon, and Rising profile, then name and style your guide's voice."
                 )
 
                 stageStrip(activeStep: 0)
@@ -113,7 +113,7 @@ struct CompanionSetupView: View {
                                 .foregroundStyle(SimastryColor.gold)
                         }
                         .padding(18)
-                        .goldGlassRect(cornerRadius: 22)
+                        .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.8))
                     }
                     .buttonStyle(SpringPressStyle())
 
@@ -176,13 +176,17 @@ struct CompanionSetupView: View {
                             }
                             .font(.system(size: 24, weight: .semibold))
                             .foregroundStyle(SimastryColor.offWhite)
+                            .tint(SimastryColor.gold)
                             .multilineTextAlignment(.center)
                     }
                     .padding(18)
-                    .simastryGlass(cornerRadius: 20)
+                    .background(.white.opacity(0.07), in: .rect(cornerRadius: 20))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.06), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(
+                                isNamingFocused ? SimastryColor.gold.opacity(0.5) : .white.opacity(0.14),
+                                lineWidth: 1
+                            )
                     }
 
                     if !nameSuggestions.isEmpty {
@@ -261,10 +265,10 @@ struct CompanionSetupView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 20)
-                            .simastryGlass(cornerRadius: 16)
+                            .surfaceCard(cornerRadius: 16)
                             .overlay {
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(viewModel.companionAppearance == style ? SimastryColor.gold : .white.opacity(0.06), lineWidth: viewModel.companionAppearance == style ? 2 : 1)
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(viewModel.companionAppearance == style ? SimastryColor.gold : .clear, lineWidth: 1.6)
                             }
                             .scaleEffect(viewModel.companionAppearance == style ? 1.03 : 1.0)
                             .animation(reduceMotion ? .default : .spring(SimastrySpring.bouncy), value: viewModel.companionAppearance)
@@ -303,6 +307,13 @@ struct CompanionSetupView: View {
         } message: {
             Text("You're about to enter information about another person. Please make sure you have their knowledge or permission to use their birth details in this app. Their data is stored privately and never shared.")
         }
+    }
+
+    /// Mode name lowercased for mid-sentence use, preserving the "AI" acronym.
+    private var shapeTitleNoun: String {
+        viewModel.selectedMode.displayName
+            .lowercased()
+            .replacingOccurrences(of: "ai ", with: "AI ")
     }
 
     private func progressHeader(title: String, subtitle: String) -> some View {
@@ -358,22 +369,32 @@ struct CompanionSetupView: View {
     }
 
     private func stagePill(title: String, isActive: Bool, isComplete: Bool) -> some View {
-        Text(title)
-            .font(SimastryFont.labelSmall)
-            .foregroundStyle(isActive || isComplete ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.72))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .frame(maxWidth: .infinity)
-            .background(isActive ? SimastryColor.gold : (isComplete ? SimastryColor.offWhite.opacity(0.82) : .white.opacity(0.06)), in: .capsule)
+        let isReached = isActive || isComplete
+
+        return HStack(spacing: 5) {
+            Circle()
+                .fill(isReached ? AnyShapeStyle(SimastryGradient.gold) : AnyShapeStyle(Color.white.opacity(0.14)))
+                .frame(width: 6, height: 6)
+
+            Text(title)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(isReached ? SimastryColor.offWhite : SimastryColor.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity)
+        .background(isReached ? AnyShapeStyle(SimastryColor.gold.opacity(0.12)) : AnyShapeStyle(Color.white.opacity(0.05)), in: .capsule)
+        .overlay {
+            Capsule()
+                .strokeBorder(isActive ? SimastryColor.gold.opacity(0.45) : (isComplete ? SimastryColor.gold.opacity(0.25) : .white.opacity(0.07)), lineWidth: isActive ? 1 : 0.6)
+        }
     }
 
     private var previewCard: some View {
         VStack(spacing: 14) {
-            GlossyOrbView(
-                signColors: companionPreviewColors,
-                state: .idle,
-                size: 72
-            )
+            previewAvatar
 
             VStack(spacing: 4) {
                 Text(viewModel.companionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Your future companion" : viewModel.companionName)
@@ -392,14 +413,61 @@ struct CompanionSetupView: View {
             }
         }
         .padding(20)
-        .goldGlassRect(cornerRadius: 26)
+        .heroGlass(SimastryColor.gold, cornerRadius: 26)
     }
 
-    private var companionPreviewColors: [Color] {
-        [
-            viewModel.companionSunSign?.color ?? SimastryColor.gold,
-            viewModel.companionMoonSign?.color ?? SimastryColor.celestialBlue
-        ]
+    /// Portrait of the cast guide this companion will resolve to (same
+    /// sun-sign matching the rest of the app uses), so the preview shows a
+    /// face instead of an abstract orb.
+    @ViewBuilder
+    private var previewAvatar: some View {
+        let sunSign = viewModel.companionSunSign
+        let matched = sunSign.flatMap { sign in
+            FactoryCompanionCatalog.all.first { $0.sign == sign && $0.gender == "Female" }
+        }
+
+        if let matched {
+            Image(matched.profileImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 76, height: 76, alignment: .top)
+                .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder(
+                        (sunSign?.color ?? SimastryColor.gold).opacity(0.7),
+                        lineWidth: 1.6
+                    )
+                }
+                .shadow(color: (sunSign?.color ?? SimastryColor.gold).opacity(0.30), radius: 14, y: 5)
+        } else {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                sunSign?.color.opacity(0.5) ?? SimastryColor.gold.opacity(0.4),
+                                SimastryColor.surfaceElevated
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 76, height: 76)
+                    .overlay {
+                        Circle().strokeBorder(SimastryColor.gold.opacity(0.4), lineWidth: 1.2)
+                    }
+
+                if let initial = viewModel.companionName.trimmingCharacters(in: .whitespacesAndNewlines).first {
+                    Text(String(initial).uppercased())
+                        .font(SimastryFont.titleLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                } else {
+                    Image(systemName: SimastryIcon.astrologers)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(SimastryColor.goldLight)
+                }
+            }
+        }
     }
 
     private func previewBadge(role: CelestialRole, sign: ZodiacSign?) -> some View {
@@ -441,7 +509,7 @@ struct CompanionSetupView: View {
     private var namingSubtitle: String {
         switch viewModel.selectedMode {
         case .soulmate:
-            return "Give your romantic match a name that already feels magnetic."
+            return "Give your AI guide a name that feels magnetic, warm, and easy to talk to."
         case .bestie:
             return "Pick something warm, easy, and instantly familiar."
         case .simulateAnyone:
@@ -452,7 +520,7 @@ struct CompanionSetupView: View {
     private var nameSuggestions: [String] {
         switch viewModel.selectedMode {
         case .soulmate:
-            return ["Aria", "Luna", "Kai", "Zara", "Orion", "Nova"]
+            return ["Nadia", "Luna", "Kai", "Zara", "Orion", "Nova"]
         case .bestie:
             return ["Sam", "Alex", "Quinn", "Jordan", "River", "Sky"]
         case .simulateAnyone:
@@ -499,13 +567,25 @@ struct CompanionSignPicker: View {
 
             HStack(spacing: 8) {
                 ForEach(Array(roles.enumerated()), id: \.offset) { index, item in
-                    Text(item.displayName)
-                        .font(SimastryFont.labelSmall)
-                        .foregroundStyle(index <= step ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.72))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .frame(maxWidth: .infinity)
-                        .background(index <= step ? item.accentColor : .white.opacity(0.06), in: .capsule)
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(index <= step ? item.accentColor : Color.white.opacity(0.14))
+                            .frame(width: 6, height: 6)
+
+                        Text(item.displayName)
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(index <= step ? SimastryColor.offWhite : SimastryColor.textTertiary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 9)
+                    .frame(maxWidth: .infinity)
+                    .background(index <= step ? AnyShapeStyle(item.accentColor.opacity(0.14)) : AnyShapeStyle(Color.white.opacity(0.05)), in: .capsule)
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(index == step ? item.accentColor.opacity(0.5) : (index < step ? item.accentColor.opacity(0.25) : .white.opacity(0.07)), lineWidth: index == step ? 1 : 0.6)
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -534,11 +614,7 @@ struct CompanionSignPicker: View {
             .padding(.horizontal, 20)
         }
         .padding(.vertical, 22)
-        .goldGlassRect(cornerRadius: 28)
-        .overlay {
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(role.accentColor.opacity(0.14), lineWidth: 1)
-        }
+        .heroGlass(role.accentColor, cornerRadius: 28)
         .padding(.horizontal, 20)
         .id(step)
     }

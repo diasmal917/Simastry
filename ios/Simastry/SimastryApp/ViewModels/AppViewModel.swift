@@ -32,6 +32,10 @@ class AppViewModel {
     private let socialBioKey = "socialBio"
     private let isDiscoverableKey = "isDiscoverable"
     private let thirdPartyConsentKey = "thirdPartyDataConsent"
+    private let auraWalletPublicAddressKey = "simastry_aura_wallet_public_address"
+    private let auraWalletUseInAuraKey = "simastry_aura_wallet_use_in_aura"
+    private let auraWalletLastCheckedAtKey = "simastry_aura_wallet_last_checked_at"
+    private let privateNotificationsEnabledKey = "simastry_private_notifications_enabled"
 
     var companionSunSign: ZodiacSign?
     var companionMoonSign: ZodiacSign?
@@ -42,10 +46,21 @@ class AppViewModel {
     var onboardingBirthday: Date?
     var onboardingBirthTime: Date?
     var onboardingBirthplace: String?
+    var onboardingDisplayName: String? = UserDefaults.standard.string(forKey: "simastry_onboarding_display_name") {
+        didSet {
+            let trimmed = onboardingDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let trimmed, !trimmed.isEmpty {
+                UserDefaults.standard.set(trimmed, forKey: "simastry_onboarding_display_name")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "simastry_onboarding_display_name")
+            }
+        }
+    }
 
     var companionMessages: [CompanionMessage] = []
     var discoveryMessages: [CompanionMessage] = []
     var savedGuides: [SavedGuide] = []
+    var relationshipPeople: [RelationshipPerson] = []
 
     // MARK: - Social Discovery
     var isDiscoverable: Bool = UserDefaults.standard.bool(forKey: "isDiscoverable") {
@@ -78,6 +93,42 @@ class AppViewModel {
         }
     }
 
+    var auraWalletPublicAddress: String = UserDefaults.standard.string(forKey: "simastry_aura_wallet_public_address") ?? "" {
+        didSet {
+            UserDefaults.standard.set(auraWalletPublicAddress, forKey: auraWalletPublicAddressKey)
+        }
+    }
+
+    var useAuraWalletForAura: Bool = UserDefaults.standard.object(forKey: "simastry_aura_wallet_use_in_aura") == nil
+        ? true
+        : UserDefaults.standard.bool(forKey: "simastry_aura_wallet_use_in_aura") {
+        didSet {
+            UserDefaults.standard.set(useAuraWalletForAura, forKey: auraWalletUseInAuraKey)
+        }
+    }
+
+    var auraWalletLastCheckedAt: Date? = {
+        let timestamp = UserDefaults.standard.double(forKey: "simastry_aura_wallet_last_checked_at")
+        guard timestamp > 0 else { return nil }
+        return Date(timeIntervalSince1970: timestamp)
+    }() {
+        didSet {
+            if let auraWalletLastCheckedAt {
+                UserDefaults.standard.set(auraWalletLastCheckedAt.timeIntervalSince1970, forKey: auraWalletLastCheckedAtKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: auraWalletLastCheckedAtKey)
+            }
+        }
+    }
+
+    var privateNotificationsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_private_notifications_enabled") == nil
+        ? true
+        : UserDefaults.standard.bool(forKey: "simastry_private_notifications_enabled") {
+        didSet {
+            UserDefaults.standard.set(privateNotificationsEnabled, forKey: privateNotificationsEnabledKey)
+        }
+    }
+
     var toastMessage: ToastMessage?
     var isDarkMode: Bool = UserDefaults.standard.object(forKey: "simastry_dark_mode") == nil ? true : UserDefaults.standard.bool(forKey: "simastry_dark_mode") {
         didSet {
@@ -86,13 +137,69 @@ class AppViewModel {
     }
     var showUpsell: Bool = false
     var selectedTab: Int = 0
+    var aiAstrologistsRouteRequest: Int = 0
+    var predictRouteRequest: Int = 0
+    /// Bumped to ask ProfileView to present the Aura sheet.
+    var auraRouteRequest: Int = 0
+    /// Bumped to ask ProfileView to present the consolidated share card.
+    var shareCardRouteRequest: Int = 0
+    /// Bumped to ask ProfileView to present the Career Read sheet.
+    var careerReadRouteRequest: Int = 0
+    /// Bumped whenever Method course progress changes so cards re-render.
+    var methodCourseVersion: Int = 0
+    /// Set to a thread's companionId to ask MessagesView to open it.
+    var openThreadRequestCompanionId: UUID?
+    /// Bumped to ask HomeView to push the Decode screen.
+    var decodeRouteRequest: Int = 0
+    /// Preselects the sign when Decode opens from a person's page.
+    var decodeDraftSign: ZodiacSign?
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
     var predictionDraft: PredictionDraft?
     var referralInfo: ReferralInfo?
 
-    // MARK: - Bonus Predictions (consumable top-ups)
+    // MARK: - Companion DM State
+    /// Companion threads currently "typing" a reply (drives the typing indicator).
+    var typingCompanionIds: Set<UUID> = []
+    /// The companion thread the user is looking at, so replies arrive pre-read.
+    var openCompanionThreadId: UUID?
+
+    // MARK: - Panel Chat State
+    /// Group thread with the user's Sun/Moon/Rising guides. Messages persist
+    /// locally; participants rebuild from the current chart (see +PanelChat).
+    var panelMessages: [PanelMessage] = []
+    /// Guide participant ids currently "typing" in the panel thread.
+    var panelTypingParticipantIds: Set<String> = []
+    /// True while the panel chat is on screen, so replies arrive pre-read.
+    var isPanelThreadOpen: Bool = false
+    /// Bumped to ask MessagesView to present the panel chat.
+    var panelChatRouteRequest: Int = 0
+    /// What the panel remembers — People mentioned in conversation (+PanelChat).
+    var panelMemoryNotes: [MemoryNote] = []
+
+    // MARK: - People Routing
+    /// Set to push a person's detail screen (debug previews, deep links).
+    var peopleDetailRequestPersonId: UUID?
+    /// Bumped to present the Team Read sheet.
+    var teamReadRouteRequest: Int = 0
+
+    // MARK: - Guide Work Lifecycle
+    /// Bumped whenever account-scoped local state is cleared; in-flight
+    /// delayed guide tasks compare their captured generation and bail if
+    /// stale, so a pending reply can never resurrect wiped data.
+    var localStateGeneration: Int = 0
+    /// Handles for delayed guide replies/comments, cancellable on clear.
+    var pendingGuideTaskHandles: [UUID: Task<Void, Never>] = [:]
+
+    // MARK: - Moments State
+    /// Private on-device photo posts; guides engage via templates (+Moments).
+    var moments: [Moment] = []
+    /// "{momentId}:{profileId}" keys for guides currently "typing" a comment.
+    var momentTypingKeys: Set<String> = []
+    let momentsStore = MomentsStore()
+
+    // MARK: - Legacy Consumable Top-Ups
     var bonusPredictions: Int = UserDefaults.standard.integer(forKey: "bonusPredictions") {
         didSet { UserDefaults.standard.set(bonusPredictions, forKey: "bonusPredictions") }
     }
@@ -109,6 +216,38 @@ class AppViewModel {
         addBonusPredictions(pack.count)
         showToast("Added \(pack.count) predictions!", subtitle: "Use them anytime", isError: false)
         analytics.track(.subscriptionStarted, key: "pack", value: pack.rawValue)
+    }
+
+    func saveAuraWalletPublicAddress(_ address: String) {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isSupportedPublicWalletAddress(trimmed) else {
+            showToast("Wallet not saved", subtitle: "Paste a Solana or EVM public wallet address.", isError: true)
+            return
+        }
+        auraWalletPublicAddress = trimmed
+        auraWalletLastCheckedAt = Date()
+        showToast("Wallet saved", subtitle: "Your Aura can reflect this wallet's Zodiacs.", isError: false)
+    }
+
+    func clearAuraWalletContext() {
+        auraWalletPublicAddress = ""
+        auraWalletLastCheckedAt = nil
+        showToast("Wallet removed", subtitle: "Aura will use chart signals only.", isError: false)
+    }
+
+    static func isSupportedPublicWalletAddress(_ address: String) -> Bool {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        let hexCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
+        if trimmed.hasPrefix("0x"), trimmed.count == 42 {
+            let hexPart = String(trimmed.dropFirst(2))
+            return hexPart.unicodeScalars.allSatisfy { hexCharacters.contains($0) }
+        }
+
+        let base58Characters = CharacterSet(charactersIn: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+        return (32...60).contains(trimmed.count)
+            && trimmed.unicodeScalars.allSatisfy { base58Characters.contains($0) }
     }
 
     // MARK: - Safety Gates
@@ -129,9 +268,33 @@ class AppViewModel {
     private let companionMessagesKey = "simastry_companion_messages"
     private let lastMessageGenerationKey = "simastry_last_message_generation"
     private let lastDiscoveryMessageTimestampKey = "simastry_last_discovery_message_timestamp"
+    private let relationshipPeopleStore = RelationshipPeopleStore()
+
+    var hasAuraWalletContext: Bool {
+        !auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var auraWalletShortAddress: String {
+        let trimmed = auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 12 else { return trimmed }
+        return "\(trimmed.prefix(6))...\(trimmed.suffix(4))"
+    }
 
     init() {
         loadReferralInfo()
+        loadRelationshipPeople()
+        loadPanelMessages()
+        loadPanelMemoryNotes()
+        loadMoments()
+
+        // Server-proxied AI channel: predictions route through the
+        // companion-reply edge function when Supabase is configured.
+        predictionService.replyChannel = { [supabase] system, user in
+            try await supabase.invokeCompanionReply(kind: .prediction, system: system, user: user)
+        }
+        predictionService.isRemoteChannelAvailable = { [supabase] in
+            supabase.canInvokeCompanionReply
+        }
     }
 
     // MARK: - Age Verification
@@ -163,6 +326,56 @@ class AppViewModel {
 
     var primaryCompanion: CompanionData? {
         companions.first
+    }
+
+    func openAIAstrologists() {
+        selectedTab = 0
+        homeSetupPhase = .complete
+        aiAstrologistsRouteRequest += 1
+    }
+
+    func openPredict(with draft: PredictionDraft? = nil) {
+        if let draft {
+            predictionDraft = draft
+        }
+        selectedTab = 0
+        homeSetupPhase = .complete
+        predictRouteRequest += 1
+    }
+
+    func loadRelationshipPeople() {
+        relationshipPeople = relationshipPeopleStore.loadPeople()
+    }
+
+    func addRelationshipPerson(_ person: RelationshipPerson) {
+        relationshipPeople.append(person)
+        saveRelationshipPeople()
+    }
+
+    func updateRelationshipPerson(_ person: RelationshipPerson) {
+        guard let index = relationshipPeople.firstIndex(where: { $0.id == person.id }) else { return }
+        var updated = person
+        updated.updatedAt = .now
+        relationshipPeople[index] = updated
+        saveRelationshipPeople()
+    }
+
+    func deleteRelationshipPerson(_ person: RelationshipPerson) {
+        relationshipPeople.removeAll { $0.id == person.id }
+        saveRelationshipPeople()
+    }
+
+    func relationshipReading(for person: RelationshipPerson) -> RelationshipPersonReading {
+        RelationshipReadingFactory.reading(
+            for: person,
+            userSun: userSunSign,
+            userMoon: userMoonSign,
+            userRising: userRisingSign
+        )
+    }
+
+    private func saveRelationshipPeople() {
+        relationshipPeopleStore.savePeople(relationshipPeople)
     }
 
     var isRevenueCatAvailable: Bool {
@@ -394,6 +607,19 @@ class AppViewModel {
         SharedDefaults.clearAll()
     }
 
+    func clearLocalDeviceData() {
+        notificationService.clearScheduledNotifications()
+        clearPendingOnboardingChart()
+        clearAccountScopedLocalState()
+        SharedDefaults.clearAll()
+        WidgetCenter.shared.reloadAllTimelines()
+        showToast(
+            "Local data cleared",
+            subtitle: "Your account was not deleted. Only this device's local Simastry data was removed.",
+            isError: false
+        )
+    }
+
     func handleIncomingURL(_ url: URL) async {
         if supabase.isAuthCallbackURL(url) {
             do {
@@ -426,14 +652,21 @@ class AppViewModel {
         switch url.host {
         case "home":
             selectedTab = 0
-        case "chat", "companions":
+        case "companions":
+            openAIAstrologists()
+        case "people":
             selectedTab = 1
+        case "chat":
+            selectedTab = 2
         case "messages":
             selectedTab = 2
+        case "panel":
+            openPanelChat()
         case "simulate":
-            selectedTab = 3
+            openPredict()
         case "guides", "astropedia":
-            selectedTab = 4
+            guideFocusSign = nil
+            selectedTab = 0
         case "profile":
             selectedTab = 5
         case "upsell":
@@ -455,18 +688,17 @@ class AppViewModel {
         pendingDeepLink = nil
 
         switch deepLink {
-        case .compatibility(_, let companionSign):
-            // Navigate to the Guides tab and focus on the companion sign
-            if let sign = ZodiacSign(rawValue: companionSign) {
-                guideFocusSign = sign
-            }
-            selectedTab = 4
+        case .compatibility:
+            guideFocusSign = nil
+            selectedTab = 1
 
-        case .guide(let sign):
-            if let zodiac = ZodiacSign(rawValue: sign) {
-                guideFocusSign = zodiac
-            }
-            selectedTab = 4
+        case .guide:
+            guideFocusSign = nil
+            selectedTab = 0
+
+        case .invite(let code):
+            applyInviteCode(code)
+            selectedTab = 0
 
         case .home:
             selectedTab = 0
@@ -624,11 +856,11 @@ class AppViewModel {
 
     func startPrediction(for companion: CompanionData, question: String? = nil, conversationText: String? = nil) {
         guard let sun = zodiacSign(from: companion.sunSign) else {
-            showToast("Missing sign", subtitle: "Add a Sun sign before starting a prediction.", isError: true)
+            showToast("Missing sign", subtitle: "Add a Sun sign before opening message guidance.", isError: true)
             return
         }
 
-        predictionDraft = PredictionDraft(
+        let draft = PredictionDraft(
             targetName: companion.name,
             targetSunSign: sun,
             targetMoonSign: zodiacSign(from: companion.moonSign),
@@ -636,17 +868,16 @@ class AppViewModel {
             question: question ?? "What will \(companion.name) say next?",
             conversationText: conversationText
         )
-        selectedTab = 3
+        openPredict(with: draft)
     }
 
     func startPrediction(for sign: ZodiacSign, question: String? = nil, conversationText: String? = nil) {
-        predictionDraft = PredictionDraft(
-            targetName: nil,
+        let draft = PredictionDraft(
             targetSunSign: sign,
             question: question ?? "What would a \(sign.displayName) say next?",
             conversationText: conversationText
         )
-        selectedTab = 3
+        openPredict(with: draft)
     }
 
     func checkSubscriptionStatus() async {
@@ -808,6 +1039,11 @@ class AppViewModel {
             return
         }
 
+        guard privateNotificationsEnabled else {
+            notificationService.clearScheduledNotifications()
+            return
+        }
+
         await notificationService.requestProvisionalPermission()
         await notificationService.trackEngagement()
         notificationService.clearScheduledNotifications()
@@ -820,8 +1056,58 @@ class AppViewModel {
         notificationService.scheduleSimulationReminder(companionName: primaryCompanion?.name ?? "")
 
         if let rising = profile?.risingSign, let tier = profile?.tier {
-            notificationService.scheduleDailyTransit(risingSign: rising, tier: tier)
+            // Tomorrow morning's notification carries tomorrow's computed sky.
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            let reading = TransitEngine.dailyReading(
+                sun: userSunSign,
+                moon: userMoonSign,
+                rising: userRisingSign,
+                on: tomorrow
+            )
+            notificationService.scheduleDailyTransit(
+                risingSign: rising,
+                tier: tier,
+                readingBody: reading.map { "\($0.headline) — \($0.guidance)" }
+            )
         }
+
+        schedulePanelStarterNotification()
+        scheduleDailyBriefNotification()
+        notificationService.scheduleGuideTipNudges()
+    }
+
+    /// Daily nudge that a guide opened the panel's conversation starter.
+    /// Privacy-safe: names the guide and focus lens, never message content.
+    private func schedulePanelStarterNotification() {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        // Tomorrow's focus role, matching the daily-starter rotation.
+        let focusRole = [CelestialRole.sun, .moon, .rising][(dayOfYear + 1) % 3]
+        guard let entry = panelGuideEntries.first(where: { $0.role == focusRole }) ?? panelGuideEntries.first else {
+            return
+        }
+        notificationService.schedulePanelStarter(
+            guideName: entry.profile.name,
+            focusName: focusRole.displayName
+        )
+    }
+
+    /// Mirrors Home's rotating daily brief. The notification fires the next
+    /// morning, so it carries tomorrow's focus (Home uses dayOfYear % 3).
+    func scheduleDailyBriefNotification() {
+        guard let type = CommunicationTypeProfile.make(
+            sun: userSunSign,
+            moon: userMoonSign,
+            rising: userRisingSign
+        ) else { return }
+
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let (focusName, line): (String, String) = switch (dayOfYear + 1) % 3 {
+        case 0: ("Sun", type.sunSignal)
+        case 1: ("Moon", type.moonSignal)
+        default: ("Rising", type.risingSignal)
+        }
+
+        notificationService.scheduleDailyBrief(focusName: focusName, body: line)
     }
 
     func navigateAfterAuth() async {
@@ -862,6 +1148,7 @@ class AppViewModel {
             p.sunSign = sun.rawValue
             p.moonSign = moon.rawValue
             p.risingSign = rising.rawValue
+            applyOnboardingDisplayNameIfNeeded(to: &p)
             profile = p
             do {
                 try await supabase.upsertProfile(p)
@@ -874,6 +1161,7 @@ class AppViewModel {
             p.sunSign = sun.rawValue
             p.moonSign = moon.rawValue
             p.risingSign = rising.rawValue
+            applyOnboardingDisplayNameIfNeeded(to: &p)
             profile = p
             do {
                 try await supabase.upsertProfile(p)
@@ -883,6 +1171,18 @@ class AppViewModel {
             }
         }
         await setupNotifications()
+    }
+
+    /// First name collected during onboarding wins only when the profile has
+    /// no name yet — never overwrites a name the user set elsewhere.
+    private func applyOnboardingDisplayNameIfNeeded(to profile: inout UserProfile) {
+        guard let name = onboardingDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty else { return }
+        let existing = profile.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if existing.isEmpty {
+            profile.displayName = name
+        }
+        onboardingDisplayName = nil
     }
 
     func stageOnboardingBirthChart(_ chart: BirthChartService.BirthChart) {
@@ -1244,6 +1544,8 @@ class AppViewModel {
         loadMessages()
         await loadDiscoveryInboxMessages(showErrors: showErrors)
         generateCompanionMessages()
+        postPanelDailyStarterIfNeeded()
+        postPanelWeeklyRecapIfNeeded()
     }
 
     private func loadDiscoveryInboxMessages(showErrors: Bool) async {
@@ -1522,16 +1824,24 @@ class AppViewModel {
     // MARK: - Companion Messages (Inbox)
 
     var unreadMessageCount: Int {
-        (companionMessages + discoveryMessages).filter { !$0.isRead }.count
+        (companionMessages + discoveryMessages)
+            .filter { !$0.isRead && $0.direction == .incoming }
+            .count
+            + unreadPanelCount
     }
 
     var inboxMessages: [CompanionMessage] {
+        let companionThreads = Dictionary(grouping: companionMessages, by: \.companionId)
+            .compactMap { _, messages in
+                messages.max { $0.timestamp < $1.timestamp }
+            }
+
         let discoveryThreads = Dictionary(grouping: discoveryMessages, by: \.companionId)
             .compactMap { _, messages in
                 messages.max { $0.timestamp < $1.timestamp }
             }
 
-        return (companionMessages + discoveryThreads)
+        return (companionThreads + discoveryThreads)
             .sorted { $0.timestamp > $1.timestamp }
     }
 
@@ -1547,14 +1857,177 @@ class AppViewModel {
             companionMessages = []
             return
         }
+        // Preserve stored direction so outgoing replies survive relaunch; legacy
+        // messages without the field decode as companion/incoming.
         companionMessages = messages
             .map { message in
                 var normalized = message
                 normalized.source = .companion
-                normalized.direction = .incoming
                 return normalized
             }
             .sorted { $0.timestamp > $1.timestamp }
+    }
+
+    /// Full companion thread, oldest first, for the DM view.
+    func companionConversation(with companionId: UUID) -> [CompanionMessage] {
+        companionMessages
+            .filter { $0.companionId == companionId }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    /// Marks every incoming message in a companion thread as read.
+    func markCompanionThreadRead(_ companionId: UUID) {
+        var changed = false
+        for index in companionMessages.indices where companionMessages[index].companionId == companionId {
+            if companionMessages[index].direction == .incoming && !companionMessages[index].isRead {
+                companionMessages[index].isRead = true
+                changed = true
+            }
+        }
+        if changed { saveMessages() }
+    }
+
+    /// Sends a user message into a companion thread and schedules a sign-lens reply.
+    /// The reply is composed on device from the method layer — no remote AI.
+    @discardableResult
+    func sendCompanionThreadMessage(
+        companionId: UUID,
+        companionName: String,
+        companionSign: String,
+        content: String
+    ) async -> Bool {
+        guard canSendMessage() else {
+            showToast(
+                "Messages used up",
+                subtitle: "You've used all \(dailyMessageLimit) messages today. Upgrade for unlimited messages.",
+                isError: true
+            )
+            showUpsell = true
+            return false
+        }
+
+        let outgoing = CompanionMessage(
+            companionId: companionId,
+            companionName: companionName,
+            companionSign: companionSign,
+            content: content,
+            timestamp: Date(),
+            isRead: true,
+            source: .companion,
+            direction: .outgoing
+        )
+        companionMessages.insert(outgoing, at: 0)
+        saveMessages()
+        // Guides share one memory — 1:1 mentions inform panel follow-ups too.
+        recordPanelMemoryIfNeeded(from: content)
+
+        // Keep relationship metrics in sync when a companion record exists.
+        if let index = companions.firstIndex(where: { $0.id == companionId }) {
+            var updated = companions[index]
+            let previousLevel = updated.relationshipLevel
+            updated.conversationCount += 1
+            if updated.firstConversationAt == nil {
+                updated.firstConversationAt = Date()
+            }
+            let newLevel = RelationshipLevel.from(messageCount: updated.conversationCount)
+            updated.relationshipLevel = newLevel.rawValue
+            if updated.compatibilityScore < 97 {
+                updated.compatibilityScore += 1
+            }
+            companions[index] = updated
+
+            // Surface the bond deepening — progression should feel like an event.
+            if newLevel.rawValue > previousLevel {
+                HapticManager.soulFlash()
+                showToast(
+                    "Bond deepened",
+                    subtitle: "\(updated.name) and you reached \(newLevel.name).",
+                    isError: false
+                )
+            }
+
+            #if DEBUG
+            let skipRemote = isDebugPreviewStateActive
+            #else
+            let skipRemote = false
+            #endif
+            if !skipRemote {
+                try? await supabase.updateCompanion(updated)
+            }
+        }
+
+        await consumeMessage()
+        scheduleCompanionReply(companionId: companionId, companionName: companionName, companionSign: companionSign)
+        return true
+    }
+
+    private func scheduleCompanionReply(companionId: UUID, companionName: String, companionSign: String) {
+        guard !typingCompanionIds.contains(companionId) else { return }
+        typingCompanionIds.insert(companionId)
+
+        let threadCount = companionMessages.filter { $0.companionId == companionId }.count
+        let delay = Double(1_400 + (threadCount % 4) * 350)
+
+        let generation = localStateGeneration
+
+        scheduleGuideWork { [weak self] in
+            try? await Task.sleep(for: .milliseconds(delay))
+            guard let self, !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+
+            // LLM reply when the edge channel is live; templates otherwise.
+            let llmContent = await self.generateCompanionReplyViaLLM(
+                companionId: companionId,
+                companionName: companionName,
+                companionSign: companionSign
+            )
+            guard !Task.isCancelled, self.isCurrentGeneration(generation) else { return }
+            self.typingCompanionIds.remove(companionId)
+
+            let reply = CompanionMessage(
+                companionId: companionId,
+                companionName: companionName,
+                companionSign: companionSign,
+                content: llmContent ?? self.composeCompanionReply(
+                    signName: companionSign,
+                    threadCount: threadCount,
+                    mode: self.guideChatMode(for: companionId)
+                ),
+                timestamp: Date(),
+                isRead: self.openCompanionThreadId == companionId,
+                source: .companion,
+                direction: .incoming
+            )
+            self.companionMessages.insert(reply, at: 0)
+            self.saveMessages()
+        }
+    }
+
+    /// Composes a companion reply from the persona's sign lens: an element-keyed opener
+    /// plus one guidance beat, rotated by thread length so it doesn't repeat.
+    /// The active chat mode picks the guidance register; check-in skips the
+    /// opener entirely — reflective replies shouldn't start with banter.
+    private func composeCompanionReply(signName: String, threadCount: Int, mode: GuideChatMode = .bestFriend) -> String {
+        let sign = ZodiacSign(rawValue: signName.lowercased())
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == signName.lowercased() }
+            ?? .sagittarius
+
+        let element = sign.element.rawValue
+        let openers = mode == .checkIn ? [] : (AstrologyTemplates.companionReplyOpeners[element] ?? [])
+        let guidance: [String] = switch mode {
+        case .bestFriend: AstrologyTemplates.companionReplyGuidance[element] ?? []
+        case .mentor: AstrologyTemplates.mentorReplyGuidance[element] ?? []
+        case .teacher: AstrologyTemplates.teacherReplyGuidance[element] ?? []
+        case .checkIn: AstrologyTemplates.checkInReplyGuidance[element] ?? []
+        }
+
+        let opener = openers.isEmpty ? "" : openers[threadCount % openers.count]
+        let beat = guidance.isEmpty
+            ? "Say it plainly, once, and give the reply room to land."
+            : guidance[(threadCount / max(openers.count, 1) + threadCount) % guidance.count]
+
+        return [opener, beat]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     func saveMessages() {
@@ -1566,9 +2039,7 @@ class AppViewModel {
 
     func markMessageRead(_ message: CompanionMessage) {
         if message.source == .companion {
-            guard let index = companionMessages.firstIndex(where: { $0.id == message.id }) else { return }
-            companionMessages[index].isRead = true
-            saveMessages()
+            markCompanionThreadRead(message.companionId)
         } else {
             for index in discoveryMessages.indices where discoveryMessages[index].companionId == message.companionId {
                 if discoveryMessages[index].direction == .incoming {
@@ -1587,7 +2058,8 @@ class AppViewModel {
 
     func deleteMessage(_ message: CompanionMessage) {
         if message.source == .companion {
-            companionMessages.removeAll { $0.id == message.id }
+            // Inbox rows represent whole threads now — remove the conversation.
+            companionMessages.removeAll { $0.companionId == message.companionId }
             saveMessages()
         } else {
             discoveryMessages.removeAll { $0.companionId == message.companionId }
@@ -1749,10 +2221,22 @@ class AppViewModel {
     }
 
     private func clearAccountScopedLocalState() {
+        // Invalidate and cancel any delayed guide replies/comments first so
+        // none of them land after the wipe and re-persist cleared data.
+        localStateGeneration += 1
+        cancelPendingGuideWork()
+
         savedGuides = []
         companionMessages = []
         discoveryMessages = []
+        panelMessages = []
+        panelTypingParticipantIds = []
+        panelMemoryNotes = []
+        moments = []
+        momentTypingKeys = []
+        momentsStore.deleteAll()
         discoveredProfiles = []
+        relationshipPeople = []
         predictionDraft = nil
         bonusPredictions = 0
         isDiscoverable = false
@@ -1763,10 +2247,26 @@ class AppViewModel {
         hasAcceptedThirdPartyConsent = false
         profileImage = nil
         profileImageURL = nil
+        auraWalletPublicAddress = ""
+        auraWalletLastCheckedAt = nil
+        useAuraWalletForAura = true
+        privateNotificationsEnabled = true
 
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: savedGuidesKey)
         defaults.removeObject(forKey: companionMessagesKey)
+        defaults.removeObject(forKey: Self.panelMessagesKey)
+        defaults.removeObject(forKey: Self.panelDailyStarterDayKey)
+        defaults.removeObject(forKey: Self.panelMemoryNotesKey)
+        defaults.removeObject(forKey: Self.panelWeeklyRecapWeekKey)
+        defaults.removeObject(forKey: Self.panelWelcomeBackDayKey)
+        defaults.removeObject(forKey: Self.methodCourseProgressKey)
+        defaults.removeObject(forKey: SealedDraftStore.defaultsKey)
+        defaults.removeObject(forKey: Self.guideThreadIdsKey)
+        defaults.removeObject(forKey: Self.practiceThreadsKey)
+        openThreadRequestCompanionId = nil
+        decodeDraftSign = nil
+        methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
         defaults.removeObject(forKey: socialBioKey)
@@ -1775,7 +2275,13 @@ class AppViewModel {
         defaults.removeObject(forKey: thirdPartyConsentKey)
         defaults.removeObject(forKey: profileImageURLKey)
         defaults.removeObject(forKey: lastDiscoveryMessageTimestampKey)
+        defaults.removeObject(forKey: auraWalletPublicAddressKey)
+        defaults.removeObject(forKey: auraWalletUseInAuraKey)
+        defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
+        defaults.removeObject(forKey: privateNotificationsEnabledKey)
+        defaults.removeObject(forKey: GuideGramStore.defaultsKey)
 
+        relationshipPeopleStore.deleteAll()
         deleteProfileImage()
     }
 
@@ -1970,7 +2476,17 @@ class AppViewModel {
         exportData["settings"] = [
             "isDarkMode": isDarkMode,
             "language": UserDefaults.standard.string(forKey: "appLanguage") ?? "en",
-            "isDiscoverable": isDiscoverable
+            "isDiscoverable": isDiscoverable,
+            "privateNotificationsEnabled": privateNotificationsEnabled,
+            "useAuraWalletForAura": useAuraWalletForAura
+        ]
+
+        exportData["auraWalletContext"] = [
+            "hasPublicWallet": hasAuraWalletContext,
+            "publicAddress": auraWalletPublicAddress,
+            "provider": hasAuraWalletContext ? "Manual public wallet" : "",
+            "readOnlyPurpose": "Aura calculation",
+            "lastCheckedAt": auraWalletLastCheckedAt.map { ISO8601DateFormatter().string(from: $0) } ?? ""
         ]
 
         exportData["exportDate"] = ISO8601DateFormatter().string(from: Date())
@@ -2006,6 +2522,14 @@ extension AppViewModel {
     func applyDebugPreviewStateIfRequested(arguments: [String] = ProcessInfo.processInfo.arguments) -> Bool {
         guard arguments.contains("-SimastryPreviewSeeded") else {
             return false
+        }
+
+        // Pre-auth screens render without the seeded session.
+        if debugPreviewScreen(from: arguments) == "birthDetails" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            currentScreen = .birthDetails
+            return true
         }
 
         let userId = UUID(uuidString: "10000000-0000-0000-0000-000000000001") ?? UUID()
@@ -2075,6 +2599,7 @@ extension AppViewModel {
             )
         ]
         discoveryMessages = []
+        relationshipPeople = RelationshipPeopleStore.previewPeople()
 
         savedGuides = [
             SavedGuide(
@@ -2093,27 +2618,261 @@ extension AppViewModel {
             )
         ]
 
+        // People power the Situation card on Today and the People tab —
+        // seed them for every preview so those surfaces always render.
+        relationshipPeople = RelationshipPeopleStore.previewPeople()
+
         selectedTab = debugPreviewTab(from: arguments)
         if selectedTab == 3 {
-            predictionDraft = PredictionDraft(
-                targetName: companion.name,
-                targetSunSign: .sagittarius,
-                targetMoonSign: .cancer,
-                targetRisingSign: .libra,
-                question: "What will Nadia say next?",
-                conversationText: "Nadia: I need a little space tonight. It is not bad, I just need air.\nMaya: Okay, I can give you room. I just want to understand the tone."
-            )
-        } else {
-            predictionDraft = nil
+            selectedTab = 0
         }
+        predictionDraft = nil
 
         if selectedTab == 4 {
-            guideFocusSign = .sagittarius
+            selectedTab = 0
+            guideFocusSign = nil
         } else {
             guideFocusSign = nil
         }
 
+        UserDefaults.standard.set("MAYA2626", forKey: Self.personalInviteCodeKey)
+
+        switch debugPreviewScreen(from: arguments) {
+        case "onboardingInsight":
+            homeSetupPhase = .onboardingInsight
+        case "modeSelection":
+            homeSetupPhase = .modeSelection
+        case "companionSetup":
+            homeSetupPhase = .companionSetup
+        case "astrologists":
+            // Home must be mounted before the route-request observer fires.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openAIAstrologists()
+            }
+        case "predict":
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openPredict()
+            }
+        case "panelChat":
+            seedDebugPanelMessages(now: now)
+            selectedTab = 2
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.panelChatRouteRequest += 1
+            }
+        case "panelInbox":
+            seedDebugPanelMessages(now: now)
+            selectedTab = 2
+        case "moments":
+            seedDebugMoments(now: now)
+            selectedTab = 5
+        case "invite":
+            selectedTab = 5
+        case "aura":
+            selectedTab = 5
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.auraRouteRequest += 1
+            }
+        case "shareCard":
+            selectedTab = 5
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.shareCardRouteRequest += 1
+            }
+        case "careerRead":
+            selectedTab = 5
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.careerReadRouteRequest += 1
+            }
+        case "methodCourse":
+            seedDebugPanelMessages(now: now)
+            UserDefaults.standard.removeObject(forKey: Self.methodCourseProgressKey)
+            selectedTab = 2
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openMethodCourseLesson()
+            }
+        case "sealedDrafts":
+            let draftStore = SealedDraftStore()
+            draftStore.deleteAll()
+            draftStore.add(SealedDraft(
+                text: "I know it's late but I keep thinking about what you said and honestly",
+                targetSign: .scorpio,
+                releaseAt: now.addingTimeInterval(10 * 60 * 60)
+            ))
+            draftStore.add(SealedDraft(
+                text: "Hey. I miss you. Is that crazy to say",
+                targetSign: .leo,
+                createdAt: now.addingTimeInterval(-20 * 60 * 60),
+                releaseAt: now.addingTimeInterval(-2 * 60 * 60)
+            ))
+            selectedTab = 0
+        case "playbook":
+            relationshipPeople = RelationshipPeopleStore.previewPeople()
+            selectedTab = 1
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.peopleDetailRequestPersonId = self.relationshipPeople.first?.id
+            }
+        case "teamRead":
+            relationshipPeople = RelationshipPeopleStore.previewPeople()
+            selectedTab = 1
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.teamReadRouteRequest += 1
+            }
+        case "recap":
+            seedDebugPanelMessages(now: now)
+            relationshipPeople = RelationshipPeopleStore.previewPeople()
+            let recapStats = WeeklyRecapStats(
+                predictionsMade: 4,
+                predictionsRated: 3,
+                predictionsLanded: 2,
+                panelMessagesSent: 6,
+                momentsPosted: 2,
+                streak: 5,
+                topGuideName: "Nadia"
+            )
+            panelMessages.append(
+                PanelMessage(
+                    senderId: "sagittarius-nadia",
+                    content: WeeklyRecapComposer.recapMessage(stats: recapStats, guideName: "Nadia", userFirstName: "Maya"),
+                    timestamp: now.addingTimeInterval(-5 * 60),
+                    isRead: false
+                )
+            )
+            selectedTab = 2
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.panelChatRouteRequest += 1
+            }
+        default:
+            break
+        }
+
         return true
+    }
+
+    /// Deterministic panel thread for screenshots: the Maya chart's guides
+    /// (Nadia · Sun, Mila · Moon, Isolde · Rising) plus one user turn.
+    private func seedDebugPanelMessages(now: Date) {
+        panelMessages = [
+            PanelMessage(
+                senderId: "sagittarius-nadia",
+                content: "Hey Maya — I read with your Sagittarius Sun. When a message has you circling, bring it here.",
+                timestamp: now.addingTimeInterval(-50 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "cancer-mila",
+                content: "I hold your Cancer Moon lens — how it actually feels before you answer. Nothing you say here needs to be polished.",
+                timestamp: now.addingTimeInterval(-49 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "libra-isolde",
+                content: "And I read your Libra Rising — the tone you open with. The three of us see the same thread differently on purpose. Ask us anything.",
+                timestamp: now.addingTimeInterval(-48 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: PanelParticipant.localUserId,
+                content: "They left me on read since yesterday. Do I follow up or wait?",
+                timestamp: now.addingTimeInterval(-31 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "sagittarius-nadia",
+                content: "Good. You said it instead of circling it. If you want to follow up, one short, warm line is enough — no essay needed.",
+                timestamp: now.addingTimeInterval(-30 * 60),
+                isRead: true
+            ),
+            PanelMessage(
+                senderId: "cancer-mila",
+                content: "Nadia is right about the timing, but feel it once before you send it.",
+                timestamp: now.addingTimeInterval(-29 * 60),
+                isRead: false
+            )
+        ]
+    }
+
+    /// Two generated moments with guide comments for screenshots.
+    private func seedDebugMoments(now: Date) {
+        func solidImageData(_ color: UIColor) -> Data? {
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: 900, height: 900))
+            let image = renderer.image { context in
+                color.setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 900, height: 900))
+            }
+            return image.jpegData(compressionQuality: 0.8)
+        }
+
+        var seeded: [Moment] = []
+
+        if let data = solidImageData(UIColor(red: 0.42, green: 0.33, blue: 0.62, alpha: 1)) {
+            var moment = Moment(
+                caption: "Finally said the honest thing",
+                imageFileName: "preview-moment-1.jpg",
+                createdAt: now.addingTimeInterval(-3 * 60 * 60),
+                reactionCount: 4
+            )
+            momentsStore.writeImage(data, fileName: moment.imageFileName)
+            if let thumb = MomentPhoto.thumbnail(data) {
+                momentsStore.writeImage(thumb, fileName: MomentsStore.thumbFileName(for: moment.imageFileName))
+            }
+            moment.comments = [
+                MomentComment(
+                    authorKind: .guide(profileId: "sagittarius-nadia"),
+                    authorName: "Nadia",
+                    content: "\u{201C}Finally said the honest thing\u{201D} — that's the whole read, honestly.",
+                    timestamp: now.addingTimeInterval(-175 * 60)
+                ),
+                MomentComment(
+                    authorKind: .guide(profileId: "libra-isolde"),
+                    authorName: "Isolde",
+                    content: "Your Libra Rising chose the tone here — light, but not careless.",
+                    timestamp: now.addingTimeInterval(-170 * 60)
+                )
+            ]
+            seeded.append(moment)
+        }
+
+        if let data = solidImageData(UIColor(red: 0.86, green: 0.62, blue: 0.36, alpha: 1)) {
+            var moment = Moment(
+                caption: nil,
+                imageFileName: "preview-moment-2.jpg",
+                createdAt: now.addingTimeInterval(-26 * 60 * 60),
+                reactionCount: 2
+            )
+            momentsStore.writeImage(data, fileName: moment.imageFileName)
+            if let thumb = MomentPhoto.thumbnail(data) {
+                momentsStore.writeImage(thumb, fileName: MomentsStore.thumbFileName(for: moment.imageFileName))
+            }
+            moment.comments = [
+                MomentComment(
+                    authorKind: .guide(profileId: "cancer-mila"),
+                    authorName: "Mila",
+                    content: "Something about this one feels settled. Hold onto that.",
+                    timestamp: now.addingTimeInterval(-25 * 60 * 60)
+                )
+            ]
+            seeded.append(moment)
+        }
+
+        moments = seeded
+    }
+
+    private func debugPreviewScreen(from arguments: [String]) -> String? {
+        guard let flagIndex = arguments.firstIndex(of: "-SimastryPreviewScreen"),
+              arguments.indices.contains(arguments.index(after: flagIndex)) else {
+            return nil
+        }
+
+        return arguments[arguments.index(after: flagIndex)]
     }
 
     private func debugPreviewTab(from arguments: [String]) -> Int {

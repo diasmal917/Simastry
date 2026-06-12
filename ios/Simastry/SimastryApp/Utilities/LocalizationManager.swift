@@ -82,7 +82,7 @@ enum LocalizedStrings {
         "home.goodMorning": "Good morning",
         "home.goodAfternoon": "Good afternoon",
         "home.goodEvening": "Good evening",
-        "home.predict": "Predict",
+        "home.predict": "Messages",
         "home.companions": "Companions",
         "home.guides": "Guides",
         "home.profile": "Profile",
@@ -99,14 +99,14 @@ enum LocalizedStrings {
         "birth.unknownTime": "I don't know my birth time",
         "birth.unknownTimeNote": "That's okay — your Sun and Moon signs are still accurate. We'll estimate your Rising sign.",
 
-        // Predict
-        "predict.title": "Predict",
-        "predict.generate": "Generate Prediction",
+        // Legacy message guidance
+        "predict.title": "Messages",
+        "predict.generate": "Send Message",
         "predict.regenerate": "Regenerate",
-        "predict.paste": "Paste your conversation",
+        "predict.paste": "Write your message",
         "predict.share": "Share Result",
-        "predict.disclaimer": "This is a pattern-based prediction, not a guarantee.",
-        "predict.goTalk": "Now that you know what they might say — go have the real conversation",
+        "predict.disclaimer": "This is chart-grounded communication guidance, not a guarantee.",
+        "predict.goTalk": "Take the clearest version into the real conversation",
 
         // Companions
         "companions.title": "Companions",
@@ -193,14 +193,14 @@ enum LocalizedStrings {
         "birth.unknownTime": "No sé mi hora de nacimiento",
         "birth.unknownTimeNote": "No te preocupes — tu signo solar y lunar siguen siendo precisos. Estimaremos tu ascendente.",
 
-        // Predict
-        "predict.title": "Predecir",
-        "predict.generate": "Generar predicción",
+        // Legacy message guidance
+        "predict.title": "Mensajes",
+        "predict.generate": "Enviar mensaje",
         "predict.regenerate": "Regenerar",
-        "predict.paste": "Pega tu conversación",
+        "predict.paste": "Escribe tu mensaje",
         "predict.share": "Compartir resultado",
-        "predict.disclaimer": "Esta es una predicción basada en patrones, no una garantía.",
-        "predict.goTalk": "Ahora que sabes lo que podrían decir — ve y ten la conversación real",
+        "predict.disclaimer": "Esta es una guía de comunicación basada en la carta, no una garantía.",
+        "predict.goTalk": "Lleva la versión más clara a la conversación real",
 
         // Companions
         "companions.title": "Compañeros",
@@ -287,14 +287,14 @@ enum LocalizedStrings {
         "birth.unknownTime": "Não sei minha hora de nascimento",
         "birth.unknownTimeNote": "Tudo bem — seus signos solar e lunar ainda são precisos. Vamos estimar seu ascendente.",
 
-        // Predict
-        "predict.title": "Prever",
-        "predict.generate": "Gerar previsão",
+        // Legacy message guidance
+        "predict.title": "Mensagens",
+        "predict.generate": "Enviar mensagem",
         "predict.regenerate": "Regenerar",
-        "predict.paste": "Cole sua conversa",
+        "predict.paste": "Escreva sua mensagem",
         "predict.share": "Compartilhar resultado",
-        "predict.disclaimer": "Esta é uma previsão baseada em padrões, não uma garantia.",
-        "predict.goTalk": "Agora que você sabe o que podem dizer — vá ter a conversa real",
+        "predict.disclaimer": "Esta é uma orientação de comunicação baseada no mapa, não uma garantia.",
+        "predict.goTalk": "Leve a versão mais clara para a conversa real",
 
         // Companions
         "companions.title": "Companheiros",

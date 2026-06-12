@@ -1,38 +1,97 @@
 import SwiftUI
+import Combine
 
 struct MessagesView: View {
     @Bindable var viewModel: AppViewModel
     @State private var selectedMessage: CompanionMessage?
     @State private var appeared: Bool = false
+    @State private var showPanelChat: Bool = false
+    @State private var handledPanelRouteRequest: Int = 0
 
     var body: some View {
         NavigationStack {
             ZStack {
                 CelestialBackground()
 
-                if viewModel.inboxMessages.isEmpty {
-                    emptyState
-                } else {
-                    messageList
+                if selectedMessage == nil {
+                    if viewModel.inboxMessages.isEmpty {
+                        VStack(spacing: 0) {
+                            PanelInboxRow(viewModel: viewModel) {
+                                openPanelChat()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+
+                            Spacer()
+                            emptyState
+                            Spacer()
+                        }
+                    } else {
+                        messageList
+                    }
                 }
             }
+            .accessibilityHidden(selectedMessage != nil)
             .navigationTitle("Messages")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .task {
                 await viewModel.refreshInbox(showErrors: false)
             }
-            .sheet(item: $selectedMessage) { message in
+            .onAppear {
+                presentPanelIfRequested()
+                presentThreadIfRequested()
+            }
+            .onChange(of: viewModel.panelChatRouteRequest) {
+                presentPanelIfRequested()
+            }
+            .onChange(of: viewModel.openThreadRequestCompanionId) {
+                presentThreadIfRequested()
+            }
+            .fullScreenCover(item: $selectedMessage) { message in
                 MessageDetailSheet(
                     message: message,
                     viewModel: viewModel
                 )
             }
+            .fullScreenCover(isPresented: $showPanelChat) {
+                PanelChatView(viewModel: viewModel)
+            }
         }
+    }
+
+    private func openPanelChat() {
+        HapticManager.buttonPress()
+        showPanelChat = true
+    }
+
+    private func presentPanelIfRequested() {
+        guard viewModel.panelChatRouteRequest > handledPanelRouteRequest else { return }
+        handledPanelRouteRequest = viewModel.panelChatRouteRequest
+        showPanelChat = true
+    }
+
+    /// Opens a specific thread on request — the last step of "tap a guide's
+    /// Message button anywhere in the app".
+    private func presentThreadIfRequested() {
+        guard let companionId = viewModel.openThreadRequestCompanionId,
+              let message = viewModel.inboxMessages.first(where: { $0.companionId == companionId }) else {
+            return
+        }
+        viewModel.openThreadRequestCompanionId = nil
+        viewModel.markMessageRead(message)
+        selectedMessage = message
     }
 
     private var messageList: some View {
         List {
+            PanelInboxRow(viewModel: viewModel) {
+                openPanelChat()
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
+
             ForEach(viewModel.inboxMessages) { message in
                 MessageRow(message: message)
                     .listRowBackground(Color.clear)
@@ -69,46 +128,156 @@ struct MessagesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.5))
+        VStack(spacing: 22) {
+            emptyStateCastStrip
 
-            Text("No messages yet")
-                .font(SimastryFont.titleMedium)
-                .foregroundStyle(SimastryColor.offWhite)
+            VStack(spacing: 8) {
+                Text("Your panel is ready to talk")
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
 
-            Text(AppConfig.socialDiscoveryEnabled
-                 ? "Add a companion or send a discovery intro, and your messages will gather here."
-                 : "Add a companion and messages will reflect their sign lens and your chart context.")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-
-            if viewModel.companions.isEmpty {
-                Button {
-                    HapticManager.buttonPress()
-                    viewModel.selectedTab = 0
-                    viewModel.homeSetupPhase = .modeSelection
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Add Companion")
-                            .font(SimastryFont.labelLarge)
-                    }
-                    .foregroundStyle(SimastryColor.midnight)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(SimastryColor.gold, in: .capsule)
-                }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityHint("Opens companion setup to add your first companion")
-                .padding(.top, 8)
+                Text(AppConfig.socialDiscoveryEnabled
+                     ? "Open a guide or send a private intro, and your conversations will gather here."
+                     : "Open a guide and every reply will read through their sign lens and your chart.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 40)
             }
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openAIAstrologists()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: SimastryIcon.astrologers)
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Open Guides")
+                        .font(SimastryFont.labelLarge)
+                }
+                .foregroundStyle(SimastryColor.midnight)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 13)
+                .background(SimastryGradient.gold, in: .capsule)
+                .shadow(color: SimastryColor.gold.opacity(0.25), radius: 14, y: 6)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityHint("Opens your guides to choose a message lens")
+            .padding(.top, 4)
+
+            InviteFriendsCard(viewModel: viewModel, style: .compact)
+                .padding(.horizontal, 32)
+                .padding(.top, 4)
         }
         .padding(.bottom, 60)
+    }
+
+    /// A fanned row of guide portraits so the empty inbox sells the cast
+    /// instead of showing a lone system glyph.
+    private var emptyStateCastStrip: some View {
+        let profiles = Array(FactoryCompanionCatalog.all.prefix(5))
+
+        return HStack(spacing: -14) {
+            ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 58, height: 58, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(profile.sign.color.opacity(0.6), lineWidth: 1.3)
+                    }
+                    .background {
+                        Circle().fill(SimastryColor.midnight)
+                            .frame(width: 62, height: 62)
+                    }
+                    .zIndex(Double(profiles.count - index))
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Panel Inbox Row
+
+/// Pinned group-thread entry at the top of the inbox — the user's three
+/// placement guides in one conversation.
+private struct PanelInboxRow: View {
+    @Bindable var viewModel: AppViewModel
+    let action: () -> Void
+
+    private var previewText: String {
+        guard let latest = viewModel.latestPanelMessage else {
+            return "Meet your three guides — one thread, three lenses."
+        }
+        if latest.senderId == PanelParticipant.localUserId {
+            return "You: \(latest.content)"
+        }
+        let name = viewModel.panelGuideEntry(forParticipantId: latest.senderId)?.profile.name ?? "Guide"
+        return "\(name): \(latest.content)"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                HStack(spacing: -16) {
+                    ForEach(Array(viewModel.panelGuideEntries.enumerated()), id: \.element.id) { index, entry in
+                        Image(entry.profile.profileImageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 40, height: 40, alignment: .top)
+                            .clipShape(Circle())
+                            .overlay {
+                                Circle().strokeBorder(entry.sign.color.opacity(0.6), lineWidth: 1.1)
+                            }
+                            .background {
+                                Circle().fill(SimastryColor.midnight)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .zIndex(Double(viewModel.panelGuideEntries.count - index))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text("Your Panel")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text("Pinned")
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                            .foregroundStyle(SimastryColor.goldLight)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(SimastryColor.gold.opacity(0.13), in: Capsule())
+
+                        Spacer()
+
+                        if viewModel.unreadPanelCount > 0 {
+                            Text("\(viewModel.unreadPanelCount)")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(SimastryColor.midnight)
+                                .frame(minWidth: 20)
+                                .frame(height: 20)
+                                .background(SimastryColor.gold, in: Capsule())
+                        }
+                    }
+
+                    Text(previewText)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(viewModel.unreadPanelCount > 0 ? SimastryColor.offWhite.opacity(0.8) : SimastryColor.deepMuted)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Your Panel, pinned group chat with your three guides. \(previewText)")
     }
 }
 
@@ -123,40 +292,17 @@ private struct MessageRow: View {
     }
 
     private var previewText: String {
-        if message.source == .discovery && message.direction == .outgoing {
+        if message.direction == .outgoing {
             return "You: \(message.content)"
         }
         return message.content
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Zodiac glyph circle — serves as avatar in mock/local mode.
-            // When Supabase social profiles go live, replace with actual profile photos
-            // using ProfileImageView.
-            ZStack {
-                Circle()
-                    .fill((zodiacSign?.color ?? SimastryColor.gold).opacity(0.15))
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                SimastryColor.goldLight,
-                                SimastryColor.gold,
-                                SimastryColor.goldDark
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
-                Text(zodiacSign?.glyph ?? "\u{2726}")
-                    .font(.system(size: 18))
-                    .foregroundStyle(zodiacSign?.color ?? SimastryColor.gold)
-            }
-            .frame(width: 42, height: 42)
+        HStack(spacing: 12) {
+            MessageAvatarView(message: message, size: 52, showGlow: !message.isRead)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     HStack(spacing: 6) {
                         Text(message.companionName)
@@ -177,7 +323,7 @@ private struct MessageRow: View {
 
                     Text(message.timestamp.relativeDescription)
                         .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.deepMuted)
+                        .foregroundStyle(message.isRead ? SimastryColor.deepMuted : SimastryColor.gold)
                 }
 
                 Text(previewText)
@@ -188,17 +334,86 @@ private struct MessageRow: View {
             }
 
             if !message.isRead {
-                Circle()
-                    .fill(SimastryColor.gold)
-                    .frame(width: 8, height: 8)
+                Text("1")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(width: 20, height: 20)
+                    .background(SimastryColor.gold, in: Circle())
             }
         }
-        .padding(14)
-        .simastryGlass(cornerRadius: 16)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(SimastryColor.offWhite.opacity(0.07))
+                .frame(height: 0.5)
+                .padding(.leading, 64)
+        }
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(message.companionName). \(previewText). \(message.timestamp.relativeDescription). \(message.isRead ? "Read" : "Unread")")
         .accessibilityHint("Double tap to open conversation")
+    }
+}
+
+private struct MessageAvatarView: View {
+    let message: CompanionMessage
+    let size: CGFloat
+    var showGlow: Bool = false
+
+    private var zodiacSign: ZodiacSign? {
+        ZodiacSign(rawValue: message.companionSign.lowercased())
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == message.companionSign.lowercased() }
+    }
+
+    private var factoryProfile: FactoryCompanionProfile? {
+        let normalizedName = message.companionName.lowercased()
+        if let exact = FactoryCompanionCatalog.all.first(where: { $0.name.lowercased() == normalizedName }) {
+            return exact
+        }
+        guard message.source == .companion, let zodiacSign else { return nil }
+        return FactoryCompanionCatalog.all.first { $0.sign == zodiacSign }
+    }
+
+    var body: some View {
+        ZStack {
+            if let factoryProfile {
+                Image(factoryProfile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size, alignment: .top)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill((zodiacSign?.color ?? SimastryColor.gold).opacity(0.18))
+
+                if let zodiacSign {
+                    ZodiacIconView(sign: zodiacSign, size: size * 0.62, showsGlow: false)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: size * 0.34, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay(
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SimastryColor.goldLight,
+                            SimastryColor.gold.opacity(showGlow ? 0.95 : 0.55),
+                            SimastryColor.goldDark.opacity(showGlow ? 0.9 : 0.45)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: showGlow ? 1.8 : 0.8
+                )
+        )
+        .shadow(color: showGlow ? SimastryColor.gold.opacity(0.24) : .clear, radius: 10, y: 2)
+        .accessibilityHidden(true)
     }
 }
 
@@ -212,6 +427,12 @@ private struct MessageDetailSheet: View {
     @State private var isSendingReply: Bool = false
     @State private var showSafetyOptions: Bool = false
     @State private var showBlockConfirmation: Bool = false
+    @State private var selectedMode: GuideChatMode = .bestFriend
+    @FocusState private var replyFocused: Bool
+
+    private var isCompanionTyping: Bool {
+        message.source == .companion && viewModel.typingCompanionIds.contains(message.companionId)
+    }
 
     private var zodiacSign: ZodiacSign? {
         ZodiacSign(rawValue: message.companionSign.lowercased())
@@ -244,162 +465,85 @@ private struct MessageDetailSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                CelestialBackground()
+        ZStack {
+            CelestialBackground()
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        Spacer().frame(height: 16)
+            VStack(spacing: 0) {
+                dmHeader
 
-                        // Companion header
-                        VStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill((zodiacSign?.color ?? SimastryColor.gold).opacity(0.15))
-                                Circle()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [
-                                                SimastryColor.goldLight,
-                                                SimastryColor.gold,
-                                                SimastryColor.goldDark
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 2
-                                    )
-                                Text(zodiacSign?.glyph ?? "\u{2726}")
-                                    .font(.system(size: 28))
-                                    .foregroundStyle(zodiacSign?.color ?? SimastryColor.gold)
-                            }
-                            .frame(width: 64, height: 64)
+                if message.source == .companion {
+                    modeChipsRow
+                }
 
-                            Text(message.companionName)
-                                .font(SimastryFont.titleMedium)
-                                .foregroundStyle(SimastryColor.offWhite)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 14) {
+                            timestampDivider
 
-                            Text("\(message.companionSign) Sun")
-                                .font(SimastryFont.labelMedium)
-                                .foregroundStyle(zodiacSign?.color ?? SimastryColor.mutedSilver)
+                            messageMethodLayer
 
-                            if message.source == .discovery {
-                                Text("Discovery Chat")
-                                    .font(SimastryFont.captionSmall)
-                                    .foregroundStyle(SimastryColor.gold)
+                            ForEach(displayMessages) { threadMessage in
+                                DMMessageBubble(
+                                    message: threadMessage,
+                                    isFromCurrentUser: threadMessage.direction == .outgoing,
+                                    companionAvatar: MessageAvatarView(message: message, size: 28, showGlow: false)
+                                )
+                                .id(threadMessage.id)
                             }
 
-                            Text(message.timestamp.relativeDescription)
-                                .font(SimastryFont.caption)
-                                .foregroundStyle(SimastryColor.deepMuted)
-                        }
-
-                        messageMethodLayer
-
-                        if message.source == .discovery {
-                            discoveryConversationSection
-                        } else {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text(message.content)
-                                    .font(SimastryFont.bodyLarge)
-                                    .foregroundStyle(SimastryColor.offWhite)
-                                    .lineSpacing(5)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(20)
-                            .simastryGlass(cornerRadius: 20)
-
-                            VStack(spacing: 12) {
-                                Button {
-                                    HapticManager.buttonPress()
-                                    dismiss()
-                                    if let sign = zodiacSign {
-                                        viewModel.startPrediction(
-                                            for: sign,
-                                            question: "What will \(message.companionName) say next?",
-                                            conversationText: "\(message.companionName): \(message.content)"
-                                        )
-                                    } else {
-                                        viewModel.selectedTab = 3
-                                    }
-                                } label: {
-                                    HStack(spacing: 10) {
-                                        Image(systemName: "wand.and.stars")
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text("Reply with a Prediction")
-                                            .font(SimastryFont.labelLarge)
-                                    }
-                                    .foregroundStyle(SimastryColor.midnight)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(SimastryColor.gold, in: .capsule)
+                            if isCompanionTyping {
+                                TypingDotsBubble {
+                                    MessageAvatarView(message: message, size: 28, showGlow: false)
                                 }
-                                .buttonStyle(SpringPressStyle())
-                                .accessibilityLabel("Reply with a prediction for \(message.companionName)")
+                                .id("typing-indicator")
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            }
 
-                                if let sign = zodiacSign {
-                                    Button {
-                                        HapticManager.buttonPress()
-                                        dismiss()
-                                        viewModel.guideFocusSign = sign
-                                        viewModel.selectedTab = 4
-                                    } label: {
-                                        HStack(spacing: 10) {
-                                            Image(systemName: "book.fill")
-                                                .font(.system(size: 16, weight: .semibold))
-                                            Text("View \(sign.displayName) Guide")
-                                                .font(SimastryFont.labelLarge)
-                                        }
-                                        .foregroundStyle(SimastryColor.offWhite)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 14)
-                                        .simastryGlassPill()
-                                    }
-                                    .buttonStyle(SpringPressStyle())
-                                    .accessibilityLabel("View communication guide for \(sign.displayName)")
+                            Spacer().frame(height: 16)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.top, 14)
+                        .animation(.spring(SimastrySpring.smooth), value: isCompanionTyping)
+                    }
+                    .scrollIndicators(.hidden)
+                    .onAppear {
+                        scrollToLatest(proxy)
+                    }
+                    .onChange(of: displayMessages.count) {
+                        scrollToLatest(proxy)
+                    }
+                    .onChange(of: isCompanionTyping) {
+                        if isCompanionTyping {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                                withAnimation(.spring(SimastrySpring.smooth)) {
+                                    proxy.scrollTo("typing-indicator", anchor: .bottom)
                                 }
                             }
                         }
-
-                        Spacer().frame(height: 40)
                     }
-                    .padding(.horizontal, 20)
-                }
-                .scrollIndicators(.hidden)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if message.source == .discovery {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            showSafetyOptions = true
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(SimastryColor.mutedSilver)
-                        }
-                        .accessibilityLabel("Discovery safety actions")
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                    }
-                    .accessibilityLabel("Close message detail")
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            replyComposer
+                .simastryToolbarGlass()
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(.white.opacity(0.08))
+                        .frame(height: 0.5)
+                }
         }
         .task {
             if message.source == .discovery {
                 await viewModel.refreshInbox(showErrors: false)
+            } else {
+                viewModel.openCompanionThreadId = message.companionId
+                viewModel.markCompanionThreadRead(message.companionId)
+            }
+        }
+        .onDisappear {
+            if viewModel.openCompanionThreadId == message.companionId {
+                viewModel.openCompanionThreadId = nil
             }
         }
         .confirmationDialog("Report or Block", isPresented: $showSafetyOptions, titleVisibility: .visible) {
@@ -433,155 +577,211 @@ private struct MessageDetailSheet: View {
         } message: {
             Text("You won't see each other in Simastry anymore. This can't be undone.")
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
         .presentationBackground(SimastryColor.midnight)
     }
 
-    private var discoveryConversationSection: some View {
-        VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Conversation")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.gold)
-                    .tracking(1)
-                    .textCase(.uppercase)
+    private var displayMessages: [CompanionMessage] {
+        if message.source == .discovery {
+            let thread = conversationMessages
+            return thread.isEmpty ? [message] : thread
+        }
+        let thread = viewModel.companionConversation(with: message.companionId)
+        return thread.isEmpty ? [message] : thread
+    }
 
-                if conversationMessages.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: "bubble.left.and.text.bubble.right")
-                            .font(.system(size: 14))
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                        Text("Start the conversation — say something!")
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                }
-
-                ForEach(conversationMessages) { threadMessage in
-                    HStack {
-                        if threadMessage.direction == .outgoing {
-                            Spacer(minLength: 44)
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(threadMessage.direction == .outgoing ? "You" : threadMessage.companionName)
-                                .font(SimastryFont.captionSmall)
-                                .foregroundStyle(threadMessage.direction == .outgoing ? SimastryColor.midnight.opacity(0.72) : SimastryColor.gold)
-
-                            Text(threadMessage.content)
-                                .font(SimastryFont.bodyMedium)
-                                .foregroundStyle(threadMessage.direction == .outgoing ? SimastryColor.midnight : SimastryColor.offWhite)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Text(threadMessage.timestamp.relativeDescription)
-                                .font(SimastryFont.captionSmall)
-                                .foregroundStyle(threadMessage.direction == .outgoing ? SimastryColor.midnight.opacity(0.62) : SimastryColor.deepMuted)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(
-                            threadMessage.direction == .outgoing ? SimastryColor.gold : SimastryColor.offWhite.opacity(0.06),
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
-
-                        if threadMessage.direction == .incoming {
-                            Spacer(minLength: 44)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .simastryGlass(cornerRadius: 20)
-
-            VStack(spacing: 12) {
-                TextField("Reply with your own message...", text: $replyText, axis: .vertical)
-                    .font(SimastryFont.bodyMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .lineLimit(1...4)
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(SimastryColor.offWhite.opacity(0.06))
-                    )
-                    .accessibilityLabel("Type a reply message")
-                    .onChange(of: replyText) {
-                        if replyText.count > 500 { replyText = String(replyText.prefix(500)) }
-                    }
-
-                if replyText.count > 0 {
-                    Text("\(replyText.count)/500")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.deepMuted)
-                }
-
-                HStack(spacing: 12) {
-                    if let sign = zodiacSign {
-                        Button {
-                            HapticManager.buttonPress()
-                            dismiss()
-                            viewModel.guideFocusSign = sign
-                            viewModel.selectedTab = 4
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "book.fill")
-                                Text("Guide")
-                            }
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .simastryGlassPill()
-                        }
-                        .buttonStyle(SpringPressStyle())
-                        .accessibilityLabel("View communication guide for \(zodiacSign?.displayName ?? message.companionSign)")
-                    }
+    /// One guide, four registers — best friend, mentor, teacher, check-in.
+    private var modeChipsRow: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(GuideChatMode.allCases) { mode in
+                    let isActive = selectedMode == mode
 
                     Button {
-                        let outgoingText = replyText
-                        isSendingReply = true
-                        Task {
-                            let sent = await viewModel.sendDiscoveryReply(
-                                to: message.companionId,
-                                companionName: message.companionName,
-                                companionSign: message.companionSign,
-                                content: outgoingText
-                            )
-                            if sent {
-                                replyText = ""
-                            }
-                            isSendingReply = false
-                        }
+                        HapticManager.buttonPress()
+                        selectedMode = mode
+                        viewModel.setGuideChatMode(
+                            mode,
+                            for: message.companionId,
+                            companionName: message.companionName,
+                            companionSign: message.companionSign
+                        )
                     } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "paperplane.fill")
-                            Text(isSendingReply ? "Sending..." : "Send")
+                        HStack(spacing: 5) {
+                            Image(systemName: mode.systemImage)
+                                .font(.system(size: 10, weight: .semibold))
+
+                            Text(mode.title)
+                                .font(SimastryFont.labelSmall)
                         }
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.midnight)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(SimastryColor.gold, in: Capsule())
+                        .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.82))
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(
+                            isActive
+                                ? AnyShapeStyle(SimastryGradient.gold)
+                                : AnyShapeStyle(Color.white.opacity(0.06)),
+                            in: Capsule()
+                        )
+                        .overlay {
+                            Capsule().strokeBorder(
+                                isActive ? .white.opacity(0.22) : .white.opacity(0.08),
+                                lineWidth: 0.6
+                            )
+                        }
                     }
                     .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel(isSendingReply ? "Sending reply" : "Send reply")
-                    .disabled(isSendingReply || replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityLabel("\(mode.title) mode. \(mode.blurb)")
+                    .accessibilityAddTraits(isActive ? .isSelected : [])
                 }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+        }
+        .scrollIndicators(.hidden)
+        .background(.black.opacity(0.18))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.06))
+                .frame(height: 0.5)
+        }
+        .onAppear {
+            selectedMode = viewModel.guideChatMode(for: message.companionId)
+        }
+        .animation(.spring(SimastrySpring.snappy), value: selectedMode)
+    }
+
+    private var dmHeader: some View {
+        HStack(spacing: 12) {
+            MessageAvatarView(message: message, size: 44, showGlow: true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(message.companionName)
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .lineLimit(1)
+
+                    if let zodiacSign {
+                        ZodiacIconView(sign: zodiacSign, size: 18, showsGlow: false)
+                    }
+
+                    if let bondLevel {
+                        RelationshipLevelChip(level: bondLevel)
+                    }
+                }
+
+                Text(headerSubtitle)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            if message.source == .discovery {
+                Button {
+                    showSafetyOptions = true
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
+                        .frame(width: 36, height: 36)
+                        .background(.white.opacity(0.07), in: Circle())
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Conversation safety actions")
+            }
+
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.07), in: Circle())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Close messages")
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .simastryToolbarGlass()
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(height: 0.5)
+        }
+    }
+
+    private var headerSubtitle: String {
+        if message.source == .discovery {
+            return "\(message.companionSign) lens • private chat"
+        }
+        return "\(message.companionSign) Guide • Simastry Method"
+    }
+
+    /// Bond level with this guide — companion threads only.
+    private var bondLevel: RelationshipLevel? {
+        guard message.source == .companion,
+              let companion = viewModel.companions.first(where: { $0.id == message.companionId }) else {
+            return nil
+        }
+        return RelationshipLevel(rawValue: companion.relationshipLevel)
+            ?? RelationshipLevel.from(messageCount: companion.conversationCount)
+    }
+
+    private var timestampDivider: some View {
+        Text(message.timestamp.chatDayDescription)
+            .font(SimastryFont.captionSmall)
+            .foregroundStyle(SimastryColor.deepMuted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.white.opacity(0.05), in: Capsule())
+    }
+
+    private func scrollToLatest(_ proxy: ScrollViewProxy) {
+        guard let last = displayMessages.last else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                proxy.scrollTo(last.id, anchor: .bottom)
             }
         }
     }
 
     private var messageMethodLayer: some View {
-        MethodLayerPanel(
-            title: "Conversation lens",
-            summary: "This thread stays anchored to message context and the companion's sign lens. Use Predict when you want a fuller chart-signal read before replying.",
-            signals: messageMethodSignals,
-            footer: "Private messages are not exposed in notification previews.",
-            accent: zodiacSign?.color ?? SimastryColor.gold
-        )
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                Image(systemName: "scope")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(zodiacSign?.color ?? SimastryColor.gold)
+
+                Text("Why this chat")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .tracking(1.1)
+                    .textCase(.uppercase)
+
+                Spacer(minLength: 0)
+            }
+
+            Text("Replies use message context, \(message.companionName)'s sign lens, and your communication type. Notification previews stay private.")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.76))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(messageMethodSignals.prefix(4))) { signal in
+                        MethodSignalChip(signal: signal)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .surfaceCard(cornerRadius: 18, accent: (zodiacSign?.color ?? SimastryColor.gold).opacity(0.7))
     }
 
     private var messageMethodSignals: [MethodSignal] {
@@ -616,6 +816,14 @@ private struct MessageDetailSheet: View {
             )
         }
 
+        if let typeSignal = CommunicationTypeProfile.methodSignal(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            signals.append(typeSignal)
+        }
+
         signals.append(
             MethodSignal(
                 label: "Privacy",
@@ -627,11 +835,188 @@ private struct MessageDetailSheet: View {
 
         return signals
     }
+
+    private var replyComposer: some View {
+        HStack(alignment: .bottom, spacing: 9) {
+            Button {
+                HapticManager.buttonPress()
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.07), in: Circle())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Add attachment")
+
+            TextField("Message", text: $replyText, axis: .vertical)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1...4)
+                .focused($replyFocused)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(SimastryColor.offWhite.opacity(0.08))
+                )
+                .overlay {
+                    Capsule(style: .continuous)
+                        .stroke(.white.opacity(replyFocused ? 0.18 : 0.08), lineWidth: 0.7)
+                }
+                .onChange(of: replyText) {
+                    if replyText.count > 500 { replyText = String(replyText.prefix(500)) }
+                }
+
+            Button {
+                sendReply()
+            } label: {
+                Image(systemName: isSendingReply ? "ellipsis" : "arrow.up")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(canSendReply ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                    .frame(width: 38, height: 38)
+                    .background(canSendReply ? SimastryGradient.gold : LinearGradient(colors: [.white.opacity(0.08), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel(isSendingReply ? "Sending reply" : "Send reply")
+            .disabled(!canSendReply)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+    }
+
+    private var canSendReply: Bool {
+        !isSendingReply && !replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func sendReply() {
+        let outgoingText = replyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !outgoingText.isEmpty else { return }
+
+        isSendingReply = true
+        Task {
+            let sent: Bool
+            if message.source == .discovery {
+                sent = await viewModel.sendDiscoveryReply(
+                    to: message.companionId,
+                    companionName: message.companionName,
+                    companionSign: message.companionSign,
+                    content: outgoingText
+                )
+            } else {
+                sent = await viewModel.sendCompanionThreadMessage(
+                    companionId: message.companionId,
+                    companionName: message.companionName,
+                    companionSign: message.companionSign,
+                    content: outgoingText
+                )
+            }
+
+            if sent {
+                replyText = ""
+            }
+            isSendingReply = false
+        }
+    }
+}
+
+private struct DMMessageBubble: View {
+    let message: CompanionMessage
+    let isFromCurrentUser: Bool
+    let companionAvatar: MessageAvatarView
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if isFromCurrentUser {
+                Spacer(minLength: 54)
+            } else {
+                companionAvatar
+            }
+
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 5) {
+                if !isFromCurrentUser {
+                    Text(message.companionName)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.gold)
+                        .lineLimit(1)
+                }
+
+                Text(message.content)
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 4) {
+                    Text(message.timestamp.relativeDescription)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.offWhite.opacity(isFromCurrentUser ? 0.70 : 0.46))
+
+                    if isFromCurrentUser {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.62))
+                    }
+                }
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .frame(maxWidth: 276, alignment: isFromCurrentUser ? .trailing : .leading)
+            .background {
+                if isFromCurrentUser {
+                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    SimastryColor.celestialBlue.opacity(0.96),
+                                    Color(red: 56/255, green: 110/255, blue: 205/255)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                } else {
+                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [SimastryColor.surfaceElevated, SimastryColor.surface],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                                .stroke(.white.opacity(0.09), lineWidth: 0.7)
+                        }
+                }
+            }
+
+            if !isFromCurrentUser {
+                Spacer(minLength: 54)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: isFromCurrentUser ? .trailing : .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(isFromCurrentUser ? "You" : message.companionName): \(message.content)")
+    }
 }
 
 // MARK: - Date Extension for Relative Time
 
 private extension Date {
+    var chatDayDescription: String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(self) {
+            return "Today"
+        }
+        if calendar.isDateInYesterday(self) {
+            return "Yesterday"
+        }
+        return SimastryDateFormatter.chatDay.string(from: self)
+    }
+
     var relativeDescription: String {
         let now = Date()
         let interval = now.timeIntervalSince(self)
@@ -650,9 +1035,7 @@ private extension Date {
             let days = Int(interval / 86400)
             return "\(days)d ago"
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return formatter.string(from: self)
+            return SimastryDateFormatter.compactDate.string(from: self)
         }
     }
 }

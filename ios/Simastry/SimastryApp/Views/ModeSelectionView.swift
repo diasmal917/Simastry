@@ -10,18 +10,18 @@ struct ModeSelectionView: View {
             CelestialBackground()
 
             ScrollView {
-                VStack(spacing: 28) {
+                VStack(spacing: 24) {
                     Spacer().frame(height: 16)
 
                     OnboardingProgressView(
                         eyebrow: "Begin",
-                        title: "Choose your first connection",
+                        title: "Choose your first guide",
                         subtitle: viewModel.hasCompletedSigns
-                            ? "Your signs are ready. Pick the kind of relationship you want to explore first."
-                            : "Start with the kind of relationship you want to explore. We'll discover your signs next.",
+                            ? "Your chart signals are ready. Pick the voice that should translate them into message guidance."
+                            : "Start with the kind of guidance you want. We'll calculate your communication type next.",
                         step: 1,
                         totalSteps: 3,
-                        labels: ["Path", "Signs", "Companion"]
+                        labels: ["Path", "Signs", "Guide"]
                     )
                     .padding(.horizontal, 20)
                     .opacity(appeared ? 1 : 0)
@@ -34,25 +34,28 @@ struct ModeSelectionView: View {
                         .offset(y: appeared ? 0 : 24)
                         .animation(reduceMotion ? .default : .spring(SimastrySpring.smooth).delay(0.05), value: appeared)
 
-                    VStack(spacing: 16) {
+                    VStack(spacing: 14) {
                         modeCard(
                             mode: .simulateAnyone,
-                            tint: Color.purple.opacity(0.15),
+                            icon: SimastryIcon.predict,
+                            accent: SimastryColor.risingViolet,
                             badge: "Pro",
                             delay: 0.1
                         )
 
-                        HStack(spacing: 16) {
+                        HStack(spacing: 14) {
                             modeCard(
                                 mode: .soulmate,
-                                tint: Color.pink.opacity(0.1),
+                                icon: "heart.fill",
+                                accent: SimastryColor.sunCoral,
                                 badge: nil,
                                 delay: 0.15
                             )
 
                             modeCard(
                                 mode: .bestie,
-                                tint: SimastryColor.celestialBlue.opacity(0.1),
+                                icon: SimastryIcon.message,
+                                accent: SimastryColor.celestialBlue,
                                 badge: nil,
                                 delay: 0.2
                             )
@@ -77,40 +80,42 @@ struct ModeSelectionView: View {
     private var valueCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label {
-            Text("Start in under a minute")
+                Text("Start in under a minute")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
             } icon: {
-                Image(systemName: "sparkles")
+                Image(systemName: SimastryIcon.astrologers)
                     .foregroundStyle(SimastryColor.gold)
             }
 
-            Text("Choose the connection type, calculate your big three, and create a companion voice grounded in placement logic.")
+            Text("Choose a path, calculate your big three, and turn Sun, Moon, and Rising into a communication type.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 pill("Pick a path")
                 pill("Calculate signs")
-                pill("Create companion")
+                pill("Meet your guide")
             }
         }
         .padding(18)
-        .simastryGlass(cornerRadius: 22)
-        .overlay {
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 1)
-        }
+        .surfaceCard(cornerRadius: 22)
     }
 
     private func pill(_ title: String) -> some View {
         Text(title)
             .font(SimastryFont.labelSmall)
-            .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
+            .foregroundStyle(SimastryColor.offWhite.opacity(0.85))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .background(.white.opacity(0.06), in: .capsule)
+            .overlay {
+                Capsule().strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+            }
     }
 
     private var isProUser: Bool {
@@ -119,7 +124,7 @@ struct ModeSelectionView: View {
     }
 
     @ViewBuilder
-    private func modeCard(mode: CompanionMode, tint: Color, badge: String?, delay: Double) -> some View {
+    private func modeCard(mode: CompanionMode, icon: String, accent: Color, badge: String?, delay: Double) -> some View {
         Button(action: {
             HapticManager.buttonPress()
             if mode == .simulateAnyone && !isProUser {
@@ -134,11 +139,13 @@ struct ModeSelectionView: View {
                 viewModel.homeSetupPhase = .signSelection
             }
         }) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(mode.displayName)
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    Image(systemName: icon)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 40, height: 40)
+                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 
                     Spacer()
 
@@ -148,26 +155,31 @@ struct ModeSelectionView: View {
                             .foregroundStyle(SimastryColor.midnight)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(SimastryColor.gold, in: .capsule)
+                            .background(SimastryGradient.gold, in: .capsule)
                     }
                 }
 
-                Text(mode.subtitle)
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(mode.displayName)
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
 
-                Text(modeSupportText(mode))
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.65))
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(mode.subtitle)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(modeSupportText(mode))
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.62))
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .padding(20)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .tintedGlass(tint)
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.06), lineWidth: 1)
-            }
+            .surfaceCard(cornerRadius: 20, accent: accent)
         }
         .buttonStyle(SpringPressStyle())
         .opacity(appeared ? 1 : 0)
@@ -180,9 +192,9 @@ struct ModeSelectionView: View {
         case .simulateAnyone:
             "Practice a conversation, rehearse an outcome, or explore a dynamic before it happens."
         case .soulmate:
-            "Build a romantic companion lens shaped by your signs and emotional chemistry."
+            "A charismatic guide lens for love, texting, timing, and emotional guidance."
         case .bestie:
-            "Create a playful, supportive companion with easy warmth and great banter."
+            "A playful, supportive guide with easy warmth and great banter."
         }
     }
 }

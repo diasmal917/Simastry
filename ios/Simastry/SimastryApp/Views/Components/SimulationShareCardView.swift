@@ -140,10 +140,10 @@ struct SimulationShareCardView: View {
 
     private var brandingHeader: some View {
         VStack(spacing: 6) {
-            Text("S I M A S T R Y")
+            Text("SIMASTRY")
                 .font(SimastryFont.captionSmall)
+                .italic()
                 .foregroundStyle(SimastryColor.gold)
-                .tracking(2)
 
             Text("What will they say?")
                 .font(SimastryFont.overline)
@@ -227,7 +227,7 @@ struct SimulationShareCardView: View {
                 Text("\(result.confidence)%")
                     .font(.system(size: isStoryFormat ? 14 : 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(SimastryColor.gold)
-                Text("match")
+                Text("fit")
                     .font(.system(size: isStoryFormat ? 7 : 5, weight: .medium))
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .textCase(.uppercase)

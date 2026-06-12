@@ -1,11 +1,14 @@
 import SwiftUI
 import Foundation
+import PhotosUI
 
 struct SimulateView: View {
     @Bindable var viewModel: AppViewModel
 
     @State private var conversationText: String = ""
     @State private var questionText: String = ""
+    @State private var screenshotPickerItem: PhotosPickerItem?
+    @State private var isRecognizingScreenshot: Bool = false
     @State private var selectedSunSign: ZodiacSign?
     @State private var selectedMoonSign: ZodiacSign?
     @State private var selectedRisingSign: ZodiacSign?
@@ -50,6 +53,13 @@ struct SimulateView: View {
     }
 
     private var methodLayerSummary: String {
+        if let type = CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            return "Your \(type.title) communication type sets your side of the exchange. Their sign lens and the pasted message context shape the prediction."
+        }
         if let selectedSunSign {
             return "This prediction reads the message context through \(selectedSunSign.displayName)'s conversation lens. Moon and Rising refine emotional pattern and first instinct when you add them."
         }
@@ -119,6 +129,14 @@ struct SimulateView: View {
             )
         }
 
+        if let typeSignal = CommunicationTypeProfile.methodSignal(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            signals.append(typeSignal)
+        }
+
         signals.append(
             MethodSignal(
                 label: "Method",
@@ -131,89 +149,93 @@ struct SimulateView: View {
         return signals
     }
 
+    // NOTE: no inner NavigationStack — this view is always pushed into an
+    // existing stack (Home routes, directory), and a nested stack makes the
+    // value-based push silently fail.
     var body: some View {
-        NavigationStack {
-            ZStack {
-                CelestialBackground()
+        ZStack {
+            CelestialBackground()
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        header
-                        modeCard
-                        methodLayerCard
-                        conversationSection
-                        signSection
-                        textingStyleTip
-                        questionSection
-                        actionSection
-                        historySection
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, SimastrySpacing.tabBarClearance)
+            ScrollView {
+                VStack(spacing: 24) {
+                    header
+                    modeCard
+                    methodLayerCard
+                    conversationSection
+                    signSection
+                    textingStyleTip
+                    questionSection
+                    actionSection
+                    historySection
                 }
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, SimastrySpacing.tabBarClearance)
             }
-            .navigationTitle("Predict")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showTopUpSheet) {
-                PredictionTopUpView(viewModel: viewModel)
-            }
-            .sheet(item: $selectedResult) { result in
-                SimulationResultView(
-                    result: result,
-                    isRegenerating: isRegenerating,
-                    onRegenerate: { alternativeReply in
-                        Task {
-                            await regenerate(from: result, with: alternativeReply)
-                        }
-                    },
-                    onOpenGuide: { sign in
-                        viewModel.guideFocusSign = sign
-                        viewModel.selectedTab = 4
-                    },
-                    userSunSign: viewModel.userSunSign
-                )
-            }
-            .task {
-                loadHistory()
-                applyPredictionDraftIfNeeded()
-                if reduceMotion {
+            .scrollIndicators(.hidden)
+        }
+        .navigationTitle("Predict")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $showTopUpSheet) {
+            PredictionTopUpView(viewModel: viewModel)
+        }
+        .sheet(item: $selectedResult) { result in
+            SimulationResultView(
+                result: result,
+                isRegenerating: isRegenerating,
+                onRegenerate: { alternativeReply in
+                    Task {
+                        await regenerate(from: result, with: alternativeReply)
+                    }
+                },
+                onOpenGuide: nil,
+                userSunSign: viewModel.userSunSign,
+                onSetOutcome: { outcome in
+                    viewModel.predictionService.setOutcome(outcome, for: result.id)
+                    viewModel.notificationService.cancelPredictionOutcomeFollowUp()
+                    loadHistory()
+                }
+            )
+        }
+        .task {
+            loadHistory()
+            applyPredictionDraftIfNeeded()
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth)) {
                     appeared = true
-                } else {
-                    withAnimation(.spring(SimastrySpring.smooth)) {
-                        appeared = true
-                    }
                 }
             }
-            .onDisappear {
-                stopProgressCycle()
-            }
-            .onChange(of: viewModel.predictionDraft?.id) { _, _ in
-                applyPredictionDraftIfNeeded()
-            }
+        }
+        .onDisappear {
+            stopProgressCycle()
+        }
+        .onChange(of: viewModel.predictionDraft?.id) { _, _ in
+            applyPredictionDraftIfNeeded()
         }
     }
 
     private var header: some View {
-        VStack(spacing: 14) {
-            GlossyOrbView(
-                signColors: [SimastryColor.risingViolet, SimastryColor.celestialBlue],
-                state: .active,
-                size: 84
-            )
-
-            VStack(spacing: 6) {
-                Text("What Will They Say?")
-                    .font(SimastryFont.titleLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                Text("Paste a real conversation and read it through chart signals.")
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .multilineTextAlignment(.center)
+        VStack(spacing: 8) {
+            if let selectedSunSign {
+                ZodiacIconView(sign: selectedSunSign, size: 36, showsGlow: true)
+                    .accessibilityHidden(true)
+                    .transition(.scale.combined(with: .opacity))
             }
+
+            Text("What Will They Say?")
+                .font(SimastryFont.titleLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+
+            Text("Paste a real conversation and read it through chart signals.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
+        .animation(.spring(SimastrySpring.snappy), value: selectedSunSign)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
@@ -238,7 +260,7 @@ struct SimulateView: View {
             Spacer()
         }
         .padding(18)
-        .tintedGlass(SimastryColor.risingViolet.opacity(0.16), cornerRadius: 20)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.7))
         .overlay {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 1)
@@ -268,7 +290,13 @@ struct SimulateView: View {
 
     private var conversationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionLabel("Paste your conversation")
+            HStack(alignment: .center) {
+                sectionLabel("Paste your conversation")
+
+                Spacer()
+
+                importScreenshotButton
+            }
 
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $conversationText)
@@ -279,7 +307,7 @@ struct SimulateView: View {
                     .background(.clear)
 
                 if conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Paste the text conversation here…")
+                    Text("Paste the text conversation here, or import a screenshot…")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .padding(.horizontal, 18)
@@ -287,11 +315,75 @@ struct SimulateView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 18)
+            .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.6))
             .accessibilityLabel("Paste your conversation")
+
+            HStack(spacing: 5) {
+                Image(systemName: SimastryIcon.privacy)
+                    .font(.system(size: 9, weight: .medium))
+                Text("Screenshots are read with Apple Vision on this device — the image never leaves your iPhone.")
+                    .font(SimastryFont.captionSmall)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(SimastryColor.deepMuted)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
+        .onChange(of: screenshotPickerItem) {
+            guard let item = screenshotPickerItem else { return }
+            screenshotPickerItem = nil
+            importScreenshot(item)
+        }
+    }
+
+    private var importScreenshotButton: some View {
+        PhotosPicker(selection: $screenshotPickerItem, matching: .images) {
+            HStack(spacing: 6) {
+                if isRecognizingScreenshot {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(SimastryColor.gold)
+                } else {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+
+                Text(isRecognizingScreenshot ? "Reading…" : "Import screenshot")
+                    .font(SimastryFont.labelSmall)
+            }
+            .foregroundStyle(SimastryColor.goldLight)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(SimastryColor.gold.opacity(0.11), in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(SimastryColor.gold.opacity(0.26), lineWidth: 0.6)
+            }
+        }
+        .disabled(isRecognizingScreenshot)
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Import a conversation screenshot from your photo library")
+    }
+
+    private func importScreenshot(_ item: PhotosPickerItem) {
+        isRecognizingScreenshot = true
+        Task {
+            defer { isRecognizingScreenshot = false }
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw ConversationOCRError.unreadableImage
+                }
+                let recognized = try await ConversationOCRService.recognizeText(in: data)
+                let existing = conversationText.trimmingCharacters(in: .whitespacesAndNewlines)
+                conversationText = existing.isEmpty ? recognized : existing + "\n" + recognized
+                HapticManager.signConfirmed()
+            } catch {
+                viewModel.showToast(
+                    "Couldn't read that screenshot",
+                    subtitle: error.localizedDescription,
+                    isError: true
+                )
+            }
+        }
     }
 
     private var signSection: some View {
@@ -323,7 +415,7 @@ struct SimulateView: View {
                     .lineSpacing(2)
             }
             .padding(14)
-            .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 16)
+            .surfaceCard(cornerRadius: 16, accent: SimastryColor.gold.opacity(0.6))
             .overlay {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(SimastryColor.gold.opacity(0.12), lineWidth: 0.5)
@@ -342,7 +434,7 @@ struct SimulateView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .foregroundStyle(SimastryColor.offWhite)
-                .tintedGlass(SimastryColor.risingViolet.opacity(0.08), cornerRadius: 18)
+                .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.6))
 
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
@@ -425,7 +517,7 @@ struct SimulateView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.18), cornerRadius: 22)
+            .surfaceCard(cornerRadius: 22, accent: SimastryColor.risingViolet.opacity(0.7))
             .overlay {
                 RoundedRectangle(cornerRadius: 22)
                     .stroke(SimastryColor.risingViolet.opacity(0.16), lineWidth: 1)
@@ -450,17 +542,48 @@ struct SimulateView: View {
                 .disabled(!canGenerate)
                 .opacity(canGenerate ? 1 : 0.45)
                 .accessibilityLabel("Generate prediction")
+
+                privacyNote
             }
         }
+    }
+
+    // Honest on purpose: readings aren't kept on any server, but a short
+    // redacted history DOES stay on this device — say both.
+    private var privacyNote: some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .padding(.top, 2)
+
+            Text("Your conversations are never stored on our servers — readings happen in the moment. Recent readings stay only on this iPhone, and you can clear them anytime.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, 2)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Past Simulations")
+                Text("Past Predictions")
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.mutedSilver)
+
+                if let scoreLine = PredictionScorecard.from(history).line {
+                    Text(scoreLine)
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.gold)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(SimastryColor.gold.opacity(0.11), in: Capsule())
+                }
 
                 Spacer()
 
@@ -480,7 +603,7 @@ struct SimulateView: View {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(SimastryColor.risingViolet)
-                    Text("No simulations yet")
+                    Text("No predictions yet")
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
                     Text(personalizedHistoryEmptyText)
@@ -553,6 +676,14 @@ struct SimulateView: View {
     }
 
     private func historyRow(_ item: PredictionResult) -> some View {
+        VStack(spacing: 8) {
+            historyRowMain(item)
+            outcomeStrip(item)
+        }
+        .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
+    }
+
+    private func historyRowMain(_ item: PredictionResult) -> some View {
         HStack(spacing: 12) {
             Button {
                 selectedResult = item
@@ -578,7 +709,7 @@ struct SimulateView: View {
 
                     Text("\(item.confidence)%")
                         .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.gold)
+                        .foregroundStyle(confidenceColor(item.confidence))
                 }
                 .padding(16)
                 .simastryGlass(cornerRadius: 18)
@@ -599,7 +730,23 @@ struct SimulateView: View {
             }
             .buttonStyle(SpringPressStyle())
         }
-        .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
+    }
+
+    private func confidenceColor(_ value: Int) -> Color {
+        if value >= 75 { return SimastryColor.gold }
+        if value >= 50 { return SimastryColor.offWhite }
+        return SimastryColor.mutedSilver
+    }
+
+    private func outcomeStrip(_ item: PredictionResult) -> some View {
+        OutcomeChipRow(currentOutcome: item.outcome) { outcome in
+            viewModel.predictionService.setOutcome(outcome, for: item.id)
+            viewModel.notificationService.cancelPredictionOutcomeFollowUp()
+            withAnimation(.spring(SimastrySpring.snappy)) {
+                loadHistory()
+            }
+        }
+        .padding(.horizontal, 6)
     }
 
     private func sectionLabel(_ title: String) -> some View {
@@ -707,12 +854,15 @@ struct SimulateView: View {
             ReviewPromptService.shared.recordPositiveAction()
             loadHistory()
             selectedResult = result
+            if viewModel.privateNotificationsEnabled {
+                viewModel.notificationService.schedulePredictionOutcomeFollowUp()
+            }
         } catch {
             CrashReporter.log(error, context: "generatePrediction")
             stopProgressCycle()
             isGenerating = false
             let message = (error as? LocalizedError)?.errorDescription ?? "Try again in a moment."
-            viewModel.showToast("Simulation interrupted", subtitle: message, isError: true)
+            viewModel.showToast("Prediction interrupted", subtitle: message, isError: true)
         }
     }
 
@@ -766,7 +916,7 @@ struct SimulateView: View {
         } catch {
             CrashReporter.log(error, context: "regeneratePrediction")
             let message = (error as? LocalizedError)?.errorDescription ?? "Try again in a moment."
-            viewModel.showToast("Couldn't redraw the timeline", subtitle: message, isError: true)
+            viewModel.showToast("Couldn't update the prediction", subtitle: message, isError: true)
         }
 
         isRegenerating = false
