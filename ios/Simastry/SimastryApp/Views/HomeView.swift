@@ -17,7 +17,6 @@ struct HomeView: View {
     @State private var isLoading: Bool = true
     @State private var showStreakMilestone: Bool = false
     @State private var transitReading: DailyTransitReading?
-    @State private var predictionScorecard: PredictionScorecard?
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
     @State private var kenBurnsActive: Bool = false
@@ -120,30 +119,17 @@ struct HomeView: View {
 
                 todayHeader
 
+                situationCard
+
                 panelCard
 
                 predictHeroCard
 
-                tipsRow
+                todaysReadCard
 
-                dailyReadCard
-
-                situationCard
+                learnCard
 
                 sealedDraftsRow
-
-                methodCourseCard
-
-                todaysSkyCard
-
-                communicationTypeSummaryCard
-
-                summaryMetricGrid
-
-                if let companion = viewModel.primaryCompanion,
-                   let companionSign = ZodiacSign(rawValue: companion.sunSign) {
-                    communicationFocusCard(companionName: companion.name, companionSign: companionSign)
-                }
 
                 Spacer().frame(height: SimastrySpacing.tabBarClearance)
             }
@@ -239,7 +225,6 @@ struct HomeView: View {
                 moon: viewModel.userMoonSign,
                 rising: viewModel.userRisingSign
             )
-            predictionScorecard = PredictionScorecard.from(viewModel.predictionService.loadHistory())
             try? await Task.sleep(for: .milliseconds(600))
             withAnimation(.easeOut(duration: 0.3)) {
                 isLoading = false
@@ -313,7 +298,7 @@ struct HomeView: View {
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Paste a conversation. Your panel reads the thread and your chart signals, then maps the likely reply, the timing, and your strongest next message.")
+                Text("Paste a conversation — your panel maps the likely reply and your strongest next message.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
@@ -372,8 +357,11 @@ struct HomeView: View {
         return moves[dayOfYear % moves.count]
     }
 
+    /// The one daily-reading card: focus line, the move, today's sky, and
+    /// the talk-it-through row — four former cards merged so Today scans
+    /// in one pass.
     @ViewBuilder
-    private var dailyReadCard: some View {
+    private var todaysReadCard: some View {
         if let briefFocusLine {
             VStack(alignment: .leading, spacing: 13) {
                 HStack(spacing: 8) {
@@ -396,6 +384,14 @@ struct HomeView: View {
                         .background(SimastryColor.gold.opacity(0.12), in: Capsule())
                 }
 
+                if let typeTitle = communicationType?.title {
+                    Text(typeTitle)
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.textTertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+                }
+
                 Text(briefFocusLine)
                     .font(SimastryFont.bodyLarge)
                     .foregroundStyle(SimastryColor.offWhite)
@@ -415,6 +411,38 @@ struct HomeView: View {
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                }
+
+                if let reading = transitReading {
+                    let accent: Color = switch reading.aspect.family {
+                    case "flow": SimastryColor.gold
+                    case "emphasis": SimastryColor.celestialBlue
+                    default: SimastryColor.sunCoral
+                    }
+
+                    Divider().overlay(SimastryColor.offWhite.opacity(0.08))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 7) {
+                            Text(reading.body.glyph)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(accent)
+
+                            Text(reading.headline)
+                                .font(SimastryFont.labelLarge)
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+
+                        Text(reading.guidance)
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Today's sky: \(reading.headline). \(reading.guidance)")
                 }
 
                 if let dailyReadGuide {
@@ -684,169 +712,122 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Simastry Method course
+    // MARK: - Learn (Method course + daily tips, one card)
 
-    /// Seven lessons taught in the panel, one a day. The card tracks
-    /// progress and flips to a graduate state after lesson seven.
-    private var methodCourseCard: some View {
+    /// One learning slot: the Method course leads while it's running, the
+    /// two daily guide tips ride below as compact chips. After graduation
+    /// the tips carry the card alone.
+    private var learnCard: some View {
         // Establishes an observation on course progress so the card
         // re-renders after a lesson posts.
         let _ = viewModel.methodCourseVersion
         let state = viewModel.methodCourseState
 
-        return Button {
-            HapticManager.buttonPress()
-            viewModel.openMethodCourseLesson()
-        } label: {
-            VStack(alignment: .leading, spacing: 11) {
-                HStack(spacing: 8) {
-                    Image(systemName: "graduationcap.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "graduationcap.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
 
-                    Text("THE SIMASTRY METHOD")
-                        .font(SimastryFont.overline)
-                        .foregroundStyle(SimastryColor.textSecondary)
-                        .tracking(1.5)
+                Text("LEARN")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.5)
 
-                    Spacer()
+                Spacer()
 
-                    HStack(spacing: 4) {
-                        ForEach(MethodCourseTemplates.lessons) { lesson in
-                            Circle()
-                                .fill(state.postedLessons.contains(lesson.number)
-                                      ? SimastryColor.gold
-                                      : SimastryColor.offWhite.opacity(0.14))
-                                .frame(width: 6, height: 6)
-                        }
+                HStack(spacing: 4) {
+                    ForEach(MethodCourseTemplates.lessons) { lesson in
+                        Circle()
+                            .fill(state.postedLessons.contains(lesson.number)
+                                  ? SimastryColor.gold
+                                  : SimastryColor.offWhite.opacity(0.14))
+                            .frame(width: 6, height: 6)
                     }
-                    .accessibilityLabel("\(state.postedLessons.count) of \(MethodCourseTemplates.lessons.count) lessons complete")
                 }
-
-                if state.isComplete {
-                    Text("Method Graduate")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    Text("All seven lessons live in your panel — revisit them any time.")
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else if let lesson = state.currentLesson {
-                    Text("Lesson \(lesson.number) of \(MethodCourseTemplates.lessons.count) · \(lesson.title)")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-
-                    Text(viewModel.canPostMethodLessonToday
-                         ? "A two-minute lesson, taught by your panel. Tap to take it."
-                         : "Today's lesson is in your panel — the next one unlocks tomorrow.")
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                .accessibilityLabel("\(state.postedLessons.count) of \(MethodCourseTemplates.lessons.count) lessons complete")
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
-            .contentShape(.rect)
+
+            if !state.isComplete, let lesson = state.currentLesson {
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.openMethodCourseLesson()
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Lesson \(lesson.number) of \(MethodCourseTemplates.lessons.count) · \(lesson.title)")
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+
+                        Text(viewModel.canPostMethodLessonToday
+                             ? "A two-minute lesson, taught by your panel. Tap to take it."
+                             : "Today's lesson is in your panel — the next one unlocks tomorrow.")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Simastry Method course. Take the next lesson with your panel.")
+
+                Divider().overlay(SimastryColor.offWhite.opacity(0.08))
+            }
+
+            if !todaysTips.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(todaysTips) { tip in
+                        compactTipChip(tip)
+                    }
+                }
+
+                Text(state.isComplete ? "Method Graduate · fresh tips daily" : "Fresh tips tomorrow")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+            }
         }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel(state.isComplete
-            ? "Simastry Method complete. Open your panel."
-            : "Simastry Method course. Take the next lesson with your panel.")
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
 
-    @ViewBuilder
-    private var tipsRow: some View {
-        if !todaysTips.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "lightbulb.max.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold)
-
-                    Text("TIPS")
-                        .font(SimastryFont.overline)
-                        .foregroundStyle(SimastryColor.textSecondary)
-                        .tracking(1.5)
-
-                    Spacer()
-
-                    Text("Fresh tomorrow")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.textTertiary)
-                }
-
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(Array(todaysTips.enumerated()), id: \.element.id) { index, tip in
-                        tipCard(tip)
-                            .opacity(appeared ? 1 : 0)
-                            .scaleEffect(appeared ? 1 : 0.96)
-                            .animation(
-                                reduceMotion ? nil : .spring(SimastrySpring.bouncy).delay(0.12 + Double(index) * 0.08),
-                                value: appeared
-                            )
-                    }
-                }
-            }
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 12)
-        }
-    }
-
-    private func tipCard(_ tip: DailyGuideTip) -> some View {
+    private func compactTipChip(_ tip: DailyGuideTip) -> some View {
         Button {
             HapticManager.buttonPress()
             viewModel.openPanelChatWithTip(lesson: tip.lesson, opener: tip.opener, guideId: tip.profile.id)
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(tip.profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 26, height: 26, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(tip.profile.sign.color.opacity(0.6), lineWidth: 1)
+                    }
+
                 Text(tip.title)
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.85)
 
                 Spacer(minLength: 0)
-
-                HStack(spacing: 8) {
-                    Image(tip.profile.profileImageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 28, height: 28, alignment: .top)
-                        .clipShape(Circle())
-                        .overlay {
-                            Circle().strokeBorder(tip.profile.sign.color.opacity(0.6), lineWidth: 1)
-                        }
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("with \(tip.profile.name)")
-                            .font(SimastryFont.labelSmall)
-                            .foregroundStyle(SimastryColor.goldLight)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-
-                        Text("\(tip.profile.sign.displayName) Guide")
-                            .font(SimastryFont.captionSmall)
-                            .foregroundStyle(SimastryColor.textTertiary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 136, alignment: .topLeading)
-            .surfaceCard(cornerRadius: 20, accent: tip.profile.sign.color.opacity(0.7))
+            .padding(9)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(.rect)
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Tip: \(tip.title). Start a conversation with \(tip.profile.name), \(tip.profile.sign.displayName) guide")
+        .accessibilityLabel("Tip: \(tip.title). Start a conversation with \(tip.profile.name)")
     }
+
 
     // MARK: - Your Panel
 
@@ -1065,278 +1046,6 @@ struct HomeView: View {
         .scrollIndicators(.hidden)
     }
 
-    // MARK: - Today's Sky
-
-    /// Real transit read: current planetary positions (Swiss Ephemeris)
-    /// against the user's natal signs, voiced as message timing.
-    @ViewBuilder
-    private var todaysSkyCard: some View {
-        if let reading = transitReading {
-            let (chipLabel, accent): (String, Color) = switch reading.aspect.family {
-            case "flow": ("Flow", SimastryColor.gold)
-            case "emphasis": ("Emphasis", SimastryColor.celestialBlue)
-            default: ("Friction", SimastryColor.sunCoral)
-            }
-
-            VStack(alignment: .leading, spacing: 11) {
-                HStack(spacing: 8) {
-                    Text(reading.body.glyph)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(accent)
-
-                    Text("TODAY'S SKY")
-                        .font(SimastryFont.overline)
-                        .foregroundStyle(SimastryColor.textSecondary)
-                        .tracking(1.5)
-
-                    Spacer()
-
-                    Text(chipLabel)
-                        .font(SimastryFont.labelSmall)
-                        .foregroundStyle(accent)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(accent.opacity(0.12), in: Capsule())
-                }
-
-                Text(reading.headline)
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                Text(reading.detailLine)
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.textTertiary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(reading.guidance)
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(15)
-            .surfaceCard(accent: accent.opacity(0.7))
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Today's sky. \(reading.headline). \(reading.guidance)")
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 10)
-        }
-    }
-
-    // MARK: - Communication Type
-
-    @ViewBuilder
-    private var communicationTypeSummaryCard: some View {
-        if let communicationType {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .stroke(SimastryColor.offWhite.opacity(0.08), lineWidth: 9)
-                            .frame(width: 68, height: 68)
-                        Circle()
-                            .trim(from: 0.05, to: 0.82)
-                            .stroke(
-                                AngularGradient(
-                                    colors: [
-                                        communicationType.accent,
-                                        SimastryColor.gold,
-                                        SimastryColor.celestialBlue,
-                                        communicationType.accent
-                                    ],
-                                    center: .center
-                                ),
-                                style: StrokeStyle(lineWidth: 9, lineCap: .round)
-                            )
-                            .rotationEffect(.degrees(-88))
-                            .frame(width: 68, height: 68)
-                        Image(systemName: SimastryIcon.quote)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(communicationType.accent)
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("COMMUNICATION TYPE")
-                            .font(SimastryFont.overline)
-                            .foregroundStyle(SimastryColor.textTertiary)
-                            .tracking(1.3)
-
-                        Text(communicationType.title)
-                            .font(SimastryFont.titleMedium)
-                            .foregroundStyle(SimastryColor.offWhite)
-
-                        Text(communicationType.summary)
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                            .lineSpacing(3)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                if !communicationType.keywords.isEmpty {
-                    HStack(spacing: 8) {
-                        ForEach(communicationType.keywords, id: \.self) { keyword in
-                            Text(keyword)
-                                .font(SimastryFont.labelSmall)
-                                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.white.opacity(0.07), in: Capsule())
-                                .overlay {
-                                    Capsule().strokeBorder(communicationType.accent.opacity(0.28), lineWidth: 0.6)
-                                }
-                        }
-                    }
-                }
-            }
-            .padding(15)
-            .surfaceCard()
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 10)
-        }
-    }
-
-    // MARK: - Metrics
-
-    private var summaryMetricGrid: some View {
-        let profile = featuredProfile
-        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-
-        return LazyVGrid(columns: columns, spacing: 10) {
-            summaryMetricCard(
-                title: "Streak",
-                value: "\(streakManager.currentStreak)",
-                caption: streakManager.currentStreak == 1 ? "day active" : "days active",
-                systemImage: SimastryIcon.streak,
-                tint: SimastryColor.sunCoral
-            )
-
-            summaryMetricCard(
-                title: "Predict",
-                value: remainingPredictionsDisplay,
-                caption: predictionScorecard?.captionLine ?? remainingPredictionsCaption,
-                systemImage: SimastryIcon.predict,
-                tint: SimastryColor.risingViolet
-            )
-
-            summaryMetricCard(
-                title: "Chart",
-                value: chartSignalCount,
-                caption: "signals ready",
-                systemImage: SimastryIcon.chart,
-                tint: SimastryColor.celestialBlue
-            )
-
-            summaryMetricCard(
-                title: "Guide",
-                value: profile.name,
-                caption: "\(profile.sign.displayName) lens",
-                systemImage: SimastryIcon.astrologers,
-                tint: SimastryColor.gold
-            )
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 12)
-    }
-
-    private func summaryMetricCard(title: String, value: String, caption: String, systemImage: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: systemImage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(tint)
-
-                Text(title.uppercased())
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.textTertiary)
-                    .tracking(1.1)
-
-                Spacer()
-            }
-
-            Spacer(minLength: 0)
-
-            Text(value)
-                .font(SimastryFont.metricMedium)
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-
-            Text(caption)
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.textSecondary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .padding(13)
-        .surfaceCard(cornerRadius: 18)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): \(value), \(caption)")
-    }
-
-    // MARK: - Today With Companion
-
-    private func communicationFocusCard(companionName: String, companionSign: ZodiacSign) -> some View {
-        let guide = CommunicationTemplates.guides[companionSign]
-        let tips = guide?.tips ?? []
-        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let tipIndex = (dayOfYear - 1) % max(tips.count, 1)
-        let todayTip = tips.isEmpty ? "Learn their sign to communicate better." : tips[tipIndex]
-
-        return Button {
-            HapticManager.buttonPress()
-            viewModel.selectedTab = 2
-        } label: {
-            VStack(alignment: .leading, spacing: 13) {
-                HStack(spacing: 10) {
-                    Image(systemName: SimastryIcon.message)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(SimastryColor.celestialBlue)
-
-                    Text("Today with \(companionName)")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    Spacer()
-
-                    ZodiacIconView(sign: companionSign, size: 28, showsGlow: false)
-                }
-
-                Text(todayTip)
-                    .font(SimastryFont.bodyLarge)
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .multilineTextAlignment(.leading)
-
-                if let approach = guide?.bestApproach {
-                    Text(approach)
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .lineLimit(2)
-                }
-
-                HStack(spacing: 6) {
-                    Image(systemName: SimastryIcon.message)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(SimastryColor.goldLight)
-                    Text("Open \(companionName) message")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.goldLight)
-                }
-                .padding(.top, 2)
-            }
-            .padding(18)
-            .surfaceCard(accent: SimastryColor.celestialBlue.opacity(0.8))
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Today with \(companionName). \(todayTip)")
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 12)
-    }
-
     // MARK: - Derived Copy
 
     private var greetingText: String {
@@ -1355,21 +1064,6 @@ struct HomeView: View {
 
     private var formattedSummaryDate: String {
         SimastryDateFormatter.summaryDate.string(from: Date())
-    }
-
-    private var chartSignalCount: String {
-        let count = [viewModel.userSunSign, viewModel.userMoonSign, viewModel.userRisingSign]
-            .compactMap { $0 }
-            .count
-        return "\(count)/3"
-    }
-
-    private var remainingPredictionsDisplay: String {
-        viewModel.weeklyPredictionLimit == .max ? "∞" : "\(viewModel.remainingWeeklyPredictions)"
-    }
-
-    private var remainingPredictionsCaption: String {
-        viewModel.weeklyPredictionLimit == .max ? "unlimited" : "weekly left"
     }
 
     private var remainingPredictionsBadge: String {
