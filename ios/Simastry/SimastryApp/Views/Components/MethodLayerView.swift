@@ -23,11 +23,15 @@ struct MethodSignalChip: View {
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
+                // Scales down instead of ellipsizing — "Sagittarius core
+                // drive" must never render as "Sagittarius core dr…".
                 Text(signal.detail)
                     .font(SimastryFont.labelSmall)
                     .foregroundStyle(SimastryColor.offWhite)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.72)
             }
         }
         .padding(.horizontal, 11)

@@ -147,7 +147,7 @@ nonisolated struct AstrologyTemplates {
         "scorpio": [
             "I know something you don't know. Ask me.",
             "I've been sitting with a feeling. It's about you.",
-            "Don't lie to me today. I'll know.",
+            "I read between lines for a living. Give me the unpolished version today — it's faster.",
             "Something deep surfaced. I'm ready to share if you are.",
         ],
         "sagittarius": [
@@ -185,7 +185,7 @@ nonisolated struct AstrologyTemplates {
             "don't overthink that situation from earlier. just do the thing",
             "I have a feeling about tomorrow and you need to hear this",
             "quick question — when's the last time you did something spontaneous?",
-            "I've been thinking. you play it too safe sometimes. just saying",
+            "I've been thinking — you've got a bold move you keep postponing. want to pick it back up?",
             "hey check your compatibility score. something shifted 👀"
         ],
         "Taurus": [
@@ -226,7 +226,7 @@ nonisolated struct AstrologyTemplates {
             "hey — that thing you're nervous about? you're going to crush it",
             "I need you to know that people notice you more than you think",
             "random appreciation post: thanks for being you. okay carry on",
-            "I have a prediction about you and I think you'll like it"
+            "I have a feeling about you and I think you'll like it"
         ],
         "Virgo": [
             "I analyzed something about our dynamic and I want to share my findings",
@@ -254,7 +254,7 @@ nonisolated struct AstrologyTemplates {
             "I had an insight about you that I've been sitting on. can I share?",
             "real talk: you can trust me with the thing you're not saying",
             "I noticed you pulled back a little. I'm not going anywhere",
-            "hey — that wall you put up? I can see through it. just so you know",
+            "hey — whatever you're carrying, you don't have to polish it before bringing it here",
             "I've been thinking about something deep and you're the only person who'd get it",
             "the universe is trying to tell you something. I think I know what it is"
         ],
@@ -264,13 +264,13 @@ nonisolated struct AstrologyTemplates {
             "I just had a realization and I literally cannot keep it to myself",
             "question: what's the most adventurous thing you've done this month? nothing? let's fix that",
             "I have a feeling something big is coming for you. like SOON",
-            "hey, you've been playing it small lately. that's not like you",
+            "hey, you've got more range than this week is using. what's one bigger swing we could plan?",
             "random but important: don't let comfort become a cage. you know what I mean",
             "I need you to promise me you'll say yes to the next unexpected thing that comes up"
         ],
         "Capricorn": [
             "hey, I've been observing and I have feedback. want to hear it?",
-            "check in: are you working hard or are you just keeping busy? there's a difference",
+            "check in: which of today's tasks actually moves the thing you care about? start there",
             "I respect how focused you are but you're allowed to have fun sometimes",
             "I noticed something about your approach that could be more efficient. interested?",
             "hey — you don't have to earn rest. you can just... rest",
@@ -409,7 +409,7 @@ nonisolated struct AstrologyTemplates {
         "Gemini": "Heads up: Gemini sends multiple messages in a row and jumps between topics. Don't try to keep up — just match their energy when you can.",
         "Cancer": "Heads up: Cancer reads between every line you write. Emoji choice, reply speed, tone — they're analyzing all of it. Be intentional.",
         "Leo": "Heads up: Leo brings energy to texts — expect exclamation marks, reactions, and stories. If their replies get short, something's up.",
-        "Virgo": "Heads up: Virgo texts in complete sentences with proper grammar. Short or vague replies from them are actually a yellow flag.",
+        "Virgo": "Heads up: Virgo texts in complete sentences with proper grammar. Short or vague replies from them usually mean busy, not cold — a specific question gets them typing again.",
         "Libra": "Heads up: Libra mirrors your texting style. If you send long messages, they will too. If you go short, they'll match that energy.",
         "Scorpio": "Heads up: Scorpio says more with what they don't text than what they do. Read the gaps. If they open up unprompted, that means a lot.",
         "Sagittarius": "Heads up: Sagittarius texts like they talk — fast, funny, and sometimes they forget to reply for hours. It's not personal.",
@@ -421,6 +421,412 @@ nonisolated struct AstrologyTemplates {
     static let closing = "Your chart signals are mapped. Now use them with care."
 
     static let ethicalDisclaimer = "Simastry helps you understand people — not control them. Use these insights with empathy."
+
+    // MARK: - Local Placement-Logic Prediction (offline composer)
+
+    /// Likely next texts per Sun sign, voiced like real messages. Used when the remote
+    /// prediction channel is not configured so Predict never dead-ends.
+    static let likelyReplies: [String: [String]] = [
+        "Aries": [
+            "ok honestly? just say what you actually want lol",
+            "I'm around tonight. you in or not",
+            "ha. fine, you have my attention"
+        ],
+        "Taurus": [
+            "Sorry, slow day. Still thinking about what you said — can we talk later tonight?",
+            "I'm not ignoring you. I just don't want to answer this halfway.",
+            "Okay. That actually means a lot. Let me get through today and I'll call you."
+        ],
+        "Gemini": [
+            "wait okay I have thoughts. several. which do you want first 😅",
+            "lol that's fair. counterpoint though —",
+            "okay you can't just drop that and disappear. explain"
+        ],
+        "Cancer": [
+            "I read this a few times. I'm okay, just needed a minute.",
+            "That made me feel some type of way, in a good sense I think.",
+            "Can we not do this over text? I'd rather hear your voice."
+        ],
+        "Leo": [
+            "Okay THIS is the energy I needed today!!",
+            "you know exactly what you're doing with that message 😏",
+            "I was waiting for you to say it first, for the record."
+        ],
+        "Virgo": [
+            "I have three questions, but the short answer is yes.",
+            "Appreciate you being specific. That makes this easier.",
+            "Let me think about the right way to answer this — I don't want to be careless about it."
+        ],
+        "Libra": [
+            "Okay that's fair, and you said it kindly, which I noticed.",
+            "I keep drafting replies and deleting them, which probably tells you something.",
+            "Can we find a middle here? I think we actually agree more than it sounds."
+        ],
+        "Scorpio": [
+            "Interesting that you said that now.",
+            "I'm not going to pretend that didn't land. It did.",
+            "Say less. I'd rather finish this in person."
+        ],
+        "Sagittarius": [
+            "ha — okay that's the most honest thing you've sent all week. respect",
+            "I'm not mad, I just needed air. still do, a little.",
+            "yes to the plan, no to the overthinking. let's go"
+        ],
+        "Capricorn": [
+            "Noted. Let's talk Thursday when I can give it real attention.",
+            "I don't say this often, but that was well put.",
+            "I'd rather do this properly than fast. Give me a day."
+        ],
+        "Aquarius": [
+            "okay unexpected, but I'm intrigued. go on",
+            "I need to sit with that. not avoiding — processing.",
+            "weirdly, I was about to send you almost the same thing."
+        ],
+        "Pisces": [
+            "I felt that more than I expected to.",
+            "I don't have words yet but I didn't want to leave you waiting.",
+            "Can tonight just be us talking properly? I miss that."
+        ]
+    ]
+
+    /// Suggested replies the user could send, per the target's Sun sign — tuned to the
+    /// sign's best-approach pattern. Communication guidance, not scripts.
+    static let suggestedReplies: [String: [String]] = [
+        "Aries": [
+            "Straight answer: I want to see you. Tonight work?",
+            "No games — I liked what you said. What's the next move?"
+        ],
+        "Taurus": [
+            "No rush on this. I meant it, and it'll still be true tomorrow.",
+            "Take your time. I'd rather have your real answer than a fast one."
+        ],
+        "Gemini": [
+            "Okay, one question, answer honestly: what did you actually think when you read my last text?",
+            "I'll trade you — one real answer for one ridiculous story from today."
+        ],
+        "Cancer": [
+            "I'm not going anywhere. Tell me when you're ready.",
+            "That wasn't me pulling away — I just worded it badly. You matter to me."
+        ],
+        "Leo": [
+            "You were the best part of that night, and I don't say that lightly.",
+            "Come on, you know I notice you. I just want the version of this where we're both honest."
+        ],
+        "Virgo": [
+            "Here's what I actually meant, said plainly: ",
+            "You were right about the details. Here's what I'll do differently."
+        ],
+        "Libra": [
+            "I think we both have a point. Can we talk it through instead of trading texts?",
+            "No pressure either way — I just want us to land somewhere fair."
+        ],
+        "Scorpio": [
+            "I'll just be honest, even if it's uncomfortable: ",
+            "No performance, no angle. Here's the truth of it."
+        ],
+        "Sagittarius": [
+            "No pressure and no drama — door's open if you want in.",
+            "Honest version: I had fun, I want more of it, and you can take that at face value."
+        ],
+        "Capricorn": [
+            "Short version: I'm serious about this. Tell me what works for your week.",
+            "I'd rather plan something real than keep circling. Thursday?"
+        ],
+        "Aquarius": [
+            "No expectations attached — I just thought of you and didn't censor it.",
+            "Take whatever space you need. The idea stands when you're back."
+        ],
+        "Pisces": [
+            "I'm not asking for an answer — I just wanted you to know how it felt.",
+            "Whatever you're feeling is allowed. I'd still rather hear it than guess."
+        ]
+    ]
+
+    /// The guidance beat of an AI Astrologist reply — follows an opener.
+    /// Keyed by the astrologist's ZodiacElement rawValue, voiced through that lens.
+    static let companionReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Say the true thing in one sentence, then stop typing. Momentum likes a clean exit.",
+            "You don't need a better argument, you need a braver first line. Send the honest one.",
+            "Wanting to reach out is reason enough. One short, warm line — no essay needed.",
+            "Don't pad it with apologies. One clear sentence carries further than three soft ones."
+        ],
+        "earth": [
+            "Reply once, plainly, and let it sit. Reliability reads louder than speed.",
+            "Strip out everything you added to sound casual. The plain version is the strong one.",
+            "You don't owe an instant answer. A steady reply tomorrow beats a wobbly one tonight.",
+            "Name one concrete thing you'll do, not five things you feel. That's what builds trust here."
+        ],
+        "air": [
+            "Lead with the question you actually want answered. Curiosity reopens rooms that arguments close.",
+            "The subtext is doing more work than the words. Answer the subtext, lightly.",
+            "Keep it one beat lighter than you feel. You can always add weight later — you can't remove it.",
+            "If the thread stalled, change the angle, not the volume. Ask something only they can answer."
+        ],
+        "water": [
+            "Name the feeling without assigning blame, then leave space. That combination is rare and it works.",
+            "Don't perform okay-ness. One honest line about how it landed is enough.",
+            "Read their last message again slowly. The answer they need is usually in what they avoided saying.",
+            "Protect your softness — say the kind thing, but keep the boundary in the same breath."
+        ]
+    ]
+
+    /// Companion chat openers per element — the first beat of an AI Astrologist reply,
+    /// before sign-specific guidance. Keyed by ZodiacElement rawValue.
+    /// What a drafted message will read as to the target's element — the
+    /// Sealed Drafts tone read. "general" covers the no-sign case.
+    static let draftToneRead: [String: String] = [
+        "fire": "To a fire sign, this reads at full volume — they'll answer the energy more than the words. If you want heat back, send it; if you want clarity back, cool one line first.",
+        "earth": "An earth sign will read this twice and take it at face value — every word counts as a commitment. Trim anything you don't fully mean.",
+        "air": "An air sign will respond to the most interesting sentence and skate past the heaviest one. Lead with the thing you actually want addressed.",
+        "water": "A water sign will feel the tone before the content — whatever mood this carries IS the message. Make sure the mood is the one you mean.",
+        "general": "Messages drafted at night carry tomorrow's weight in tonight's mood. Reread the first and last line — those are the two they'll remember."
+    ]
+
+    /// One tightening tip per element (plus general) for the
+    /// "cleaner version" action.
+    static let draftCleanerTips: [String: String] = [
+        "fire": "Cut the wind-up. Your first honest sentence is the message — send that one alone.",
+        "earth": "Keep the promise, cut the pressure: one clear ask, one open timeline.",
+        "air": "Three thoughts are fighting in there. Pick the one you'd say out loud and send only it.",
+        "water": "Name the feeling once, gently — then stop before the third paragraph apologizes for the first.",
+        "general": "Say it in two sentences: the true thing, then the question. Everything else is armor."
+    ]
+
+    /// Decode-a-text: what a received message likely means, by the
+    /// sender's element.
+    static let decodeSubtext: [String: [String]] = [
+        "fire": [
+            "Short and fast means engaged — fire signs text like they talk, in bursts.",
+            "If it ends with energy — a joke, an exclamation — the door is open. Match it, don't measure it.",
+            "A blunt line from a fire sign is usually exactly what it says. No trapdoor underneath."
+        ],
+        "earth": [
+            "Short from an earth sign is economy, not coldness — they spend words like money.",
+            "If there's a plan or a time in it, that IS the affection — logistics are how earth signs lean in.",
+            "A slow, complete reply means they thought about it. Earth signs don't draft casually."
+        ],
+        "air": [
+            "The joke is doing real work — air signs flirt and de-escalate with the same tool.",
+            "A question back means genuine interest — air signs invest with curiosity, not declarations.",
+            "If it's wordy, they're thinking out loud — respond to the theme, not every clause."
+        ],
+        "water": [
+            "The tone IS the content here — read how it feels before what it says.",
+            "A soft, short reply often means they're feeling more than they're showing — gentle beats clever.",
+            "If they mirrored your words back, they're attuned — water signs echo what mattered to them."
+        ]
+    ]
+
+    /// Decode-a-text: the anti-spiral line — what NOT to read into it.
+    static let decodeDontReadInto: [String: [String]] = [
+        "fire": [
+            "Don't read a fast, short reply as dismissal — speed is their warmth.",
+            "Don't treat one blunt word as a fight — fire signs forget the spark before you've finished screenshotting it.",
+            "Punctuation isn't a clue here. Fire signs don't proofread feelings."
+        ],
+        "earth": [
+            "Don't read \"ok\" as anger — earth signs use it as a receipt, not a verdict.",
+            "A slow reply isn't fading interest; it's a queue. You're in it.",
+            "No emoji doesn't mean no feeling — earth signs show up in person, not in punctuation."
+        ],
+        "air": [
+            "Don't decode the joke for hidden meaning — sometimes the joke is the whole sentence.",
+            "A topic change isn't avoidance; air signs surf. The wave comes back around.",
+            "Read receipts mean nothing here — air signs read instantly and reply on a different clock."
+        ],
+        "water": [
+            "Don't read a delay as a door closing — water signs step back to feel, then return softer.",
+            "One dry text isn't a mood about you — they absorb whatever room they're standing in.",
+            "Don't reread it a fifth time — the fourth read was already your worry talking, not their words."
+        ]
+    ]
+
+    /// One line per situation status × the person's element, with `{n}` as
+    /// the day count. Anti-spiral by design: every line steadies and ends
+    /// usable — never "they've moved on" energy.
+    static let situationLines: [String: [String: String]] = [
+        "newSpark": [
+            "fire": "Fire signs reward the bold first move — day {n} is exactly the right day to send it.",
+            "earth": "Earth signs warm to consistency, not fireworks — one easy, concrete opener beats a grand one.",
+            "air": "Air signs fall for curiosity first — open with a question only they would have a take on.",
+            "water": "Water signs feel the tone before the words — one warm, unhurried line is the whole move."
+        ],
+        "waitingOnReply": [
+            "fire": "Fire signs reply fast or they reply later with momentum — day {n} of quiet usually means life, not verdicts.",
+            "earth": "Earth signs answer when the answer is solid — day {n} is process, not a verdict.",
+            "air": "Air signs drift mid-thread and circle back like nothing happened — day {n} is normal air-sign weather.",
+            "water": "Water signs go quiet to feel, not to punish — day {n} of space often comes back softer."
+        ],
+        "steady": [
+            "fire": "Steady with a fire sign means the spark gets scheduled — keep one small adventure on the calendar.",
+            "earth": "Steady is an earth sign's love language — notice the maintenance, it's the romance.",
+            "air": "Steady with an air sign runs on conversation — one good question a day keeps it alive.",
+            "water": "Steady with a water sign deepens in the small check-ins — the two-line text matters more than the big night."
+        ],
+        "repairing": [
+            "fire": "Repair with a fire sign moves fast once it starts — one clean, warm message and don't relitigate.",
+            "earth": "Earth signs rebuild through shown behavior — day {n} of consistency is the apology working.",
+            "air": "Air signs repair by talking it through once, fully — then genuinely closing the tab.",
+            "water": "Water signs repair through tenderness before analysis — lead with how it felt, not what happened."
+        ],
+        "coolingOff": [
+            "fire": "Day {n} of quiet — fire burns out of a mood as fast as it burned in. Your evenings are yours again; use one well.",
+            "earth": "Day {n} of quiet — quiet is where earth signs reset. Steady your own routine first; it reads from a distance.",
+            "air": "Day {n} of quiet — air signs return through a side door, usually with a link or a joke. Keep yours light too.",
+            "water": "Day {n} of quiet — water needs the tide out before it comes back in. Tend your own shore today."
+        ]
+    ]
+
+    /// One first-text opener per sign for the New Spark situation —
+    /// sendable as-is.
+    static let newSparkOpeners: [ZodiacSign: String] = [
+        .aries: "Settle a debate for me — best spontaneous thing you've done this month?",
+        .taurus: "Found a place I think you'd actually like. No rush, but it's going on the list.",
+        .gemini: "Okay, random question you'll have a take on: what's the most overrated app on your phone?",
+        .cancer: "This made me think of you today — how's your week actually going?",
+        .leo: "I keep telling people about that thing you said. What's the encore?",
+        .virgo: "I need a competent opinion and you're the most competent person I know. Got 5 minutes?",
+        .libra: "You strike me as someone with great taste — coffee place recommendation? I'll trade you one.",
+        .scorpio: "You're hard to read and I mean that as a compliment. Coffee sometime?",
+        .sagittarius: "Tell me something true: where's the next place you want to travel?",
+        .capricorn: "I respect a full calendar, so I'll be efficient: drinks this week, you pick the day.",
+        .aquarius: "You seem like you'd have an unusual answer to this: what's something everyone loves that you don't get?",
+        .pisces: "What's something you're quietly really into right now? I have a feeling it's interesting."
+    ]
+
+    /// Panel daily starters when a situation is active — top priority,
+    /// `{personName}` and `{n}` slots.
+    static let panelSituationStarters: [String: [String]] = [
+        "newSpark": [
+            "So — {personName}. Day {n} of the new spark. Have you sent the first real message yet, or are we drafting it together?",
+            "Still thinking about {personName}? Good. New things deserve one bold, easy opener — want us to shape it?"
+        ],
+        "waitingOnReply": [
+            "Day {n} waiting on {personName} — before you reread the thread again, want us to read it once for you?",
+            "Checking in on the {personName} wait. The silence has a shape — want to talk about what it probably is and isn't?"
+        ],
+        "steady": [
+            "Things with {personName} are steady — which is exactly when one thoughtful message lands hardest. Want ideas?",
+            "Quiet good news is still news: how are things with {personName} this week?"
+        ],
+        "repairing": [
+            "Day {n} of repairing things with {personName}. Repair is mostly pacing — how did the last exchange feel?",
+            "How's the rebuild with {personName} going? One honest line at a time is the whole method."
+        ],
+        "coolingOff": [
+            "Day {n} of distance from {personName}. You're doing the hard, right thing — what's one good hour you can claim today?",
+            "No news from the {personName} front is allowed to be good news. How are YOU doing in it?"
+        ]
+    ]
+
+    /// Mode-specific guidance beats for 1:1 template replies — same
+    /// element-keyed scheme as companionReplyGuidance (which stays the
+    /// best-friend default). Mentor talks career, teacher ends each beat
+    /// with an applying question, check-in mirrors without advising.
+    static let mentorReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Career lens: name the outcome you want from this week, then take the visible swing — momentum is a strategy.",
+            "Mentor note: the bold version of your ask is usually the honest one. Draft it like you've already earned it.",
+            "Pick the one task that scares you slightly — that's the growth edge. Start there tomorrow morning.",
+            "Don't wait to be picked for it. Claim the project out loud and let the follow-through defend you."
+        ],
+        "earth": [
+            "Career lens: progress here is brick by brick — what's the one brick you can lay before Friday?",
+            "Mentor note: write the win down where your manager will see it. Quiet competence needs a paper trail.",
+            "The steady route wins this one: one deliverable fully landed beats three half-starts.",
+            "Negotiate from evidence — list what changed since your last review and let the list do the talking."
+        ],
+        "air": [
+            "Career lens: your edge is the framing — rewrite the problem in one sentence before you solve it.",
+            "Mentor note: the right question in the right meeting is a promotion engine. Prepare two for tomorrow.",
+            "Talk to one person outside your team this week — your next move usually comes through a side door.",
+            "Turn the idea into a one-pager; thinking out loud lands better with a page underneath it."
+        ],
+        "water": [
+            "Career lens: your read on the room is data — trust it, then verify it with one direct question.",
+            "Mentor note: the relationship you tend this month is the opportunity that calls next year.",
+            "Protect your deep-work hours like meetings — your intuition needs quiet to compound.",
+            "Before the big conversation, decide how you want to feel walking out — then work backwards."
+        ]
+    ]
+
+    static let teacherReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Quick lesson: fire signs process out loud and forward — the first reaction is rarely the final position. Where have you seen that this week?",
+            "Today's one-liner: Aries, Leo, and Sagittarius share an element, not a personality — the modality is what splits them. Want the breakdown?",
+            "Lesson: a fire Moon needs the vent before the solve. Who in your life makes more sense through that rule?",
+            "A pattern worth testing: fire energy reads silence as a verdict. Notice it anywhere lately?"
+        ],
+        "earth": [
+            "Quick lesson: earth signs trust what repeats — one kept promise outweighs five warm speeches. Where could you apply that?",
+            "Today's one-liner: Taurus holds, Virgo refines, Capricorn climbs — same element, three different jobs. Which one is in your life?",
+            "Lesson: an earth Moon processes slowly and privately — tomorrow's answer is the real one. Recognize anyone?",
+            "A pattern worth testing: earth energy says it's fine while still deciding. Seen it this week?"
+        ],
+        "air": [
+            "Quick lesson: air signs metabolize feeling through words — the talking IS the processing. Who does that around you?",
+            "Today's one-liner: Gemini collects, Libra weighs, Aquarius reframes — three kinds of thinking, one element. Which do you lean on?",
+            "Lesson: an air Moon needs to think out loud without being held to the draft. Useful for anyone you know?",
+            "A pattern worth testing: air energy under stress gets more talkative, not less. Notice it anywhere?"
+        ],
+        "water": [
+            "Quick lesson: water signs answer the tone before the text — one warm word up front changes everything after. Where could you try it?",
+            "Today's one-liner: Cancer protects, Scorpio probes, Pisces absorbs — same element, three different depths. Which one is near you?",
+            "Lesson: a water Moon remembers how it felt long after the words fade. Does that explain anyone's reaction lately?",
+            "A pattern worth testing: water energy goes quiet to feel, not to punish. Seen that this week?"
+        ]
+    ]
+
+    static let checkInReplyGuidance: [String: [String]] = [
+        "fire": [
+            "Heard. Sit with it for a second — what's the strongest feeling in it right now?",
+            "That's a lot of motion for one week. If you named the engine under it, what would you call it?",
+            "Okay — no fixing yet. What part of this feels most yours, and what part feels handed to you?",
+            "Take a breath with that one. If it had a headline, what would it say?"
+        ],
+        "earth": [
+            "That sounds heavy to carry steadily. Where does it sit when you think about it?",
+            "No rush here. What would enough-for-today look like?",
+            "Noted, gently. Which part of this is actually in your hands?",
+            "Let's slow it down. What's one true sentence about how this week really felt?"
+        ],
+        "air": [
+            "Let's untangle it one thread at a time — which thread first?",
+            "Interesting. If your best friend described this back to you, what would they emphasize?",
+            "Say the messy version — drafts are welcome here. What's the thought underneath the thought?",
+            "Let's name it without solving it. What word keeps coming back?"
+        ],
+        "water": [
+            "I'm here for the unpolished version. How did it actually feel?",
+            "That landed somewhere deep, sounds like. Where?",
+            "No need to be okay here. What does the feeling need first — naming, or just company?",
+            "Gently: what would you tell someone you love who felt this way?"
+        ]
+    ]
+
+    static let companionReplyOpeners: [String: [String]] = [
+        "fire": [
+            "Good. You said it instead of circling it.",
+            "I like the heat in this one. Let's aim it.",
+            "Quick read before you hit send on anything else:"
+        ],
+        "earth": [
+            "Let's slow this down for one breath.",
+            "Okay. Solid ground first, then the reply.",
+            "Here's the steady version of what you're feeling:"
+        ],
+        "air": [
+            "Interesting thread. Let's read the pattern, not just the words.",
+            "Two ways to play this — here's the cleaner one.",
+            "Let's separate the tone from the content for a second."
+        ],
+        "water": [
+            "I can feel the weight under that message.",
+            "First: nothing is wrong with how you feel about this.",
+            "Let's read what's underneath before you answer."
+        ]
+    ]
 
     // MARK: - Transparency & Methodology
 
@@ -439,7 +845,7 @@ nonisolated struct AstrologyTemplates {
         MethodologySection(
             icon: "cpu.fill",
             title: "AI-Powered, Astrology-Grounded",
-            body: "Our predictions and communication guides are powered by AI (Claude by Anthropic), trained on synastry principles. We use AI to simulate conversation patterns based on element compatibility, modality, and sign placements — not to interpret your birth chart. Every insight traces back to a specific astrological relationship between your signs."
+            body: "Our companion messages are powered by AI and grounded in synastry principles. We use chart signals to frame conversation patterns based on element compatibility, modality, and sign placements — not to make guaranteed claims about your future. Every insight should trace back to a specific astrological relationship between your signs."
         ),
         MethodologySection(
             icon: "person.2.fill",
@@ -454,7 +860,7 @@ nonisolated struct AstrologyTemplates {
         MethodologySection(
             icon: "exclamationmark.circle.fill",
             title: "What We Can't Do",
-            body: "No app can predict the future with certainty. Our predictions show likely communication patterns based on astrological compatibility — not guarantees. People are more than their signs, and every relationship is unique."
+            body: "No app can know the future with certainty. Simastry offers communication guidance based on astrological compatibility — not guarantees. People are more than their signs, and every relationship is unique."
         ),
         MethodologySection(
             icon: "heart.circle.fill",
@@ -484,7 +890,7 @@ nonisolated struct AstrologyTemplates {
         (
             "Why some people text back instantly and others don't",
             "Fire and Air signs tend to respond fast — they process externally. Earth and Water signs need time to think — it's not ghosting, it's processing.",
-            "predict"
+            "guides"
         ),
         (
             "Compatibility isn't just about matching",
@@ -493,8 +899,8 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Your communication style is in your Mercury sign",
-            "Mercury rules how you think and talk. Even if your Sun is a quiet Pisces, Mercury in Gemini means your texts are rapid-fire. We factor this into predictions.",
-            "predict"
+            "Mercury rules how you think and talk. Even if your Sun is a quiet Pisces, Mercury in Gemini can make your texts rapid-fire. Simastry uses that as communication context.",
+            "profile"
         ),
         (
             "Why you get along with some signs instantly",
@@ -503,7 +909,7 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "The difference between astrology and horoscopes",
-            "Horoscopes are generic predictions for 1/12th of the population. What we do is compare YOUR specific sign placements against someone else's. That's synastry — and it's way more personal.",
+            "Horoscopes are generic Sun-sign forecasts for 1/12th of the population. Simastry compares your specific sign placements against someone else's. That's synastry — and it's way more personal.",
             nil
         ),
         (
@@ -513,13 +919,13 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Fixed signs are the most stubborn texters",
-            "Taurus, Leo, Scorpio, and Aquarius are 'fixed' signs — they commit to a position and don't budge easily. If they leave you on read, they've already decided. Your guides account for this.",
+            "Taurus, Leo, Scorpio, and Aquarius are 'fixed' signs — they commit to a position and don't budge easily. If they've gone quiet, a low-pressure opener works better than a big swing. Your guides have one ready.",
             "guides"
         ),
         (
             "Water signs absorb your energy over text",
-            "Cancer, Scorpio, and Pisces literally feel your mood through messages. That's why your tone matters more with them than your words. Our predictions factor emotional tone.",
-            "predict"
+            "Cancer, Scorpio, and Pisces tend to read mood through messages. That's why your tone can matter more with them than your exact words.",
+            "guides"
         ),
         (
             "The 4 elements explained in 10 seconds",
@@ -528,8 +934,8 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Why fire signs always text first",
-            "Aries, Leo, and Sagittarius are cardinal/fixed fire — they initiate. If a fire sign isn't texting first anymore, something shifted. Use Predict to find out what.",
-            "predict"
+            "Aries, Leo, and Sagittarius carry fire emphasis — they often initiate. If a fire sign gets quiet, your message should leave room without turning cold.",
+            "guides"
         ),
         (
             "Your saved guides work because of element theory",
@@ -538,10 +944,122 @@ nonisolated struct AstrologyTemplates {
         ),
         (
             "Mutable signs are the hardest to predict",
-            "Gemini, Virgo, Sagittarius, Pisces — they adapt and change direction constantly. That's why predictions for mutable signs show lower confidence. It's not a bug, it's their nature.",
-            "predict"
+            "Gemini, Virgo, Sagittarius, Pisces adapt and change direction constantly. With mutable signs, leave room for the conversation to breathe.",
+            "guides"
         )
     ]
+
+    /// Micro-lessons for the Today tab Tips row. Each tip is taught by a
+    /// specific guide; tapping the card drops the lesson into the panel
+    /// thread as that guide's icebreaker, so a tip always opens a
+    /// conversation. Two rotate in per day.
+    static let guideTips: [(title: String, body: String, opener: String, guideId: String)] = [
+        (
+            "Why fixed signs go quiet before a decision",
+            "Taurus, Leo, Scorpio, and Aquarius are the fixed signs — silence usually means weighing, not withdrawing. The pause is how the decision gets made.",
+            "Want to check how this plays out with someone you know?",
+            "taurus-theo"
+        ),
+        (
+            "The two-hour rule for charged replies",
+            "When a message stings, the first draft is your Moon talking. Two hours later your Sun gets a vote — and that version usually lands better.",
+            "Want to try it on a real thread?",
+            "cancer-mila"
+        ),
+        (
+            "Read the Rising before the Sun",
+            "First messages mostly show someone's Rising — the social reflex. The Sun shows up once the conversation matters, so early texts are the doorway, not the room.",
+            "Whose first impression should we decode?",
+            "libra-isolde"
+        ),
+        (
+            "Fire signs argue forward",
+            "Aries, Leo, and Sagittarius process out loud and move on fast. The blowup is rarely the verdict — what gets said the next day is.",
+            "Anyone in your life argue like this?",
+            "aries-amara"
+        ),
+        (
+            "Why earth signs ask for the plan",
+            "Taurus, Virgo, and Capricorn hear \"someday\" as \"maybe never.\" A concrete time and place reads as care.",
+            "Want help turning a vague plan into a real one?",
+            "capricorn-naomi"
+        ),
+        (
+            "Air signs flirt with questions",
+            "Gemini, Libra, and Aquarius show interest through curiosity. Questions are their kisses — answer one, then ask one back.",
+            "Want to read a thread through this lens?",
+            "gemini-rina"
+        ),
+        (
+            "Water signs answer the tone, not the text",
+            "Cancer, Scorpio, and Pisces reply to how a message feels. The same sentence lands differently with one warm word in front of it.",
+            "Want to warm up a message together?",
+            "pisces-liora"
+        ),
+        (
+            "The double-text window",
+            "A second text within the hour reads as pressure to a fire sign and as care to a water sign. Same move, opposite meaning — the element decides.",
+            "Should we check what it means for your person?",
+            "scorpio-vera"
+        ),
+        (
+            "Your Moon sign is how you fight",
+            "Conflict style comes from the Moon more than the Sun. A gentle Sun with an Aries Moon still needs to vent first and soothe second.",
+            "Want to map someone's conflict style?",
+            "aries-cassian"
+        ),
+        (
+            "Why Sagittarius jokes in serious moments",
+            "Humor is how Sagittarius keeps honesty breathable. The joke isn't deflection — it's an invitation to keep talking.",
+            "Does someone you know do this?",
+            "sagittarius-nadia"
+        ),
+        (
+            "Cardinal signs start things",
+            "Aries, Cancer, Libra, and Capricorn lead with initiative. If a thread stalls mid-way, restate the goal — cardinal energy re-engages at the start of things.",
+            "Want an opener that restarts a stalled thread?",
+            "libra-mateo"
+        ),
+        (
+            "The mirror trick for mutable signs",
+            "Gemini, Virgo, Sagittarius, and Pisces adapt to the energy they receive. Set the tone you want back, and they'll usually match it.",
+            "Want to test it on tomorrow's first text?",
+            "virgo-mara"
+        ),
+        (
+            "Compliments, aimed by element",
+            "Praise effort with earth, vision with fire, ideas with air, feeling with water. The same compliment, aimed right, lands twice as deep.",
+            "Who should we write one for?",
+            "leo-leona"
+        ),
+        (
+            "Why Capricorn texts short",
+            "Brevity is Capricorn's respect for your time, not coldness. Watch the consistency instead — that's where the warmth lives.",
+            "Want to read someone's texting rhythm?",
+            "capricorn-silas"
+        ),
+        (
+            "Lead Aquarius with the frame",
+            "Open with the idea — \"I want us to figure out weekends\" — then the feelings. Aquarius engages structure first and sentiment second.",
+            "Want to draft one together?",
+            "aquarius-imani"
+        ),
+        (
+            "The repair message most signs accept",
+            "Name the moment, own your line, ask one question. \"I was short yesterday — that's on me. How are you feeling about it?\" travels across the zodiac.",
+            "Want to tailor it to a specific sign?",
+            "cancer-noel"
+        )
+    ]
+
+    /// The day's two Tips-row entries — shared by the Today tab and the
+    /// evening tip notification so both always agree on what "today's tip" is.
+    static func dailyGuideTips(dayOfYear: Int) -> [(title: String, body: String, opener: String, guideId: String)] {
+        let tips = guideTips
+        guard !tips.isEmpty else { return [] }
+        let first = (dayOfYear * 2) % tips.count
+        return [tips[first], tips[(first + 1) % tips.count]]
+    }
 
     // MARK: - Personal Insights (post-onboarding)
 
@@ -687,6 +1205,208 @@ nonisolated struct AstrologyTemplates {
         "neutral": [
             "hey! our signs are interesting together — %@%% compatibility. curious what you think",
             "we're %@%% compatible — different enough to be interesting, similar enough to click",
+        ]
+    ]
+
+    // MARK: - Panel Chat
+
+    /// Second/third panel voices reacting to the previous guide's take.
+    /// `{name}` = the guide who spoke before. Keyed by ZodiacElement rawValue.
+    static let panelInterGuideBeats: [String: [String]] = [
+        "fire": [
+            "I read it a shade differently than {name} — keep the heat, cut the apology.",
+            "{name} isn't wrong, but I'd move sooner. Waiting is also a message.",
+            "Building on {name}: yes, but say it like you mean it the first time."
+        ],
+        "earth": [
+            "Where {name} sees a spark, I'd want one steady line first.",
+            "{name} has the spirit of it. I'd just slow the delivery by half.",
+            "Agreed with {name} on the what — my note is the pacing."
+        ],
+        "air": [
+            "Adding one angle to what {name} said — answer the subtext, not the sentence.",
+            "{name} read the feeling; I'm reading the pattern. Both say the same thing.",
+            "Take {name}'s line and make it ten percent lighter. That's the version that lands."
+        ],
+        "water": [
+            "{name} is right about the timing, but feel it once before you send it.",
+            "Underneath what {name} said: check what this is actually about for you.",
+            "I'd hold {name}'s advice with one soft edge — leave them room to meet you."
+        ]
+    ]
+
+    /// Panel welcome posts, one per slot (Sun, Moon, Rising guide).
+    /// `{name}` = user first name, `{sign}` = placement sign, `{role}` = Sun/Moon/Rising.
+    static let panelWelcomeOpeners: [String] = [
+        "Hey {name} — I read with your {sign} {role}. When a message has you circling, bring it here.",
+        "I hold your {sign} {role} lens — how it actually feels before you answer. Nothing you say here needs to be polished.",
+        "And I read your {sign} {role} — the tone you open with. The three of us see the same thread differently on purpose. Ask us anything."
+    ]
+
+    /// Panel daily conversation starters. Keyed by CelestialRole rawValue
+    /// ("sun"/"moon"/"rising"); each ends in a question to invite a reply.
+    static let panelDailyStarters: [String: [String]] = [
+        "sun": [
+            "Daily check from your Sun lens: is there a message you're carrying today that wants to be sent?",
+            "Sun read for today: your core drive sets the tone before any wording does. What conversation matters most today?",
+            "Today's Sun focus — say less, mean it more. Anything on your mind worth a read?"
+        ],
+        "moon": [
+            "Moon check-in: how a message feels usually decides how you answer it. Anything land strangely today?",
+            "Today runs on your Moon lens — reaction before reply. Want us to read anything before you respond?",
+            "Moon focus today: notice what you reread twice. What was it?"
+        ],
+        "rising": [
+            "Rising lens today: first impressions are doing the talking. Any opener you want us to tune?",
+            "Today's Rising read — tone first, content second. Is there a conversation you want to start well?",
+            "Your Rising sets the door you open with. Anyone you've been meaning to message?"
+        ]
+    ]
+
+    /// Contextual starters — the panel referencing what it actually remembers.
+    /// `{personName}` slot.
+    static let panelMemoryStarters: [String] = [
+        "Quick follow-up — how did things go with {personName}?",
+        "You brought up {personName} last time. Any movement there, or still composing?",
+        "Still thinking about your {personName} situation. Want a fresh read on it today?"
+    ]
+
+    /// `{target}` slot — the unrated-prediction nudge that feeds the accuracy stat.
+    static let panelPredictionFollowUpStarters: [String] = [
+        "You ran a read on {target} — did the reply land like we called it? Tap it in your history either way.",
+        "Open loop from your last prediction about {target}: did it land? Rating it sharpens every read we give you."
+    ]
+
+    /// `{streak}` slot.
+    static let panelStreakStarters: [String] = [
+        "{streak} days straight. That consistency is doing more for your reads than any single prediction. What's today's thread?",
+        "Streak check: {streak} days. You keep showing up — so will we. Anything worth a read this morning?"
+    ]
+
+    /// `{caption}` slot — riffs on the user's own words, never the image.
+    static let panelMomentStarters: [String] = [
+        "\u{201C}{caption}\u{201D} stuck with me. Want to carry that tone into a message today?",
+        "Your last moment — \u{201C}{caption}\u{201D} — reads like a good chapter. What's happening in it now?"
+    ]
+
+    /// Welcome-back lines after 3+ quiet days, referencing a memory note.
+    /// `{personName}` slot.
+    static let panelWelcomeBackLines: [String] = [
+        "Welcome back. Last time you were working out things with {personName} — how did it land?",
+        "Good to see you. Before anything new: where did things settle with {personName}?"
+    ]
+
+    // MARK: - Moments
+
+    /// Guide comments on a user's private Moment. These riff on the user's
+    /// chart and the act of sharing — the guides cannot see images, and these
+    /// templates must never imply they can. Placeholders: `{name}`, `{sun}`,
+    /// `{rising}`, `{role}`. Keyed by the GUIDE's element.
+    static let momentCommentTemplates: [String: [String]] = [
+        "fire": [
+            "Posting without overthinking it — that's the {sun} Sun doing exactly its job.",
+            "This is the energy I keep telling you to text from, {name}.",
+            "You shared it, you own it. That's the whole move.",
+            "Momentum suits you. Carry this into your next conversation.",
+            "The {role} lens says: this is you at full signal. Keep that."
+        ],
+        "earth": [
+            "Moments like this are how steadiness reads from the outside.",
+            "No performance in this one — that's why it works, {name}.",
+            "Your {sun} Sun builds in quiet ways. This is one of them.",
+            "Keep collecting these. They're proof, not decoration.",
+            "Grounded read: whatever today was, you held it well."
+        ],
+        "air": [
+            "There's a whole story in this one and you told it without a paragraph.",
+            "Noted and filed under: {name} understanding the assignment.",
+            "Your {rising} Rising chose the tone here — light, but not careless.",
+            "This says more than your last three drafts combined.",
+            "The pattern across your moments: you share when you're sure. Respect."
+        ],
+        "water": [
+            "Something about this one feels settled. Hold onto that.",
+            "You share when it means something — your {sun} Sun keeps it honest.",
+            "Reading the feeling here, not the surface. It reads calm.",
+            "This is the version of you your best messages come from.",
+            "Soft proof that you're doing better than your overthinking says."
+        ]
+    ]
+
+    /// Caption-echo comments — quote the user's own words back through the lens.
+    /// `{caption}` = the user's trimmed caption.
+    static let momentCaptionEchoTemplates: [String] = [
+        "\u{201C}{caption}\u{201D} — that's the whole read, honestly.",
+        "You wrote \u{201C}{caption}\u{201D} and that tracks completely with your chart.",
+        "\u{201C}{caption}\u{201D} is exactly the tone I'd tell you to text with.",
+        "Keep \u{201C}{caption}\u{201D} as your opening-line energy this week."
+    ]
+
+    // MARK: - Transit Timing
+
+    /// Daily timing guidance keyed by "{body}.{family}" where family is
+    /// flow (trine/sextile), friction (square/opposition), or
+    /// emphasis (conjunction). Message-timing voice, not horoscope filler.
+    static let transitGuidance: [String: [String]] = [
+        "mercury.flow": [
+            "Wording comes clean today — the honest text writes itself. Send it.",
+            "Good day for the conversation you've been drafting. Say it plainly."
+        ],
+        "mercury.friction": [
+            "Messages bend out of shape today. Draft now, reread once, send later.",
+            "Easy to be misread right now — keep texts short and literal."
+        ],
+        "mercury.emphasis": [
+            "Words carry extra weight today. One clear sentence does the work of five.",
+            "Everything you send today gets reread. Make the first line count."
+        ],
+        "venus.flow": [
+            "Warmth lands easily today — a kind message goes further than usual.",
+            "Good timing for affection, repair, or the soft follow-up."
+        ],
+        "venus.friction": [
+            "Affection can read as pressure today. Offer warmth, don't ask for proof.",
+            "Don't measure their reply speed against your effort today."
+        ],
+        "venus.emphasis": [
+            "Tone is the message today. How you say it will outlive what you said.",
+            "Lead with warmth today — it sets the price of the whole conversation."
+        ],
+        "mars.flow": [
+            "Momentum favors the first move. Open the conversation you've been circling.",
+            "Directness lands as confidence today, not aggression. Use it."
+        ],
+        "mars.friction": [
+            "Short fuses in the air — don't send the reply you typed while annoyed.",
+            "Friction day: win by staying measured while the thread runs hot."
+        ],
+        "mars.emphasis": [
+            "Energy wants an outlet today — aim it at one honest message, not five impulsive ones.",
+            "Bold reads as decisive today. Pick the one move that matters."
+        ],
+        "sun.flow": [
+            "You read as yourself today — good light for the conversation that needs the real you.",
+            "Visibility is high and kind today. Show up in the thread that matters."
+        ],
+        "sun.friction": [
+            "Ego stakes feel inflated today. Argue the point, not the identity.",
+            "Don't make today's message a referendum on who's right."
+        ],
+        "sun.emphasis": [
+            "A reset day for how you show up. Open the thread the way you'd want it remembered.",
+            "Today resets the tone going forward — choose your opening carefully."
+        ],
+        "moon.flow": [
+            "Feelings are readable today — yours and theirs. Trust the first read.",
+            "Emotionally clear air today. A sincere message will be received as sent."
+        ],
+        "moon.friction": [
+            "Moods swing fast today — let a charged message sit for an hour before sending.",
+            "What feels urgent this morning won't by tonight. Time your reply accordingly."
+        ],
+        "moon.emphasis": [
+            "The feeling under the words is loud today. Name yours before you reply to theirs.",
+            "Lead with how it felt, not what they did. Today that distinction lands."
         ]
     ]
 }

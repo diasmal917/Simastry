@@ -4,12 +4,14 @@ struct ProfileImageView: View {
     let image: UIImage?
     let size: CGFloat
     let showEditBadge: Bool
+    let sunSign: ZodiacSign?
     let sunSignGlyph: String?
 
-    init(image: UIImage?, size: CGFloat, showEditBadge: Bool = false, sunSignGlyph: String? = nil) {
+    init(image: UIImage?, size: CGFloat, showEditBadge: Bool = false, sunSign: ZodiacSign? = nil, sunSignGlyph: String? = nil) {
         self.image = image
         self.size = size
         self.showEditBadge = showEditBadge
+        self.sunSign = sunSign
         self.sunSignGlyph = sunSignGlyph
     }
 
@@ -37,11 +39,13 @@ struct ProfileImageView: View {
                             )
                     )
             } else {
-                Circle()
+                let cornerRadius = min(size * 0.24, 24)
+
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(Color.white.opacity(0.04))
                     .frame(width: size, height: size)
                     .overlay(
-                        Circle()
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .stroke(
                                 LinearGradient(
                                     colors: [
@@ -69,7 +73,7 @@ struct ProfileImageView: View {
                             } else {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: size * 0.2, weight: .medium))
-                                    .foregroundStyle(SimastryColor.gold.opacity(0.6))
+                                    .foregroundStyle((sunSign?.color ?? SimastryColor.gold).opacity(0.78))
                             }
 
                             if size >= 80 && sunSignGlyph == nil {

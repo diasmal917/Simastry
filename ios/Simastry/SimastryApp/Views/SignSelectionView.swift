@@ -54,8 +54,8 @@ struct SignSelectionView: View {
 
                 OnboardingProgressView(
                     eyebrow: "Discover",
-                    title: "Calculate your big three",
-                    subtitle: "We use your birth date, exact time, and birthplace timezone to compute your Sun, Moon, and Rising signs.",
+                    title: "Calculate your communication type",
+                    subtitle: "Your Sun, Moon, and Rising signs become the chart signals Simastry uses for message guidance.",
                     step: 2,
                     totalSteps: 3,
                     labels: ["Path", "Signs", "Companion"]
@@ -78,7 +78,7 @@ struct SignSelectionView: View {
     private var chartAccuracyCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label {
-                Text("Accurate chart required")
+                Text("Chart signals shape your type")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
             } icon: {
@@ -86,7 +86,7 @@ struct SignSelectionView: View {
                     .foregroundStyle(SimastryColor.gold)
             }
 
-            Text("Moon and Rising signs shift with both birth time and birthplace. We only reveal your chart once we can calculate it from real birth details.")
+            Text("Sun shows core communication drive, Moon shows emotional reaction, and Rising shows your first response style. Moon and Rising need birth time and birthplace to stay accurate.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
@@ -193,11 +193,11 @@ struct SignSelectionView: View {
     private func inputSubtitle(for role: CelestialRole) -> String {
         switch role {
         case .sun:
-            "Locks in the birth date for your chart"
+            "Core communication drive"
         case .moon:
-            "Needed to compute your ascendant precisely"
+            "Emotional reaction pattern"
         case .rising:
-            "Sets the location and timezone of the chart"
+            "First response and social presentation"
         }
     }
 

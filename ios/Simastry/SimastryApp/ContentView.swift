@@ -70,10 +70,10 @@ struct ContentView: View {
         ZStack {
             SimastryColor.midnight.ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("S I M A S T R Y")
+                Text("SIMASTRY")
                     .font(SimastryFont.titleLarge)
+                    .italic()
                     .foregroundStyle(SimastryColor.gold)
-                    .tracking(1)
                 ProgressView()
                     .tint(SimastryColor.gold)
             }

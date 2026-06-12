@@ -5,6 +5,7 @@ struct BirthDetailsView: View {
     @Bindable var viewModel: AppViewModel
     @State private var currentStep: Int = 0
     @State private var isCalculating: Bool = false
+    @State private var displayName: String = ""
     @State private var birthday: Date = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
     @State private var birthTime: Date = {
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
@@ -13,14 +14,24 @@ struct BirthDetailsView: View {
         return Calendar.current.date(from: components) ?? Date()
     }()
     @State private var birthplace: String = ""
-    @State private var appeared: Bool = false
     @State private var birthTimeUnknown: Bool = false
     @State private var showSuggestions: Bool = false
     @State private var selectedFromSuggestion: Bool = false
     @StateObject private var locationCompleter = LocationSearchCompleter()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var birthplaceFocused: Bool
+    @FocusState private var nameFocused: Bool
     private let birthplaceGeocodingService = BirthplaceGeocodingService()
+
+    private let totalSteps = 4
+
+    private var trimmedName: String {
+        displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var firstName: String {
+        trimmedName.components(separatedBy: " ").first ?? trimmedName
+    }
 
     var body: some View {
         ZStack {
@@ -30,24 +41,18 @@ struct BirthDetailsView: View {
                 header
                     .padding(.top, 16)
 
-                OnboardingProgressView(
-                    eyebrow: "Your Birth Chart",
-                    title: stepTitle,
-                    subtitle: stepSubtitle,
-                    step: currentStep + 1,
-                    totalSteps: 3,
-                    labels: ["Birthday", "Time", "Place"]
-                )
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
+                stepProgress
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
 
                 Spacer()
 
                 Group {
                     switch currentStep {
-                    case 0: birthdayStep
-                    case 1: birthTimeStep
-                    case 2: birthplaceStep
+                    case 0: nameStep
+                    case 1: birthdayStep
+                    case 2: birthTimeStep
+                    case 3: birthplaceStep
                     default: EmptyView()
                     }
                 }
@@ -75,7 +80,7 @@ struct BirthDetailsView: View {
                     .padding(.horizontal, 24)
                     .padding(.bottom, 50)
                 } else {
-                    GoldButton("Continue") {
+                    GoldButton(currentStep == totalSteps - 1 ? "Reveal My Chart" : "Continue", isEnabled: canAdvance) {
                         advanceStep()
                     }
                     .padding(.horizontal, 24)
@@ -84,19 +89,26 @@ struct BirthDetailsView: View {
             }
         }
         .onAppear {
-            if reduceMotion {
-                appeared = true
-            } else {
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
-                    appeared = true
-                }
+            if let staged = viewModel.onboardingDisplayName, displayName.isEmpty {
+                displayName = staged
             }
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { birthplaceFocused = false }
+                Button("Done") {
+                    nameFocused = false
+                    birthplaceFocused = false
+                }
             }
+        }
+    }
+
+    private var canAdvance: Bool {
+        switch currentStep {
+        case 0: return !trimmedName.isEmpty
+        case 3: return !birthplace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        default: return true
         }
     }
 
@@ -123,64 +135,138 @@ struct BirthDetailsView: View {
             .accessibilityLabel(currentStep > 0 ? "Previous step" : "Back to landing")
 
             Spacer()
+
+            Text("Step \(currentStep + 1) of \(totalSteps)")
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .padding(.trailing, 16)
         }
         .padding(.horizontal, 12)
     }
 
-    private var stepTitle: String {
-        switch currentStep {
-        case 0: return "Your Birthday"
-        case 1: return "Your Birth Time"
-        case 2: return "Your Birthplace"
-        default: return ""
+    private var stepProgress: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<totalSteps, id: \.self) { step in
+                Capsule()
+                    .fill(step <= currentStep ? AnyShapeStyle(SimastryGradient.gold) : AnyShapeStyle(Color.white.opacity(0.12)))
+                    .frame(height: 4)
+                    .animation(.spring(SimastrySpring.snappy), value: currentStep)
+            }
         }
+        .accessibilityHidden(true)
     }
 
-    private var stepSubtitle: String {
-        switch currentStep {
-        case 0: return "We'll calculate your Sun and Moon signs from this."
-        case 1: return "We need your exact birth time to calculate your Rising sign correctly."
-        case 2: return "We use your birthplace to resolve the chart timezone and location."
-        default: return ""
-        }
+    // MARK: - Step Copy
+
+    private func stepEyebrow(_ text: String) -> some View {
+        Text(text)
+            .font(SimastryFont.overline)
+            .foregroundStyle(SimastryColor.gold)
+            .tracking(2.2)
+            .textCase(.uppercase)
     }
 
     // MARK: - Steps
 
-    private var birthdayStep: some View {
-        VStack(spacing: 24) {
-            Text("What's your birthday?")
+    private var nameStep: some View {
+        VStack(spacing: 18) {
+            stepEyebrow("Your advisory panel")
+
+            Text("What should your guides call you?")
                 .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Every reading is written to you — your name, your chart, your conversations.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
+
+            TextField("Your name", text: $displayName)
+                .focused($nameFocused)
+                .textContentType(.givenName)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .submitLabel(.continue)
+                .onSubmit {
+                    if canAdvance { advanceStep() }
+                }
+                .font(SimastryFont.titleLarge)
+                .foregroundStyle(.white)
+                .tint(SimastryColor.gold)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 18)
+                .padding(.horizontal, 20)
+                .background(.white.opacity(0.07), in: .rect(cornerRadius: 18))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            nameFocused ? SimastryColor.gold.opacity(0.5) : .white.opacity(0.14),
+                            lineWidth: 1
+                        )
+                }
+                .padding(.top, 6)
+                .onChange(of: displayName) { _, newValue in
+                    if newValue.count > 30 {
+                        displayName = String(newValue.prefix(30))
+                    }
+                }
+        }
+        .padding(.horizontal, 28)
+    }
+
+    private var birthdayStep: some View {
+        VStack(spacing: 18) {
+            stepEyebrow("Sun · core drive")
+
+            Text(firstName.isEmpty ? "When were you born?" : "Nice to meet you, \(firstName).\nWhen were you born?")
+                .font(SimastryFont.displayMedium)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Your birthday sets your Sun and Moon — the heart of how you communicate.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
 
             DatePicker("Birthday", selection: $birthday, in: ...Date(), displayedComponents: .date)
                 .datePickerStyle(.wheel)
                 .labelsHidden()
                 .colorScheme(.dark)
-                .frame(maxHeight: 200)
+                .frame(maxHeight: 190)
         }
         .padding(.horizontal, 24)
     }
 
     private var birthTimeStep: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 18) {
+            stepEyebrow("Rising · first impression")
+
             Text("What time were you born?")
-                .font(SimastryFont.titleLarge)
+                .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
+
+            Text("Birth time pins down your Rising sign — the tone people read first.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
 
             if !birthTimeUnknown {
                 DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .colorScheme(.dark)
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 170)
             }
 
-            // "I don't know" toggle
             Button {
                 withAnimation(.spring(SimastrySpring.snappy)) {
                     birthTimeUnknown.toggle()
@@ -194,32 +280,30 @@ struct BirthDetailsView: View {
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(birthTimeUnknown ? SimastryColor.offWhite : SimastryColor.mutedSilver)
                 }
+                .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
 
             if birthTimeUnknown {
-                Text("No worries — your Sun and Moon signs will still be accurate. We'll estimate your Rising sign based on your birthday.")
+                Text("No worries — your Sun and Moon stay accurate. We'll estimate your Rising sign from your birthday.")
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
-
-            Text("Don't know your exact birth time? That's okay — your Sun and Moon signs are still accurate. Rising sign needs birth time for precision, but we'll estimate if needed.")
-                .font(SimastryFont.caption)
-                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
-                .multilineTextAlignment(.center)
-                .opacity(birthTimeUnknown ? 0 : 0.7)
         }
         .padding(.horizontal, 24)
     }
 
     private var birthplaceStep: some View {
-        VStack(spacing: 24) {
-            Text("Where were you born?")
+        VStack(spacing: 18) {
+            stepEyebrow("Chart · final signal")
+
+            Text(firstName.isEmpty ? "Where were you born?" : "Last one, \(firstName).\nWhere were you born?")
                 .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             VStack(spacing: 8) {
                 TextField("City, Country", text: $birthplace)
@@ -229,14 +313,17 @@ struct BirthDetailsView: View {
                     .onSubmit { birthplaceFocused = false }
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(.white)
-                    .tint(.white)
+                    .tint(SimastryColor.gold)
                     .multilineTextAlignment(.center)
                     .padding(.vertical, 16)
                     .padding(.horizontal, 20)
-                    .background(.white.opacity(0.08), in: .rect(cornerRadius: 16))
+                    .background(.white.opacity(0.07), in: .rect(cornerRadius: 16))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(.white.opacity(0.15), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(
+                                birthplaceFocused ? SimastryColor.gold.opacity(0.5) : .white.opacity(0.14),
+                                lineWidth: 1
+                            )
                     }
                     .onChange(of: birthplace) { _, newValue in
                         selectedFromSuggestion = false
@@ -285,7 +372,7 @@ struct BirthDetailsView: View {
                 }
 
                 if !showSuggestions || locationCompleter.suggestions.isEmpty {
-                    Text("Required — used to resolve your chart timezone and Rising sign")
+                    Text("Resolves your chart timezone and Rising sign")
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
@@ -322,7 +409,14 @@ struct BirthDetailsView: View {
 
     private func advanceStep() {
         HapticManager.buttonPress()
-        if currentStep < 2 {
+        if currentStep == 0 {
+            guard !trimmedName.isEmpty else { return }
+            viewModel.onboardingDisplayName = trimmedName
+            nameFocused = false
+            withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                currentStep = 1
+            }
+        } else if currentStep < totalSteps - 1 {
             birthplaceFocused = false
             withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
                 currentStep += 1

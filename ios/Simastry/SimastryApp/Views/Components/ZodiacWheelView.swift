@@ -36,9 +36,11 @@ struct ZodiacWheelView: View {
                                         .frame(width: circleSize(distance: distance) + 4, height: circleSize(distance: distance) + 4)
                                 }
 
-                                Text(sign.glyph)
-                                    .font(.system(size: circleSize(distance: distance) * 0.4))
-                                    .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.offWhite.opacity(0.7))
+                                ZodiacIconView(
+                                    sign: sign,
+                                    size: circleSize(distance: distance) * 0.72,
+                                    showsGlow: isSelected
+                                )
                             }
                             .opacity(opacityForDistance(distance))
                             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: selectedSign)

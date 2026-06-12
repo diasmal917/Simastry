@@ -66,6 +66,25 @@ nonisolated struct PredictionRequest: Sendable {
     }
 }
 
+nonisolated enum PredictionOutcome: String, Codable, Sendable {
+    case landed
+    case missed
+
+    var title: String {
+        switch self {
+        case .landed: "Landed"
+        case .missed: "Off"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .landed: "hand.thumbsup.fill"
+        case .missed: "hand.thumbsdown"
+        }
+    }
+}
+
 nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     let id: UUID
     let mode: SimulationMode
@@ -80,6 +99,11 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     let tone: SimulationTone?
     let privacySummary: String?
     let createdAt: Date
+    /// True when composed on-device from placement logic (no remote AI involved).
+    /// Optional so previously saved history still decodes.
+    var isLocalComposition: Bool?
+    /// User-reported accuracy ("Did this land?"). Optional so old history decodes.
+    var outcome: PredictionOutcome?
 
     var historyTitle: String {
         if !question.isEmpty {

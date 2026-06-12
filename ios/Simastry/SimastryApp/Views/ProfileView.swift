@@ -10,6 +10,9 @@ nonisolated private enum ProfileSheet: Identifiable {
     case terms
     case methodology
     case astrologerPartner
+    case aura
+    case careerRead
+    case settings
 
     var id: String {
         switch self {
@@ -29,6 +32,12 @@ nonisolated private enum ProfileSheet: Identifiable {
             "methodology"
         case .astrologerPartner:
             "astrologerPartner"
+        case .aura:
+            "aura"
+        case .careerRead:
+            "careerRead"
+        case .settings:
+            "settings"
         }
     }
 }
@@ -52,6 +61,9 @@ struct ProfileView: View {
     @State private var exportFileURL: URL?
     @State private var showExportShare: Bool = false
     @State private var showDiscoveryView: Bool = false
+    @State private var handledAuraRouteRequest: Int = 0
+    @State private var handledShareCardRouteRequest: Int = 0
+    @State private var handledCareerReadRouteRequest: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -72,6 +84,7 @@ struct ProfileView: View {
                             }
                         } else {
                             placeholderSignCards
+                            auraButtonSection
                         }
 
                         if viewModel.hasCompletedSigns {
@@ -81,6 +94,8 @@ struct ProfileView: View {
                         } else {
                             placeholderCompanionSection
                         }
+
+                        MomentsSection(viewModel: viewModel)
 
                         subscriptionSection
 
@@ -92,11 +107,17 @@ struct ProfileView: View {
 
                         astrologerSection
 
+                        InviteFriendsCard(viewModel: viewModel)
+
                         referralCodeSection
 
                         forAstrologersSection
 
                         dataExportSection
+
+                        if viewModel.hasCompletedSigns {
+                            streakSection
+                        }
 
                         footerSection
 
@@ -114,13 +135,13 @@ struct ProfileView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
-            .alert("Clear My Data", isPresented: $showDeleteAccountConfirmation) {
-                Button("Clear My Data", role: .destructive) {
-                    Task { await viewModel.deleteAccount() }
+            .alert("Clear Local Data", isPresented: $showDeleteAccountConfirmation) {
+                Button("Clear Local Data", role: .destructive) {
+                    viewModel.clearLocalDeviceData()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This clears your Simastry data from this device and attempts to remove your server data too. The app will tell you if any server cleanup still needs support follow-up.")
+                Text("This removes saved notes, local people, wallet address, and device-only Simastry data from this iPhone. Your account is not deleted.")
             }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -140,6 +161,12 @@ struct ProfileView: View {
                     methodologySheet
                 case .astrologerPartner:
                     astrologerPartnerSheet
+                case .aura:
+                    AuraView(viewModel: viewModel)
+                case .careerRead:
+                    CareerReadView(viewModel: viewModel)
+                case .settings:
+                    SimastrySettingsView(viewModel: viewModel)
                 }
             }
             .onAppear {
@@ -150,8 +177,43 @@ struct ProfileView: View {
                         appeared = true
                     }
                 }
+                presentProfileRoutesIfRequested()
+            }
+            .onChange(of: viewModel.auraRouteRequest) {
+                presentProfileRoutesIfRequested()
+            }
+            .onChange(of: viewModel.shareCardRouteRequest) {
+                presentProfileRoutesIfRequested()
+            }
+            .onChange(of: viewModel.careerReadRouteRequest) {
+                presentProfileRoutesIfRequested()
             }
         }
+    }
+
+    /// Catch sheet requests fired before this view mounted (deep links,
+    /// preview seeding) — same handled-counter pattern as the Home routes.
+    private func presentProfileRoutesIfRequested() {
+        if viewModel.auraRouteRequest > handledAuraRouteRequest {
+            handledAuraRouteRequest = viewModel.auraRouteRequest
+            activeSheet = .aura
+        }
+        if viewModel.shareCardRouteRequest > handledShareCardRouteRequest {
+            handledShareCardRouteRequest = viewModel.shareCardRouteRequest
+            activeSheet = .share(.cosmicDNA)
+        }
+        if viewModel.careerReadRouteRequest > handledCareerReadRouteRequest {
+            handledCareerReadRouteRequest = viewModel.careerReadRouteRequest
+            activeSheet = .careerRead
+        }
+    }
+
+    private var communicationType: CommunicationTypeProfile? {
+        CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        )
     }
 
     private var userHeader: some View {
@@ -164,23 +226,41 @@ struct ProfileView: View {
                 Text(viewModel.hasCompletedSigns ? "About You" : "Your Stars Await")
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
+
+                if let communicationType {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(communicationType.accent)
+                        Text(communicationType.title)
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.92))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(communicationType.accent.opacity(0.14), in: Capsule())
+                    .overlay(Capsule().stroke(communicationType.accent.opacity(0.22), lineWidth: 0.6))
+                    .padding(.top, 2)
+                    .accessibilityLabel("Communication type: \(communicationType.title)")
+                }
             }
 
             Spacer()
 
-            GlossyOrbView(
-                signColors: viewModel.hasCompletedSigns
-                    ? [
-                        viewModel.userSunSign?.color ?? SimastryColor.gold,
-                        viewModel.userMoonSign?.color ?? SimastryColor.celestialBlue
-                    ]
-                    : [
-                        SimastryColor.placeholderLight,
-                        SimastryColor.placeholderDark
-                    ],
-                state: .idle,
-                size: 56
-            )
+            Button {
+                HapticManager.buttonPress()
+                activeSheet = .settings
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(width: 42, height: 42)
+                    .simastryGlass(cornerRadius: 14)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Open settings")
         }
         .padding(20)
         .simastryGlass(cornerRadius: 20)
@@ -275,13 +355,10 @@ struct ProfileView: View {
                 .foregroundStyle(SimastryColor.mutedSilver)
 
             HStack(spacing: 14) {
-                GlossyOrbView(
-                    signColors: [
-                        SimastryColor.placeholderLight,
-                        SimastryColor.placeholderDark
-                    ],
-                    state: .idle,
-                    size: 40
+                profileSymbolTile(
+                    systemName: "person.fill.questionmark",
+                    accent: SimastryColor.mutedSilver,
+                    size: 42
                 )
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -353,11 +430,33 @@ struct ProfileView: View {
                 currentStreak: streakManager.currentStreak,
                 lastCheckIn: streakManager.lastCheckIn
             )
+
+            methodCourseLine
         }
         .padding(20)
         .glossyCard(cornerRadius: 22)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+    }
+
+    private var methodCourseLine: some View {
+        let _ = viewModel.methodCourseVersion
+        let state = viewModel.methodCourseState
+
+        return HStack(spacing: 7) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+
+            Text(state.isComplete
+                 ? "Simastry Method Graduate"
+                 : "Simastry Method · \(state.postedLessons.count) of \(MethodCourseTemplates.lessons.count) lessons")
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(state.isComplete ? SimastryColor.gold : SimastryColor.mutedSilver)
+
+            Spacer()
+        }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - About You Section
@@ -368,11 +467,16 @@ struct ProfileView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
 
-            streakSection
+            auraButtonSection
 
             signEntry(role: .sun, sign: sun, delay: 0)
             signEntry(role: .moon, sign: moon, delay: 0.15)
             signEntry(role: .rising, sign: rising, delay: 0.3)
+
+            // Communication signals section
+            conversationGuideSection(sun: sun)
+
+            careerReadButtonSection
 
             Button(action: {
                 activeSheet = .share(.cosmicDNA)
@@ -380,25 +484,132 @@ struct ProfileView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "square.and.arrow.up")
                         .font(SimastryFont.labelSmall)
-                    Text("Share Your Cosmic DNA")
+                    Text("Share Your Card")
                         .font(SimastryFont.labelMedium)
                 }
                 .foregroundStyle(SimastryColor.gold)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Share your Cosmic DNA card")
+            .accessibilityLabel("Share your Simastry card")
 
             if AppConfig.socialDiscoveryEnabled {
                 // MARK: Social Accounts
                 socialAccountsSection
             }
 
-            // MARK: Find Others Like You
-            discoverySection
-
-            // Conversation Guide section
-            conversationGuideSection(sun: sun)
+            if AppConfig.socialDiscoveryEnabled {
+                // MARK: Find Others Like You
+                discoverySection
+            }
         }
+    }
+
+    private var auraButtonSection: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeSheet = .aura
+        } label: {
+            HStack(spacing: 14) {
+                profileSymbolTile(
+                    systemName: "sparkles",
+                    accent: viewModel.userSunSign?.color ?? SimastryColor.gold,
+                    size: 54
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Aura")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text(auraButtonSubtitle)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .padding(16)
+            .simastryGlass(cornerRadius: 20)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Open your Aura page")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 14)
+    }
+
+    private var careerReadButtonSection: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeSheet = .careerRead
+        } label: {
+            HStack(spacing: 14) {
+                profileSymbolTile(
+                    systemName: "briefcase.fill",
+                    accent: SimastryColor.celestialBlue,
+                    size: 54
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Career Read")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text("How you work, lead, and read to colleagues — plus how to decode your boss.")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .padding(16)
+            .simastryGlass(cornerRadius: 20)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Open your Career Read")
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 14)
+    }
+
+    private func profileSymbolTile(systemName: String, accent: Color, size: CGFloat) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: size * 0.36, weight: .semibold))
+            .foregroundStyle(accent)
+            .frame(width: size, height: size)
+            .background(accent.opacity(0.10), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.22), .white.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            }
+    }
+
+    private var auraButtonSubtitle: String {
+        if let profile = CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            return "\(profile.title) · chart-signal energy"
+        }
+        return "Visualize your Sun, Moon, and Rising once your signs are set."
     }
 
     // MARK: - Discovery Section
@@ -571,7 +782,7 @@ struct ProfileView: View {
 
     private var profileImageSection: some View {
         let profileImage = viewModel.profileImage
-        let sunSignGlyph = viewModel.userSunSign?.glyph
+        let sunSign = viewModel.userSunSign
 
         return VStack(spacing: 10) {
             PhotosPicker(
@@ -583,7 +794,7 @@ struct ProfileView: View {
                     image: profileImage,
                     size: 100,
                     showEditBadge: profileImage != nil,
-                    sunSignGlyph: sunSignGlyph
+                    sunSign: sunSign
                 )
             }
             .buttonStyle(.plain)
@@ -658,15 +869,15 @@ struct ProfileView: View {
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 Button {
-                    activeSheet = .share(.conversationGuide)
+                    activeSheet = .share(.cosmicDNA)
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.gold)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Share your communication guide")
-                .accessibilityHint("Creates a share card with your best approach and what to avoid")
+                .accessibilityLabel("Share your Simastry card")
+                .accessibilityHint("Creates a share card with your signs and how to talk to you")
             }
 
             if let guide {
@@ -702,7 +913,7 @@ struct ProfileView: View {
                         .lineSpacing(2)
                 }
                 .padding(12)
-                .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 12)
+                .surfaceCard(cornerRadius: 12, accent: SimastryColor.gold.opacity(0.6))
 
                 // What to avoid
                 VStack(alignment: .leading, spacing: 6) {
@@ -722,7 +933,7 @@ struct ProfileView: View {
                         .lineSpacing(2)
                 }
                 .padding(12)
-                .tintedGlass(SimastryColor.amber.opacity(0.06), cornerRadius: 12)
+                .surfaceCard(cornerRadius: 12, accent: SimastryColor.amber.opacity(0.6))
             }
         }
         .padding(18)
@@ -758,9 +969,7 @@ struct ProfileView: View {
                         Text("\(role.displayName) in \(sign.displayName)")
                             .font(SimastryFont.bodySmall)
                             .foregroundStyle(role.accentColor)
-                        Text(sign.glyph)
-                            .font(SimastryFont.bodySmall)
-                            .foregroundStyle(role.accentColor.opacity(0.7))
+                        ZodiacIconView(sign: sign, size: 16, showsGlow: false)
                     }
 
                     Text(role.subtitle)
@@ -800,12 +1009,9 @@ struct ProfileView: View {
             }) {
                 VStack(spacing: 14) {
                     HStack(spacing: 14) {
-                        GlossyOrbView(
-                            signColors: [
-                                ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
-                                ZodiacSign(rawValue: companion.moonSign)?.color ?? SimastryColor.celestialBlue
-                            ],
-                            state: .idle,
+                        profileSymbolTile(
+                            systemName: "moon.stars.fill",
+                            accent: ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
                             size: 44
                         )
 
@@ -883,12 +1089,6 @@ struct ProfileView: View {
                             tint: SimastryColor.celestialBlue
                         )
                         usagePill(
-                            label: "Predictions",
-                            value: "\(viewModel.remainingWeeklyPredictions)",
-                            subtitle: "this week",
-                            tint: SimastryColor.risingViolet
-                        )
-                        usagePill(
                             label: "Companions",
                             value: "\(viewModel.companions.count)/\(viewModel.companionLimit)",
                             subtitle: "slots",
@@ -896,23 +1096,10 @@ struct ProfileView: View {
                         )
                     }
 
-                    if viewModel.bonusPredictions > 0 {
-                        HStack(spacing: 8) {
-                            Image(systemName: "scope")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(SimastryColor.gold)
-                            Text("Bonus Predictions: \(viewModel.bonusPredictions) remaining")
-                                .font(SimastryFont.labelMedium)
-                                .foregroundStyle(SimastryColor.offWhite)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(SimastryColor.gold.opacity(0.08), in: .capsule)
-                    }
                 } else {
                     HStack(spacing: 10) {
                         unlimitedChip("Unlimited messages")
-                        unlimitedChip("Unlimited predictions")
+                        unlimitedChip("More companions")
                     }
                 }
             }
@@ -1286,9 +1473,16 @@ struct ProfileView: View {
                         .textInputAutocapitalization(.characters)
 
                     Button(action: {
-                        guard !referralCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                        viewModel.applyReferralCode(referralCodeInput)
-                        showReferralConfirmation = true
+                        let trimmed = referralCodeInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        // Invite-shaped codes grant the welcome predictions;
+                        // anything else falls back to the legacy referral path.
+                        if InviteCode.isValid(trimmed) {
+                            viewModel.applyInviteCode(trimmed)
+                        } else {
+                            viewModel.applyReferralCode(trimmed)
+                            showReferralConfirmation = true
+                        }
                         referralCodeInput = ""
                     }) {
                         Text("Apply")
@@ -1493,14 +1687,14 @@ struct ProfileView: View {
     private var deleteAccountSection: some View {
         VStack(spacing: 0) {
             Button(action: { showDeleteAccountConfirmation = true }) {
-                Text("Clear My Data")
+                Text("Clear Local Data")
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Clear your Simastry data from this device")
+            .accessibilityLabel("Clear local Simastry data from this device")
         }
         .padding(.top, 16)
         .opacity(appeared ? 1 : 0)

@@ -53,6 +53,29 @@ nonisolated final class SupabaseService {
         }
     }
 
+    /// True when the edge-function AI channel can be reached (Supabase
+    /// configured). The function itself still requires a signed-in session.
+    var canInvokeCompanionReply: Bool {
+        isConfigured
+    }
+
+    /// Calls the `companion-reply` edge function — the server-side Anthropic
+    /// proxy — and returns the generated text.
+    func invokeCompanionReply(
+        kind: CompanionReplyKind,
+        system: String,
+        user: String,
+        maxTokens: Int = 1024
+    ) async throws -> String {
+        let client = try configuredClient()
+        let payload = CompanionReplyPayload(kind: kind.rawValue, system: system, user: user, maxTokens: maxTokens)
+        let response: CompanionReplyResponse = try await client.functions.invoke(
+            "companion-reply",
+            options: FunctionInvokeOptions(body: payload)
+        )
+        return response.text
+    }
+
     func signInWithApple(idToken: String) async throws {
         let client = try configuredClient()
         try await client.auth.signInWithIdToken(
@@ -312,4 +335,22 @@ nonisolated final class SupabaseService {
         }
         return client
     }
+}
+
+// MARK: - Companion Reply Channel
+
+nonisolated enum CompanionReplyKind: String, Sendable {
+    case prediction
+    case chat
+}
+
+nonisolated struct CompanionReplyPayload: Encodable, Sendable {
+    let kind: String
+    let system: String
+    let user: String
+    let maxTokens: Int
+}
+
+nonisolated struct CompanionReplyResponse: Decodable, Sendable {
+    let text: String
 }

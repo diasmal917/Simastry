@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SimulationResultView: View {
     let result: PredictionResult
@@ -6,11 +7,14 @@ struct SimulationResultView: View {
     let onRegenerate: (String) -> Void
     var onOpenGuide: ((ZodiacSign) -> Void)?
     var userSunSign: ZodiacSign?
+    var onSetOutcome: ((PredictionOutcome?) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @State private var alternativeReply: String = ""
     @State private var showShareCard: Bool = false
     @State private var appeared: Bool = false
+    @State private var copiedSuggestion: Bool = false
+    @State private var localOutcome: PredictionOutcome?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accentColor: Color {
@@ -21,15 +25,20 @@ struct SimulationResultView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    predictionBubble
-                    resultMethodLayer
-                    breakdownSection
-                    shareResultButton
+                    cascaded(predictionBubble, step: 0)
+                    cascaded(suggestedReplySection, step: 1)
+                    cascaded(resultMethodLayer, step: 2)
+                    cascaded(breakdownSection, step: 3)
+                    cascaded(shareResultButton, step: 4)
                     if let sign = result.targetSunSign {
-                        guideFollowUpCard(sign: sign)
+                        cascaded(guideFollowUpCard(sign: sign), step: 5)
                     }
                     whatIfSection
                     confidenceFooter
+
+                    if onSetOutcome != nil {
+                        outcomeSection
+                    }
 
                     // Real conversation nudge
                     Text("Use this as preparation, then have the real conversation.")
@@ -76,8 +85,10 @@ struct SimulationResultView: View {
         .presentationContentInteraction(.scrolls)
         .onChange(of: result.id) { _, _ in
             alternativeReply = ""
+            localOutcome = result.outcome
         }
         .task {
+            localOutcome = result.outcome
             if reduceMotion {
                 appeared = true
             } else {
@@ -86,6 +97,38 @@ struct SimulationResultView: View {
                 }
             }
         }
+    }
+
+    /// Step-staggered rise-in so the reading discloses progressively —
+    /// prediction first, then the reply, then the reasoning.
+    private func cascaded(_ view: some View, step: Int) -> some View {
+        view
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+            .animation(
+                reduceMotion ? nil : .spring(SimastrySpring.smooth).delay(Double(step) * 0.09),
+                value: appeared
+            )
+    }
+
+    /// Closes the meaning loop: rate the prediction against what happened.
+    private var outcomeSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            OutcomeChipRow(currentOutcome: localOutcome) { outcome in
+                withAnimation(.spring(SimastrySpring.snappy)) {
+                    localOutcome = outcome
+                }
+                onSetOutcome?(outcome)
+            }
+
+            if localOutcome == nil {
+                Text("Come back after they reply — this trains your panel's accuracy stat.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+            }
+        }
+        .padding(13)
+        .surfaceCard(cornerRadius: 16)
     }
 
     private var predictionBubble: some View {
@@ -139,6 +182,71 @@ struct SimulationResultView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+    }
+
+    @ViewBuilder
+    private var suggestedReplySection: some View {
+        if let suggestion = suggestedReplyText {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrowshape.turn.up.left.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("Suggested reply")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .tracking(1.4)
+                        .textCase(.uppercase)
+
+                    Spacer()
+
+                    Button {
+                        HapticManager.buttonPress()
+                        UIPasteboard.general.string = suggestion
+                        copiedSuggestion = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            copiedSuggestion = false
+                        }
+                    } label: {
+                        Label(copiedSuggestion ? "Copied" : "Copy", systemImage: copiedSuggestion ? "checkmark" : "doc.on.doc")
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(SimastryColor.gold.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel(copiedSuggestion ? "Suggested reply copied" : "Copy suggested reply")
+                }
+
+                Text(suggestion)
+                    .font(SimastryFont.bodyLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let approach = result.targetSunSign.flatMap({ CommunicationTemplates.guides[$0]?.bestApproach }) {
+                    Text(approach)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(18)
+            .tintedGlass(SimastryColor.gold, cornerRadius: 20)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+        }
+    }
+
+    private var suggestedReplyText: String? {
+        guard let sign = result.targetSunSign,
+              let options = AstrologyTemplates.suggestedReplies[sign.displayName],
+              !options.isEmpty else { return nil }
+        let seed = abs((result.conversationText?.count ?? 0) &+ result.predictedMessage.count)
+        return options[seed % options.count]
     }
 
     private var breakdownSection: some View {
@@ -341,7 +449,7 @@ struct SimulationResultView: View {
                             .font(.system(size: 14, weight: .semibold))
                     }
 
-                    Text(isRegenerating ? "Re-reading the timeline" : "See New Response")
+                    Text(isRegenerating ? "Updating prediction" : "See New Response")
                         .font(SimastryFont.titleSmall)
                 }
                 .foregroundStyle(SimastryColor.midnight)
@@ -434,11 +542,13 @@ struct SimulationResultView: View {
 
     private var aiDisclosureBadge: some View {
         HStack(spacing: 6) {
-            Image(systemName: "cpu")
+            Image(systemName: result.isLocalComposition == true ? "scope" : "cpu")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(SimastryColor.deepMuted)
 
-            Text("AI-assisted - \(AppConfig.astrologyTradition) - not a guarantee")
+            Text(result.isLocalComposition == true
+                 ? "Placement logic, on device - \(AppConfig.astrologyTradition) - not a guarantee"
+                 : "AI-assisted - \(AppConfig.astrologyTradition) - not a guarantee")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.deepMuted)
         }
