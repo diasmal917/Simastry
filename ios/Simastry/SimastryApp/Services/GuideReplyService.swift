@@ -156,6 +156,63 @@ nonisolated enum GuideReplyService {
         return (systemLines.joined(separator: "\n"), userLines.joined(separator: "\n"))
     }
 
+    /// Prompt pair for a practice conversation with a simulated persona of
+    /// someone in the user's life — a REHEARSAL, never the real person.
+    /// Built from chart placements and user-described behavior; the hard
+    /// rules ban identity claims, stereotyping, and unhandled crisis talk.
+    static func practicePersonaPrompt(
+        personName: String,
+        personSigns: String,
+        relationshipType: String,
+        pronouns: String?,
+        ageBand: String?,
+        textingStyles: [String],
+        situationLine: String?,
+        contextNotes: String?,
+        user: UserContext,
+        transcript: [TranscriptEntry]
+    ) -> (system: String, user: String) {
+        var systemLines: [String] = []
+        systemLines.append("You are a practice simulation inside the Simastry app: a rehearsal stand-in for \(personName), a real person in the user's life. The user wants to practice a conversation before having it for real.")
+        systemLines.append("Simulate how \(personName) might plausibly respond, based ONLY on: chart placements (\(personSigns)), relationship to the user (\(relationshipType)), and the user's own description below.")
+
+        var descriptors: [String] = []
+        if let pronouns { descriptors.append("pronouns: \(pronouns)") }
+        if let ageBand { descriptors.append("age: \(ageBand)") }
+        if !textingStyles.isEmpty { descriptors.append("texting style: \(textingStyles.joined(separator: ", "))") }
+        if !descriptors.isEmpty {
+            systemLines.append("Described behavior — \(descriptors.joined(separator: "; ")).")
+        }
+        if let situationLine {
+            systemLines.append("Current situation: \(situationLine).")
+        }
+        if let contextNotes = contextNotes?.trimmingCharacters(in: .whitespacesAndNewlines), !contextNotes.isEmpty {
+            systemLines.append("The user's own notes about \(personName), verbatim: \u{201C}\(contextNotes)\u{201D}")
+        }
+
+        var chartParts: [String] = []
+        if let sun = user.sun { chartParts.append("Sun in \(sun.displayName)") }
+        if let moon = user.moon { chartParts.append("Moon in \(moon.displayName)") }
+        if !chartParts.isEmpty {
+            systemLines.append("The user\(user.name.map { " (\($0))" } ?? "") has \(chartParts.joined(separator: ", ")).")
+        }
+
+        systemLines.append(SimastryVoice.promptBlock)
+
+        systemLines.append("""
+        Hard rules: you are a rehearsal simulation, NOT the real \(personName) — never claim to be them, \
+        never invent facts about their life beyond what the user described. \
+        Derive behavior from described patterns only; never stereotype from any demographic detail. \
+        Reply in 1-2 short sentences in their plausible texting register. \
+        Stay realistic — include the friction the user describes; a rehearsal that only flatters is useless. \
+        If the conversation turns to crisis, self-harm, or abuse, break character and gently point the user to real-world support. \
+        Plain text only, no emoji unless their texting style says otherwise.
+        """)
+
+        let userPrompt = threadUserPrompt(transcript: transcript, replyingAs: personName)
+        return (systemLines.joined(separator: "\n"), userPrompt)
+    }
+
     /// Prompt pair for a guide's comment on a user's Moment. The model never
     /// sees the photo — the hard no-vision rule is part of the system prompt.
     static func momentCommentPrompt(

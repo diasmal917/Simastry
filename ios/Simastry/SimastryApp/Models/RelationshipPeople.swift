@@ -72,6 +72,12 @@ nonisolated struct RelationshipPerson: Identifiable, Hashable, Codable, Sendable
     // decode unchanged and existing memberwise call sites keep compiling.
     var situationStatus: SituationStatus? = nil
     var situationUpdatedAt: Date? = nil
+    // Persona context for practice conversations — behavior descriptors
+    // only, by design. Anything else belongs in the user's own words in
+    // `notes`, which the persona prompt ingests verbatim.
+    var pronouns: String? = nil
+    var ageBand: String? = nil
+    var textingStyles: [String]? = nil
 
     var displayName: String {
         let label = privateLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

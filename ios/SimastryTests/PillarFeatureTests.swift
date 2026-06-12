@@ -183,6 +183,91 @@ struct PillarFeatureTests {
         #expect(!starter.contains("{personName}") && !starter.contains("{n}"))
     }
 
+    // MARK: - Simulation Room
+
+    @Test func practicePersonaPromptCarriesRulesAndContext() {
+        let user = GuideReplyService.UserContext(
+            name: "Maya", sun: .sagittarius, moon: .cancer, rising: .libra, communicationType: nil
+        )
+        let (system, userPrompt) = GuideReplyService.practicePersonaPrompt(
+            personName: "Jake",
+            personSigns: "Taurus Sun • Leo Moon",
+            relationshipType: "Partner",
+            pronouns: "he/him",
+            ageBand: "20s",
+            textingStyles: ["dry", "slow replier"],
+            situationLine: "Waiting on a reply, day 2",
+            contextNotes: "We met hiking. He hates conflict over text.",
+            user: user,
+            transcript: [.init(senderName: "User", content: "We need to talk about last weekend.")]
+        )
+
+        // The non-negotiables.
+        #expect(system.contains("rehearsal"))
+        #expect(system.contains("NOT the real Jake"))
+        #expect(system.contains("never stereotype"))
+        #expect(system.contains("crisis"))
+        #expect(system.contains(SimastryVoice.promptBlock))
+
+        // The persona context flows through, notes verbatim.
+        #expect(system.contains("he/him"))
+        #expect(system.contains("dry, slow replier"))
+        #expect(system.contains("He hates conflict over text."))
+        #expect(system.contains("Waiting on a reply, day 2"))
+        #expect(userPrompt.contains("Reply as Jake"))
+    }
+
+    @Test func practiceTemplateReplyIsDeterministicAndStyled() {
+        for sign in ZodiacSign.allCases {
+            let reply = AppViewModel.composePracticeReply(sign: sign, textingStyles: [], threadCount: 1)
+            #expect(!reply.isEmpty, "empty practice reply for \(sign)")
+        }
+
+        // Deterministic per turn.
+        let a = AppViewModel.composePracticeReply(sign: .taurus, textingStyles: [], threadCount: 2)
+        let b = AppViewModel.composePracticeReply(sign: .taurus, textingStyles: [], threadCount: 2)
+        #expect(a == b)
+
+        // "dry" trims to the first sentence.
+        let dry = AppViewModel.composePracticeReply(sign: .taurus, textingStyles: ["dry"], threadCount: 0)
+        #expect(dry.filter { $0 == "." }.count <= 1)
+    }
+
+    @Test func practiceThreadStoreRoundTripsPerPerson() {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.practiceThreadsKey)
+        let viewModel = seededViewModel()
+        let personA = UUID()
+        let personB = UUID()
+
+        viewModel.savePracticeThread(
+            [PracticeMessage(isUser: true, content: "hey"), PracticeMessage(isUser: false, content: "hey yourself")],
+            for: personA
+        )
+        viewModel.savePracticeThread([PracticeMessage(isUser: true, content: "different saga")], for: personB)
+
+        #expect(viewModel.practiceThread(for: personA).count == 2)
+        #expect(viewModel.practiceThread(for: personB).count == 1)
+        #expect(viewModel.practiceThread(for: personA).first?.content == "hey")
+
+        viewModel.clearPracticeThread(for: personA)
+        #expect(viewModel.practiceThread(for: personA).isEmpty)
+        #expect(viewModel.practiceThread(for: personB).count == 1)
+
+        // Persona fields survive the people-store round trip.
+        var person = RelationshipPeopleStore.previewPeople()[0]
+        person.pronouns = "he/him"
+        person.textingStyles = ["dry"]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try? decoder.decode([RelationshipPerson].self, from: encoder.encode([person]))
+        #expect(decoded?.first?.pronouns == "he/him")
+        #expect(decoded?.first?.textingStyles == ["dry"])
+
+        UserDefaults.standard.removeObject(forKey: AppViewModel.practiceThreadsKey)
+    }
+
     // MARK: - Guide DMs
 
     @Test func startGuideChatSeedsOneThreadWithStableId() {

@@ -383,6 +383,7 @@ struct RelationshipPersonDetailView: View {
     @State private var showDeleteConfirmation: Bool = false
     @State private var showHowToTalk: Bool = false
     @State private var showCoupleRead: Bool = false
+    @State private var showPracticeChat: Bool = false
 
     private var currentPerson: RelationshipPerson {
         viewModel.relationshipPeople.first { $0.id == person.id } ?? person
@@ -483,6 +484,229 @@ struct RelationshipPersonDetailView: View {
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 
+    // MARK: - Simulation Room
+
+    /// One surface, three tools: rehearse the conversation, predict the
+    /// reply, decode the text — all reading through this person's chart.
+    private var simulationRoomSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 7) {
+                Image(systemName: "theatermasks.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.risingViolet)
+
+                Text("SIMULATION ROOM")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.3)
+            }
+
+            simulationRoomRow(
+                title: "Practice the conversation",
+                subtitle: "Rehearse the sensitive topic with a simulation of \(currentPerson.displayName) — before the real one.",
+                icon: "bubble.left.and.bubble.right.fill",
+                tint: SimastryColor.risingViolet
+            ) {
+                showPracticeChat = true
+            }
+
+            simulationRoomRow(
+                title: "Predict their reply",
+                subtitle: "Paste the thread, see the likely answer.",
+                icon: SimastryIcon.predict,
+                tint: SimastryColor.celestialBlue
+            ) {
+                viewModel.predictionDraft = PredictionDraft(
+                    targetName: currentPerson.displayName,
+                    targetSunSign: currentPerson.sunSign,
+                    targetMoonSign: currentPerson.moonSign,
+                    targetRisingSign: currentPerson.risingSign,
+                    question: "What will \(currentPerson.displayName) say next?",
+                    conversationText: nil
+                )
+                viewModel.selectedTab = 0
+                viewModel.predictRouteRequest += 1
+            }
+
+            simulationRoomRow(
+                title: "Decode their text",
+                subtitle: "One confusing message, read through their sign.",
+                icon: "text.magnifyingglass",
+                tint: SimastryColor.gold
+            ) {
+                viewModel.decodeDraftSign = currentPerson.sunSign
+                viewModel.selectedTab = 0
+                viewModel.decodeRouteRequest += 1
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.6))
+        .sheet(isPresented: $showPracticeChat) {
+            PracticeChatView(viewModel: viewModel, person: currentPerson)
+        }
+    }
+
+    private func simulationRoomRow(
+        title: String,
+        subtitle: String,
+        icon: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 36, height: 36)
+                    .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text(subtitle)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .padding(9)
+            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("\(title). \(subtitle)")
+    }
+
+    // MARK: - Persona Context
+
+    /// Behavior descriptors that sharpen the practice persona. Anything
+    /// beyond behavior belongs in the user's own words in Notes — the
+    /// persona reads those verbatim.
+    private var personaContextSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 7) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+
+                Text("TUNE THE PERSONA")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.3)
+            }
+
+            personaChipRow(
+                label: "Pronouns",
+                options: ["she/her", "he/him", "they/them"],
+                selected: currentPerson.pronouns
+            ) { choice in
+                var updated = currentPerson
+                updated.pronouns = updated.pronouns == choice ? nil : choice
+                viewModel.updateRelationshipPerson(updated)
+            }
+
+            personaChipRow(
+                label: "Age",
+                options: ["teens", "20s", "30s", "40s+"],
+                selected: currentPerson.ageBand
+            ) { choice in
+                var updated = currentPerson
+                updated.ageBand = updated.ageBand == choice ? nil : choice
+                viewModel.updateRelationshipPerson(updated)
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text("How they text")
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                ForEach([["dry", "emoji-heavy", "paragraphs"], ["slow replier", "double-texter", "voice notes"]], id: \.self) { row in
+                    HStack(spacing: 8) {
+                        ForEach(row, id: \.self) { option in
+                            personaChip(option, isActive: (currentPerson.textingStyles ?? []).contains(option)) {
+                                var updated = currentPerson
+                                var styles = Set(updated.textingStyles ?? [])
+                                if styles.contains(option) { styles.remove(option) } else { styles.insert(option) }
+                                updated.textingStyles = styles.isEmpty ? nil : styles.sorted()
+                                viewModel.updateRelationshipPerson(updated)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text("Anything else that matters — background, history, in-jokes — goes in Notes below, in your own words. The persona reads them verbatim.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard(cornerRadius: 20)
+    }
+
+    private func personaChipRow(
+        label: String,
+        options: [String],
+        selected: String?,
+        onTap: @escaping (String) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(label)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            HStack(spacing: 8) {
+                ForEach(options, id: \.self) { option in
+                    personaChip(option, isActive: selected == option) {
+                        onTap(option)
+                    }
+                }
+            }
+        }
+    }
+
+    private func personaChip(_ title: String, isActive: Bool, onTap: @escaping () -> Void) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            onTap()
+        } label: {
+            Text(title)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.82))
+                .padding(.horizontal, 11)
+                .padding(.vertical, 7)
+                .background(
+                    isActive ? AnyShapeStyle(SimastryGradient.gold) : AnyShapeStyle(Color.white.opacity(0.06)),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(
+                        isActive ? .white.opacity(0.22) : .white.opacity(0.08),
+                        lineWidth: 0.6
+                    )
+                }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+
     /// Couple Read needs both charts — partner-type people plus the user's Sun.
     @ViewBuilder
     private var coupleReadButton: some View {
@@ -541,6 +765,8 @@ struct RelationshipPersonDetailView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     header
                     situationSection
+                    simulationRoomSection
+                    personaContextSection
                     loopActionsRow
                     PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
                     coupleReadButton

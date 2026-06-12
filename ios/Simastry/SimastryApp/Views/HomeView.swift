@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var transitReading: DailyTransitReading?
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
+    @State private var handledDecodeRouteRequest: Int = 0
     @State private var kenBurnsActive: Bool = false
     @State private var sealedDrafts: [SealedDraft] = []
     @State private var showSealedDraftCompose: Bool = false
@@ -104,6 +105,9 @@ struct HomeView: View {
             .onChange(of: viewModel.predictRouteRequest) {
                 presentRoutesIfRequested()
             }
+            .onChange(of: viewModel.decodeRouteRequest) {
+                presentRoutesIfRequested()
+            }
         }
     }
 
@@ -116,6 +120,10 @@ struct HomeView: View {
         if viewModel.predictRouteRequest > handledPredictRouteRequest {
             handledPredictRouteRequest = viewModel.predictRouteRequest
             navigationPath.append(HomeRoute.predict)
+        }
+        if viewModel.decodeRouteRequest > handledDecodeRouteRequest {
+            handledDecodeRouteRequest = viewModel.decodeRouteRequest
+            navigationPath.append(HomeRoute.decode)
         }
     }
 

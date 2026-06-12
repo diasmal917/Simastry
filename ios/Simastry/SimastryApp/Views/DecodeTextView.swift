@@ -79,12 +79,17 @@ struct DecodeTextView: View {
         .onChange(of: messageText) { decoded = false; privacyBlockMessage = nil }
         .onChange(of: theirSign) { decoded = false }
         .onAppear {
+            // Person-page handoff: arrive with their sign already selected.
+            if let handoffSign = viewModel.decodeDraftSign {
+                theirSign = handoffSign
+                viewModel.decodeDraftSign = nil
+            }
             #if DEBUG
             // Prefill only — the preview taps Decode like a user would,
             // since onChange(of: messageText) clears stale results.
             if viewModel.isDebugPreviewStateActive, messageText.isEmpty {
                 messageText = "haha yeah maybe, this week is kind of crazy though"
-                theirSign = .taurus
+                theirSign = theirSign ?? .taurus
             }
             #endif
         }

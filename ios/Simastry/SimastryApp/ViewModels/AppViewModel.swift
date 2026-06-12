@@ -149,6 +149,10 @@ class AppViewModel {
     var methodCourseVersion: Int = 0
     /// Set to a thread's companionId to ask MessagesView to open it.
     var openThreadRequestCompanionId: UUID?
+    /// Bumped to ask HomeView to push the Decode screen.
+    var decodeRouteRequest: Int = 0
+    /// Preselects the sign when Decode opens from a person's page.
+    var decodeDraftSign: ZodiacSign?
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -2259,7 +2263,9 @@ class AppViewModel {
         defaults.removeObject(forKey: Self.methodCourseProgressKey)
         defaults.removeObject(forKey: SealedDraftStore.defaultsKey)
         defaults.removeObject(forKey: Self.guideThreadIdsKey)
+        defaults.removeObject(forKey: Self.practiceThreadsKey)
         openThreadRequestCompanionId = nil
+        decodeDraftSign = nil
         methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)

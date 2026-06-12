@@ -201,6 +201,36 @@ final class RedesignScrollVerificationTests: XCTestCase {
         attachShot(app, name: "decode-result")
     }
 
+    /// Simulation Room on the person page: practice chat with the pinned
+    /// rehearsal disclosure, plus the persona-tuning chips.
+    @MainActor
+    func testSimulationRoomAndPracticeChat() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "playbook"]
+        app.launch()
+        sleep(4)
+
+        attachShot(app, name: "simulation-room")
+
+        let practice = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH 'Practice the conversation'")
+        ).firstMatch
+        if practice.waitForExistence(timeout: 4) {
+            practice.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "practice-chat-empty")
+
+        let field = app.textFields.firstMatch
+        if field.waitForExistence(timeout: 3) {
+            field.tap()
+            field.typeText("I need to talk about last weekend.")
+            app.buttons["Send"].firstMatch.tap()
+            sleep(4)
+        }
+        attachShot(app, name: "practice-chat-reply")
+    }
+
     /// The Instagram flow: featured guide pane → full profile → Message
     /// opens a real DM thread with that guide.
     @MainActor
