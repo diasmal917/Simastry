@@ -183,6 +183,37 @@ struct PillarFeatureTests {
         #expect(!starter.contains("{personName}") && !starter.contains("{n}"))
     }
 
+    // MARK: - Guide DMs
+
+    @Test func startGuideChatSeedsOneThreadWithStableId() {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.guideThreadIdsKey)
+        let viewModel = seededViewModel()
+        viewModel.companionMessages = []
+        let theo = FactoryCompanionCatalog.all.first { $0.id == "taurus-theo" }!
+
+        // Thread id is stable across calls.
+        let first = viewModel.guideThreadId(for: theo)
+        #expect(viewModel.guideThreadId(for: theo) == first)
+
+        viewModel.startGuideChat(theo)
+        #expect(viewModel.selectedTab == 2)
+        #expect(viewModel.openThreadRequestCompanionId == first)
+        let theoMessages = { viewModel.companionMessages.filter { $0.companionId == first } }
+        #expect(theoMessages().count == 1)
+        #expect(theoMessages().first?.companionName == "Theo")
+        #expect(theoMessages().first?.direction == .incoming)
+
+        // Reopening never re-seeds the greeting.
+        viewModel.startGuideChat(theo)
+        #expect(theoMessages().count == 1)
+
+        // Different guide, different thread.
+        let nadia = FactoryCompanionCatalog.all.first { $0.id == "sagittarius-nadia" }!
+        #expect(viewModel.guideThreadId(for: nadia) != first)
+
+        UserDefaults.standard.removeObject(forKey: AppViewModel.guideThreadIdsKey)
+    }
+
     // MARK: - Sealed Drafts & Decode
 
     @Test func sealedDraftStorePartitionsCapsAndMorningMath() {

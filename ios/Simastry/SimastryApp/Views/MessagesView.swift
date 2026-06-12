@@ -40,9 +40,13 @@ struct MessagesView: View {
             }
             .onAppear {
                 presentPanelIfRequested()
+                presentThreadIfRequested()
             }
             .onChange(of: viewModel.panelChatRouteRequest) {
                 presentPanelIfRequested()
+            }
+            .onChange(of: viewModel.openThreadRequestCompanionId) {
+                presentThreadIfRequested()
             }
             .fullScreenCover(item: $selectedMessage) { message in
                 MessageDetailSheet(
@@ -65,6 +69,18 @@ struct MessagesView: View {
         guard viewModel.panelChatRouteRequest > handledPanelRouteRequest else { return }
         handledPanelRouteRequest = viewModel.panelChatRouteRequest
         showPanelChat = true
+    }
+
+    /// Opens a specific thread on request — the last step of "tap a guide's
+    /// Message button anywhere in the app".
+    private func presentThreadIfRequested() {
+        guard let companionId = viewModel.openThreadRequestCompanionId,
+              let message = viewModel.inboxMessages.first(where: { $0.companionId == companionId }) else {
+            return
+        }
+        viewModel.openThreadRequestCompanionId = nil
+        viewModel.markMessageRead(message)
+        selectedMessage = message
     }
 
     private var messageList: some View {

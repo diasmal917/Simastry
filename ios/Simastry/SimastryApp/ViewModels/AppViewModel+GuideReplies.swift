@@ -7,6 +7,53 @@ import Foundation
 // composer on error or timeout, so chats never stall.
 
 extension AppViewModel {
+    // MARK: Guide DMs
+
+    static let guideThreadIdsKey = "simastry_guide_thread_ids"
+
+    /// Stable thread UUID per catalog guide, so a guide's DM thread survives
+    /// app restarts and reopens to the same conversation.
+    func guideThreadId(for profile: FactoryCompanionProfile) -> UUID {
+        var map = (UserDefaults.standard.data(forKey: Self.guideThreadIdsKey))
+            .flatMap { try? JSONDecoder().decode([String: UUID].self, from: $0) } ?? [:]
+        if let existing = map[profile.id] {
+            return existing
+        }
+        let id = UUID()
+        map[profile.id] = id
+        if let data = try? JSONEncoder().encode(map) {
+            UserDefaults.standard.set(data, forKey: Self.guideThreadIdsKey)
+        }
+        return id
+    }
+
+    /// The Instagram flow's last step: open a real 1:1 thread with any
+    /// catalog guide. First open seeds the guide's greeting so the thread
+    /// exists in the inbox; subsequent opens land in the same conversation.
+    func startGuideChat(_ profile: FactoryCompanionProfile) {
+        let threadId = guideThreadId(for: profile)
+
+        if !companionMessages.contains(where: { $0.companionId == threadId }) {
+            let greeting = "Hey — \(profile.name) here, your \(profile.sign.displayName) lens. \(profile.headline) What's the conversation on your mind?"
+            companionMessages.insert(
+                CompanionMessage(
+                    companionId: threadId,
+                    companionName: profile.name,
+                    companionSign: profile.sign.rawValue,
+                    content: greeting,
+                    isRead: true,
+                    source: .companion,
+                    direction: .incoming
+                ),
+                at: 0
+            )
+            saveMessages()
+        }
+
+        selectedTab = 2
+        openThreadRequestCompanionId = threadId
+    }
+
     // MARK: Guide Chat Modes
 
     /// The user's chosen register for a 1:1 guide thread (best friend by

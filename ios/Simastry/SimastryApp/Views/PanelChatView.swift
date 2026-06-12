@@ -270,6 +270,7 @@ struct PanelChatView: View {
 private struct PanelMessageBubble: View {
     @Bindable var viewModel: AppViewModel
     let message: PanelMessage
+    @State private var showGuideProfile: Bool = false
 
     private var isFromCurrentUser: Bool {
         message.senderId == PanelParticipant.localUserId
@@ -284,15 +285,29 @@ private struct PanelMessageBubble: View {
             if isFromCurrentUser {
                 Spacer(minLength: 54)
             } else if let guideEntry {
-                Image(guideEntry.profile.profileImageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 28, height: 28, alignment: .top)
-                    .clipShape(Circle())
-                    .overlay {
-                        Circle().strokeBorder(guideEntry.sign.color.opacity(0.55), lineWidth: 1)
+                // Instagram pattern: tapping a face opens the profile.
+                Button {
+                    HapticManager.buttonPress()
+                    showGuideProfile = true
+                } label: {
+                    Image(guideEntry.profile.profileImageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 28, height: 28, alignment: .top)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle().strokeBorder(guideEntry.sign.color.opacity(0.55), lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open \(guideEntry.profile.name)'s profile")
+                .sheet(isPresented: $showGuideProfile) {
+                    NavigationStack {
+                        GuideProfileView(viewModel: viewModel, profile: guideEntry.profile)
                     }
-                    .accessibilityHidden(true)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                }
             }
 
             VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 5) {

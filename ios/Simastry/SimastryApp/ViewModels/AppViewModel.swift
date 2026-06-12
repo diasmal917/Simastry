@@ -147,6 +147,8 @@ class AppViewModel {
     var careerReadRouteRequest: Int = 0
     /// Bumped whenever Method course progress changes so cards re-render.
     var methodCourseVersion: Int = 0
+    /// Set to a thread's companionId to ask MessagesView to open it.
+    var openThreadRequestCompanionId: UUID?
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -2256,6 +2258,8 @@ class AppViewModel {
         defaults.removeObject(forKey: Self.panelWelcomeBackDayKey)
         defaults.removeObject(forKey: Self.methodCourseProgressKey)
         defaults.removeObject(forKey: SealedDraftStore.defaultsKey)
+        defaults.removeObject(forKey: Self.guideThreadIdsKey)
+        openThreadRequestCompanionId = nil
         methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
@@ -2269,7 +2273,7 @@ class AppViewModel {
         defaults.removeObject(forKey: auraWalletUseInAuraKey)
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
-        defaults.removeObject(forKey: AIAstrologistsView.gramCommentsDefaultsKey)
+        defaults.removeObject(forKey: GuideGramStore.defaultsKey)
 
         relationshipPeopleStore.deleteAll()
         deleteProfileImage()

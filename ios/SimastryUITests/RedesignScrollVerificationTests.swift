@@ -201,6 +201,38 @@ final class RedesignScrollVerificationTests: XCTestCase {
         attachShot(app, name: "decode-result")
     }
 
+    /// The Instagram flow: featured guide pane → full profile → Message
+    /// opens a real DM thread with that guide.
+    @MainActor
+    func testGuideProfileToMessageFlow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launch()
+        sleep(3)
+
+        let featured = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH 'Theo, Taurus Guide'")
+        ).firstMatch
+        if featured.waitForExistence(timeout: 4) {
+            featured.tap()
+            sleep(2)
+        }
+        attachShot(app, name: "guide-profile-top")
+
+        app.swipeUp()
+        sleep(1)
+        attachShot(app, name: "guide-profile-grid")
+
+        app.swipeDown()
+        sleep(1)
+        let message = app.buttons["Message Theo"].firstMatch
+        if message.waitForExistence(timeout: 3) {
+            message.tap()
+            sleep(3)
+        }
+        attachShot(app, name: "guide-dm-thread")
+    }
+
     /// Lesson one of the Method course posted into the panel thread.
     @MainActor
     func testMethodCourseLessonInPanel() throws {

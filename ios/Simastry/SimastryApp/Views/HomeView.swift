@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum HomeRoute: Hashable {
     case aiAstrologist(profileId: String?)
+    case guideProfile(profileId: String)
     case predict
     case decode
 }
@@ -79,6 +80,12 @@ struct HomeView: View {
                     } else {
                         AIAstrologistsView(viewModel: viewModel, initialProfileId: nil)
                             .id("primary")
+                    }
+                case .guideProfile(let profileId):
+                    // The Instagram pattern: any guide face lands here.
+                    if let profile = FactoryCompanionCatalog.all.first(where: { $0.id == profileId }) {
+                        GuideProfileView(viewModel: viewModel, profile: profile)
+                            .navigationTransition(.zoom(sourceID: profileId, in: panelHeroNamespace))
                     }
                 case .predict:
                     SimulateView(viewModel: viewModel)
@@ -930,7 +937,7 @@ struct HomeView: View {
     }
 
     private func featuredGuidePane(_ profile: FactoryCompanionProfile) -> some View {
-        NavigationLink(value: HomeRoute.aiAstrologist(profileId: profile.id)) {
+        NavigationLink(value: HomeRoute.guideProfile(profileId: profile.id)) {
             ZStack(alignment: .bottom) {
                 // Slow Ken Burns drift keeps the featured portrait alive;
                 // the outer clip shape crops the overflow.
@@ -1018,7 +1025,7 @@ struct HomeView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
                 ForEach(castRowProfiles) { profile in
-                    NavigationLink(value: HomeRoute.aiAstrologist(profileId: profile.id)) {
+                    NavigationLink(value: HomeRoute.guideProfile(profileId: profile.id)) {
                         VStack(spacing: 6) {
                             Image(profile.profileImageName)
                                 .resizable()
