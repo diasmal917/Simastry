@@ -5,6 +5,23 @@ app is buildable and test-covered; release still requires configuration,
 device QA, App Store setup, and backend hardening — all captured below.
 Check items off as you go.
 
+## Current finalization status
+
+Last verified on `codex/finalization`:
+
+- [x] Simulator build succeeds with `CODE_SIGNING_ALLOWED=NO`
+- [x] Unit/app tests pass: 78 passed, 0 failed
+- [x] Seeded simulator preview launches with `-SimastryPreviewSeeded`
+- [x] Core tabs are present in order: Today, Messages, People, Me
+- [x] RevenueCat-unconfigured prediction packs are disabled instead of granting
+      fake credits
+- [x] Account/local-data cleanup no longer leaves prediction history behind
+- [x] Invite links require user confirmation; backend verification is still
+      required before treating invite rewards as production-secure
+- [ ] Full UI-test target verified end-to-end. Current blocker: simulator
+      install/state failure when launching the UI-test runner, while the
+      app build and app tests pass.
+
 ---
 
 ## 1. Keys (required before the app works at all)
@@ -85,7 +102,8 @@ baked into the prompts and locked by unit tests.
       entitlement)
 - [ ] After deploy, test: send `https://simastry.com/share/invite/MAYA2626`
       to yourself in Messages and tap it on a device with the app installed —
-      it should open the app and grant the welcome predictions
+      it should open the app, show the invite confirmation, and apply the
+      welcome gift only through the server-verified path
 
 ## 4. App Store Connect
 
