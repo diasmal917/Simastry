@@ -371,13 +371,24 @@ struct ShareableCardView: View {
     }
 
     private func saveToPhotos() {
-        guard let image = renderImage() else { return }
+        guard let image = renderImage() else {
+            viewModel.showToast("Couldn't save card", subtitle: "Try again in a moment.", isError: true)
+            return
+        }
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             if status == .authorized || status == .limited {
                 UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
                 Task { @MainActor in
                     HapticManager.soulFlash()
                     viewModel.showToast("Saved to Photos", subtitle: "Your card is ready to share", isError: false)
+                }
+            } else {
+                Task { @MainActor in
+                    viewModel.showToast(
+                        "Photos access denied",
+                        subtitle: "Allow photo access in Settings to save your card.",
+                        isError: true
+                    )
                 }
             }
         }

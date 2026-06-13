@@ -31,10 +31,17 @@ struct MomentsSection: View {
         .onChange(of: pickerItem) {
             guard let pickerItem else { return }
             Task {
-                if let data = try? await pickerItem.loadTransferable(type: Data.self) {
+                do {
+                    guard let data = try await pickerItem.loadTransferable(type: Data.self) else {
+                        viewModel.showToast("Moment not added", subtitle: "Choose a different photo and try again.", isError: true)
+                        self.pickerItem = nil
+                        return
+                    }
                     pendingImageData = data
                     captionDraft = ""
                     showCaptionSheet = true
+                } catch {
+                    viewModel.showToast("Moment not added", subtitle: "The photo could not be loaded.", isError: true)
                 }
                 self.pickerItem = nil
             }

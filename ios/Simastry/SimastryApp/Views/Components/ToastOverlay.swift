@@ -3,6 +3,7 @@ import SwiftUI
 struct ToastOverlay: View {
     @Binding var message: ToastMessage?
     @State private var isVisible: Bool = false
+    @State private var dismissTask: Task<Void, Never>?
 
     var body: some View {
         VStack {
@@ -41,23 +42,30 @@ struct ToastOverlay: View {
             Spacer()
         }
         .onChange(of: message?.id) { _, newValue in
-            guard newValue != nil else { return }
+            dismissTask?.cancel()
+            guard let newValue else { return }
             withAnimation(.spring(SimastrySpring.bouncy)) {
                 isVisible = true
             }
-            Task {
-                try? await Task.sleep(for: .seconds(4))
-                dismiss()
+            dismissTask = Task {
+                do {
+                    try await Task.sleep(for: .seconds(4))
+                    guard !Task.isCancelled, message?.id == newValue else { return }
+                    dismiss(expectedId: newValue)
+                } catch { }
             }
         }
     }
 
-    private func dismiss() {
+    private func dismiss(expectedId: UUID? = nil) {
+        dismissTask?.cancel()
+        guard expectedId == nil || message?.id == expectedId else { return }
         withAnimation(.spring(SimastrySpring.smooth)) {
             isVisible = false
         }
         Task {
             try? await Task.sleep(for: .milliseconds(500))
+            guard expectedId == nil || message?.id == expectedId else { return }
             message = nil
         }
     }

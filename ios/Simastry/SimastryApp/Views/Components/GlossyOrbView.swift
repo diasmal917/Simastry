@@ -68,9 +68,16 @@ struct GlossyOrbView: View {
         .onAppear {
             startAnimations()
         }
+        .onChange(of: state) {
+            startAnimations()
+        }
     }
 
     private func startAnimations() {
+        breatheScale = 1.0
+        glowOpacity = state == .active ? 0.35 : 0.3
+        rotation = 0
+
         guard !reduceMotion else {
             if state == .active { glowOpacity = 0.6 }
             return

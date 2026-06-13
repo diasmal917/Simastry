@@ -16,8 +16,27 @@ but still ship in this build.
 > funding source up front and charge exactly one pool, only after success;
 > H5 — the developer menu trigger is `#if DEBUG`-gated. H4 — the catalog's
 > opaque PNGs were re-encoded as JPEG q90 (364 MB → 105 MB; the 38
-> byte-duplicate files remain, now small). The remaining findings below
-> are unfixed.
+> byte-duplicate files remain, now small). At that point, the findings
+> below remained open.
+
+> **Fixes applied on `codex/finalization`**: M1 — prediction packs are
+> disabled unless RevenueCat products are configured, and no credits are
+> granted without a verified purchase path; M2 — prediction history is
+> removed during account-scoped and full local wipes; M3 — invite deep
+> links now require explicit user confirmation, reject the user's own code,
+> and keep a server-verification TODO; M4 — account deletion best-effort
+> deletes discovery messages, blocks, and reports; M5 — person notes/labels
+> seed once and labels are trimmed before saving; M6 — clearing a rehearsal
+> cancels in-flight replies and resets typing state; M7 — out-of-quota
+> regeneration dismisses the result sheet before showing top-up; M8 —
+> panel messages are capped and chat histories render lazily; M9 — streak
+> milestone toast is visible again; M10 — paid-tier subscription management
+> opens Apple's subscription page; M11 — Chinese zodiac uses Foundation's
+> Chinese calendar lunar-year boundary; M13 — panel guide row IDs are
+> role-qualified; M14 — the no-op attachment button was removed; M15 —
+> toast timers, orb state animation, Moments import feedback, Photos denial
+> feedback, and People photo-picker reset are fixed. M12 and the remaining
+> Low findings are still open unless noted inline.
 
 ---
 
@@ -79,14 +98,14 @@ on the same field.
 
 ## Medium
 
-**M1. (pre-existing) `purchasePredictionPack` grants packs without
+**M1. FIXED (`codex/finalization`) — (pre-existing) `purchasePredictionPack` grants packs without
 charging.** `AppViewModel.swift:213-219` just calls
 `addBonusPredictions` (RevenueCat TODO unshipped) while
 `PredictionTopUpView` shows real prices on the buy buttons — free product
 today, App Store compliance problem the moment IAP review sees prices
 without transactions.
 
-**M2. Prediction history survives sign-out and account deletion.**
+**M2. FIXED (`codex/finalization`) — Prediction history survives sign-out and account deletion.**
 `PredictionService` stores history (including users' pasted conversation
 text) under `simastry_prediction_history`; neither
 `clearAccountScopedLocalState()` nor `clearAllLocalData()` removes that
@@ -95,24 +114,24 @@ On a shared device, user B sees user A's conversations in Simulate
 history, and the branch newly feeds that history into the panel daily
 starter and weekly recap.
 
-**M3. Invite rewards are fully client-trusted.**
+**M3. FIXED (`codex/finalization`, server verification still TODO) — Invite rewards are fully client-trusted.**
 `AppViewModel+Invites.swift:34-62`: any format-valid code — including a
 made-up one opened via `https://simastry.com/invite?code=AAAAAA` — grants
 5 bonus predictions with no server check and no confirmation; the
 once-only guard is a UserDefaults bool reset by reinstalling.
 
-**M4. Account deletion leaves authored content on the server.**
+**M4. FIXED (`codex/finalization`) — Account deletion leaves authored content on the server.**
 `deleteAccount` removes companions/profile/social profile, but
 `discovery_messages` (message text, both parties' names and signs),
 `discovery_blocks`, and `discovery_reports` are never deleted.
 
-**M5. Unsaved person notes are silently destroyed.**
+**M5. FIXED (`codex/finalization`) — Unsaved person notes are silently destroyed.**
 `PeopleView.swift:789`: the detail view re-seeds its editable
 `@State` from the model in `onAppear`, which re-fires on every return to
 the tab — and the screen's own "Predict their reply" / "Decode their
 text" buttons switch tabs. Typed-but-unsaved notes/labels are wiped.
 
-**M6. Practice "Clear rehearsal" races the pending reply.**
+**M6. FIXED (`codex/finalization`) — Practice "Clear rehearsal" races the pending reply.**
 `PracticeChatView.swift:75` clears messages without cancelling
 `replyTask` (`:245`); the in-flight task then appends the persona reply
 and re-persists the thread the user just deleted. Related: a cancelled
@@ -120,28 +139,28 @@ task's `try? await Task.sleep` swallows the cancellation, so the LLM call
 still runs for a dismissed screen and `isReplying` can leak `true`,
 permanently disabling the send button.
 
-**M7. Out-of-quota "See New Response" looks dead.**
+**M7. FIXED (`codex/finalization`) — Out-of-quota "See New Response" looks dead.**
 `SimulateView.swift:180-183, 892`: `regenerate` sets
 `showTopUpSheet = true` while the result sheet (a sibling `.sheet`) is
 still presented, so the top-up sheet can't appear.
 
-**M8. Panel/DM threads degrade with age.**
+**M8. FIXED (`codex/finalization`) — Panel/DM threads degrade with age.**
 Panel messages are never pruned (practice threads are capped at 40;
 panel has no cap), `sortedPanelMessages` re-sorts the whole array every
 body evaluation, and both `PanelChatView` and `MessageDetailSheet`
 render full history in non-lazy `VStack`s — linear slowdown forever.
 
-**M9. Streak milestone toast is dead (regression).**
+**M9. FIXED (`codex/finalization`) — Streak milestone toast is dead (regression).**
 `HomeView.swift:19, 167-180`: the redesign deleted the toast view but
 kept the trigger; `showStreakMilestone` is written and never read.
 Day 3/7/14/30 celebrations silently never show.
 
-**M10. "Manage Subscription" doesn't manage subscriptions.**
+**M10. FIXED (`codex/finalization`) — "Manage Subscription" doesn't manage subscriptions.**
 `ProfileView.swift:1070-1077`, `SimastrySettingsView.swift:132-143`: for
 paid tiers the button opens the purchase upsell modal; there's no path to
 Apple's manage/cancel UI even though the app's own ToS text points there.
 
-**M11. Chinese zodiac wrong for Jan–mid-Feb birthdays.**
+**M11. FIXED (`codex/finalization`) — Chinese zodiac wrong for Jan–mid-Feb birthdays.**
 `NumerologyTemplates.swift:61-65` uses the Gregorian year, ignoring the
 Lunar New Year boundary the card's own copy describes (e.g. Feb 1 2000 →
 shown Dragon, actually Rabbit).
@@ -151,7 +170,7 @@ shown Dragon, actually Rabbit).
 targets exist in the pbxproj), despite the new Info.plist comment
 claiming the scheme "powers widget tap-through".
 
-**M13. Duplicate panel-guide IDs for same-sign charts.**
+**M13. FIXED (`codex/finalization`) — Duplicate panel-guide IDs for same-sign charts.**
 `PanelMatcher.swift:24`: the catalog has exactly 2 guides per sign, and
 the `?? candidates.first` fallback re-picks a used profile when Sun =
 Moon = Rising (a real chart: born near dawn around a new moon).
@@ -160,11 +179,11 @@ OnboardingInsightView, MomentsSection, and the panel — SwiftUI
 duplicate-ID undefined behavior, and `panelGuideEntry(forParticipantId:)`
 can only resolve the first role.
 
-**M14. No-op "Add attachment" button.**
+**M14. FIXED (`codex/finalization`) — No-op "Add attachment" button.**
 `MessagesView.swift:841-849`: the DM composer's "+" button (with a
 VoiceOver label) fires a haptic and nothing else.
 
-**M15. UI bits that silently fail.**
+**M15. FIXED (`codex/finalization`) — UI bits that silently fail.**
 ToastOverlay's un-cancelled 4s dismiss task hides a newer toast after
 ~1s and can nil it entirely; GlossyOrbView only starts animations in
 `onAppear`, so the soul-creation orb's `.active` glow renders frozen;
@@ -200,7 +219,7 @@ re-selecting the same photo does nothing.
 - **Panel typing-indicator race** — dedup is checked at schedule time but
   the ID is inserted after the staggered sleep, so rapid sends kill the
   indicator mid-generation (`AppViewModel+PanelChat.swift:282/291`).
-- **Untrimmed private label** — `PeopleView.swift:1045` checks the
+- **FIXED (`codex/finalization`) — Untrimmed private label** — `PeopleView.swift:1045` checks the
   trimmed value but stores the raw string.
 - **Always-on animations** — 14s `repeatForever` Ken Burns on the
   permanently mounted Today tab (`HomeView.swift:958`); pre-existing
