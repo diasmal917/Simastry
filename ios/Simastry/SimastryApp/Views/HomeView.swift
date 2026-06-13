@@ -69,6 +69,9 @@ struct HomeView: View {
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
             }
+            .overlay(alignment: .top) {
+                streakMilestoneToast
+            }
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .aiAstrologist(let profileId):
@@ -244,6 +247,35 @@ struct HomeView: View {
             withAnimation(.easeOut(duration: 0.3)) {
                 isLoading = false
             }
+        }
+    }
+
+    @ViewBuilder
+    private var streakMilestoneToast: some View {
+        if showStreakMilestone, let message = streakManager.streakMessage {
+            HStack(spacing: 10) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text(message)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(SimastryColor.gold.opacity(0.35), lineWidth: 1)
+            }
+            .shadow(color: SimastryColor.gold.opacity(0.25), radius: 18, y: 8)
+            .padding(.top, 12)
+            .padding(.horizontal, 20)
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .zIndex(50)
         }
     }
 

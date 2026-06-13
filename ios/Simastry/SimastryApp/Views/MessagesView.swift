@@ -477,7 +477,7 @@ private struct MessageDetailSheet: View {
 
                 ScrollViewReader { proxy in
                     ScrollView {
-                        VStack(spacing: 14) {
+                        LazyVStack(spacing: 14) {
                             timestampDivider
 
                             messageMethodLayer
@@ -838,18 +838,6 @@ private struct MessageDetailSheet: View {
 
     private var replyComposer: some View {
         HStack(alignment: .bottom, spacing: 9) {
-            Button {
-                HapticManager.buttonPress()
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
-                    .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.07), in: Circle())
-            }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Add attachment")
-
             TextField("Message", text: $replyText, axis: .vertical)
                 .font(SimastryFont.bodyMedium)
                 .foregroundStyle(SimastryColor.offWhite)

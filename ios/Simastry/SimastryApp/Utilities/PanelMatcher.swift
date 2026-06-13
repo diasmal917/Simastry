@@ -7,7 +7,7 @@ nonisolated enum PanelMatcher {
         let sign: ZodiacSign
         let profile: FactoryCompanionProfile
 
-        var id: String { profile.id }
+        var id: String { "\(role.rawValue)-\(profile.id)" }
     }
 
     /// One guide per placement, deduped so shared signs surface both

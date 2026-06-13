@@ -380,6 +380,7 @@ struct RelationshipPersonDetailView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var localNotes: String = ""
     @State private var privateLabel: String = ""
+    @State private var hasSeededEditableFields: Bool = false
     @State private var showDeleteConfirmation: Bool = false
     @State private var showHowToTalk: Bool = false
     @State private var showCoupleRead: Bool = false
@@ -787,8 +788,10 @@ struct RelationshipPersonDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .onAppear {
+            guard !hasSeededEditableFields else { return }
             localNotes = currentPerson.notes ?? ""
             privateLabel = currentPerson.privateLabel ?? ""
+            hasSeededEditableFields = true
         }
         .onChange(of: selectedPhotoItem) { _, newItem in
             guard let newItem else { return }
@@ -802,6 +805,9 @@ struct RelationshipPersonDetailView: View {
                             viewModel.updateRelationshipPerson(updated)
                         }
                     }
+                }
+                await MainActor.run {
+                    selectedPhotoItem = nil
                 }
             }
         }
@@ -1041,8 +1047,9 @@ struct RelationshipPersonDetailView: View {
 
                 HStack {
                     Button {
+                        let trimmedLabel = privateLabel.trimmingCharacters(in: .whitespacesAndNewlines)
                         var updated = currentPerson
-                        updated.privateLabel = privateLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : privateLabel
+                        updated.privateLabel = trimmedLabel.isEmpty ? nil : trimmedLabel
                         viewModel.updateRelationshipPerson(updated)
                     } label: {
                         Label("Save label", systemImage: "eye.slash")
@@ -1185,6 +1192,9 @@ struct AddRelationshipPersonView: View {
                                 imageData = prepared
                             }
                         }
+                    }
+                    await MainActor.run {
+                        selectedPhotoItem = nil
                     }
                 }
             }
@@ -1354,7 +1364,9 @@ struct AddRelationshipPersonView: View {
         let person = RelationshipPerson(
             id: UUID(),
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            privateLabel: privateLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : privateLabel,
+            privateLabel: privateLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : privateLabel.trimmingCharacters(in: .whitespacesAndNewlines),
             relationshipType: relationshipType,
             birthDate: hasBirthDate ? birthDate : nil,
             birthTime: nil,

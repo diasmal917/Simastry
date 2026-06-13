@@ -829,7 +829,11 @@ struct SimulateView: View {
         } else if viewModel.hasBonusPredictions {
             usesBonusPrediction = true
         } else {
-            showTopUpSheet = true
+            selectedResult = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(250))
+                showTopUpSheet = true
+            }
             return
         }
 
@@ -900,7 +904,11 @@ struct SimulateView: View {
         } else if viewModel.hasBonusPredictions {
             usesBonusPrediction = true
         } else {
-            showTopUpSheet = true
+            selectedResult = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(250))
+                showTopUpSheet = true
+            }
             return
         }
 

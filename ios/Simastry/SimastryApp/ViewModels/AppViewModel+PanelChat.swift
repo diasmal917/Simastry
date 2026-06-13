@@ -12,6 +12,7 @@ extension AppViewModel {
     static let panelWeeklyRecapWeekKey = "simastry_panel_weekly_recap_week"
     static let panelWelcomeBackDayKey = "simastry_panel_welcome_back_day"
     static let methodCourseProgressKey = "simastry_method_course_progress"
+    static let panelMessageLimit = 40
 
     // MARK: Participants
 
@@ -57,11 +58,11 @@ extension AppViewModel {
     // MARK: Derived
 
     var sortedPanelMessages: [PanelMessage] {
-        panelMessages.sorted { $0.timestamp < $1.timestamp }
+        panelMessages
     }
 
     var latestPanelMessage: PanelMessage? {
-        panelMessages.max { $0.timestamp < $1.timestamp }
+        panelMessages.last
     }
 
     var unreadPanelCount: Int {
@@ -82,14 +83,19 @@ extension AppViewModel {
             panelMessages = []
             return
         }
-        panelMessages = messages
+        panelMessages = Self.prunedPanelMessages(messages)
     }
 
     func savePanelMessages() {
+        panelMessages = Self.prunedPanelMessages(panelMessages)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(panelMessages) else { return }
         UserDefaults.standard.set(data, forKey: Self.panelMessagesKey)
+    }
+
+    static func prunedPanelMessages(_ messages: [PanelMessage]) -> [PanelMessage] {
+        Array(messages.sorted { $0.timestamp < $1.timestamp }.suffix(panelMessageLimit))
     }
 
     func markPanelThreadRead() {

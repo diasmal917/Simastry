@@ -17,7 +17,7 @@ struct PanelChatView: View {
 
                 ScrollViewReader { proxy in
                     ScrollView {
-                        VStack(spacing: 14) {
+                        LazyVStack(spacing: 14) {
                             methodCard
 
                             ForEach(viewModel.sortedPanelMessages) { message in

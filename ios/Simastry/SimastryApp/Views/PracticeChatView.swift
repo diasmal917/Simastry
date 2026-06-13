@@ -73,8 +73,7 @@ struct PracticeChatView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button(role: .destructive) {
-                            messages = []
-                            viewModel.clearPracticeThread(for: person.id)
+                            clearRehearsal()
                         } label: {
                             Label("Clear rehearsal", systemImage: "trash")
                         }
@@ -103,6 +102,14 @@ struct PracticeChatView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+
+    private func clearRehearsal() {
+        replyTask?.cancel()
+        replyTask = nil
+        isReplying = false
+        messages = []
+        viewModel.clearPracticeThread(for: person.id)
     }
 
     /// Pinned and non-dismissable: a rehearsal is never the real person.
@@ -242,17 +249,33 @@ struct PracticeChatView: View {
         }
         let threadCount = messages.count
 
+        replyTask?.cancel()
         replyTask = Task {
-            try? await Task.sleep(for: .milliseconds(900))
-            let reply = await viewModel.generatePracticeReply(
-                person: person,
-                transcript: Array(transcript),
-                threadCount: threadCount
-            )
-            guard !Task.isCancelled else { return }
-            isReplying = false
-            messages.append(PracticeMessage(isUser: false, content: reply))
-            viewModel.savePracticeThread(messages, for: person.id)
+            do {
+                try await Task.sleep(for: .milliseconds(900))
+                guard !Task.isCancelled else {
+                    isReplying = false
+                    return
+                }
+
+                let reply = await viewModel.generatePracticeReply(
+                    person: person,
+                    transcript: Array(transcript),
+                    threadCount: threadCount
+                )
+                guard !Task.isCancelled else {
+                    isReplying = false
+                    return
+                }
+
+                isReplying = false
+                messages.append(PracticeMessage(isUser: false, content: reply))
+                viewModel.savePracticeThread(messages, for: person.id)
+            } catch is CancellationError {
+                isReplying = false
+            } catch {
+                isReplying = false
+            }
         }
     }
 }

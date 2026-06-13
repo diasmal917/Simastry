@@ -52,6 +52,7 @@ struct ProfileView: View {
     @State private var expandedRoles: Set<CelestialRole> = []
     @State private var appeared: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     @State private var activeSheet: ProfileSheet?
     @State private var referralCodeInput: String = ""
     @State private var showReferralConfirmation: Bool = false
@@ -1068,7 +1069,11 @@ struct ProfileView: View {
                         tierLabel(tier)
 
                         Button(action: {
-                            viewModel.showUpsell = true
+                            if tier == "free" {
+                                viewModel.showUpsell = true
+                            } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                                openURL(url)
+                            }
                         }) {
                             Text(tier == "free" ? "Upgrade" : "Manage Subscription")
                                 .font(SimastryFont.bodySmall)

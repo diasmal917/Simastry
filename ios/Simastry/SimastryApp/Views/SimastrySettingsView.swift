@@ -5,6 +5,7 @@ struct SimastrySettingsView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     @State private var walletAddressInput: String = ""
     @State private var showingPhantomInfo = false
@@ -130,7 +131,11 @@ struct SimastrySettingsView: View {
             )
 
             Button {
-                viewModel.showUpsell = true
+                if (viewModel.profile?.tier ?? "free") == "free" {
+                    viewModel.showUpsell = true
+                } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                    openURL(url)
+                }
             } label: {
                 settingRow(
                     icon: "sparkles",
