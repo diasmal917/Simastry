@@ -61,6 +61,7 @@ class AppViewModel {
     var discoveryMessages: [CompanionMessage] = []
     var savedGuides: [SavedGuide] = []
     var relationshipPeople: [RelationshipPerson] = []
+    var pendingInviteCodeForConfirmation: String?
 
     // MARK: - Social Discovery
     var isDiscoverable: Bool = UserDefaults.standard.bool(forKey: "isDiscoverable") {
@@ -211,11 +212,22 @@ class AppViewModel {
     }
 
     func purchasePredictionPack(_ pack: PredictionPack) async {
-        // For now, simulate the purchase locally
-        // TODO: Wire to RevenueCat consumable IAP when products are configured
-        addBonusPredictions(pack.count)
-        showToast("Added \(pack.count) predictions!", subtitle: "Use them anytime", isError: false)
-        analytics.track(.subscriptionStarted, key: "pack", value: pack.rawValue)
+        guard isRevenueCatAvailable else {
+            showToast(
+                "Prediction packs unavailable",
+                subtitle: "Purchases will unlock after App Store products are configured.",
+                isError: true
+            )
+            return
+        }
+
+        // TODO: Wire RevenueCat consumable products before enabling prediction
+        // packs in production. Never grant credits without a verified purchase.
+        showToast(
+            "Prediction packs unavailable",
+            subtitle: "Consumable products are not configured yet.",
+            isError: true
+        )
     }
 
     func saveAuraWalletPublicAddress(_ address: String) {
@@ -555,6 +567,27 @@ class AppViewModel {
                 remoteFailures.append("social_profile")
                 CrashReporter.log(error, context: "deleteAccountSocialProfile")
             }
+
+            do {
+                try await supabase.deleteDiscoveryMessages(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("discovery_messages")
+                CrashReporter.log(error, context: "deleteAccountDiscoveryMessages")
+            }
+
+            do {
+                try await supabase.deleteDiscoveryBlocks(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("discovery_blocks")
+                CrashReporter.log(error, context: "deleteAccountDiscoveryBlocks")
+            }
+
+            do {
+                try await supabase.deleteDiscoveryReports(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("discovery_reports")
+                CrashReporter.log(error, context: "deleteAccountDiscoveryReports")
+            }
         }
 
         clearAllLocalData()
@@ -600,7 +633,7 @@ class AppViewModel {
                     "simastry_dark_mode", "appLanguage", "ageVerified",
                     "socialDisplayName", "socialBio", "socialLinks",
                     "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount",
-                    "bonusPredictions"]
+                    "bonusPredictions", "simastry_prediction_history"]
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
 
         // Delete profile image file
@@ -700,7 +733,7 @@ class AppViewModel {
             selectedTab = 0
 
         case .invite(let code):
-            applyInviteCode(code)
+            requestInviteCodeConfirmation(code)
             selectedTab = 0
 
         case .home:
@@ -2241,6 +2274,7 @@ class AppViewModel {
         discoveredProfiles = []
         relationshipPeople = []
         predictionDraft = nil
+        pendingInviteCodeForConfirmation = nil
         bonusPredictions = 0
         isDiscoverable = false
         socialDisplayName = ""
@@ -2283,6 +2317,7 @@ class AppViewModel {
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
         defaults.removeObject(forKey: GuideGramStore.defaultsKey)
+        predictionService.clearHistory()
 
         relationshipPeopleStore.deleteAll()
         deleteProfileImage()

@@ -11,7 +11,11 @@ struct PredictionTopUpView: View {
         ScrollView {
             VStack(spacing: 28) {
                 headerSection
-                packCards
+                if viewModel.isRevenueCatAvailable {
+                    packCards
+                } else {
+                    purchasesUnavailableCard
+                }
                 upgradePrompt
                 bonusBalanceSection
             }
@@ -72,6 +76,23 @@ struct PredictionTopUpView: View {
                 packCard(pack)
             }
         }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    private var purchasesUnavailableCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Prediction packs unavailable", systemImage: "lock.shield.fill")
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+
+            Text("Consumable prediction packs will appear here after App Store products are configured. No credits are granted without a verified purchase.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .glossyCard(cornerRadius: 20)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
     }

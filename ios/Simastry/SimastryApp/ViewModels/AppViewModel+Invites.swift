@@ -29,6 +29,38 @@ extension AppViewModel {
         DeepLink.invite(code: personalInviteCode).shareText
     }
 
+    func requestInviteCodeConfirmation(_ rawCode: String) {
+        let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard InviteCode.isValid(code) else {
+            showToast("That code doesn't look right", subtitle: "Invite codes are 6–12 letters and numbers.", isError: true)
+            return
+        }
+
+        guard code != personalInviteCode else {
+            showToast("That's your own code", subtitle: "Share it with a friend instead.", isError: true)
+            return
+        }
+
+        let alreadyReferred = !(referralInfo?.referredBy ?? "").isEmpty
+        let alreadyGranted = UserDefaults.standard.bool(forKey: Self.inviteRewardGrantedKey)
+        guard !alreadyReferred, !alreadyGranted else {
+            showToast("Invite already applied", subtitle: "Welcome gifts apply once per account.", isError: true)
+            return
+        }
+
+        pendingInviteCodeForConfirmation = code
+    }
+
+    func confirmPendingInviteCode() {
+        guard let code = pendingInviteCodeForConfirmation else { return }
+        pendingInviteCodeForConfirmation = nil
+        applyInviteCode(code)
+    }
+
+    func cancelPendingInviteCode() {
+        pendingInviteCodeForConfirmation = nil
+    }
+
     /// Redeems an invite code on this device: records the referrer and grants
     /// the welcome predictions, each at most once.
     func applyInviteCode(_ rawCode: String) {
@@ -50,6 +82,9 @@ extension AppViewModel {
             return
         }
 
+        // TODO: Replace this local welcome gift with server-verified invite
+        // redemption so inviter/invitee credits cannot be self-granted across
+        // reinstalls or forged links.
         applyReferralCode(code)
         UserDefaults.standard.set(true, forKey: Self.inviteRewardGrantedKey)
         addBonusPredictions(Self.inviteRewardPredictions)

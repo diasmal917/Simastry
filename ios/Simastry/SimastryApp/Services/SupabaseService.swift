@@ -262,6 +262,30 @@ nonisolated final class SupabaseService {
             .execute()
     }
 
+    func deleteDiscoveryMessages(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_messages")
+            .delete()
+            .or("sender_id.eq.\(userId),recipient_id.eq.\(userId)")
+            .execute()
+    }
+
+    func deleteDiscoveryBlocks(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_blocks")
+            .delete()
+            .or("blocker_id.eq.\(userId),blocked_id.eq.\(userId)")
+            .execute()
+    }
+
+    func deleteDiscoveryReports(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_reports")
+            .delete()
+            .or("reporter_id.eq.\(userId),reported_id.eq.\(userId)")
+            .execute()
+    }
+
     func fetchDiscoveryBlocks() async throws -> [DiscoveryBlockData] {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return [] }

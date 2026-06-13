@@ -17,6 +17,16 @@ struct MainTabView: View {
     var body: some View {
         tabContainer
             .tint(SimastryColor.gold)
+            .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
+                Button("Not now", role: .cancel) {
+                    viewModel.cancelPendingInviteCode()
+                }
+                Button("Apply") {
+                    viewModel.confirmPendingInviteCode()
+                }
+            } message: {
+                Text("This will add \(AppViewModel.inviteRewardPredictions) welcome predictions to this account. Invite credits still need server verification before launch.")
+            }
             .onAppear {
             normalizeSelection(viewModel.selectedTab)
         }
@@ -72,6 +82,17 @@ struct MainTabView: View {
                 ProfileView(viewModel: viewModel)
             }
         }
+    }
+
+    private var inviteConfirmationBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.pendingInviteCodeForConfirmation != nil },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.cancelPendingInviteCode()
+                }
+            }
+        )
     }
 
     private func normalizedTab(_ tab: Int) -> Int {
