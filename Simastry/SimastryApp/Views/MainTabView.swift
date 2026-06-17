@@ -59,16 +59,7 @@ struct LiquidGlassTabBar: View {
             tabButton(.aboutMe)
         }
         .padding(10)
-        .background {
-            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                .fill(.black.opacity(0.28))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .stroke(.white.opacity(0.10), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.36), radius: 28, x: 0, y: 18)
-        }
-        .liquidGlassSurface(cornerRadius: 34, tint: SimastryColor.espresso.opacity(0.18), interactive: false)
+        .modifier(TabBarGlassSurface(cornerRadius: 34))
     }
 
     private func tabButton(_ tab: AppTab) -> some View {
@@ -149,6 +140,36 @@ struct LiquidGlassTabBar: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Companions")
+    }
+}
+
+/// Floating tab-bar container surface. On iOS 26 it leans on real Liquid Glass
+/// (no opaque fill or manual hairline underneath, which would flatten the glass);
+/// on iOS 18 it falls back to the tinted-material treatment.
+private struct TabBarGlassSurface: ViewModifier {
+    var cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular.tint(SimastryColor.espresso.opacity(0.18)),
+                    in: .rect(cornerRadius: cornerRadius)
+                )
+                .shadow(color: .black.opacity(0.30), radius: 26, x: 0, y: 16)
+        } else {
+            content
+                .background {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.black.opacity(0.28))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .stroke(.white.opacity(0.10), lineWidth: 1)
+                        }
+                        .shadow(color: .black.opacity(0.36), radius: 28, x: 0, y: 18)
+                }
+                .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
+        }
     }
 }
 
