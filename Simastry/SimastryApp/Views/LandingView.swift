@@ -1,43 +1,99 @@
 import SwiftUI
 import CoreMotion
 
-private struct OnboardingPage: Identifiable {
+private struct LandingFeature: Identifiable {
     let id: Int
     let icon: String
     let title: String
-    let subtitle: String
-    let accentColor: Color
+    let accent: Color
 }
 
-private let onboardingPages: [OnboardingPage] = [
-    OnboardingPage(
-        id: 0,
-        icon: "heart.circle.fill",
-        title: "Find Your Soulmate",
-        subtitle: "Discover your perfectly compatible\ncosmic match based on your big three",
-        accentColor: SimastryColor.sunCoral
+private let landingFeatures: [LandingFeature] = [
+    LandingFeature(id: 0, icon: SimastryIcon.lens, title: "Decode the message", accent: SimastryColor.celestialBlue),
+    LandingFeature(id: 1, icon: SimastryIcon.predict, title: "Predict their reply", accent: SimastryColor.risingViolet),
+    LandingFeature(id: 2, icon: SimastryIcon.quote, title: "Know what to say", accent: SimastryColor.gold)
+]
+
+private struct LandingCompanionWindow: Identifiable {
+    let id: String
+    let imageName: String
+    let name: String
+    let role: String
+    let isHero: Bool
+    let widthRatio: CGFloat
+    let heightRatio: CGFloat
+    let xRatio: CGFloat
+    let yRatio: CGFloat
+    let rotation: Double
+    let zIndex: Double
+}
+
+private let landingCompanionWindows: [LandingCompanionWindow] = [
+    LandingCompanionWindow(
+        id: "ada",
+        imageName: "Factory_taurus-ada_card",
+        name: "Ada",
+        role: "Taurus Guide",
+        isHero: true,
+        widthRatio: 0.44,
+        heightRatio: 0.92,
+        xRatio: 0.50,
+        yRatio: 0.50,
+        rotation: 0,
+        zIndex: 5
     ),
-    OnboardingPage(
-        id: 1,
-        icon: "wand.and.stars",
-        title: "Predict Their Reply",
-        subtitle: "Paste a real conversation and see\nwhat they'll say next — powered by the stars",
-        accentColor: SimastryColor.risingViolet
+    LandingCompanionWindow(
+        id: "nadia",
+        imageName: "Factory_sagittarius-nadia_profile",
+        name: "Nadia",
+        role: "Sagittarius Guide",
+        isHero: false,
+        widthRatio: 0.30,
+        heightRatio: 0.52,
+        xRatio: 0.18,
+        yRatio: 0.32,
+        rotation: -3.5,
+        zIndex: 2
     ),
-    OnboardingPage(
-        id: 2,
-        icon: "bubble.left.and.text.bubble.right.fill",
-        title: "Know What to Say",
-        subtitle: "Communication playbooks for every sign\nso you always find the right words",
-        accentColor: SimastryColor.celestialBlue
+    LandingCompanionWindow(
+        id: "maria",
+        imageName: "Factory_gemini-rina_profile",
+        name: "Maria",
+        role: "Gemini Guide",
+        isHero: false,
+        widthRatio: 0.29,
+        heightRatio: 0.51,
+        xRatio: 0.82,
+        yRatio: 0.33,
+        rotation: 3.5,
+        zIndex: 3
     ),
-    OnboardingPage(
-        id: 3,
-        icon: "person.2.fill",
-        title: "Simulate Any Personality",
-        subtitle: "Build a soulmate, bestie, or anyone —\nthen explore their cosmic personality",
-        accentColor: SimastryColor.gold
+    LandingCompanionWindow(
+        id: "leyla",
+        imageName: "Factory_virgo-mara_card",
+        name: "Leyla",
+        role: "Virgo Guide",
+        isHero: false,
+        widthRatio: 0.29,
+        heightRatio: 0.50,
+        xRatio: 0.20,
+        yRatio: 0.76,
+        rotation: 2.5,
+        zIndex: 1
     ),
+    LandingCompanionWindow(
+        id: "elias",
+        imageName: "Factory_scorpio-elias_profile",
+        name: "Elias",
+        role: "Scorpio Guide",
+        isHero: false,
+        widthRatio: 0.30,
+        heightRatio: 0.51,
+        xRatio: 0.81,
+        yRatio: 0.77,
+        rotation: -2.5,
+        zIndex: 1
+    )
 ]
 
 struct LandingView: View {
@@ -48,8 +104,6 @@ struct LandingView: View {
     @State private var shimmerStars: [ShimmerStar] = ShimmerStar.generate(count: 25)
     @State private var motionOffset: CGSize = .zero
     @State private var starTimer: Timer?
-    @State private var currentPage: Int = 0
-    @State private var autoAdvanceTimer: Timer?
     @State private var motionManager: CMMotionManager = CMMotionManager()
 
     var body: some View {
@@ -65,6 +119,24 @@ struct LandingView: View {
                     .clipped()
                     .ignoresSafeArea()
 
+                // Calms the busy artwork where text must read: a light veil
+                // behind the wordmark, untouched art behind the collage, and
+                // progressively solid ground under the feature row and CTA.
+                LinearGradient(
+                    stops: [
+                        .init(color: .black.opacity(0.30), location: 0),
+                        .init(color: .black.opacity(0.05), location: 0.18),
+                        .init(color: .clear, location: 0.34),
+                        .init(color: .black.opacity(0.30), location: 0.62),
+                        .init(color: .black.opacity(0.66), location: 0.78),
+                        .init(color: .black.opacity(0.94), location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
                 shimmerLayer(size: geo.size)
                     .offset(x: motionOffset.width * 0.4, y: motionOffset.height * 0.4)
 
@@ -72,18 +144,28 @@ struct LandingView: View {
                     .offset(x: motionOffset.width * 1.0, y: motionOffset.height * 1.0)
 
                 VStack(spacing: 0) {
-                    Text("Simastry")
-                        .font(.system(size: 38, weight: .bold, design: .serif))
-                        .italic()
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : -20)
-                        .animation(.spring(SimastrySpring.smooth).delay(0.1), value: appeared)
-                        .padding(.top, 60)
+                    wordmark
+                        .padding(.top, landingTopPadding(for: geo.size))
 
-                    Spacer()
-                    onboardingCarousel
+                    valueStatement
+                        .padding(.top, 10)
+                        .padding(.horizontal, 32)
+
+                    companionWindowArrangement(size: geo.size)
+                        .frame(height: heroWindowHeight(for: geo.size))
+                        .padding(.top, geo.size.height < 720 ? 8 : 16)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 26)
+                        .animation(.spring(SimastrySpring.bouncy).delay(0.22), value: appeared)
+
+                    Spacer(minLength: 8)
+
+                    featureRow
+                        .padding(.horizontal, 24)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 24)
+                        .animation(.spring(SimastrySpring.smooth).delay(0.34), value: appeared)
+
                     foregroundPanel
                 }
                 .ignoresSafeArea(.container, edges: .bottom)
@@ -93,7 +175,6 @@ struct LandingView: View {
         .onAppear {
             startFallingStars()
             startMotionUpdates()
-            startAutoAdvance()
             withAnimation(.spring(SimastrySpring.smooth).delay(0.3)) {
                 appeared = true
             }
@@ -102,122 +183,224 @@ struct LandingView: View {
             stopMotionUpdates()
             starTimer?.invalidate()
             starTimer = nil
-            autoAdvanceTimer?.invalidate()
-            autoAdvanceTimer = nil
         }
     }
 
-    private var onboardingCarousel: some View {
-        VStack(spacing: 14) {
-            TabView(selection: $currentPage) {
-                ForEach(onboardingPages) { page in
-                    onboardingCard(page: page)
-                        .tag(page.id)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 232)
-            .onChange(of: currentPage) { _, _ in
-                resetAutoAdvance()
-            }
+    private func landingTopPadding(for size: CGSize) -> CGFloat {
+        size.height < 720 ? 40 : 60
+    }
 
-            pageIndicator
+    private func heroWindowHeight(for size: CGSize) -> CGFloat {
+        if size.height < 700 {
+            return 220
         }
-        .padding(.horizontal, 20)
+        return min(max(size.height * 0.36, 270), 330)
+    }
+
+    // MARK: - Wordmark & Value
+
+    private var wordmark: some View {
+        Text("Simastry")
+            .font(SimastryFont.wordmark)
+            .italic()
+            .foregroundStyle(.white)
+            .shadow(color: SimastryColor.gold.opacity(0.35), radius: 18)
+            .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : -16)
+            .animation(.spring(SimastrySpring.smooth).delay(0.08), value: appeared)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var valueStatement: some View {
+        VStack(spacing: 6) {
+            Text("Your personal panel of AI astrologers")
+                .font(SimastryFont.titleMedium)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
+
+            Text("Relationships, timing, and what to say next.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(.white.opacity(0.82))
+                .multilineTextAlignment(.center)
+                .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+        }
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
-        .animation(.spring(SimastrySpring.bouncy).delay(0.2), value: appeared)
+        .offset(y: appeared ? 0 : -10)
+        .animation(.spring(SimastrySpring.smooth).delay(0.15), value: appeared)
+        .accessibilityElement(children: .combine)
     }
 
-    private func onboardingCard(page: OnboardingPage) -> some View {
-        VStack(spacing: 18) {
+    // MARK: - Companion Collage
+
+    private func companionWindowArrangement(size: CGSize) -> some View {
+        GeometryReader { proxy in
+            let canvas = proxy.size
+
             ZStack {
-                Circle()
-                    .fill(.white.opacity(0.1))
-                    .frame(width: 68, height: 68)
-                    .overlay {
-                        Circle()
-                            .stroke(.white.opacity(0.16), lineWidth: 1)
-                    }
+                constellationBackdrop(size: canvas)
+                    .allowsHitTesting(false)
 
-                Image(systemName: page.icon)
-                    .font(.system(size: 29, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .symbolEffect(.pulse, options: .repeating.speed(0.5))
+                ForEach(landingCompanionWindows) { window in
+                    companionWindow(window, canvasSize: canvas)
+                        .zIndex(window.zIndex)
+                }
             }
-            .background {
-                Circle()
-                    .fill(page.accentColor.opacity(0.2))
-                    .blur(radius: 18)
-            }
-
-            VStack(spacing: 10) {
-                Text(page.title)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
-
-                Text(page.subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 8)
-                    .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
-            }
+            .frame(width: canvas.width, height: canvas.height)
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 24)
-        .frame(maxWidth: .infinity, minHeight: 196)
-        .background(.black.opacity(0.25), in: .rect(cornerRadius: 28))
-        .overlay {
-            RoundedRectangle(cornerRadius: 28)
-                .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
-        }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Featured Simastry guides: Ada the Taurus Guide, Nadia the Sagittarius Guide, Maria the Gemini Guide, Leyla the Virgo Guide, and Elias the Scorpio Guide")
     }
 
-    private var pageIndicator: some View {
-        HStack(spacing: 8) {
-            ForEach(onboardingPages) { page in
-                Capsule()
-                    .fill(currentPage == page.id ? .white.opacity(0.96) : .white.opacity(0.34))
-                    .frame(width: currentPage == page.id ? 28 : 8, height: 8)
-                    .animation(.spring(SimastrySpring.snappy), value: currentPage)
+    private func constellationBackdrop(size: CGSize) -> some View {
+        Canvas { context, canvasSize in
+            let points = [
+                CGPoint(x: canvasSize.width * 0.18, y: canvasSize.height * 0.24),
+                CGPoint(x: canvasSize.width * 0.40, y: canvasSize.height * 0.17),
+                CGPoint(x: canvasSize.width * 0.62, y: canvasSize.height * 0.29),
+                CGPoint(x: canvasSize.width * 0.82, y: canvasSize.height * 0.22),
+                CGPoint(x: canvasSize.width * 0.72, y: canvasSize.height * 0.74),
+                CGPoint(x: canvasSize.width * 0.48, y: canvasSize.height * 0.83),
+                CGPoint(x: canvasSize.width * 0.25, y: canvasSize.height * 0.70)
+            ]
+
+            var path = Path()
+            for (index, point) in points.enumerated() {
+                if index == 0 {
+                    path.move(to: point)
+                } else {
+                    path.addLine(to: point)
+                }
             }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.black.opacity(0.18), in: .capsule)
-        .simastryGlassPill()
-        .overlay {
-            Capsule()
-                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+            context.stroke(path, with: .color(SimastryColor.gold.opacity(0.25)), lineWidth: 0.7)
+
+            for point in points {
+                let rect = CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)
+                context.fill(Circle().path(in: rect), with: .color(.white.opacity(0.6)))
+            }
         }
     }
 
-    private func startAutoAdvance() {
-        guard !reduceMotion else { return }
-        autoAdvanceTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
-            Task { @MainActor in
-                withAnimation(.spring(SimastrySpring.smooth)) {
-                    currentPage = (currentPage + 1) % onboardingPages.count
+    private func companionWindow(_ window: LandingCompanionWindow, canvasSize: CGSize) -> some View {
+        let width = canvasSize.width * window.widthRatio
+        let height = canvasSize.height * window.heightRatio
+        let radius: CGFloat = window.isHero ? 26 : 20
+
+        return Image(window.imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: width, height: height, alignment: .top)
+            .clipped()
+            .frame(width: width, height: height)
+            .overlay(alignment: .bottom) {
+                paneScrim(window, width: width, radius: radius)
+            }
+            .clipShape(.rect(cornerRadius: radius))
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(window.isHero ? 0.30 : 0.16),
+                                .white.opacity(0.05)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: window.isHero ? 1.0 : 0.7
+                    )
+            }
+            .shadow(color: .black.opacity(0.5), radius: 22, y: 14)
+            .shadow(color: SimastryColor.gold.opacity(window.isHero ? 0.20 : 0.06), radius: 18, y: 0)
+            .rotationEffect(.degrees(window.rotation))
+            .position(
+                x: canvasSize.width * window.xRatio,
+                y: canvasSize.height * window.yRatio
+            )
+    }
+
+    @ViewBuilder
+    private func paneScrim(_ window: LandingCompanionWindow, width: CGFloat, radius: CGFloat) -> some View {
+        // Right-side panes sit partly behind the hero pane, so their labels
+        // hug the visible (outer) edge instead of the occluded one.
+        let labelsTrailing = !window.isHero && window.xRatio > 0.5
+        let alignment: HorizontalAlignment = labelsTrailing ? .trailing : .leading
+
+        VStack(alignment: alignment, spacing: window.isHero ? 3 : 1) {
+            if window.isHero {
+                HStack(spacing: 4) {
+                    Image(systemName: SimastryIcon.method)
+                        .font(.system(size: 8, weight: .bold))
+                    Text("SIMASTRY METHOD")
+                        .font(.system(size: 8, weight: .bold))
+                        .tracking(0.8)
+                }
+                .foregroundStyle(SimastryColor.goldLight)
+            }
+
+            Text(window.name)
+                .font(window.isHero ? SimastryFont.titleSmall : SimastryFont.labelSmall)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+            Text(window.isHero ? window.role : window.role.replacingOccurrences(of: " Guide", with: ""))
+                .font(window.isHero ? SimastryFont.labelSmall : SimastryFont.captionSmall)
+                .foregroundStyle(.white.opacity(0.78))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, alignment: labelsTrailing ? .trailing : .leading)
+        .padding(.horizontal, window.isHero ? 14 : 10)
+        .padding(.top, 26)
+        .padding(.bottom, window.isHero ? 12 : 8)
+        .background(
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.55), .black.opacity(0.85)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    // MARK: - Feature Row
+
+    private var featureRow: some View {
+        HStack(spacing: 10) {
+            ForEach(landingFeatures) { feature in
+                VStack(spacing: 7) {
+                    Image(systemName: feature.icon)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(feature.accent)
+                        .frame(height: 20)
+
+                    Text(feature.title)
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 6)
+                .background(.black.opacity(0.30), in: .rect(cornerRadius: 16))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.6)
                 }
             }
         }
-    }
-
-    private func resetAutoAdvance() {
-        autoAdvanceTimer?.invalidate()
-        startAutoAdvance()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Decode the message. Predict their reply. Know what to say.")
     }
 
     // MARK: - Bottom Panel
 
     private var foregroundPanel: some View {
         VStack(spacing: 14) {
+            methodCredentialLine
+
             GoldButton("Get Started") {
                 withAnimation(.spring(SimastrySpring.smooth)) {
                     viewModel.currentScreen = .birthDetails
@@ -232,30 +415,74 @@ struct LandingView: View {
                 }
             } label: {
                 Text("I already have an account")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(.white.opacity(0.75))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Sign in to existing account")
 
-            Text("By continuing, you agree to our Terms & Privacy Policy")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.3))
-                .padding(.top, 2)
+            HStack(spacing: 4) {
+                Text("By continuing, you agree to our")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(.white.opacity(0.78))
+                Link("Terms", destination: AppConfig.termsOfServiceURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(.white.opacity(0.86))
+                Text("&")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(.white.opacity(0.78))
+                Link("Privacy", destination: AppConfig.privacyPolicyURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(.white.opacity(0.86))
+            }
+            .padding(.top, 2)
+
+            HStack(spacing: 4) {
+                Image(systemName: SimastryIcon.privacy)
+                    .font(.system(size: 9, weight: .medium))
+                Text("Private by design")
+                    .font(SimastryFont.captionSmall)
+            }
+            .foregroundStyle(SimastryColor.mutedSilver)
+            .padding(.top, 4)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 24)
+        .padding(.top, 20)
         .padding(.bottom, 50)
         .background(
+            // The global scrim already grounds this region; this adds a
+            // gentle local reinforcement without a visible gradient seam.
             LinearGradient(
-                colors: [.clear, .black.opacity(0.7), .black.opacity(0.92)],
+                colors: [.clear, .black.opacity(0.35), .black.opacity(0.55)],
                 startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea(.container, edges: .bottom)
         )
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 30)
-        .animation(.spring(SimastrySpring.bouncy).delay(0.5), value: appeared)
+        .animation(.spring(SimastrySpring.bouncy).delay(0.45), value: appeared)
+    }
+
+    private var methodCredentialLine: some View {
+        HStack(spacing: 6) {
+            Image(systemName: SimastryIcon.method)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(SimastryColor.goldLight)
+
+            Text("24 guides · 12 zodiac lenses · trained in the Simastry Method")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(.white.opacity(0.82))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.black.opacity(0.25), in: .capsule)
+        .overlay {
+            Capsule()
+                .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
+        }
+        .accessibilityLabel("24 guides across 12 zodiac lenses, trained in the Simastry Method")
     }
 
     // MARK: - Shimmer Stars

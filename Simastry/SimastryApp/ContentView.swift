@@ -19,7 +19,11 @@ struct ContentView: View {
                 case .loading:
                     loadingView
                 case .home:
-                    MainTabView(viewModel: viewModel)
+                    if viewModel.homeSetupPhase == .complete {
+                        MainTabView(viewModel: viewModel)
+                    } else {
+                        HomeView(viewModel: viewModel)
+                    }
                 }
             }
             .animation(.spring(SimastrySpring.smooth), value: viewModel.currentScreen == .home)

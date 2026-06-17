@@ -8,6 +8,8 @@ nonisolated enum AppConfig {
     static let supabaseURL: String = "https://veufwogjdfwjxweftfws.supabase.co"
     static let teamID: String = ""
     static let toolkitURL: String = ""
+    static let privacyPolicyURL = URL(string: "https://simastry.vercel.app/privacy")!
+    static let termsOfServiceURL = URL(string: "https://simastry.vercel.app/terms")!
 
     static let allValues: [String: String] = [
         "SIMASTRY_PROJECT_ID": projectID,

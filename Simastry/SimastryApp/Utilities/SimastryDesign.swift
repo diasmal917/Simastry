@@ -20,6 +20,7 @@ struct SimastryColor {
     static let midnight = Color(red: 8/255, green: 8/255, blue: 11/255)
     static let surface = Color(red: 24/255, green: 19/255, blue: 18/255)
     static let gold = Color(red: 221/255, green: 181/255, blue: 102/255)
+    static let goldLight = Color(red: 245/255, green: 214/255, blue: 140/255)
     static let celestialBlue = Color(red: 74/255, green: 144/255, blue: 217/255)
     static let offWhite = cream
     static let mutedSilver = Color(red: 176/255, green: 168/255, blue: 154/255)
@@ -28,6 +29,24 @@ struct SimastryColor {
     static let sunCoral = Color(red: 232/255, green: 132/255, blue: 90/255)
     static let moonBlue = Color(red: 74/255, green: 144/255, blue: 217/255)
     static let risingViolet = Color(red: 192/255, green: 132/255, blue: 216/255)
+}
+
+enum SimastryIcon {
+    static let method = "checkmark.seal.fill"
+    static let lens = "text.magnifyingglass"
+    static let predict = "waveform"
+    static let quote = "quote.bubble.fill"
+    static let privacy = "lock.fill"
+}
+
+struct SimastryFont {
+    static let wordmark = Font.system(.largeTitle, design: .serif, weight: .semibold)
+    static let titleMedium = Font.system(.title3, weight: .semibold)
+    static let titleSmall = Font.system(.headline, weight: .semibold)
+    static let bodySmall = Font.system(.subheadline)
+    static let labelSmall = Font.system(.caption, weight: .medium)
+    static let caption = Font.system(.caption)
+    static let captionSmall = Font.system(.caption2)
 }
 
 extension CelestialRole {
