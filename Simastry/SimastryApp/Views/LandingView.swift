@@ -384,11 +384,7 @@ struct LandingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 6)
-                .background(.black.opacity(0.30), in: .rect(cornerRadius: 16))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.6)
-                }
+                .landingTileSurface(cornerRadius: 16)
             }
         }
         .accessibilityElement(children: .combine)
@@ -477,11 +473,7 @@ struct LandingView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(.black.opacity(0.25), in: .capsule)
-        .overlay {
-            Capsule()
-                .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
-        }
+        .landingCredentialSurface()
         .accessibilityLabel("24 guides across 12 zodiac lenses, trained in the Simastry Method")
     }
 
@@ -615,6 +607,46 @@ struct LandingView: View {
     }
 }
 
+
+// MARK: - Landing Surfaces
+
+private extension View {
+    @ViewBuilder
+    func landingTileSurface(cornerRadius: CGFloat) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(
+                .regular.tint(.black.opacity(0.24)),
+                in: .rect(cornerRadius: cornerRadius)
+            )
+        } else {
+            self
+                .background(.black.opacity(0.30), in: .rect(cornerRadius: cornerRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.6)
+                }
+        }
+    }
+
+    @ViewBuilder
+    func landingCredentialSurface() -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .glassEffect(.regular.tint(.black.opacity(0.18)), in: .capsule)
+                .overlay {
+                    Capsule()
+                        .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
+                }
+        } else {
+            self
+                .background(.black.opacity(0.25), in: .capsule)
+                .overlay {
+                    Capsule()
+                        .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
+                }
+        }
+    }
+}
 
 // MARK: - Models
 
