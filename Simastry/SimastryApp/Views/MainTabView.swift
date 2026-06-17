@@ -153,7 +153,7 @@ private struct TabBarGlassSurface: ViewModifier {
         if #available(iOS 26.0, *) {
             content
                 .glassEffect(
-                    .regular.tint(SimastryColor.espresso.opacity(0.18)),
+                    .regular.tint(SimastryColor.espresso.opacity(0.18)).interactive(),
                     in: .rect(cornerRadius: cornerRadius)
                 )
                 .shadow(color: .black.opacity(0.30), radius: 26, x: 0, y: 16)
