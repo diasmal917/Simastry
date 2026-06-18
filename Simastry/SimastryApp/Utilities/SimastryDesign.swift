@@ -95,8 +95,8 @@ extension View {
     func simastryToolbarGlass() -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryColor.surface.opacity(0.88))
-                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.025)), in: .rect(cornerRadius: 0))
+                .background(SimastryColor.surface.opacity(0.22))
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.045)), in: .rect(cornerRadius: 0))
         } else {
             self
                 .background(SimastryColor.surface.opacity(0.92))
@@ -108,8 +108,8 @@ extension View {
     func simastryGlass(cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryColor.surface.opacity(0.78), in: .rect(cornerRadius: cornerRadius))
-                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.035)), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.22), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.07)), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
@@ -143,8 +143,8 @@ extension View {
     func simastryGlassLight(cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryColor.surface.opacity(0.58), in: .rect(cornerRadius: cornerRadius))
-                .glassEffect(.clear, in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.12), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.025)), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
@@ -177,8 +177,8 @@ extension View {
     func simastryGlassPill() -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryColor.surface.opacity(0.74), in: Capsule())
-                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.035)), in: .capsule)
+                .background(SimastryColor.surface.opacity(0.20), in: Capsule())
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.065)), in: .capsule)
                 .overlay(
                     Capsule()
                         .stroke(
@@ -212,7 +212,7 @@ extension View {
     func goldGlassPill() -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryGradient.gold, in: Capsule())
+                .background(SimastryColor.gold.opacity(0.36), in: Capsule())
                 .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.32)), in: .capsule)
                 .overlay(
                     Capsule()
@@ -247,8 +247,8 @@ extension View {
     func goldGlassRect(cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryColor.gold.opacity(0.13), in: .rect(cornerRadius: cornerRadius))
-                .background(SimastryColor.surface.opacity(0.84), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.gold.opacity(0.18), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.20), in: .rect(cornerRadius: cornerRadius))
                 .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.20)), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -283,9 +283,9 @@ extension View {
     func tintedGlass(_ color: Color, cornerRadius: CGFloat = 16) -> some View {
         if #available(iOS 26.0, *) {
             self
-                .background(SimastryColor.surface.opacity(0.94), in: .rect(cornerRadius: cornerRadius))
-                .background(color.opacity(0.025), in: .rect(cornerRadius: cornerRadius))
-                .glassEffect(.regular.tint(color.opacity(0.06)), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surface.opacity(0.22), in: .rect(cornerRadius: cornerRadius))
+                .background(color.opacity(0.06), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(color.opacity(0.09)), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
@@ -358,8 +358,8 @@ extension View {
                     ),
                     in: .rect(cornerRadius: cornerRadius)
                 )
-                .background(SimastryColor.surfaceElevated.opacity(0.86), in: .rect(cornerRadius: cornerRadius))
-                .glassEffect(.regular.tint(accent.opacity(0.14)), in: .rect(cornerRadius: cornerRadius))
+                .background(SimastryColor.surfaceElevated.opacity(0.24), in: .rect(cornerRadius: cornerRadius))
+                .glassEffect(.regular.tint(accent.opacity(0.18)), in: .rect(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
@@ -583,6 +583,6 @@ struct ReducedMotionModifier: ViewModifier {
     let reducedAnimation: Animation?
 
     func body(content: Content) -> some View {
-        content.animation(reduceMotion ? reducedAnimation : animation, value: UUID())
+        content.animation(reduceMotion ? reducedAnimation : animation, value: reduceMotion)
     }
 }

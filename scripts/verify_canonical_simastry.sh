@@ -31,6 +31,18 @@ grep -q 'PRODUCT_BUNDLE_IDENTIFIER = app.simastry.ios;' "Simastry.xcodeproj/proj
 grep -q 'CURRENT_PROJECT_VERSION = 2;' "Simastry.xcodeproj/project.pbxproj" || fail "build number is not 2"
 pass "project identity"
 
+if [[ -f ".xcodebuildmcp/config.yaml" ]]; then
+  grep -q 'activeSessionDefaultsProfile: simastry-canonical' ".xcodebuildmcp/config.yaml" || fail "xcodebuildmcp active profile is not simastry-canonical"
+  grep -q 'projectPath: /Users/chiburashka/Documents/Codex/Simastry/Simastry.xcodeproj' ".xcodebuildmcp/config.yaml" || fail "xcodebuildmcp project path is not canonical"
+  grep -q 'derivedDataPath: /Users/chiburashka/Library/Developer/Xcode/DerivedData/Simastry-canonical' ".xcodebuildmcp/config.yaml" || fail "xcodebuildmcp DerivedData is not canonical"
+  grep -q 'bundleId: app.simastry.ios' ".xcodebuildmcp/config.yaml" || fail "xcodebuildmcp bundle id is not app.simastry.ios"
+  if grep -n -E 'app\.rork|Simastry-finalization|Simastry-current|/tmp/simastry|_archives' ".xcodebuildmcp/config.yaml" >/tmp/simastry_xcodebuildmcp_stale.txt; then
+    cat /tmp/simastry_xcodebuildmcp_stale.txt >&2
+    fail "stale xcodebuildmcp profile reference found"
+  fi
+  pass "xcodebuildmcp canonical profile"
+fi
+
 if grep -R -n -E 'Rork|app\.rork|EXPO_PUBLIC_RORK' \
   --exclude-dir='.git' \
   --exclude-dir='DerivedData' \

@@ -253,7 +253,7 @@ struct UpsellModalView: View {
     private func subscribeAction(tier: String) -> some View {
         if selectedTier == tier {
             if !isRevenueCatAvailable {
-                GoldButton("Subscribe", isEnabled: false) {}
+                GoldButton("Plans coming soon", isEnabled: false) {}
             } else if let pkg = package(for: tier) {
                 GoldButton("Subscribe", isEnabled: !isPurchasing) {
                     Task { await purchasePackage(pkg, type: tier) }
@@ -282,17 +282,19 @@ struct UpsellModalView: View {
             )
     }
 
+    @ViewBuilder
     private var restoreButton: some View {
-        Button(action: {
-            Task { await viewModel.restorePurchases() }
-        }) {
-            Text("Restore Purchases")
-                .font(SimastryFont.labelMedium)
-                .foregroundStyle(SimastryColor.mutedSilver)
+        if isRevenueCatAvailable {
+            Button(action: {
+                Task { await viewModel.restorePurchases() }
+            }) {
+                Text("Restore Purchases")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .buttonStyle(.plain)
+            .opacity(appeared ? 1 : 0)
         }
-        .buttonStyle(.plain)
-        .disabled(!isRevenueCatAvailable)
-        .opacity(appeared ? 1 : 0)
     }
 
     private func freeChip(_ text: String) -> some View {
@@ -392,7 +394,7 @@ struct UpsellModalView: View {
 
     private func purchasePackage(_ package: Package, type: String) async {
         guard isRevenueCatAvailable else {
-            viewModel.showToast("Subscriptions unavailable", subtitle: "RevenueCat isn't configured yet", isError: true)
+            viewModel.showToast("Subscriptions unavailable", subtitle: "Purchases are not available in this build yet.", isError: true)
             return
         }
 

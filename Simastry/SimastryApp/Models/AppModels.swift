@@ -448,7 +448,7 @@ nonisolated enum DeepLink: Equatable, Sendable {
 
     /// Attempts to parse a `DeepLink` from either a custom-scheme URL
     /// (`simastry://compatibility/aries/leo`) or a universal link
-    /// (`https://simastry.com/share/compatibility/aries/leo`).
+    /// (`https://simastry.vercel.app/share/compatibility/aries/leo`).
     static func from(url: URL) -> DeepLink? {
         let pathComponents: [String]
 
@@ -464,7 +464,7 @@ nonisolated enum DeepLink: Equatable, Sendable {
                     "simastry.app",
                     "www.simastry.app"
                   ].contains(host) {
-            // https://simastry.com/share/compatibility/aries/leo
+            // https://simastry.vercel.app/share/compatibility/aries/leo
             var raw = url.pathComponents.filter { $0 != "/" }
             // Strip the leading "share" segment used in universal links
             if raw.first == "share" { raw.removeFirst() }

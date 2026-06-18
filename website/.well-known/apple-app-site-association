@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "A6PP462J72.app.simastry.ios",
+        "paths": [
+          "/",
+          "/messages",
+          "/predict",
+          "/person/*",
+          "/share/compatibility/*",
+          "/share/guide/*",
+          "/share/invite/*"
+        ]
+      }
+    ]
+  }
+}

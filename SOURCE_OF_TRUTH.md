@@ -15,6 +15,7 @@ Before any Codex, Bitrig, or Xcode work, run:
 - Bundle ID: `app.simastry.ios`
 - Active TestFlight/Bitrig branch: `codex/testflight-bitrig-readiness`
 - DerivedData for verification: `/Users/chiburashka/Library/Developer/Xcode/DerivedData/Simastry-canonical`
+- XcodeBuildMCP active profile: `simastry-canonical` only
 
 The intended iOS baseline must contain all of these:
 
@@ -39,6 +40,12 @@ Do not build, run, or review these archived/stale copies:
 ## Bitrig Review
 
 Bitrig should review the pushed GitHub branch for this repo only. Do not use archived local snapshots or old Bitrig project folders. Before reviewing, confirm the branch contains the companion-collage landing in `Simastry/SimastryApp/Views/LandingView.swift`.
+
+## Build Guardrails
+
+- Run `scripts/verify_canonical_simastry.sh` before Simulator, Bitrig, archive, or TestFlight work.
+- If XcodeBuildMCP is used, `session_show_defaults` must show `simastry-canonical`, `app.simastry.ios`, and `/Users/chiburashka/Library/Developer/Xcode/DerivedData/Simastry-canonical`.
+- If a different Simastry path, bundle ID, or DerivedData folder appears, stop and fix the active profile before building.
 
 ## Recovery Note
 

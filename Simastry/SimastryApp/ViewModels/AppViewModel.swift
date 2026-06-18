@@ -263,11 +263,11 @@ class AppViewModel {
             return
         }
 
-        // TODO: Wire RevenueCat consumable products before enabling prediction
-        // packs in production. Never grant credits without a verified purchase.
+        // Keep consumable packs disabled until App Store products and receipt
+        // verification are fully configured.
         showToast(
             "Prediction packs unavailable",
-            subtitle: "Consumable products are not configured yet.",
+            subtitle: "Purchases are not available in this build yet.",
             isError: true
         )
     }
@@ -1029,7 +1029,7 @@ class AppViewModel {
 
     func restorePurchases() async {
         guard isRevenueCatAvailable else {
-            showToast("Subscriptions unavailable", subtitle: "RevenueCat isn't configured yet", isError: true)
+            showToast("Subscriptions unavailable", subtitle: "Purchases are not available in this build yet.", isError: true)
             return
         }
 
