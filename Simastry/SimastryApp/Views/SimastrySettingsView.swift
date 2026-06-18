@@ -214,15 +214,28 @@ struct SimastrySettingsView: View {
             .padding(14)
             .simastryGlass(cornerRadius: 16)
 
-            Picker("Language", selection: $localization.currentLanguage) {
+            Menu {
                 ForEach(LocalizationManager.Language.allCases) { language in
-                    Text("\(language.flag) \(language.displayName)").tag(language)
+                    Button {
+                        localization.currentLanguage = language
+                    } label: {
+                        if localization.currentLanguage == language {
+                            Label(language.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(language.displayName)
+                        }
+                    }
                 }
+            } label: {
+                settingRow(
+                    icon: "globe",
+                    title: "Language",
+                    detail: localization.currentLanguage.displayName,
+                    tint: SimastryColor.gold,
+                    showsChevron: true
+                )
             }
-            .pickerStyle(.menu)
-            .tint(SimastryColor.gold)
-            .padding(14)
-            .simastryGlass(cornerRadius: 16)
+            .buttonStyle(SpringPressStyle())
         }
     }
 

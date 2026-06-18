@@ -425,6 +425,12 @@ private struct MessageRow: View {
         return message.content
     }
 
+    private var accessibilityPreviewSentence: String {
+        let trimmed = previewText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let last = trimmed.unicodeScalars.last else { return "" }
+        return CharacterSet(charactersIn: ".!?").contains(last) ? trimmed : "\(trimmed)."
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             MessageAvatarView(
@@ -483,7 +489,7 @@ private struct MessageRow: View {
         }
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(message.companionName). \(previewText). \(message.timestamp.relativeDescription). \(message.isRead ? "Read" : "Unread")")
+        .accessibilityLabel("\(message.companionName). \(accessibilityPreviewSentence) \(message.timestamp.relativeDescription). \(message.isRead ? "Read" : "Unread")")
         .accessibilityHint("Double tap to open conversation")
     }
 }

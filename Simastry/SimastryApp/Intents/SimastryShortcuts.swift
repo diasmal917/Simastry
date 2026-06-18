@@ -128,6 +128,7 @@ struct DailyVibeIntent: AppIntent {
             "Good day to have the conversation you've been avoiding if you keep the tone honest"
         ]
         let index = Calendar.current.component(.hour, from: Date()) % signals.count
+        UserDefaults.standard.set(SimastryShortcutDestination.today.rawValue, forKey: AppViewModel.shortcutDestinationKey)
         return .result(dialog: "\(signals[index])")
     }
 }

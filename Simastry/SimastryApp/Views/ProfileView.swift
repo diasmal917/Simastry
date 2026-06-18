@@ -133,6 +133,7 @@ struct ProfileView: View {
                     .padding(.horizontal, 20)
                 }
             }
+            .accessibilityHidden(activeSheet != nil)
             .navigationBarTitleDisplayMode(.inline)
             .confirmationDialog("Sign Out", isPresented: $showSignOutConfirmation, titleVisibility: .visible) {
                 Button("Sign Out", role: .destructive) {
