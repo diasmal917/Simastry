@@ -1,4 +1,21 @@
 import AppIntents
+import Foundation
+
+enum SimastryShortcutDestination: String, CaseIterable, AppEnum {
+    case today
+    case predict
+    case messages
+    case nadia
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Simastry Destination"
+
+    static var caseDisplayRepresentations: [SimastryShortcutDestination: DisplayRepresentation] = [
+        .today: "Today",
+        .predict: "Predict",
+        .messages: "Messages",
+        .nadia: "Nadia"
+    ]
+}
 
 enum ZodiacSignShortcutOption: String, CaseIterable, AppEnum {
     case aries
@@ -32,18 +49,35 @@ enum ZodiacSignShortcutOption: String, CaseIterable, AppEnum {
     ]
 }
 
-// MARK: - Check Compatibility Shortcut
-struct CheckCompatibilityIntent: AppIntent {
-    static var title: LocalizedStringResource = "Check Compatibility"
-    static var description = IntentDescription("Check your compatibility with a companion")
+// MARK: - Open Simastry Shortcut
+struct OpenSimastryDestinationIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Simastry"
+    static var description = IntentDescription("Open a specific Simastry surface")
     static var openAppWhenRun: Bool = true
 
-    @Parameter(title: "Companion Name")
-    var companionName: String?
+    @Parameter(title: "Destination")
+    var destination: SimastryShortcutDestination
+
+    init() {
+        destination = .today
+    }
+
+    init(destination: SimastryShortcutDestination) {
+        self.destination = destination
+    }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // Open app to companions tab
-        return .result(dialog: "Opening Simastry to check your compatibility...")
+        UserDefaults.standard.set(destination.rawValue, forKey: AppViewModel.shortcutDestinationKey)
+        return .result(dialog: "Opening \(destinationDisplayName)...")
+    }
+
+    private var destinationDisplayName: String {
+        switch destination {
+        case .today: "Today"
+        case .predict: "Predict"
+        case .messages: "Messages"
+        case .nadia: "Nadia"
+        }
     }
 }
 
@@ -102,14 +136,14 @@ struct DailyVibeIntent: AppIntent {
 struct SimastryShortcutsProvider: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
-            intent: CheckCompatibilityIntent(),
+            intent: OpenSimastryDestinationIntent(),
             phrases: [
-                "Check compatibility in \(.applicationName)",
-                "Show my compatibility in \(.applicationName)",
-                "Open \(.applicationName) companions"
+                "Open \(\.$destination) in \(.applicationName)",
+                "Show \(\.$destination) in \(.applicationName)",
+                "\(.applicationName) \(\.$destination)"
             ],
-            shortTitle: "Check Compatibility",
-            systemImageName: "heart.circle"
+            shortTitle: "Open Simastry",
+            systemImageName: "sparkles"
         )
         AppShortcut(
             intent: GetCommunicationTipIntent(),
@@ -130,6 +164,15 @@ struct SimastryShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Daily Vibe",
             systemImageName: "sparkles"
+        )
+        AppShortcut(
+            intent: OpenSimastryDestinationIntent(destination: .nadia),
+            phrases: [
+                "Ask Nadia in \(.applicationName)",
+                "Open Nadia in \(.applicationName)"
+            ],
+            shortTitle: "Ask Nadia",
+            systemImageName: "person.wave.2.fill"
         )
     }
 }

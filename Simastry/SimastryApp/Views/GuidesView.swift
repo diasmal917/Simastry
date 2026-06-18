@@ -171,7 +171,7 @@ struct GuidesView: View {
                         systemImage: "message.fill",
                         accent: SimastryColor.celestialBlue
                     ) {
-                        viewModel.selectedTab = 2
+                        viewModel.selectedTab = .messages
                     }
 
                     nextStepCard(
@@ -191,7 +191,7 @@ struct GuidesView: View {
                         systemImage: "message.fill",
                         accent: SimastryColor.celestialBlue
                     ) {
-                        viewModel.selectedTab = 2
+                        viewModel.selectedTab = .messages
                     }
 
                     nextStepCard(

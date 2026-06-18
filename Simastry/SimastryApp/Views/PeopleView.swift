@@ -537,7 +537,7 @@ struct RelationshipPersonDetailView: View {
                     question: "What will \(currentPerson.displayName) say next?",
                     conversationText: nil
                 )
-                viewModel.selectedTab = 0
+                viewModel.selectedTab = .today
                 viewModel.predictRouteRequest += 1
             }
 
@@ -548,7 +548,7 @@ struct RelationshipPersonDetailView: View {
                 tint: SimastryColor.gold
             ) {
                 viewModel.decodeDraftSign = currentPerson.sunSign
-                viewModel.selectedTab = 0
+                viewModel.selectedTab = .today
                 viewModel.decodeRouteRequest += 1
             }
         }

@@ -135,6 +135,10 @@ struct HomeView: View {
 
                 todayHeader
 
+                todayWithNadiaCard
+
+                continueStrip
+
                 situationCard
 
                 panelCard
@@ -154,6 +158,7 @@ struct HomeView: View {
                 streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
                 sealedDrafts = SealedDraftStore().load()
+                viewModel.todayStore.reloadSavedPrompts()
                 if !reduceMotion {
                     kenBurnsActive = true
                 }
@@ -310,6 +315,136 @@ struct HomeView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
+    }
+
+    private var todayWithNadiaCard: some View {
+        let prompt = dailyNadiaPrompt
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(featuredProfile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 48, height: 48, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(SimastryColor.gold.opacity(0.7), lineWidth: 1.2)
+                    }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("TODAY WITH NADIA")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.gold)
+                        .tracking(1.4)
+
+                    Text(prompt)
+                        .font(SimastryFont.bodyLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.openPanelChatWithTip(
+                        lesson: prompt,
+                        opener: "Want to check the timing with me?",
+                        guideId: featuredProfile.id
+                    )
+                } label: {
+                    Label("Ask Nadia", systemImage: "message.fill")
+                }
+                .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
+
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.draftPredictFromToday()
+                } label: {
+                    Image(systemName: SimastryIcon.predict)
+                        .frame(width: 38, height: 38)
+                        .simastryGlassPill()
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Predict the best tone")
+
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: featuredProfile.id))
+                } label: {
+                    Image(systemName: "bookmark.fill")
+                        .frame(width: 38, height: 38)
+                        .simastryGlassPill()
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Save today's Nadia prompt")
+            }
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.7))
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
+    }
+
+    private var continueStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.startGuideChat(featuredProfile)
+                } label: {
+                    continuePill(title: "Continue with Nadia", icon: "person.wave.2.fill")
+                }
+                .buttonStyle(SpringPressStyle())
+
+                if let person = viewModel.relationshipPeople.first {
+                    Button {
+                        HapticManager.buttonPress()
+                        viewModel.peopleDetailRequestPersonId = person.id
+                        viewModel.selectedTab = .people
+                    } label: {
+                        continuePill(title: "Check \(person.displayName)", icon: "person.text.rectangle.fill")
+                    }
+                    .buttonStyle(SpringPressStyle())
+                }
+
+                if let savedPrompt = viewModel.todayStore.savedDailyPrompts.first {
+                    Button {
+                        HapticManager.buttonPress()
+                        viewModel.openPanelChatWithTip(
+                            lesson: savedPrompt.text,
+                            opener: "This is the one you saved. Want to work it through?",
+                            guideId: savedPrompt.guideId
+                        )
+                    } label: {
+                        continuePill(title: "Saved prompt", icon: "bookmark.fill")
+                    }
+                    .buttonStyle(SpringPressStyle())
+                }
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+    }
+
+    private var dailyNadiaPrompt: String {
+        let prompts = [
+            "Say the true thing with enough room for the other person to stay open.",
+            "Before you reply, separate honesty from urgency.",
+            "A clean question will work better today than a perfect paragraph.",
+            "If the conversation feels tight, lead with space before explanation."
+        ]
+        let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        return prompts[day % prompts.count]
+    }
+
+    private func continuePill(title: String, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(SimastryFont.labelMedium)
+            .foregroundStyle(SimastryColor.offWhite)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .simastryGlassPill()
     }
 
     // MARK: - Predict Hero
@@ -578,7 +713,7 @@ struct HomeView: View {
 
             Button {
                 HapticManager.buttonPress()
-                viewModel.selectedTab = 1
+                viewModel.selectedTab = .people
                 viewModel.peopleDetailRequestPersonId = person.id
             } label: {
                 VStack(alignment: .leading, spacing: 11) {

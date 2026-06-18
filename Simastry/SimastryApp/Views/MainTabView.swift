@@ -6,10 +6,10 @@ struct MainTabView: View {
     private var tabSelection: Binding<Int> {
         Binding(
             get: {
-                normalizedTab(viewModel.selectedTab)
+                viewModel.selectedTabIndex
             },
             set: { newValue in
-                viewModel.selectedTab = normalizedTab(newValue)
+                viewModel.selectedTab = AppTab(normalizing: newValue)
             }
         )
     }
@@ -28,18 +28,14 @@ struct MainTabView: View {
                 Text("This saves the invite code on this device. Credits require server verification and are not granted locally.")
             }
             .onAppear {
-            normalizeSelection(viewModel.selectedTab)
+            normalizeSelection(viewModel.selectedTabIndex)
         }
         .onChange(of: viewModel.selectedTab) { _, newTab in
-            let normalized = normalizedTab(newTab)
-            if normalized != newTab {
-                viewModel.selectedTab = normalized
-                return
-            }
             HapticManager.tabChange()
-            if normalized == 2 {
+            if newTab == .messages {
                 Task {
                     await viewModel.refreshInbox(showErrors: false)
+                    await viewModel.fetchConnectedProfiles()
                 }
             }
         }
@@ -102,6 +98,6 @@ struct MainTabView: View {
     private func normalizeSelection(_ tab: Int) {
         let normalized = normalizedTab(tab)
         guard normalized != tab else { return }
-        viewModel.selectedTab = normalized
+        viewModel.selectedTab = AppTab(normalizing: normalized)
     }
 }

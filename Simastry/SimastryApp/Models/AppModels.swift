@@ -1,6 +1,28 @@
 import Foundation
 import SwiftUI
 
+nonisolated enum AppTab: Int, CaseIterable, Codable, Identifiable, Sendable {
+    case today = 0
+    case people = 1
+    case messages = 2
+    case me = 5
+
+    var id: Int { rawValue }
+
+    init(normalizing rawValue: Int) {
+        switch rawValue {
+        case Self.people.rawValue:
+            self = .people
+        case Self.messages.rawValue:
+            self = .messages
+        case Self.me.rawValue:
+            self = .me
+        default:
+            self = .today
+        }
+    }
+}
+
 nonisolated enum CompanionMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case simulateAnyone = "simulate_anyone"
     case soulmate
@@ -417,7 +439,11 @@ nonisolated enum InviteCode {
 nonisolated enum DeepLink: Equatable, Sendable {
     case compatibility(userSign: String, companionSign: String)
     case guide(sign: String)
+    case guideProfile(id: String)
     case invite(code: String)
+    case messages
+    case person(id: UUID)
+    case predict
     case home
 
     /// Attempts to parse a `DeepLink` from either a custom-scheme URL
@@ -450,6 +476,19 @@ nonisolated enum DeepLink: Equatable, Sendable {
         guard let action = pathComponents.first else { return nil }
 
         switch action {
+        case "home", "today":
+            return .home
+
+        case "messages", "chat":
+            return .messages
+
+        case "predict", "simulate":
+            return .predict
+
+        case "person":
+            guard pathComponents.count >= 2, let id = UUID(uuidString: pathComponents[1]) else { return nil }
+            return .person(id: id)
+
         case "compatibility":
             guard pathComponents.count >= 3 else { return nil }
             let userSign = pathComponents[1].lowercased()
@@ -460,9 +499,11 @@ nonisolated enum DeepLink: Equatable, Sendable {
 
         case "guide":
             guard pathComponents.count >= 2 else { return nil }
-            let sign = pathComponents[1].lowercased()
-            guard ZodiacSign(rawValue: sign) != nil else { return nil }
-            return .guide(sign: sign)
+            let value = pathComponents[1].lowercased()
+            if ZodiacSign(rawValue: value) != nil {
+                return .guide(sign: value)
+            }
+            return .guideProfile(id: value)
 
         case "invite":
             guard pathComponents.count >= 2 else { return nil }
@@ -482,8 +523,16 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return URL(string: "simastry://compatibility/\(userSign)/\(companionSign)")!
         case .guide(let sign):
             return URL(string: "simastry://guide/\(sign)")!
+        case .guideProfile(let id):
+            return URL(string: "simastry://guide/\(id)")!
         case .invite(let code):
             return URL(string: "simastry://invite/\(code)")!
+        case .messages:
+            return URL(string: "simastry://messages")!
+        case .person(let id):
+            return URL(string: "simastry://person/\(id.uuidString)")!
+        case .predict:
+            return URL(string: "simastry://predict")!
         case .home:
             return URL(string: "simastry://home")!
         }
@@ -496,8 +545,16 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return URL(string: "https://\(AppConfig.universalLinkHost)/share/compatibility/\(userSign)/\(companionSign)")!
         case .guide(let sign):
             return URL(string: "https://\(AppConfig.universalLinkHost)/share/guide/\(sign)")!
+        case .guideProfile(let id):
+            return URL(string: "https://\(AppConfig.universalLinkHost)/share/guide/\(id)")!
         case .invite(let code):
             return URL(string: "https://\(AppConfig.universalLinkHost)/share/invite/\(code)")!
+        case .messages:
+            return URL(string: "https://\(AppConfig.universalLinkHost)/messages")!
+        case .person(let id):
+            return URL(string: "https://\(AppConfig.universalLinkHost)/person/\(id.uuidString)")!
+        case .predict:
+            return URL(string: "https://\(AppConfig.universalLinkHost)/predict")!
         case .home:
             return AppConfig.websiteURL
         }
@@ -512,8 +569,16 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return "See the full \(u) & \(c) compatibility reading on Simastry"
         case .guide(let sign):
             return "Discover how to talk to a \(sign.capitalized) \u{2014} full communication guide on Simastry"
+        case .guideProfile:
+            return "Open this Simastry guide"
         case .invite:
             return "Join me on Simastry \u{2014} your chart changes how your texts land."
+        case .messages:
+            return "Open your Simastry messages"
+        case .person:
+            return "Open this person in Simastry"
+        case .predict:
+            return "Predict the tone of a conversation on Simastry"
         case .home:
             return "Explore astrology-grounded communication on Simastry"
         }
@@ -608,32 +673,57 @@ nonisolated struct SocialLinks: Codable, Equatable, Sendable {
     }
 }
 
-// MARK: - Social Discovery Profile
+// MARK: - Public Discovery Profile
 
-nonisolated struct SocialProfile: Identifiable, Codable, Equatable, Sendable {
+nonisolated struct PublicProfile: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
+    var username: String?
     var displayName: String
+    var avatarURL: String?
     var sunSign: String
     var moonSign: String?
     var risingSign: String?
     var bio: String?
     var socialLinks: SocialLinks?
-    var isVisible: Bool // opt-in to discovery
+    var communicationHint: String?
+    var iceBreakers: [String]
+    var isDiscoverable: Bool
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
+        case username
         case displayName = "display_name"
+        case avatarURL = "avatar_url"
         case sunSign = "sun_sign"
         case moonSign = "moon_sign"
         case risingSign = "rising_sign"
         case bio
         case socialLinks = "social_links"
-        case isVisible = "is_visible"
+        case communicationHint = "communication_hint"
+        case iceBreakers = "ice_breakers"
+        case isDiscoverable = "is_discoverable"
+        case legacyIsVisible = "is_visible"
         case createdAt = "created_at"
     }
 
-    // Computed
+    static func normalizedUsername(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    static func isValidUsername(_ raw: String) -> Bool {
+        let normalized = normalizedUsername(raw)
+        guard (3...24).contains(normalized.count) else { return false }
+        return normalized.allSatisfy { character in
+            character.isASCII && (character.isLetter || character.isNumber || character == "." || character == "_")
+        }
+    }
+
+    var isVisible: Bool {
+        get { isDiscoverable }
+        set { isDiscoverable = newValue }
+    }
+
     var signSummary: String {
         var parts = ["\u{2600}\u{FE0F} \(sunSign.capitalized)"]
         if let moon = moonSign { parts.append("\u{1F319} \(moon.capitalized)") }
@@ -643,24 +733,118 @@ nonisolated struct SocialProfile: Identifiable, Codable, Equatable, Sendable {
 
     init(
         id: UUID = UUID(),
+        username: String? = nil,
         displayName: String,
+        avatarURL: String? = nil,
         sunSign: String,
         moonSign: String? = nil,
         risingSign: String? = nil,
         bio: String? = nil,
         socialLinks: SocialLinks? = nil,
-        isVisible: Bool = true,
+        communicationHint: String? = nil,
+        iceBreakers: [String] = [],
+        isDiscoverable: Bool = true,
         createdAt: Date = Date()
     ) {
         self.id = id
+        self.username = username.map(Self.normalizedUsername)
         self.displayName = displayName
+        self.avatarURL = avatarURL
         self.sunSign = sunSign
         self.moonSign = moonSign
         self.risingSign = risingSign
         self.bio = bio
         self.socialLinks = socialLinks
-        self.isVisible = isVisible
+        self.communicationHint = communicationHint
+        self.iceBreakers = iceBreakers
+        self.isDiscoverable = isDiscoverable
         self.createdAt = createdAt
+    }
+
+    init(
+        id: UUID = UUID(),
+        username: String? = nil,
+        displayName: String,
+        avatarURL: String? = nil,
+        sunSign: String,
+        moonSign: String? = nil,
+        risingSign: String? = nil,
+        bio: String? = nil,
+        socialLinks: SocialLinks? = nil,
+        communicationHint: String? = nil,
+        iceBreakers: [String] = [],
+        isVisible: Bool,
+        createdAt: Date = Date()
+    ) {
+        self.init(
+            id: id,
+            username: username,
+            displayName: displayName,
+            avatarURL: avatarURL,
+            sunSign: sunSign,
+            moonSign: moonSign,
+            risingSign: risingSign,
+            bio: bio,
+            socialLinks: socialLinks,
+            communicationHint: communicationHint,
+            iceBreakers: iceBreakers,
+            isDiscoverable: isVisible,
+            createdAt: createdAt
+        )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        username = try container.decodeIfPresent(String.self, forKey: .username)
+            .map(Self.normalizedUsername)
+        let decodedName = try container.decodeIfPresent(String.self, forKey: .displayName)
+        displayName = decodedName?.isEmpty == false ? decodedName! : (username ?? "Stargazer")
+        avatarURL = try container.decodeIfPresent(String.self, forKey: .avatarURL)
+        sunSign = try container.decode(String.self, forKey: .sunSign)
+        moonSign = try container.decodeIfPresent(String.self, forKey: .moonSign)
+        risingSign = try container.decodeIfPresent(String.self, forKey: .risingSign)
+        bio = try container.decodeIfPresent(String.self, forKey: .bio)
+        socialLinks = try container.decodeIfPresent(SocialLinks.self, forKey: .socialLinks)
+        communicationHint = try container.decodeIfPresent(String.self, forKey: .communicationHint)
+        iceBreakers = try container.decodeIfPresent([String].self, forKey: .iceBreakers) ?? []
+        isDiscoverable = try container.decodeIfPresent(Bool.self, forKey: .isDiscoverable)
+            ?? container.decodeIfPresent(Bool.self, forKey: .legacyIsVisible)
+            ?? false
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(username, forKey: .username)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encodeIfPresent(avatarURL, forKey: .avatarURL)
+        try container.encode(sunSign, forKey: .sunSign)
+        try container.encodeIfPresent(moonSign, forKey: .moonSign)
+        try container.encodeIfPresent(risingSign, forKey: .risingSign)
+        try container.encodeIfPresent(bio, forKey: .bio)
+        try container.encodeIfPresent(socialLinks, forKey: .socialLinks)
+        try container.encodeIfPresent(communicationHint, forKey: .communicationHint)
+        try container.encode(iceBreakers, forKey: .iceBreakers)
+        try container.encode(isDiscoverable, forKey: .isDiscoverable)
+        try container.encode(createdAt, forKey: .createdAt)
+    }
+}
+
+typealias SocialProfile = PublicProfile
+
+nonisolated struct UserConnectionData: Codable, Identifiable, Equatable, Sendable {
+    var ownerId: UUID
+    var profileId: UUID
+    var createdAt: Date?
+
+    var id: String { "\(ownerId.uuidString):\(profileId.uuidString)" }
+
+    enum CodingKeys: String, CodingKey {
+        case ownerId = "owner_id"
+        case profileId = "profile_id"
+        case createdAt = "created_at"
     }
 }
 

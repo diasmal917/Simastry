@@ -296,7 +296,7 @@ struct ProfileView: View {
             )
 
             GoldButton("Discover Your Signs") {
-                viewModel.selectedTab = 0
+                viewModel.selectedTab = .today
             }
             .padding(.top, 8)
             .opacity(appeared ? 1 : 0)
@@ -1858,7 +1858,7 @@ struct ProfileView: View {
                     viewModel.userMoonSign = nil
                     viewModel.userRisingSign = nil
                     viewModel.homeSetupPhase = .modeSelection
-                    viewModel.selectedTab = 0
+                    viewModel.selectedTab = .today
                     activeSheet = nil
                 }
             }

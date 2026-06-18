@@ -282,7 +282,7 @@ struct PillarFeatureTests {
         #expect(viewModel.guideThreadId(for: theo) == first)
 
         viewModel.startGuideChat(theo)
-        #expect(viewModel.selectedTab == 2)
+        #expect(viewModel.selectedTab == .messages)
         #expect(viewModel.openThreadRequestCompanionId == first)
         let theoMessages = { viewModel.companionMessages.filter { $0.companionId == first } }
         #expect(theoMessages().count == 1)
@@ -434,7 +434,7 @@ struct PillarFeatureTests {
         #expect(lessonMessages().count == 1)
         #expect(lessonMessages().first?.content.contains("Lesson 1 of 7") == true)
         #expect(viewModel.methodCourseState.postedLessons == [1])
-        #expect(viewModel.selectedTab == 2)
+        #expect(viewModel.selectedTab == .messages)
 
         // Same day: re-tap routes but never double-posts.
         viewModel.openMethodCourseLesson()

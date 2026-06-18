@@ -58,6 +58,73 @@ struct SimastryAppTests {
         #expect(!message.isRead)
     }
 
+    @Test func publicProfileNormalizesAndValidatesUsernames() {
+        #expect(PublicProfile.normalizedUsername("  Nadia.Star  ") == "nadia.star")
+        #expect(PublicProfile.isValidUsername("nadia.star"))
+        #expect(PublicProfile.isValidUsername("nadia_star24"))
+        #expect(!PublicProfile.isValidUsername("na"))
+        #expect(!PublicProfile.isValidUsername("nadia star"))
+        #expect(!PublicProfile.isValidUsername("nadia-star"))
+    }
+
+    @Test func publicProfileDecodesNewAndLegacyDiscoveryFlags() throws {
+        let id = UUID()
+        let payload = """
+        {
+          "id": "\(id.uuidString)",
+          "username": "  Nadia.Star  ",
+          "display_name": "Nadia",
+          "sun_sign": "sagittarius",
+          "communication_hint": "Lead with warmth, then be direct.",
+          "ice_breakers": ["What kind of timing feels right today?"],
+          "is_visible": true
+        }
+        """.data(using: .utf8)!
+
+        let profile = try JSONDecoder().decode(PublicProfile.self, from: payload)
+
+        #expect(profile.username == "nadia.star")
+        #expect(profile.displayName == "Nadia")
+        #expect(profile.isDiscoverable)
+        #expect(profile.communicationHint == "Lead with warmth, then be direct.")
+        #expect(profile.iceBreakers == ["What kind of timing feels right today?"])
+    }
+
+    @Test func publicProfileEncodesSupabaseDiscoveryFields() throws {
+        let id = UUID()
+        let profile = PublicProfile(
+            id: id,
+            username: "Nadia.Star",
+            displayName: "Nadia",
+            avatarURL: "https://example.com/nadia.jpg",
+            sunSign: "sagittarius",
+            communicationHint: "Keep it bright and specific.",
+            iceBreakers: ["Want to compare timing?"],
+            isDiscoverable: true,
+            createdAt: Date(timeIntervalSince1970: 0)
+        )
+
+        let data = try JSONEncoder().encode(profile)
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        #expect(object["username"] as? String == "nadia.star")
+        #expect(object["display_name"] as? String == "Nadia")
+        #expect(object["avatar_url"] as? String == "https://example.com/nadia.jpg")
+        #expect(object["communication_hint"] as? String == "Keep it bright and specific.")
+        #expect(object["is_discoverable"] as? Bool == true)
+        #expect(object["is_visible"] == nil)
+    }
+
+    @Test func deepLinksSupportTodayPredictMessagesPeopleAndGuideProfiles() throws {
+        let personId = UUID()
+
+        #expect(DeepLink.from(url: URL(string: "simastry://today")!) == .home)
+        #expect(DeepLink.from(url: URL(string: "simastry://predict")!) == .predict)
+        #expect(DeepLink.from(url: URL(string: "simastry://messages")!) == .messages)
+        #expect(DeepLink.from(url: URL(string: "simastry://person/\(personId.uuidString)")!) == .person(id: personId))
+        #expect(DeepLink.from(url: URL(string: "simastry://guide/nadia")!) == .guideProfile(id: "nadia"))
+    }
+
     @Test func outgoingDiscoveryMessageUsesCounterpartSnapshotAndStaysRead() {
         let viewerId = UUID()
         let recipientId = UUID()

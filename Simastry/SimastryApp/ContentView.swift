@@ -38,6 +38,7 @@ struct ContentView: View {
             #endif
 
             await viewModel.checkAuthState()
+            viewModel.consumePendingShortcutDestination()
             if let pendingDeepLinkURL = AppDelegate.pendingDeepLinkURL {
                 AppDelegate.pendingDeepLinkURL = nil
                 viewModel.handleDeepLink(pendingDeepLinkURL)
@@ -58,6 +59,7 @@ struct ContentView: View {
             } else if newPhase == .active {
                 Task {
                     await viewModel.refreshRealtimeSurfaces()
+                    viewModel.consumePendingShortcutDestination()
                 }
             }
         }

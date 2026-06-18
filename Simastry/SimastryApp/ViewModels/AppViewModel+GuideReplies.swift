@@ -50,7 +50,7 @@ extension AppViewModel {
             saveMessages()
         }
 
-        selectedTab = 2
+        selectedTab = .messages
         openThreadRequestCompanionId = threadId
     }
 

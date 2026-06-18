@@ -94,7 +94,7 @@ struct PanelMomentsInviteTests {
             guideId: "taurus-theo"
         )
 
-        #expect(viewModel.selectedTab == 2)
+        #expect(viewModel.selectedTab == .messages)
         #expect(viewModel.panelMessages.count == 1)
         #expect(viewModel.panelMessages.first?.senderId == "taurus-theo")
         #expect(viewModel.panelMessages.first?.content.contains("Fixed signs pause") == true)

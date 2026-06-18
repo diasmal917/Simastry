@@ -6,6 +6,8 @@ import WidgetKit
 @MainActor
 @Observable
 class AppViewModel {
+    nonisolated static let shortcutDestinationKey = "simastry_pending_shortcut_destination"
+
     var currentScreen: AppScreen = .loading
     var homeSetupPhase: HomeSetupPhase = .modeSelection
     var isAuthenticated: Bool = false
@@ -28,8 +30,11 @@ class AppViewModel {
     private let profileImageFileName = "profile_image.jpg"
     private let profileImageURLKey = "simastry_profile_image_url"
     private let socialLinksKey = "socialLinks"
+    private let publicUsernameKey = "simastry_public_username"
     private let socialDisplayNameKey = "socialDisplayName"
     private let socialBioKey = "socialBio"
+    private let communicationHintKey = "simastry_communication_hint"
+    private let iceBreakersKey = "simastry_ice_breakers"
     private let isDiscoverableKey = "isDiscoverable"
     private let thirdPartyConsentKey = "thirdPartyDataConsent"
     private let auraWalletPublicAddressKey = "simastry_aura_wallet_public_address"
@@ -72,7 +77,19 @@ class AppViewModel {
             UserDefaults.standard.set(isDiscoverable, forKey: isDiscoverableKey)
         }
     }
-    var discoveredProfiles: [SocialProfile] = []
+    var discoveredProfiles: [SocialProfile] {
+        get { profileDiscoveryStore.discoveredProfiles }
+        set { profileDiscoveryStore.discoveredProfiles = newValue }
+    }
+    var connectedProfiles: [SocialProfile] {
+        get { profileDiscoveryStore.connectedProfiles }
+        set { profileDiscoveryStore.connectedProfiles = newValue }
+    }
+    var publicUsername: String = UserDefaults.standard.string(forKey: "simastry_public_username") ?? "" {
+        didSet {
+            UserDefaults.standard.set(PublicProfile.normalizedUsername(publicUsername), forKey: publicUsernameKey)
+        }
+    }
     var socialDisplayName: String = UserDefaults.standard.string(forKey: "socialDisplayName") ?? "" {
         didSet {
             UserDefaults.standard.set(socialDisplayName, forKey: socialDisplayNameKey)
@@ -81,6 +98,24 @@ class AppViewModel {
     var socialBio: String = UserDefaults.standard.string(forKey: "socialBio") ?? "" {
         didSet {
             UserDefaults.standard.set(socialBio, forKey: socialBioKey)
+        }
+    }
+    var communicationHint: String = UserDefaults.standard.string(forKey: "simastry_communication_hint") ?? "" {
+        didSet {
+            UserDefaults.standard.set(communicationHint, forKey: communicationHintKey)
+        }
+    }
+    var iceBreakers: [String] = {
+        guard let data = UserDefaults.standard.data(forKey: "simastry_ice_breakers"),
+              let prompts = try? JSONDecoder().decode([String].self, from: data) else {
+            return []
+        }
+        return prompts
+    }() {
+        didSet {
+            if let data = try? JSONEncoder().encode(iceBreakers) {
+                UserDefaults.standard.set(data, forKey: iceBreakersKey)
+            }
         }
     }
     var socialLinks: SocialLinks = {
@@ -140,7 +175,11 @@ class AppViewModel {
         }
     }
     var showUpsell: Bool = false
-    var selectedTab: Int = 0
+    var selectedTab: AppTab = .today
+    var selectedTabIndex: Int {
+        get { selectedTab.rawValue }
+        set { selectedTab = AppTab(normalizing: newValue) }
+    }
     var aiAstrologistsRouteRequest: Int = 0
     var predictRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the Aura sheet.
@@ -271,6 +310,8 @@ class AppViewModel {
 
     let analytics = AnalyticsService.shared
     let supabase = SupabaseService()
+    let profileDiscoveryStore: ProfileDiscoveryStore
+    let todayStore: TodayStore
     let notificationService = NotificationService()
     let predictionService = PredictionService()
     let predictionRateLimiter = RateLimiter(config: .init(
@@ -296,6 +337,8 @@ class AppViewModel {
     }
 
     init() {
+        profileDiscoveryStore = ProfileDiscoveryStore(service: supabase)
+        todayStore = TodayStore()
         loadReferralInfo()
         loadRelationshipPeople()
         loadPanelMessages()
@@ -344,7 +387,7 @@ class AppViewModel {
     }
 
     func openAIAstrologists() {
-        selectedTab = 0
+        selectedTab = .today
         homeSetupPhase = .complete
         aiAstrologistsRouteRequest += 1
     }
@@ -353,7 +396,7 @@ class AppViewModel {
         if let draft {
             predictionDraft = draft
         }
-        selectedTab = 0
+        selectedTab = .today
         homeSetupPhase = .complete
         predictRouteRequest += 1
     }
@@ -409,7 +452,7 @@ class AppViewModel {
             profile = nil
             companions = []
             showUpsell = false
-            selectedTab = 0
+            selectedTab = .today
             pendingDeepLinkURL = nil
             pendingDeepLink = nil
             guideFocusSign = nil
@@ -534,7 +577,7 @@ class AppViewModel {
         profile = nil
         companions = []
         showUpsell = false
-        selectedTab = 0
+        selectedTab = .today
         pendingDeepLinkURL = nil
         pendingDeepLink = nil
         guideFocusSign = nil
@@ -604,7 +647,7 @@ class AppViewModel {
 
         isAuthenticated = false
         profile = nil
-        selectedTab = 0
+        selectedTab = .today
         companions = []
         showUpsell = false
         pendingDeepLinkURL = nil
@@ -690,24 +733,24 @@ class AppViewModel {
 
         switch url.host {
         case "home":
-            selectedTab = 0
+            selectedTab = .today
         case "companions":
             openAIAstrologists()
         case "people":
-            selectedTab = 1
+            selectedTab = .people
         case "chat":
-            selectedTab = 2
+            selectedTab = .messages
         case "messages":
-            selectedTab = 2
+            selectedTab = .messages
         case "panel":
             openPanelChat()
         case "simulate":
             openPredict()
         case "guides", "astropedia":
             guideFocusSign = nil
-            selectedTab = 0
+            selectedTab = .today
         case "profile":
-            selectedTab = 5
+            selectedTab = .me
         case "upsell":
             showUpsell = true
         default:
@@ -729,18 +772,53 @@ class AppViewModel {
         switch deepLink {
         case .compatibility:
             guideFocusSign = nil
-            selectedTab = 1
+            selectedTab = .people
 
         case .guide:
             guideFocusSign = nil
-            selectedTab = 0
+            selectedTab = .today
+
+        case .guideProfile(let id):
+            selectedTab = .today
+            aiAstrologistsRouteRequest += 1
+            if let guide = FactoryCompanionCatalog.all.first(where: { $0.id == id }) {
+                startGuideChat(guide)
+            }
 
         case .invite(let code):
             requestInviteCodeConfirmation(code)
-            selectedTab = 0
+            selectedTab = .today
+
+        case .messages:
+            selectedTab = .messages
+
+        case .person(let id):
+            selectedTab = .people
+            peopleDetailRequestPersonId = id
+
+        case .predict:
+            openPredict()
 
         case .home:
-            selectedTab = 0
+            selectedTab = .today
+        }
+    }
+
+    func consumePendingShortcutDestination() {
+        guard let destination = UserDefaults.standard.string(forKey: Self.shortcutDestinationKey) else { return }
+        UserDefaults.standard.removeObject(forKey: Self.shortcutDestinationKey)
+
+        switch destination {
+        case "today":
+            navigateToDeepLink(.home)
+        case "predict":
+            navigateToDeepLink(.predict)
+        case "messages":
+            navigateToDeepLink(.messages)
+        case "nadia":
+            navigateToDeepLink(.guideProfile(id: FactoryCompanionCatalog.featured.id))
+        default:
+            break
         }
     }
 
@@ -1161,7 +1239,7 @@ class AppViewModel {
         loadProfileImage()
         await refreshInbox()
         syncHomeSetupPhase()
-        selectedTab = 0
+        selectedTab = .today
         currentScreen = .home
         if homeSetupPhase == .complete {
             analytics.track(.onboardingCompleted)
@@ -1301,35 +1379,36 @@ class AppViewModel {
     }
 
     func fetchDiscoverableProfiles() async {
+        await searchPublicProfiles(query: "")
+    }
+
+    func searchPublicProfiles(query: String) async {
         guard AppConfig.socialDiscoveryEnabled else {
             discoveredProfiles = []
             return
         }
 
         do {
-            let profiles = try await supabase.fetchVisibleSocialProfiles()
-            let blocks = try await supabase.fetchDiscoveryBlocks()
             let fallbackCurrentUserId = await supabase.currentUserId
             let currentUserId = profile?.id ?? fallbackCurrentUserId
-
-            let blockedProfileIds = Set(blocks.compactMap { block -> UUID? in
-                guard let currentUserId else { return nil }
-                if block.blockerId == currentUserId { return block.blockedId }
-                if block.blockedId == currentUserId { return block.blockerId }
-                return nil
-            })
-
-            discoveredProfiles = profiles
-                .filter { socialProfile in
-                    socialProfile.isVisible &&
-                    socialProfile.id != currentUserId &&
-                    !blockedProfileIds.contains(socialProfile.id)
-                }
+            try await profileDiscoveryStore.search(query: query, currentUserId: currentUserId)
+            discoveredProfiles = discoveredProfiles
                 .sorted { compatibilityWithUser(for: $0) > compatibilityWithUser(for: $1) }
         } catch {
             CrashReporter.log(error, context: "fetchDiscoverableProfiles")
-            discoveredProfiles = []
             showToast("Couldn't load discovery", subtitle: "Check your connection or try again later.", isError: true)
+        }
+    }
+
+    func fetchConnectedProfiles() async {
+        guard AppConfig.socialDiscoveryEnabled else {
+            connectedProfiles = []
+            return
+        }
+        do {
+            try await profileDiscoveryStore.refreshConnections()
+        } catch {
+            CrashReporter.log(error, context: "fetchConnectedProfiles")
         }
     }
 
@@ -1561,10 +1640,13 @@ class AppViewModel {
 
         do {
             if let remoteProfile = try await supabase.fetchCurrentSocialProfile() {
+                publicUsername = remoteProfile.username ?? ""
                 socialDisplayName = remoteProfile.displayName
                 socialBio = remoteProfile.bio ?? ""
                 socialLinks = remoteProfile.socialLinks ?? SocialLinks()
-                isDiscoverable = remoteProfile.isVisible
+                communicationHint = remoteProfile.communicationHint ?? ""
+                iceBreakers = remoteProfile.iceBreakers
+                isDiscoverable = remoteProfile.isDiscoverable
             } else if socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 socialDisplayName = profile?.displayName ?? ""
             }
@@ -1664,9 +1746,12 @@ class AppViewModel {
         }
 
         do {
-            try await supabase.upsertSocialProfile(socialProfile)
+            try await profileDiscoveryStore.saveProfile(socialProfile)
             socialDisplayName = socialProfile.displayName
-            isDiscoverable = socialProfile.isVisible
+            publicUsername = socialProfile.username ?? ""
+            communicationHint = socialProfile.communicationHint ?? ""
+            iceBreakers = socialProfile.iceBreakers
+            isDiscoverable = socialProfile.isDiscoverable
 
             guard showVisibilityToast else { return }
             if isVisible {
@@ -1715,17 +1800,123 @@ class AppViewModel {
             }
         }
 
+        let normalizedUsername = PublicProfile.normalizedUsername(publicUsername)
+        guard !isVisible || PublicProfile.isValidUsername(normalizedUsername) else {
+            showToast("Choose a username", subtitle: "Use 3-24 lowercase letters, numbers, periods, or underscores.", isError: true)
+            return nil
+        }
+
+        let trimmedHint = String(communicationHint.trimmingCharacters(in: .whitespacesAndNewlines).prefix(96))
+        let cleanIceBreakers = iceBreakers
+            .map { String($0.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)) }
+            .filter { !$0.isEmpty }
+            .prefix(6)
+
         return SocialProfile(
             id: currentProfile.id,
+            username: normalizedUsername.isEmpty ? nil : normalizedUsername,
             displayName: resolvedDisplayName,
+            avatarURL: profileImageURL,
             sunSign: sunSign,
             moonSign: moonSign,
             risingSign: risingSign,
             bio: trimmedBio.isEmpty ? nil : trimmedBio,
             socialLinks: socialLinks.isEmpty ? nil : socialLinks,
-            isVisible: isVisible,
+            communicationHint: trimmedHint.isEmpty ? defaultCommunicationHint(sunSign: sunSign) : trimmedHint,
+            iceBreakers: cleanIceBreakers.isEmpty ? defaultIceBreakers(displayName: resolvedDisplayName, sunSign: sunSign) : Array(cleanIceBreakers),
+            isDiscoverable: isVisible,
             createdAt: Date()
         )
+    }
+
+    func addUserConnection(profile: SocialProfile) async {
+        guard AppConfig.socialDiscoveryEnabled else { return }
+        do {
+            try await profileDiscoveryStore.addConnection(profile)
+            showToast("Added \(profile.displayName)", subtitle: "Their profile is saved in Messages and discovery.", isError: false)
+        } catch {
+            CrashReporter.log(error, context: "addUserConnection")
+            showToast("Couldn't add profile", subtitle: "They may no longer be discoverable.", isError: true)
+        }
+    }
+
+    func removeUserConnection(profile: SocialProfile) async {
+        guard AppConfig.socialDiscoveryEnabled else { return }
+        do {
+            try await profileDiscoveryStore.removeConnection(profile)
+            showToast("Removed \(profile.displayName)", subtitle: "You can add them again from discovery.", isError: false)
+        } catch {
+            CrashReporter.log(error, context: "removeUserConnection")
+            showToast("Couldn't remove profile", subtitle: "Try again in a moment.", isError: true)
+        }
+    }
+
+    func publicProfile(for id: UUID) -> SocialProfile? {
+        profileDiscoveryStore.publicProfile(for: id)
+    }
+
+    func communicationHint(for message: CompanionMessage) -> String {
+        if message.source == .discovery, let profile = publicProfile(for: message.companionId) {
+            return profile.communicationHint ?? defaultCommunicationHint(sunSign: profile.sunSign)
+        }
+        return guideCommunicationHint(for: message)
+    }
+
+    func iceBreakers(for message: CompanionMessage) -> [String] {
+        if message.source == .discovery, let profile = publicProfile(for: message.companionId) {
+            let prompts = profile.iceBreakers.filter { !$0.isEmpty }
+            return prompts.isEmpty ? defaultIceBreakers(displayName: profile.displayName, sunSign: profile.sunSign) : prompts
+        }
+        return guideIceBreakers(for: message)
+    }
+
+    func draftPredictFromToday() {
+        let guide = FactoryCompanionCatalog.featured
+        predictionDraft = PredictionDraft(
+            targetSunSign: guide.sign,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: "What tone is most likely to land well today?",
+            conversationText: "I want to understand the timing before I reply."
+        )
+        openPredict()
+    }
+
+    private func defaultCommunicationHint(sunSign: String) -> String {
+        guard let sign = ZodiacSign(rawValue: sunSign) else {
+            return "Start warm, stay clear, and ask one real question."
+        }
+        return CommunicationTemplates.guides[sign]?.bestApproach
+            ?? "Lead with \(sign.displayName) clarity: simple, warm, and specific."
+    }
+
+    private func defaultIceBreakers(displayName: String, sunSign: String) -> [String] {
+        let sign = ZodiacSign(rawValue: sunSign)?.displayName ?? sunSign.capitalized
+        return [
+            "What kind of message feels easiest for you to answer?",
+            "Does your \(sign) side prefer directness or a softer opening?",
+            "What should I know before I read your silence the wrong way?"
+        ]
+    }
+
+    private func guideCommunicationHint(for message: CompanionMessage) -> String {
+        let sign = ZodiacSign(rawValue: message.companionSign.lowercased())
+            ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == message.companionSign.lowercased() }
+        if let sign {
+            return GuideDirectoryCopy.specialty(
+                for: FactoryCompanionCatalog.all.first { $0.sign == sign } ?? FactoryCompanionCatalog.featured
+            )
+        }
+        return "Ask for timing, tone, or the sentence you should not send yet."
+    }
+
+    private func guideIceBreakers(for message: CompanionMessage) -> [String] {
+        [
+            "What is the cleanest way to say this?",
+            "What am I missing in their tone?",
+            "Help me make this warmer without chasing.",
+            "What should I wait to send?"
+        ]
     }
 
     func currentDiscoveryMessageSender() -> (displayName: String, sunSign: String, moonSign: String?, risingSign: String?)? {
@@ -2221,12 +2412,34 @@ class AppViewModel {
         }
     }
 
+    func uploadPublicProfileAvatar(_ image: UIImage) async {
+        guard let data = image.jpegData(compressionQuality: 0.82) else {
+            showToast("Couldn't use photo", subtitle: "Try another image.", isError: true)
+            return
+        }
+
+        do {
+            let publicURL = try await profileDiscoveryStore.uploadAvatar(data: data)
+            saveProfileImage(image)
+            profileImageURL = publicURL
+            UserDefaults.standard.set(publicURL, forKey: profileImageURLKey)
+            updateSocialProfile()
+            showToast("Photo updated", subtitle: "Your discovery profile now has a public avatar.")
+        } catch {
+            showToast("Couldn't upload photo", subtitle: "Check your connection and try again.", isError: true)
+        }
+    }
+
     func loadProfileImage() {
         guard let savedURL = UserDefaults.standard.string(forKey: profileImageURLKey),
               let url = URL(string: savedURL) else {
             UserDefaults.standard.removeObject(forKey: profileImageURLKey)
             profileImage = nil
             profileImageURL = nil
+            return
+        }
+        if url.scheme == "http" || url.scheme == "https" {
+            profileImageURL = savedURL
             return
         }
         guard FileManager.default.fileExists(atPath: url.path) else {
@@ -2276,14 +2489,18 @@ class AppViewModel {
         momentTypingKeys = []
         momentsStore.deleteAll()
         discoveredProfiles = []
+        connectedProfiles = []
         relationshipPeople = []
         predictionDraft = nil
         pendingInviteCodeForConfirmation = nil
         bonusPredictions = 0
         isDiscoverable = false
         socialDisplayName = ""
+        publicUsername = ""
         socialBio = ""
         socialLinks = SocialLinks()
+        communicationHint = ""
+        iceBreakers = []
         referralInfo = nil
         hasAcceptedThirdPartyConsent = false
         profileImage = nil
@@ -2310,7 +2527,10 @@ class AppViewModel {
         methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
+        defaults.removeObject(forKey: publicUsernameKey)
         defaults.removeObject(forKey: socialBioKey)
+        defaults.removeObject(forKey: communicationHintKey)
+        defaults.removeObject(forKey: iceBreakersKey)
         defaults.removeObject(forKey: isDiscoverableKey)
         defaults.removeObject(forKey: referralInfoKey)
         defaults.removeObject(forKey: thirdPartyConsentKey)
@@ -2321,6 +2541,7 @@ class AppViewModel {
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
         defaults.removeObject(forKey: GuideGramStore.defaultsKey)
+        todayStore.clearSavedPrompts()
         predictionService.clearHistory()
 
         relationshipPeopleStore.deleteAll()
@@ -2664,14 +2885,12 @@ extension AppViewModel {
         // seed them for every preview so those surfaces always render.
         relationshipPeople = RelationshipPeopleStore.previewPeople()
 
-        selectedTab = debugPreviewTab(from: arguments)
-        if selectedTab == 3 {
-            selectedTab = 0
-        }
+        let previewTab = debugPreviewTab(from: arguments)
+        selectedTab = AppTab(normalizing: previewTab)
         predictionDraft = nil
 
-        if selectedTab == 4 {
-            selectedTab = 0
+        if previewTab == 4 {
+            selectedTab = .today
             guideFocusSign = nil
         } else {
             guideFocusSign = nil
@@ -2699,33 +2918,33 @@ extension AppViewModel {
             }
         case "panelChat":
             seedDebugPanelMessages(now: now)
-            selectedTab = 2
+            selectedTab = .messages
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.panelChatRouteRequest += 1
             }
         case "panelInbox":
             seedDebugPanelMessages(now: now)
-            selectedTab = 2
+            selectedTab = .messages
         case "moments":
             seedDebugMoments(now: now)
-            selectedTab = 5
+            selectedTab = .me
         case "invite":
-            selectedTab = 5
+            selectedTab = .me
         case "aura":
-            selectedTab = 5
+            selectedTab = .me
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.auraRouteRequest += 1
             }
         case "shareCard":
-            selectedTab = 5
+            selectedTab = .me
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.shareCardRouteRequest += 1
             }
         case "careerRead":
-            selectedTab = 5
+            selectedTab = .me
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.careerReadRouteRequest += 1
@@ -2733,7 +2952,7 @@ extension AppViewModel {
         case "methodCourse":
             seedDebugPanelMessages(now: now)
             UserDefaults.standard.removeObject(forKey: Self.methodCourseProgressKey)
-            selectedTab = 2
+            selectedTab = .messages
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.openMethodCourseLesson()
@@ -2752,17 +2971,17 @@ extension AppViewModel {
                 createdAt: now.addingTimeInterval(-20 * 60 * 60),
                 releaseAt: now.addingTimeInterval(-2 * 60 * 60)
             ))
-            selectedTab = 0
+            selectedTab = .today
         case "playbook":
             relationshipPeople = RelationshipPeopleStore.previewPeople()
-            selectedTab = 1
+            selectedTab = .people
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.peopleDetailRequestPersonId = self.relationshipPeople.first?.id
             }
         case "teamRead":
             relationshipPeople = RelationshipPeopleStore.previewPeople()
-            selectedTab = 1
+            selectedTab = .people
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.teamReadRouteRequest += 1
@@ -2787,7 +3006,7 @@ extension AppViewModel {
                     isRead: false
                 )
             )
-            selectedTab = 2
+            selectedTab = .messages
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.panelChatRouteRequest += 1

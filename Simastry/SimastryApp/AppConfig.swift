@@ -18,9 +18,7 @@ nonisolated enum AppConfig {
     static let websiteURL = URL(string: "https://simastry.vercel.app")!
     static let appStoreURL = websiteURL
 
-    // The recovered Nadia UI still has an older social-discovery screen. Keep
-    // it gated until the new public_profiles backend is wired into this UI.
-    static let socialDiscoveryEnabled = false
+    static let socialDiscoveryEnabled = true
     static let llmChatEnabled = false
 
     static let privacyPolicyURL = URL(string: "https://simastry.vercel.app/privacy")!

@@ -141,7 +141,7 @@ extension AppViewModel {
     // MARK: Routing
 
     func openPanelChat() {
-        selectedTab = 2
+        selectedTab = .messages
         panelChatRouteRequest += 1
     }
 

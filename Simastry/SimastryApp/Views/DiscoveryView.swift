@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 // MARK: - Discovery Filter
 
@@ -15,8 +17,10 @@ private enum DiscoveryFilter: String, CaseIterable, Identifiable {
 
 struct DiscoveryView: View {
     @Bindable var viewModel: AppViewModel
+    @State private var searchText: String = ""
     @State private var selectedFilter: DiscoveryFilter = .compatible
     @State private var selectedProfile: SocialProfile?
+    @State private var selectedAvatarItem: PhotosPickerItem?
     @State private var appeared: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
@@ -45,7 +49,7 @@ struct DiscoveryView: View {
                         }
                         .padding(.horizontal, 20)
                         .refreshable {
-                            await viewModel.fetchDiscoverableProfiles()
+                            await viewModel.searchPublicProfiles(query: searchText)
                         }
                     } else {
                         comingSoonState
@@ -55,6 +59,7 @@ struct DiscoveryView: View {
             }
             .navigationTitle("Find Others Like You")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search usernames")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -83,9 +88,16 @@ struct DiscoveryView: View {
                 }
                 if AppConfig.socialDiscoveryEnabled {
                     Task {
-                        await viewModel.fetchDiscoverableProfiles()
+                        await viewModel.loadSocialProfile()
+                        await viewModel.searchPublicProfiles(query: searchText)
                     }
                 }
+            }
+            .task(id: searchText) {
+                guard AppConfig.socialDiscoveryEnabled else { return }
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                await viewModel.searchPublicProfiles(query: searchText)
             }
         }
     }
@@ -169,6 +181,33 @@ struct DiscoveryView: View {
                     .foregroundStyle(SimastryColor.offWhite)
             }
 
+            discoveryAvatarPicker
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Username")
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+
+                TextField("maya.sag", text: $viewModel.publicUsername)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .padding(12)
+                    .simastryGlass(cornerRadius: 12)
+                    .onChange(of: viewModel.publicUsername) {
+                        viewModel.publicUsername = PublicProfile.normalizedUsername(viewModel.publicUsername)
+                        viewModel.updateSocialProfile()
+                    }
+                    .accessibilityLabel("Public username")
+
+                Text("3-24 characters: lowercase letters, numbers, periods, or underscores.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(PublicProfile.isValidUsername(viewModel.publicUsername) ? SimastryColor.deepMuted : SimastryColor.sunCoral)
+            }
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("Display Name")
                     .font(SimastryFont.labelSmall)
@@ -219,11 +258,107 @@ struct DiscoveryView: View {
                     .accessibilityLabel("Optional bio for discovery profile")
             }
 
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Communication Hint")
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+
+                TextField("How people should start with you", text: $viewModel.communicationHint, axis: .vertical)
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineLimit(1...2)
+                    .padding(12)
+                    .simastryGlass(cornerRadius: 12)
+                    .onChange(of: viewModel.communicationHint) {
+                        if viewModel.communicationHint.count > 96 {
+                            viewModel.communicationHint = String(viewModel.communicationHint.prefix(96))
+                        }
+                        viewModel.updateSocialProfile()
+                    }
+                    .accessibilityLabel("Communication hint")
+            }
+
         }
         .padding(18)
         .glossyCard()
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
+    }
+
+    private var discoveryAvatarPicker: some View {
+        let profileImage = viewModel.profileImage
+        let sunSign = viewModel.userSunSign
+        let isUploadingAvatar = viewModel.profileDiscoveryStore.isUploadingAvatar
+
+        return HStack(spacing: 14) {
+            PhotosPicker(selection: $selectedAvatarItem, matching: .images, photoLibrary: .shared()) {
+                ZStack(alignment: .bottomTrailing) {
+                    ProfileImageView(
+                        image: profileImage,
+                        size: 70,
+                        showEditBadge: false,
+                        sunSign: sunSign
+                    )
+
+                    Image(systemName: isUploadingAvatar ? "arrow.triangle.2.circlepath" : "camera.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.midnight)
+                        .frame(width: 24, height: 24)
+                        .background(SimastryColor.gold, in: Circle())
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(isUploadingAvatar)
+            .accessibilityLabel(profileImage == nil ? "Add discovery profile photo" : "Change discovery profile photo")
+            .accessibilityHint("Uploads a public avatar for people who can discover your profile.")
+            .onChange(of: selectedAvatarItem) { _, newItem in
+                Task {
+                    await uploadSelectedAvatar(newItem)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isUploadingAvatar ? "Uploading photo" : "Profile photo")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Text("Visible only when your discovery profile is on.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(12)
+        .simastryGlassLight(cornerRadius: 14)
+    }
+
+    private func uploadSelectedAvatar(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else {
+            selectedAvatarItem = nil
+            viewModel.showToast("Couldn't use photo", subtitle: "Try another image.", isError: true)
+            return
+        }
+
+        await viewModel.uploadPublicProfileAvatar(resizeImage(image, maxDimension: 512))
+        selectedAvatarItem = nil
+    }
+
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let maxSide = max(size.width, size.height)
+        guard maxSide > maxDimension else { return image }
+
+        let scale = maxDimension / maxSide
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 
     // MARK: - Privacy Note
@@ -302,14 +437,80 @@ struct DiscoveryView: View {
         let filtered = filteredProfiles
 
         return Group {
-            if filtered.isEmpty {
+            if viewModel.profileDiscoveryStore.searchState == .loading &&
+                filtered.isEmpty &&
+                viewModel.connectedProfiles.isEmpty {
+                loadingState
+            } else if case .failed(let message) = viewModel.profileDiscoveryStore.searchState,
+                      filtered.isEmpty,
+                      viewModel.connectedProfiles.isEmpty {
+                retryState(message: message)
+            } else if filtered.isEmpty && viewModel.connectedProfiles.isEmpty {
                 emptyState
             } else {
                 LazyVStack(spacing: 16) {
+                    if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       !viewModel.connectedProfiles.isEmpty {
+                        connectedProfilesSection
+                    }
+
                     ForEach(Array(filtered.enumerated()), id: \.element.id) { index, profile in
                         discoveryCard(for: profile, index: index)
                     }
                 }
+            }
+        }
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .tint(SimastryColor.gold)
+            Text("Looking for public profiles")
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.mutedSilver)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loading public profiles")
+    }
+
+    private func retryState(message: String) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(SimastryColor.sunCoral)
+            Text("Couldn't load profiles")
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+            Text(message)
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .multilineTextAlignment(.center)
+            Button {
+                Task {
+                    await viewModel.searchPublicProfiles(query: searchText)
+                }
+            } label: {
+                Label("Try Again", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
+            .accessibilityLabel("Try loading public profiles again")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
+    }
+
+    private var connectedProfilesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Connected")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(1.4)
+
+            ForEach(viewModel.connectedProfiles) { profile in
+                discoveryCard(for: profile, index: 0)
             }
         }
     }
@@ -363,29 +564,7 @@ struct DiscoveryView: View {
             selectedProfile = profile
         } label: {
             HStack(spacing: 14) {
-                // Zodiac glyph avatar — placeholder for mock/local mode.
-                // When Supabase social profiles go live, replace with actual profile photos.
-                ZStack {
-                    Circle()
-                        .fill((sunSign?.color ?? SimastryColor.gold).opacity(0.15))
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    SimastryColor.goldLight,
-                                    SimastryColor.gold,
-                                    SimastryColor.goldDark
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                    Text(sunSign?.glyph ?? "\u{2726}")
-                        .font(.system(size: 18))
-                        .foregroundStyle(sunSign?.color ?? SimastryColor.gold)
-                }
-                .frame(width: 40, height: 40)
+                PublicProfileAvatar(profile: profile, size: 44)
 
                 VStack(alignment: .leading, spacing: 14) {
                     // Header: name + compatibility
@@ -394,6 +573,12 @@ struct DiscoveryView: View {
                             Text(profile.displayName)
                                 .font(SimastryFont.titleSmall)
                                 .foregroundStyle(SimastryColor.offWhite)
+
+                            if let username = profile.username {
+                                Text("@\(username)")
+                                    .font(SimastryFont.captionSmall)
+                                    .foregroundStyle(SimastryColor.deepMuted)
+                            }
 
                             // Sign glyphs
                             HStack(spacing: 12) {
@@ -428,6 +613,13 @@ struct DiscoveryView: View {
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .lineSpacing(2)
                         .lineLimit(2)
+
+                    if let hint = profile.communicationHint, !hint.isEmpty {
+                        Text(hint)
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.gold.opacity(0.9))
+                            .lineLimit(2)
+                    }
                 }
             }
             .padding(18)
@@ -458,6 +650,49 @@ struct DiscoveryView: View {
     }
 }
 
+private struct PublicProfileAvatar: View {
+    let profile: SocialProfile
+    let size: CGFloat
+
+    private var sunSign: ZodiacSign? {
+        ZodiacSign(rawValue: profile.sunSign)
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill((sunSign?.color ?? SimastryColor.gold).opacity(0.15))
+
+            if let avatarURL = profile.avatarURL, let url = URL(string: avatarURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        Text(sunSign?.glyph ?? "\u{2726}")
+                            .font(.system(size: size * 0.42))
+                            .foregroundStyle(sunSign?.color ?? SimastryColor.gold)
+                    }
+                }
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+            } else {
+                Text(sunSign?.glyph ?? "\u{2726}")
+                    .font(.system(size: size * 0.42))
+                    .foregroundStyle(sunSign?.color ?? SimastryColor.gold)
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay {
+            Circle()
+                .stroke(SimastryGradient.gold, lineWidth: 1.4)
+        }
+        .accessibilityLabel("\(profile.displayName) profile picture")
+    }
+}
+
 // MARK: - Profile Detail Sheet
 
 private struct ProfileDetailSheet: View {
@@ -471,6 +706,10 @@ private struct ProfileDetailSheet: View {
 
     private var compatibility: Int {
         viewModel.compatibilityWithUser(for: profile)
+    }
+
+    private var isConnected: Bool {
+        viewModel.connectedProfiles.contains { $0.id == profile.id }
     }
 
     var body: some View {
@@ -487,6 +726,12 @@ private struct ProfileDetailSheet: View {
                         compatibilitySection
                         if let bio = profile.bio, !bio.isEmpty {
                             bioSection(bio)
+                        }
+                        if let hint = profile.communicationHint, !hint.isEmpty {
+                            communicationHintSection(hint)
+                        }
+                        if !profile.iceBreakers.isEmpty {
+                            iceBreakerSection
                         }
                         addCompanionButton
                         privacyReminder
@@ -565,40 +810,7 @@ private struct ProfileDetailSheet: View {
 
     private var profileHeader: some View {
         VStack(spacing: 14) {
-            // Avatar placeholder — shows zodiac glyph in mock/local mode.
-            // When Supabase social profiles go live, replace with actual profile photos.
-            let signColor = ZodiacSign(rawValue: profile.sunSign)?.color ?? SimastryColor.gold
-
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [signColor.opacity(0.6), signColor.opacity(0.2)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        SimastryColor.goldLight,
-                                        SimastryColor.gold,
-                                        SimastryColor.goldDark
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2.5
-                            )
-                    )
-
-                Text(ZodiacSign(rawValue: profile.sunSign)?.glyph ?? "")
-                    .font(.system(size: 36))
-            }
-            .accessibilityHidden(true)
+            PublicProfileAvatar(profile: profile, size: 86)
 
             Text(profile.displayName)
                 .font(SimastryFont.titleLarge)
@@ -607,6 +819,12 @@ private struct ProfileDetailSheet: View {
             Text(profile.signSummary)
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
+
+            if let username = profile.username {
+                Text("@\(username)")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.deepMuted)
+            }
 
             // Compatibility badge
             HStack(spacing: 6) {
@@ -756,6 +974,47 @@ private struct ProfileDetailSheet: View {
         .glossyCard()
     }
 
+    private func communicationHintSection(_ hint: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("How to Start")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(1)
+                .textCase(.uppercase)
+
+            Text(hint)
+                .font(SimastryFont.bodyLarge)
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                .lineSpacing(3)
+        }
+        .padding(18)
+        .glossyCard()
+    }
+
+    private var iceBreakerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Ice Breakers")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(1)
+                .textCase(.uppercase)
+
+            ForEach(profile.iceBreakers.prefix(4), id: \.self) { prompt in
+                Text(prompt)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .simastryGlassPill()
+                    .accessibilityLabel("Suggested question: \(prompt)")
+            }
+        }
+        .padding(18)
+        .glossyCard()
+    }
+
     // MARK: - Action Buttons
 
     private var addCompanionButton: some View {
@@ -763,7 +1022,7 @@ private struct ProfileDetailSheet: View {
             Button {
                 if hasSentHi {
                     dismiss()
-                    viewModel.selectedTab = 2
+                    viewModel.selectedTab = .messages
                 } else {
                     Task {
                         let didSend = await viewModel.sendDiscoveryMessage(from: profile)
@@ -786,22 +1045,30 @@ private struct ProfileDetailSheet: View {
             .accessibilityLabel(hasSentHi ? "Open your conversation with \(profile.displayName)" : "Start a chat with \(profile.displayName)")
             .accessibilityHint(hasSentHi ? "Opens your Messages inbox" : "Sends an intro to start a discovery conversation")
 
-            // Add as Companion button
             Button {
-                showAddConfirmation = true
+                Task {
+                    if isConnected {
+                        await viewModel.removeUserConnection(profile: profile)
+                    } else {
+                        await viewModel.addUserConnection(profile: profile)
+                        hasSentHi = true
+                    }
+                }
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "person.badge.plus")
+                    Image(systemName: isConnected ? "person.crop.circle.badge.minus" : "person.crop.circle.badge.plus")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("Add as Companion")
+                    Text(isConnected ? "Remove Connection" : "Add Connection")
                         .font(SimastryFont.labelLarge)
                 }
-                .foregroundStyle(SimastryColor.midnight)
+                .foregroundStyle(isConnected ? SimastryColor.mutedSilver : SimastryColor.midnight)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
                     LinearGradient(
-                        colors: [SimastryColor.gold, SimastryColor.goldLight],
+                        colors: isConnected
+                            ? [SimastryColor.surface.opacity(0.75), SimastryColor.surface.opacity(0.55)]
+                            : [SimastryColor.gold, SimastryColor.goldLight],
                         startPoint: .leading,
                         endPoint: .trailing
                     ),
@@ -809,8 +1076,18 @@ private struct ProfileDetailSheet: View {
                 )
             }
             .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Add \(profile.displayName) as a companion")
-            .accessibilityHint("Creates a companion with their signs to explore compatibility")
+            .accessibilityLabel(isConnected ? "Remove \(profile.displayName) from connections" : "Add \(profile.displayName) as a connection")
+            .accessibilityHint(isConnected ? "Removes this public profile from your connected people" : "Saves this public profile to your connected people")
+
+            Button {
+                showAddConfirmation = true
+            } label: {
+                Text("Create practice companion")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.gold)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Create a practice companion from \(profile.displayName)")
         }
     }
 

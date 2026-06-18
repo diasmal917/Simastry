@@ -25,7 +25,13 @@ struct MessagesView: View {
                             .padding(.top, 8)
 
                             Spacer()
-                            emptyState
+                            if viewModel.profileDiscoveryStore.connectionState == .loading {
+                                connectionLoadingState
+                            } else if case .failed(let message) = viewModel.profileDiscoveryStore.connectionState {
+                                connectionRetryState(message)
+                            } else {
+                                emptyState
+                            }
                             Spacer()
                         }
                     } else {
@@ -53,6 +59,7 @@ struct MessagesView: View {
             }
             .task {
                 await viewModel.refreshInbox(showErrors: false)
+                await viewModel.fetchConnectedProfiles()
             }
             .onAppear {
                 presentPanelIfRequested()
@@ -87,7 +94,44 @@ struct MessagesView: View {
     }
 
     private var hasInboxContent: Bool {
-        !viewModel.inboxMessages.isEmpty || !viewModel.chatThreadSummaries.isEmpty
+        !viewModel.inboxMessages.isEmpty || !viewModel.chatThreadSummaries.isEmpty || !viewModel.connectedProfiles.isEmpty
+    }
+
+    private var connectionLoadingState: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .tint(SimastryColor.gold)
+            Text("Loading connections")
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.mutedSilver)
+        }
+        .padding(16)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loading connected people")
+    }
+
+    private func connectionRetryState(_ message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(SimastryColor.sunCoral)
+            Text("Couldn't load connections")
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+            Text(message)
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .multilineTextAlignment(.center)
+            Button {
+                Task {
+                    await viewModel.fetchConnectedProfiles()
+                }
+            } label: {
+                Label("Try Again", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
+        }
+        .padding(16)
     }
 
     private func openPanelChat() {
@@ -123,7 +167,7 @@ struct MessagesView: View {
             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
 
             ForEach(viewModel.inboxMessages) { message in
-                MessageRow(message: message)
+                MessageRow(message: message, publicProfile: viewModel.publicProfile(for: message.companionId))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
@@ -142,6 +186,28 @@ struct MessagesView: View {
                             Label("Delete", systemImage: "trash")
                         }
                         .accessibilityLabel("Delete message")
+                    }
+            }
+
+            ForEach(connectedProfilesWithoutThreads) { profile in
+                MessageRow(message: placeholderMessage(for: profile), publicProfile: profile)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    .contentShape(.rect)
+                    .onTapGesture {
+                        HapticManager.buttonPress()
+                        selectedMessage = placeholderMessage(for: profile)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            Task {
+                                await viewModel.removeUserConnection(profile: profile)
+                            }
+                        } label: {
+                            Label("Remove", systemImage: "person.crop.circle.badge.minus")
+                        }
+                        .accessibilityLabel("Remove \(profile.displayName) from connections")
                     }
             }
 
@@ -168,6 +234,23 @@ struct MessagesView: View {
         .refreshable {
             await viewModel.refreshInbox(showErrors: true)
         }
+    }
+
+    private var connectedProfilesWithoutThreads: [SocialProfile] {
+        let threadIds = Set(viewModel.inboxMessages.filter { $0.source == .discovery }.map(\.companionId))
+        return viewModel.connectedProfiles.filter { !threadIds.contains($0.id) }
+    }
+
+    private func placeholderMessage(for profile: SocialProfile) -> CompanionMessage {
+        CompanionMessage(
+            companionId: profile.id,
+            companionName: profile.displayName,
+            companionSign: ZodiacSign(rawValue: profile.sunSign)?.displayName ?? profile.sunSign.capitalized,
+            content: profile.communicationHint ?? "Start with one honest question.",
+            isRead: true,
+            source: .discovery,
+            direction: .incoming
+        )
     }
 
     private var emptyState: some View {
@@ -328,6 +411,7 @@ private struct PanelInboxRow: View {
 
 private struct MessageRow: View {
     let message: CompanionMessage
+    var publicProfile: SocialProfile?
 
     private var zodiacSign: ZodiacSign? {
         ZodiacSign(rawValue: message.companionSign.lowercased())
@@ -343,7 +427,12 @@ private struct MessageRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MessageAvatarView(message: message, size: 52, showGlow: !message.isRead)
+            MessageAvatarView(
+                message: message,
+                size: 52,
+                showGlow: !message.isRead,
+                avatarURL: publicProfile?.avatarURL
+            )
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -403,6 +492,7 @@ private struct MessageAvatarView: View {
     let message: CompanionMessage
     let size: CGFloat
     var showGlow: Bool = false
+    var avatarURL: String?
 
     private var zodiacSign: ZodiacSign? {
         ZodiacSign(rawValue: message.companionSign.lowercased())
@@ -420,7 +510,21 @@ private struct MessageAvatarView: View {
 
     var body: some View {
         ZStack {
-            if let factoryProfile {
+            if let avatarURL, let url = URL(string: avatarURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        Circle()
+                            .fill((zodiacSign?.color ?? SimastryColor.gold).opacity(0.18))
+                    }
+                }
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+            } else if let factoryProfile {
                 Image(factoryProfile.profileImageName)
                     .resizable()
                     .scaledToFill()
@@ -486,6 +590,10 @@ private struct MessageDetailSheet: View {
         viewModel.discoveryConversation(with: message.companionId)
     }
 
+    private var publicProfile: SocialProfile? {
+        viewModel.publicProfile(for: message.companionId)
+    }
+
     private var discoverySafetyProfile: SocialProfile {
         SocialProfile(
             id: message.companionId,
@@ -524,19 +632,25 @@ private struct MessageDetailSheet: View {
                             timestampDivider
 
                             messageMethodLayer
+                            iceBreakerBubbles
 
                             ForEach(displayMessages) { threadMessage in
                                 DMMessageBubble(
                                     message: threadMessage,
                                     isFromCurrentUser: threadMessage.direction == .outgoing,
-                                    companionAvatar: MessageAvatarView(message: message, size: 28, showGlow: false)
+                                    companionAvatar: MessageAvatarView(
+                                        message: message,
+                                        size: 28,
+                                        showGlow: false,
+                                        avatarURL: publicProfile?.avatarURL
+                                    )
                                 )
                                 .id(threadMessage.id)
                             }
 
                             if isCompanionTyping {
                                 TypingDotsBubble {
-                                    MessageAvatarView(message: message, size: 28, showGlow: false)
+                                    MessageAvatarView(message: message, size: 28, showGlow: false, avatarURL: publicProfile?.avatarURL)
                                 }
                                 .id("typing-indicator")
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -695,7 +809,7 @@ private struct MessageDetailSheet: View {
 
     private var dmHeader: some View {
         HStack(spacing: 12) {
-            MessageAvatarView(message: message, size: 44, showGlow: true)
+            MessageAvatarView(message: message, size: 44, showGlow: true, avatarURL: publicProfile?.avatarURL)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -809,7 +923,7 @@ private struct MessageDetailSheet: View {
                 Spacer(minLength: 0)
             }
 
-            Text("Replies use message context, \(message.companionName)'s sign lens, and your communication type. Notification previews stay private.")
+            Text(viewModel.communicationHint(for: message))
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.76))
                 .lineLimit(2)
@@ -825,6 +939,35 @@ private struct MessageDetailSheet: View {
         }
         .padding(12)
         .surfaceCard(cornerRadius: 18, accent: (zodiacSign?.color ?? SimastryColor.gold).opacity(0.7))
+    }
+
+    private var iceBreakerBubbles: some View {
+        let prompts = viewModel.iceBreakers(for: message)
+
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(prompts.prefix(5), id: \.self) { prompt in
+                    Button {
+                        HapticManager.buttonPress()
+                        replyText = prompt
+                        replyFocused = true
+                    } label: {
+                        Text(prompt)
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .simastryGlassPill()
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("Use suggested opener: \(prompt)")
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+        .accessibilityLabel("Suggested questions and ice breakers")
     }
 
     private var messageMethodSignals: [MethodSignal] {

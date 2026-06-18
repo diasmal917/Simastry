@@ -4,6 +4,7 @@ import Supabase
 nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
     case notConfigured
     case invalidRedirectURL
+    case missingSession
 
     var errorDescription: String? {
         switch self {
@@ -11,6 +12,8 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
             "Authentication is not configured yet."
         case .invalidRedirectURL:
             "Authentication redirect URL is invalid."
+        case .missingSession:
+            "Please sign in again before continuing."
         }
     }
 }
@@ -40,6 +43,11 @@ nonisolated final class SupabaseService {
         }
 
         client = SupabaseClient(supabaseURL: url, supabaseKey: rawKey)
+    }
+
+    static func avatarStoragePath(userId: UUID, fileExtension: String) -> String {
+        let sanitizedExtension = fileExtension.trimmingCharacters(in: CharacterSet(charactersIn: ".")).lowercased()
+        return "\(userId.uuidString)/profile.\(sanitizedExtension.isEmpty ? "jpg" : sanitizedExtension)"
     }
 
     var currentUserId: UUID? {
@@ -231,7 +239,7 @@ nonisolated final class SupabaseService {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
         let profiles: [SocialProfile] = try await client
-            .from("social_profiles")
+            .from("public_profiles")
             .select()
             .eq("id", value: userId.uuidString)
             .execute()
@@ -241,22 +249,96 @@ nonisolated final class SupabaseService {
 
     func upsertSocialProfile(_ profile: SocialProfile) async throws {
         let client = try configuredClient()
-        try await client.from("social_profiles").upsert(profile).execute()
+        try await client.from("public_profiles").upsert(profile).execute()
     }
 
     func fetchVisibleSocialProfiles() async throws -> [SocialProfile] {
         let client = try configuredClient()
         return try await client
-            .from("social_profiles")
+            .from("public_profiles")
             .select()
-            .eq("is_visible", value: true)
+            .eq("is_discoverable", value: true)
+            .not("username", operator: .is, value: "null")
+            .order("updated_at", ascending: false)
+            .limit(50)
             .execute()
             .value
     }
 
+    func searchPublicProfiles(query rawQuery: String) async throws -> [PublicProfile] {
+        let client = try configuredClient()
+        let query = PublicProfile.normalizedUsername(rawQuery)
+        guard !query.isEmpty else {
+            return try await fetchVisibleSocialProfiles()
+        }
+
+        return try await client
+            .from("public_profiles")
+            .select()
+            .eq("is_discoverable", value: true)
+            .not("username", operator: .is, value: "null")
+            .ilike("username", pattern: "\(query)%")
+            .order("username", ascending: true)
+            .limit(25)
+            .execute()
+            .value
+    }
+
+    func fetchUserConnections() async throws -> [UserConnectionData] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        return try await client
+            .from("user_connections")
+            .select()
+            .eq("owner_id", value: userId.uuidString)
+            .execute()
+            .value
+    }
+
+    func fetchConnectedProfiles() async throws -> [PublicProfile] {
+        let client = try configuredClient()
+        let connections = try await fetchUserConnections()
+        let profileIds = connections.map(\.profileId)
+        guard !profileIds.isEmpty else { return [] }
+        return try await client
+            .from("public_profiles")
+            .select()
+            .or(uuidOrFilter(column: "id", ids: profileIds))
+            .eq("is_discoverable", value: true)
+            .not("username", operator: .is, value: "null")
+            .execute()
+            .value
+    }
+
+    func addUserConnection(profileId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+        let connection = UserConnectionData(ownerId: userId, profileId: profileId, createdAt: Date())
+        try await client.from("user_connections").insert(connection).execute()
+    }
+
+    func removeUserConnection(profileId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+        try await client.from("user_connections")
+            .delete()
+            .eq("owner_id", value: userId.uuidString)
+            .eq("profile_id", value: profileId.uuidString)
+            .execute()
+    }
+
+    func uploadAvatar(data: Data, fileExtension: String = "jpg", contentType: String = "image/jpeg") async throws -> String {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { throw SupabaseServiceError.missingSession }
+        let path = Self.avatarStoragePath(userId: userId, fileExtension: fileExtension)
+        let bucket = client.storage.from("avatars")
+        try await bucket.upload(path, data: data, options: FileOptions(contentType: contentType, upsert: true))
+        return try bucket.getPublicURL(path: path, cacheNonce: UUID().uuidString).absoluteString
+    }
+
     func deleteSocialProfile(for userId: String) async throws {
         let client = try configuredClient()
-        try await client.from("social_profiles")
+        try await client.from("public_profiles")
             .delete()
             .eq("id", value: userId)
             .execute()

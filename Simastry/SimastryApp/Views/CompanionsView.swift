@@ -145,7 +145,7 @@ struct CompanionsView: View {
 
                     castActionButton(systemImage: "message.fill", label: "Message", tint: SimastryColor.gold) {
                         HapticManager.buttonPress()
-                        viewModel.selectedTab = 2
+                        viewModel.selectedTab = .messages
                     }
 
                     castActionButton(systemImage: "sparkles", label: "Choose", tint: SimastryColor.sunCoral) {
@@ -308,7 +308,7 @@ struct CompanionsView: View {
             .offset(y: appeared ? 0 : 10)
 
             GoldButton(viewModel.hasCompletedSigns ? "Choose a Guide" : "Set Up Your Signs") {
-                viewModel.selectedTab = 0
+                viewModel.selectedTab = .today
                 if viewModel.hasCompletedSigns {
                     viewModel.homeSetupPhase = .modeSelection
                 }
@@ -386,7 +386,7 @@ struct CompanionsView: View {
 
             Section {
                 Button {
-                    viewModel.selectedTab = 0
+                    viewModel.selectedTab = .today
                     viewModel.homeSetupPhase = .modeSelection
                 } label: {
                     HStack(spacing: 14) {
@@ -540,7 +540,7 @@ struct CompanionsView: View {
                     systemImage: "message.fill",
                     tint: SimastryColor.celestialBlue
                 ) {
-                    viewModel.selectedTab = 2
+                    viewModel.selectedTab = .messages
                 }
                 .frame(width: 230)
 

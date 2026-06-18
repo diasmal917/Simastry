@@ -147,7 +147,7 @@ struct CompanionDetailSheet: View {
                 Button {
                     HapticManager.buttonPress()
                     dismiss()
-                    viewModel.selectedTab = 2
+                    viewModel.selectedTab = .messages
                 } label: {
                     Label("Open Messages", systemImage: "message.fill")
                         .font(SimastryFont.labelLarge)

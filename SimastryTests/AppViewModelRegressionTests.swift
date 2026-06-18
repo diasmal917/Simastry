@@ -126,7 +126,7 @@ struct AppViewModelRegressionTests {
             conversationText: "Seren: I need a little room before I answer."
         )
 
-        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.selectedTab == .today)
         #expect(viewModel.predictRouteRequest == 1)
         #expect(viewModel.predictionDraft?.targetName == "Seren")
         #expect(viewModel.predictionDraft?.targetSunSign == .libra)
@@ -144,7 +144,7 @@ struct AppViewModelRegressionTests {
             conversationText: "Nadia: I need air tonight, not a fight."
         )
 
-        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.selectedTab == .today)
         #expect(viewModel.predictRouteRequest == 1)
         #expect(viewModel.predictionDraft?.targetName == nil)
         #expect(viewModel.predictionDraft?.targetSunSign == .sagittarius)
@@ -175,7 +175,7 @@ struct AppViewModelRegressionTests {
 
         viewModel.startPrediction(for: companion)
 
-        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.selectedTab == .today)
         #expect(viewModel.predictionDraft == nil)
         #expect(viewModel.toastMessage?.title == "Missing sign")
     }
@@ -186,7 +186,7 @@ struct AppViewModelRegressionTests {
 
         viewModel.handleDeepLink(URL(string: "simastry://simulate")!)
 
-        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.selectedTab == .today)
         #expect(viewModel.predictRouteRequest == 1)
     }
 
@@ -195,11 +195,11 @@ struct AppViewModelRegressionTests {
         viewModel.isAuthenticated = true
 
         viewModel.handleDeepLink(URL(string: "simastry://guides")!)
-        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.selectedTab == .today)
         #expect(viewModel.guideFocusSign == nil)
 
         viewModel.handleDeepLink(URL(string: "simastry://guide/sagittarius")!)
-        #expect(viewModel.selectedTab == 0)
+        #expect(viewModel.selectedTab == .today)
         #expect(viewModel.guideFocusSign == nil)
     }
 
@@ -209,7 +209,7 @@ struct AppViewModelRegressionTests {
 
         viewModel.handleDeepLink(URL(string: "simastry://compatibility/aries/leo")!)
 
-        #expect(viewModel.selectedTab == 1)
+        #expect(viewModel.selectedTab == .people)
         #expect(viewModel.guideFocusSign == nil)
     }
 
@@ -228,6 +228,28 @@ struct AppViewModelRegressionTests {
         #expect(viewModel.auraWalletPublicAddress.isEmpty)
         #expect(viewModel.relationshipPeople.isEmpty)
         #expect(viewModel.toastMessage?.title == "Local data cleared")
+    }
+
+    @Test func dailyPromptStoreKeepsNewestUniquePrompts() throws {
+        let suiteName = "DailyPromptStoreTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = DailyPromptStore(defaults: defaults)
+        let guideId = FactoryCompanionCatalog.featured.id
+
+        store.save(SavedDailyPrompt(text: "Ask Nadia what timing wants from me.", guideId: guideId, createdAt: Date(timeIntervalSince1970: 1)))
+        store.save(SavedDailyPrompt(text: "Notice the soft opening.", guideId: guideId, createdAt: Date(timeIntervalSince1970: 2)))
+        store.save(SavedDailyPrompt(text: "Ask Nadia what timing wants from me.", guideId: guideId, createdAt: Date(timeIntervalSince1970: 3)))
+
+        let prompts = store.load()
+
+        #expect(prompts.map(\.text) == [
+            "Ask Nadia what timing wants from me.",
+            "Notice the soft opening."
+        ])
+        #expect(prompts.first?.createdAt == Date(timeIntervalSince1970: 3))
     }
 }
 
