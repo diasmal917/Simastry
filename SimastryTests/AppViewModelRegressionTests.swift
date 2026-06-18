@@ -6,7 +6,7 @@ import Testing
 struct AppViewModelRegressionTests {
     private let pendingChartKey = "simastry_pending_onboarding_chart"
 
-    @Test func freeTierPredictionQuotaExhaustsAfterThirdUse() async {
+    @Test func betaAccessDoesNotExhaustPredictionQuotaWhenPurchasesAreUnavailable() async {
         let viewModel = AppViewModel()
         var profile = UserProfile.createDefault(id: UUID())
         profile.weeklyPredictionsUsed = 2
@@ -17,12 +17,14 @@ struct AppViewModelRegressionTests {
 
         await viewModel.consumePrediction()
 
-        #expect(viewModel.profile?.weeklyPredictionsUsed == 3)
-        #expect(viewModel.remainingWeeklyPredictions == 0)
-        #expect(!viewModel.canUsePrediction())
+        #expect(!viewModel.isRevenueCatAvailable)
+        #expect(viewModel.profile?.weeklyPredictionsUsed == 2)
+        #expect(viewModel.weeklyPredictionLimit == .max)
+        #expect(viewModel.remainingWeeklyPredictions == .max)
+        #expect(viewModel.canUsePrediction())
     }
 
-    @Test func stalePredictionQuotaResetsBeforeConsumption() async {
+    @Test func betaAccessKeepsStalePredictionQuotaFromBlockingUse() async {
         let viewModel = AppViewModel()
         var profile = UserProfile.createDefault(id: UUID())
         profile.weeklyPredictionsUsed = 3
@@ -30,15 +32,15 @@ struct AppViewModelRegressionTests {
         viewModel.profile = profile
 
         #expect(viewModel.canUsePrediction())
-        #expect(viewModel.remainingWeeklyPredictions == 3)
+        #expect(viewModel.remainingWeeklyPredictions == .max)
 
         await viewModel.consumePrediction()
 
-        #expect(viewModel.profile?.weeklyPredictionsUsed == 1)
-        #expect(viewModel.remainingWeeklyPredictions == 2)
+        #expect(viewModel.profile?.weeklyPredictionsUsed == 3)
+        #expect(viewModel.remainingWeeklyPredictions == .max)
     }
 
-    @Test func freeTierDailyMessageQuotaExhaustsAfterTenthUse() async {
+    @Test func betaAccessDoesNotExhaustDailyMessageQuotaWhenPurchasesAreUnavailable() async {
         let viewModel = AppViewModel()
         var profile = UserProfile.createDefault(id: UUID())
         profile.dailyMessagesUsed = 9
@@ -49,12 +51,14 @@ struct AppViewModelRegressionTests {
 
         await viewModel.consumeMessage()
 
-        #expect(viewModel.profile?.dailyMessagesUsed == 10)
-        #expect(viewModel.remainingDailyMessages == 0)
-        #expect(!viewModel.canSendMessage())
+        #expect(!viewModel.isRevenueCatAvailable)
+        #expect(viewModel.profile?.dailyMessagesUsed == 9)
+        #expect(viewModel.dailyMessageLimit == .max)
+        #expect(viewModel.remainingDailyMessages == .max)
+        #expect(viewModel.canSendMessage())
     }
 
-    @Test func staleDailyMessageQuotaResetsBeforeConsumption() async {
+    @Test func betaAccessKeepsStaleDailyMessageQuotaFromBlockingUse() async {
         let viewModel = AppViewModel()
         var profile = UserProfile.createDefault(id: UUID())
         profile.dailyMessagesUsed = 10
@@ -62,12 +66,12 @@ struct AppViewModelRegressionTests {
         viewModel.profile = profile
 
         #expect(viewModel.canSendMessage())
-        #expect(viewModel.remainingDailyMessages == 10)
+        #expect(viewModel.remainingDailyMessages == .max)
 
         await viewModel.consumeMessage()
 
-        #expect(viewModel.profile?.dailyMessagesUsed == 1)
-        #expect(viewModel.remainingDailyMessages == 9)
+        #expect(viewModel.profile?.dailyMessagesUsed == 10)
+        #expect(viewModel.remainingDailyMessages == .max)
     }
 
     @Test func stagingBirthChartPersistsUntilSignOut() async throws {

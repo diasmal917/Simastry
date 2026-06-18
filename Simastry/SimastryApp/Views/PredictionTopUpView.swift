@@ -16,7 +16,9 @@ struct PredictionTopUpView: View {
                 } else {
                     purchasesUnavailableCard
                 }
-                upgradePrompt
+                if viewModel.isRevenueCatAvailable {
+                    upgradePrompt
+                }
                 bonusBalanceSection
             }
             .padding(.horizontal, 20)

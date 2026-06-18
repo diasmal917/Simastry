@@ -119,6 +119,7 @@ struct ModeSelectionView: View {
     }
 
     private var isProUser: Bool {
+        guard viewModel.isRevenueCatAvailable else { return true }
         let tier = viewModel.profile?.tier ?? "free"
         return tier == "pro"
     }

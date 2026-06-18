@@ -63,9 +63,25 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $viewModel.showUpsell) {
+        .onChange(of: viewModel.showUpsell) { _, wantsUpsell in
+            guard wantsUpsell, !viewModel.isRevenueCatAvailable else { return }
+            viewModel.showUpsell = false
+            viewModel.showToast("Beta access active", subtitle: "Purchases are unavailable in this build.", isError: false)
+        }
+        .sheet(isPresented: upsellBinding) {
             UpsellModalView(viewModel: viewModel)
         }
+    }
+
+    private var upsellBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.showUpsell && viewModel.isRevenueCatAvailable },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.showUpsell = false
+                }
+            }
+        )
     }
 
     private var loadingView: some View {

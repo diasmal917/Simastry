@@ -126,26 +126,35 @@ struct SimastrySettingsView: View {
             settingRow(
                 icon: "crown.fill",
                 title: "Plan",
-                detail: (viewModel.profile?.tier ?? "free").capitalized,
+                detail: viewModel.isRevenueCatAvailable ? (viewModel.profile?.tier ?? "free").capitalized : "Beta",
                 tint: SimastryColor.gold
             )
 
-            Button {
-                if (viewModel.profile?.tier ?? "free") == "free" {
-                    viewModel.showUpsell = true
-                } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                    openURL(url)
+            if viewModel.isRevenueCatAvailable {
+                Button {
+                    if (viewModel.profile?.tier ?? "free") == "free" {
+                        viewModel.showUpsell = true
+                    } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                        openURL(url)
+                    }
+                } label: {
+                    settingRow(
+                        icon: "sparkles",
+                        title: (viewModel.profile?.tier ?? "free") == "free" ? "Upgrade Simastry" : "Manage Subscription",
+                        detail: "Unlock more messages and chart tools",
+                        tint: SimastryColor.gold,
+                        showsChevron: true
+                    )
                 }
-            } label: {
+                .buttonStyle(SpringPressStyle())
+            } else {
                 settingRow(
                     icon: "sparkles",
-                    title: (viewModel.profile?.tier ?? "free") == "free" ? "Upgrade Simastry" : "Manage Subscription",
-                    detail: "Unlock more messages and chart tools",
-                    tint: SimastryColor.gold,
-                    showsChevron: true
+                    title: "Beta Access",
+                    detail: "Purchases are unavailable in this build",
+                    tint: SimastryColor.gold
                 )
             }
-            .buttonStyle(SpringPressStyle())
 
             Button(role: .destructive) {
                 Task {

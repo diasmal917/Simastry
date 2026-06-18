@@ -752,7 +752,11 @@ class AppViewModel {
         case "profile":
             selectedTab = .me
         case "upsell":
-            showUpsell = true
+            if isRevenueCatAvailable {
+                showUpsell = true
+            } else {
+                showToast("Beta access active", subtitle: "Purchases are unavailable in this build.", isError: false)
+            }
         default:
             break
         }
@@ -1055,6 +1059,7 @@ class AppViewModel {
     }
 
     var dailyMessageLimit: Int {
+        guard isRevenueCatAvailable else { return .max }
         switch profile?.tier ?? "free" {
         case "plus", "pro": return .max
         default: return 10
@@ -1062,6 +1067,7 @@ class AppViewModel {
     }
 
     var weeklyPredictionLimit: Int {
+        guard isRevenueCatAvailable else { return .max }
         switch profile?.tier ?? "free" {
         case "plus", "pro": return .max
         default: return 3
@@ -1069,6 +1075,7 @@ class AppViewModel {
     }
 
     var companionLimit: Int {
+        guard isRevenueCatAvailable else { return .max }
         switch profile?.tier ?? "free" {
         case "pro": return .max
         case "plus": return 3
@@ -1077,30 +1084,35 @@ class AppViewModel {
     }
 
     var remainingDailyMessages: Int {
+        guard isRevenueCatAvailable else { return .max }
         guard var p = profile else { return 10 }
         resetDailyIfNeeded(&p)
         return max(0, dailyMessageLimit - p.dailyMessagesUsed)
     }
 
     var remainingWeeklyPredictions: Int {
+        guard isRevenueCatAvailable else { return .max }
         guard var p = profile else { return 3 }
         resetWeeklyIfNeeded(&p)
         return max(0, weeklyPredictionLimit - p.weeklyPredictionsUsed)
     }
 
     func canSendMessage() -> Bool {
+        guard isRevenueCatAvailable else { return true }
         let tier = profile?.tier ?? "free"
         if tier == "plus" || tier == "pro" { return true }
         return remainingDailyMessages > 0
     }
 
     func canUsePrediction() -> Bool {
+        guard isRevenueCatAvailable else { return true }
         let tier = profile?.tier ?? "free"
         if tier == "plus" || tier == "pro" { return true }
         return remainingWeeklyPredictions > 0
     }
 
     func consumeMessage() async {
+        guard isRevenueCatAvailable else { return }
         guard var p = await trackedProfile() else { return }
         let tier = p.tier
         if tier == "plus" || tier == "pro" { return }
@@ -1115,6 +1127,7 @@ class AppViewModel {
     }
 
     func consumePrediction() async {
+        guard isRevenueCatAvailable else { return }
         guard var p = await trackedProfile() else { return }
         let tier = p.tier
         if tier == "plus" || tier == "pro" { return }
@@ -2000,6 +2013,7 @@ class AppViewModel {
     private let savedGuidesKey = "savedGuides"
 
     var savedGuideLimit: Int {
+        guard isRevenueCatAvailable else { return .max }
         switch profile?.tier ?? "free" {
         case "pro": return .max
         case "plus": return 10

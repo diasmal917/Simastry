@@ -1067,31 +1067,43 @@ struct ProfileView: View {
 
     private var subscriptionSection: some View {
         let tier = viewModel.profile?.tier ?? "free"
+        let isBetaAccess = !viewModel.isRevenueCatAvailable
 
         return VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        tierLabel(tier)
+                        tierLabel(isBetaAccess ? "beta" : tier)
 
-                        Button(action: {
-                            if tier == "free" {
-                                viewModel.showUpsell = true
-                            } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                                openURL(url)
-                            }
-                        }) {
-                            Text(tier == "free" ? "Upgrade" : "Manage Subscription")
+                        if isBetaAccess {
+                            Text("Internal beta access is unlocked while purchases are unavailable.")
                                 .font(SimastryFont.bodySmall)
-                                .foregroundStyle(SimastryColor.gold)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                        } else {
+                            Button(action: {
+                                if tier == "free" {
+                                    viewModel.showUpsell = true
+                                } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                                    openURL(url)
+                                }
+                            }) {
+                                Text(tier == "free" ? "Upgrade" : "Manage Subscription")
+                                    .font(SimastryFont.bodySmall)
+                                    .foregroundStyle(SimastryColor.gold)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     Spacer()
                 }
 
-                if tier == "free" {
+                if isBetaAccess {
+                    HStack(spacing: 10) {
+                        unlimitedChip("Beta messages")
+                        unlimitedChip("Guide access")
+                    }
+                } else if tier == "free" {
                     HStack(spacing: 16) {
                         usagePill(
                             label: "Messages",
@@ -1154,6 +1166,10 @@ struct ProfileView: View {
     @ViewBuilder
     private func tierLabel(_ tier: String) -> some View {
         switch tier {
+        case "beta":
+            Text("Beta Access")
+                .font(SimastryFont.titleSmall)
+                .foregroundStyle(SimastryColor.gold)
         case "plus":
             Text("Simastry+")
                 .font(SimastryFont.titleSmall)
