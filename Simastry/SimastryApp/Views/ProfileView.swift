@@ -1211,7 +1211,7 @@ struct ProfileView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .simastryGlassPill()
+                .simastryGlassPill(interactive: true)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localization.string("profile.darkMode"))
@@ -1245,7 +1245,7 @@ struct ProfileView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .simastryGlassPill()
+                .simastryGlassPill(interactive: true)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localization.string("profile.language"))

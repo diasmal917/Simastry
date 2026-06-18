@@ -173,12 +173,15 @@ extension View {
         }
     }
 
+    /// - Parameter interactive: pass `true` when the pill is itself the tappable
+    ///   surface of a button so iOS 26 Liquid Glass responds to touch. Older OSes
+    ///   keep the static material fallback.
     @ViewBuilder
-    func simastryGlassPill() -> some View {
+    func simastryGlassPill(interactive: Bool = false) -> some View {
         if #available(iOS 26.0, *) {
             self
                 .background(SimastryColor.surface.opacity(0.20), in: Capsule())
-                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.065)), in: .capsule)
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.065)).interactive(interactive), in: .capsule)
                 .overlay(
                     Capsule()
                         .stroke(

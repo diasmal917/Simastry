@@ -363,8 +363,8 @@ struct HomeView: View {
                     viewModel.draftPredictFromToday()
                 } label: {
                     Image(systemName: SimastryIcon.predict)
-                        .frame(width: 38, height: 38)
-                        .simastryGlassPill()
+                        .frame(width: 44, height: 44)
+                        .simastryGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
                 .accessibilityLabel("Predict the best tone")
@@ -374,8 +374,8 @@ struct HomeView: View {
                     viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: featuredProfile.id))
                 } label: {
                     Image(systemName: "bookmark.fill")
-                        .frame(width: 38, height: 38)
-                        .simastryGlassPill()
+                        .frame(width: 44, height: 44)
+                        .simastryGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
                 .accessibilityLabel("Save today's Nadia prompt")

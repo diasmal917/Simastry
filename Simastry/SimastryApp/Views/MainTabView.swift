@@ -48,6 +48,7 @@ struct MainTabView: View {
     private var tabContainer: some View {
         if #available(iOS 26.0, *) {
             tabView
+                .tabBarMinimizeBehavior(.onScrollDown)
         } else {
             tabView
                 .toolbarBackground(.ultraThinMaterial, for: .tabBar)
