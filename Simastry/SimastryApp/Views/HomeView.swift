@@ -1,16 +1,53 @@
 import SwiftUI
 
+private enum HomeRoute: Hashable {
+    case aiAstrologist(profileId: String?)
+    case guideProfile(profileId: String)
+    case predict
+    case decode
+}
+
 struct HomeView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
+    @StateObject private var streakManager = StreakManager.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var navigationPath = NavigationPath()
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
+    @State private var showStreakMilestone: Bool = false
+    @State private var transitReading: DailyTransitReading?
+    @State private var handledAstrologistsRouteRequest: Int = 0
+    @State private var handledPredictRouteRequest: Int = 0
+    @State private var handledDecodeRouteRequest: Int = 0
+    @State private var kenBurnsActive: Bool = false
+    @State private var sealedDrafts: [SealedDraft] = []
+    @State private var showSealedDraftCompose: Bool = false
+    @State private var rereadDraft: SealedDraft?
+    @Namespace private var panelHeroNamespace
+
+    private var communicationType: CommunicationTypeProfile? {
+        CommunicationTypeProfile.make(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        )
+    }
+
+    private var featuredProfile: FactoryCompanionProfile {
+        FactoryCompanionCatalog.featured
+    }
+
+    private var castRowProfiles: [FactoryCompanionProfile] {
+        let featured = featuredProfile
+        return Array(FactoryCompanionCatalog.all.filter { $0.id != featured.id }.prefix(6))
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
-                SimastryShellBackground()
+                CelestialBackground()
 
                 Group {
                     switch viewModel.homeSetupPhase {
@@ -18,6 +55,8 @@ struct HomeView: View {
                         ModeSelectionView(viewModel: viewModel)
                     case .signSelection:
                         SignSelectionView(viewModel: viewModel)
+                    case .onboardingInsight:
+                        OnboardingInsightView(viewModel: viewModel)
                     case .companionSetup:
                         CompanionSetupView(viewModel: viewModel)
                     case .soulCreation:
@@ -28,51 +67,96 @@ struct HomeView: View {
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
             }
+            .overlay(alignment: .top) {
+                streakMilestoneToast
+            }
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case .aiAstrologist(let profileId):
+                    // Zoom out of the tapped pane/avatar; route requests
+                    // without a profile have no on-screen source to zoom from.
+                    if let profileId {
+                        AIAstrologistsView(viewModel: viewModel, initialProfileId: profileId)
+                            .id(profileId)
+                            .navigationTransition(.zoom(sourceID: profileId, in: panelHeroNamespace))
+                    } else {
+                        AIAstrologistsView(viewModel: viewModel, initialProfileId: nil)
+                            .id("primary")
+                    }
+                case .guideProfile(let profileId):
+                    // The Instagram pattern: any guide face lands here.
+                    if let profile = FactoryCompanionCatalog.all.first(where: { $0.id == profileId }) {
+                        GuideProfileView(viewModel: viewModel, profile: profile)
+                            .navigationTransition(.zoom(sourceID: profileId, in: panelHeroNamespace))
+                    }
+                case .predict:
+                    SimulateView(viewModel: viewModel)
+                case .decode:
+                    DecodeTextView(viewModel: viewModel)
+                }
+            }
+            .onAppear {
+                // Catch route requests fired before this view mounted
+                // (cold-start deep links, preview seeding).
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.aiAstrologistsRouteRequest) {
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.predictRouteRequest) {
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.decodeRouteRequest) {
+                presentRoutesIfRequested()
+            }
+        }
+    }
+
+    private func presentRoutesIfRequested() {
+        guard viewModel.homeSetupPhase == .complete else { return }
+        if viewModel.aiAstrologistsRouteRequest > handledAstrologistsRouteRequest {
+            handledAstrologistsRouteRequest = viewModel.aiAstrologistsRouteRequest
+            navigationPath.append(HomeRoute.aiAstrologist(profileId: nil))
+        }
+        if viewModel.predictRouteRequest > handledPredictRouteRequest {
+            handledPredictRouteRequest = viewModel.predictRouteRequest
+            navigationPath.append(HomeRoute.predict)
+        }
+        if viewModel.decodeRouteRequest > handledDecodeRouteRequest {
+            handledDecodeRouteRequest = viewModel.decodeRouteRequest
+            navigationPath.append(HomeRoute.decode)
         }
     }
 
     private var homeContent: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 16)
+            VStack(alignment: .leading, spacing: 14) {
+                Spacer().frame(height: 6)
 
-                greetingSection
+                todayHeader
 
-                if !viewModel.companions.isEmpty {
-                    CompanionHeroDeckView(
-                        companions: viewModel.companions,
-                        onPredict: { companion in
-                            viewModel.startPrediction(for: companion)
-                        },
-                        onOpenCompanions: {
-                            viewModel.selectedTab = AppTab.companions.rawValue
-                        }
-                    )
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 10)
-                }
+                situationCard
 
-                predictReplyCard
+                panelCard
 
-                if let companion = viewModel.primaryCompanion,
-                   let companionSign = ZodiacSign(rawValue: companion.sunSign) {
-                    communicationFocusCard(companionName: companion.name, companionSign: companionSign)
-                }
+                predictHeroCard
 
-                featureGrid
+                todaysReadCard
 
-                if let companion = viewModel.primaryCompanion {
-                    companionCard(companion)
-                }
+                learnCard
 
-                if let sun = viewModel.userSunSign {
-                    todayEnergyCard(sun: sun)
-                }
+                sealedDraftsRow
 
-                Spacer().frame(height: 80)
+                Spacer().frame(height: SimastrySpacing.tabBarClearance)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
             .onAppear {
+                streakManager.recordCheckIn()
+                AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
+                sealedDrafts = SealedDraftStore().load()
+                if !reduceMotion {
+                    kenBurnsActive = true
+                }
                 guard !appeared else { return }
                 if reduceMotion {
                     appeared = true
@@ -81,16 +165,30 @@ struct HomeView: View {
                         appeared = true
                     }
                 }
+                // Show milestone toast after a brief delay
+                if streakManager.streakMessage != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        withAnimation(.spring(SimastrySpring.smooth)) {
+                            showStreakMilestone = true
+                        }
+                        // Auto-dismiss after 4 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                showStreakMilestone = false
+                            }
+                        }
+                    }
+                }
             }
         }
         .scrollIndicators(.hidden)
         .overlay {
             if isLoading {
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 20) {
                         Spacer().frame(height: 16)
 
-                        // Greeting skeleton
+                        // Header skeleton
                         HStack {
                             VStack(alignment: .leading, spacing: 6) {
                                 RoundedRectangle(cornerRadius: 4)
@@ -98,7 +196,7 @@ struct HomeView: View {
                                     .frame(width: 100, height: 14)
                                 RoundedRectangle(cornerRadius: 6)
                                     .fill(SimastryColor.surface)
-                                    .frame(width: 180, height: 26)
+                                    .frame(width: 180, height: 30)
                             }
                             Spacer()
                             Circle()
@@ -106,31 +204,31 @@ struct HomeView: View {
                                 .frame(width: 48, height: 48)
                         }
 
-                        // Predict card skeleton
-                        RoundedRectangle(cornerRadius: 22)
+                        // Panel skeleton
+                        RoundedRectangle(cornerRadius: 24)
                             .fill(SimastryColor.surface)
-                            .frame(height: 120)
+                            .frame(height: 340)
 
-                        // Communication card skeleton
+                        // Predict hero skeleton
+                        RoundedRectangle(cornerRadius: 28)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 200)
+
+                        // Daily read skeleton
                         RoundedRectangle(cornerRadius: 22)
                             .fill(SimastryColor.surface)
-                            .frame(height: 140)
+                            .frame(height: 150)
 
                         // Grid skeleton
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                             ForEach(0..<4, id: \.self) { _ in
                                 RoundedRectangle(cornerRadius: 18)
                                     .fill(SimastryColor.surface)
-                                    .frame(height: 110)
+                                    .frame(height: 104)
                             }
                         }
-
-                        // Companion skeleton
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 80)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     .skeletonShimmer()
                 }
                 .scrollIndicators(.hidden)
@@ -138,6 +236,11 @@ struct HomeView: View {
             }
         }
         .task {
+            transitReading = TransitEngine.dailyReading(
+                sun: viewModel.userSunSign,
+                moon: viewModel.userMoonSign,
+                rising: viewModel.userRisingSign
+            )
             try? await Task.sleep(for: .milliseconds(600))
             withAnimation(.easeOut(duration: 0.3)) {
                 isLoading = false
@@ -145,613 +248,929 @@ struct HomeView: View {
         }
     }
 
-    private var greetingSection: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(greetingText)
-                    .font(.system(size: 14))
-                    .foregroundStyle(SimastryColor.mutedSilver)
+    @ViewBuilder
+    private var streakMilestoneToast: some View {
+        if showStreakMilestone, let message = streakManager.streakMessage {
+            HStack(spacing: 10) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(SimastryColor.gold)
 
-                if let name = viewModel.profile?.displayName {
-                    Text("Hey, \(name)")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(SimastryColor.offWhite)
-                } else {
-                    Text("Welcome back")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(SimastryColor.offWhite)
-                }
+                Text(message)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(SimastryColor.gold.opacity(0.35), lineWidth: 1)
+            }
+            .shadow(color: SimastryColor.gold.opacity(0.25), radius: 18, y: 8)
+            .padding(.top, 12)
+            .padding(.horizontal, 20)
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .zIndex(50)
+        }
+    }
+
+    // MARK: - Header
+
+    private var todayHeader: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(formattedSummaryDate.uppercased())
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textTertiary)
+                    .tracking(1.4)
+
+                Text("Today")
+                    .font(SimastryFont.displayLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text(summaryGreeting)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.gold)
             }
 
             Spacer()
 
             if let sun = viewModel.userSunSign {
-                Text(sun.glyph)
-                    .font(.system(size: 28))
-                    .foregroundStyle(sun.color)
+                ZodiacIconView(sign: sun, size: 42, showsGlow: true)
                     .frame(width: 48, height: 48)
-                    .background(sun.color.opacity(0.14), in: Circle())
+                    .background(SimastryColor.gold.opacity(0.10), in: Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(SimastryColor.gold.opacity(0.18), lineWidth: 0.6)
+                    )
             }
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
     }
 
-    private func communicationFocusCard(companionName: String, companionSign: ZodiacSign) -> some View {
-        let guide = CommunicationTemplates.guides[companionSign]
-        let tips = guide?.tips ?? []
+    // MARK: - Predict Hero
+
+    private var predictHeroCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                Image(systemName: SimastryIcon.predict)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(SimastryColor.risingViolet)
+                    .frame(width: 44, height: 44)
+                    .background(SimastryColor.risingViolet.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                Spacer()
+
+                Text(remainingPredictionsBadge)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.risingViolet)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(SimastryColor.risingViolet.opacity(0.13), in: Capsule())
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("PREDICT")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.risingViolet)
+                    .tracking(1.8)
+
+                Text("What will they say back?")
+                    .font(SimastryFont.titleLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text("Paste a conversation — your panel maps the likely reply and your strongest next message.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            NavigationLink(value: HomeRoute.predict) {
+                Label("Paste a conversation", systemImage: SimastryIcon.predict)
+            }
+            .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
+            .simultaneousGesture(TapGesture().onEnded {
+                HapticManager.buttonPress()
+            })
+
+            NavigationLink(value: HomeRoute.decode) {
+                Text("Just decode one text \u{2192}")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.risingViolet)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                HapticManager.buttonPress()
+            })
+            .accessibilityLabel("Decode one received text")
+        }
+        .padding(18)
+        .heroGlass(SimastryColor.risingViolet)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+        .zIndex(2)
+    }
+
+    // MARK: - Daily Read
+
+    /// Which chart signal leads today's read — rotates daily through Sun/Moon/Rising.
+    private var briefFocusRole: CelestialRole {
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let tipIndex = (dayOfYear - 1) % max(tips.count, 1)
-        let todayTip = tips.isEmpty ? "Learn their sign to communicate better." : tips[tipIndex]
+        return [CelestialRole.sun, .moon, .rising][dayOfYear % 3]
+    }
 
-        return Button {
-            HapticManager.buttonPress()
-            viewModel.guideFocusSign = companionSign
-            viewModel.selectedTab = 3
-        } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 10) {
-                    Image(systemName: "text.bubble.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(SimastryColor.celestialBlue)
+    private var briefFocusLine: String? {
+        guard let communicationType else { return nil }
+        switch briefFocusRole {
+        case .sun: return communicationType.sunSignal
+        case .moon: return communicationType.moonSignal
+        case .rising: return communicationType.risingSignal
+        }
+    }
 
-                    Text("Today with \(companionName)")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(SimastryColor.offWhite)
+    private var briefMoveLine: String? {
+        guard let sun = viewModel.userSunSign else { return nil }
+        let moves = AstrologyTemplates.companionReplyGuidance[sun.element.rawValue] ?? []
+        guard !moves.isEmpty else { return nil }
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        return moves[dayOfYear % moves.count]
+    }
+
+    /// The one daily-reading card: focus line, the move, today's sky, and
+    /// the talk-it-through row — four former cards merged so Today scans
+    /// in one pass.
+    @ViewBuilder
+    private var todaysReadCard: some View {
+        if let briefFocusLine {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(spacing: 8) {
+                    Image(systemName: SimastryIcon.dailyRead)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("YOUR DAILY READ")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
 
                     Spacer()
 
-                    Text(companionSign.glyph)
-                        .font(.system(size: 18))
-                        .foregroundStyle(companionSign.color)
+                    Text("\(briefFocusRole.displayName) focus")
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.gold)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(SimastryColor.gold.opacity(0.12), in: Capsule())
                 }
 
-                Text(todayTip)
-                    .font(.system(size: 16, weight: .medium, design: .serif))
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                if let typeTitle = communicationType?.title {
+                    Text(typeTitle)
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.textTertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+                }
+
+                Text(briefFocusLine)
+                    .font(SimastryFont.bodyLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
-                    .multilineTextAlignment(.leading)
 
-                if let approach = guide?.bestApproach {
-                    Text(approach)
-                        .font(.system(size: 13))
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .lineLimit(2)
-                }
-
-                HStack(spacing: 6) {
-                    Text("Read full guide")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(SimastryColor.celestialBlue)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(SimastryColor.celestialBlue)
-                }
-                .padding(.top, 2)
-            }
-            .padding(20)
-            .tintedGlass(SimastryColor.celestialBlue.opacity(0.12), cornerRadius: 22)
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(SimastryColor.celestialBlue.opacity(0.18), lineWidth: 1)
-            }
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Today with \(companionName). \(todayTip)")
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 12)
-    }
-
-    private var predictReplyCard: some View {
-        Button {
-            HapticManager.buttonPress()
-            if let companion = viewModel.primaryCompanion {
-                viewModel.startPrediction(for: companion)
-            } else {
-                viewModel.selectedTab = 2
-            }
-        } label: {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(SimastryColor.risingViolet)
-
-                        Text("PREDICT REPLY")
+                if let briefMoveLine {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: SimastryIcon.quote)
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(SimastryColor.risingViolet)
-                            .tracking(1.2)
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.top, 3)
+
+                        Text(briefMoveLine)
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if let reading = transitReading {
+                    let accent: Color = switch reading.aspect.family {
+                    case "flow": SimastryColor.gold
+                    case "emphasis": SimastryColor.celestialBlue
+                    default: SimastryColor.sunCoral
                     }
 
-                    Text(viewModel.primaryCompanion.map { "What will \($0.name) say next?" } ?? "What will they say next?")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(SimastryColor.offWhite)
+                    Divider().overlay(SimastryColor.offWhite.opacity(0.08))
 
-                    Text(viewModel.primaryCompanion == nil ? "Paste a conversation and let the stars predict their next text." : "Paste the thread. Their signs are already loaded.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 7) {
+                            Text(reading.body.glyph)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(accent)
+
+                            Text(reading.headline)
+                                .font(SimastryFont.labelLarge)
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+
+                        Text(reading.guidance)
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Today's sky: \(reading.headline). \(reading.guidance)")
                 }
 
-                Spacer(minLength: 0)
+                if let dailyReadGuide {
+                    Button {
+                        HapticManager.buttonPress()
+                        viewModel.openPanelChatSeededWithDailyRead(line: briefFocusLine, role: briefFocusRole)
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(dailyReadGuide.profile.profileImageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 28, height: 28, alignment: .top)
+                                .clipShape(Circle())
+                                .overlay {
+                                    Circle().strokeBorder(dailyReadGuide.sign.color.opacity(0.6), lineWidth: 1)
+                                }
 
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(SimastryColor.risingViolet)
-                    .symbolRenderingMode(.hierarchical)
+                            Text("Talk it through with \(dailyReadGuide.profile.name)")
+                                .font(SimastryFont.labelLarge)
+                                .foregroundStyle(SimastryColor.goldLight)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+
+                            Spacer()
+
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(SimastryColor.goldLight.opacity(0.8))
+                        }
+                        .padding(.top, 4)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("Talk today's read through with \(dailyReadGuide.profile.name) in your panel chat")
+                }
             }
-            .padding(20)
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.14), cornerRadius: 22)
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 1)
+            .padding(17)
+            .surfaceCard(accent: SimastryColor.gold.opacity(0.8))
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+        }
+    }
+
+    /// The guide whose lens matches today's focus rotation.
+    private var dailyReadGuide: PanelMatcher.Entry? {
+        viewModel.panelGuideEntries.first { $0.role == briefFocusRole }
+            ?? viewModel.panelGuideEntries.first
+    }
+
+    // MARK: - Tips
+
+    private struct DailyGuideTip: Identifiable {
+        let title: String
+        let lesson: String
+        let opener: String
+        let profile: FactoryCompanionProfile
+        var id: String { "\(profile.id)-\(title)" }
+    }
+
+    /// Two micro-lessons per day, rotating through the template set with
+    /// their teaching guides resolved from the catalog.
+    private var todaysTips: [DailyGuideTip] {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        return AstrologyTemplates.dailyGuideTips(dayOfYear: dayOfYear).compactMap { tip in
+            guard let profile = FactoryCompanionCatalog.all.first(where: { $0.id == tip.guideId }) else {
+                return nil
+            }
+            return DailyGuideTip(title: tip.title, lesson: tip.body, opener: tip.opener, profile: profile)
+        }
+    }
+
+    // MARK: - The Situation
+
+    /// The most recently updated active saga — the card the user actually
+    /// opens the app to check.
+    private var activeSituationPerson: RelationshipPerson? {
+        viewModel.relationshipPeople
+            .filter { $0.situationStatus != nil }
+            .max { ($0.situationUpdatedAt ?? .distantPast) < ($1.situationUpdatedAt ?? .distantPast) }
+    }
+
+    @ViewBuilder
+    private var situationCard: some View {
+        if let person = activeSituationPerson, let status = person.situationStatus {
+            let day = person.situationDay()
+            let line = AstrologyTemplates.situationLines[status.rawValue]?[person.sunSign.element.rawValue]?
+                .replacingOccurrences(of: "{n}", with: "\(day)")
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.selectedTab = 1
+                viewModel.peopleDetailRequestPersonId = person.id
+            } label: {
+                VStack(alignment: .leading, spacing: 11) {
+                    HStack(spacing: 8) {
+                        Image(systemName: status.systemImage)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+
+                        Text("THE SITUATION")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.textSecondary)
+                            .tracking(1.5)
+
+                        Spacer()
+
+                        Text(status.title)
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(SimastryColor.gold.opacity(0.12), in: Capsule())
+                    }
+
+                    HStack(spacing: 8) {
+                        ZodiacIconView(sign: person.sunSign, size: 22, showsGlow: false)
+
+                        Text("\(person.displayName) · Day \(day)")
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+
+                    if let line {
+                        Text(line)
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                    }
+
+                    if status == .newSpark,
+                       let opener = AstrologyTemplates.newSparkOpeners[person.sunSign] {
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("\u{201C}\(opener)\u{201D}")
+                                .font(.system(.footnote, design: .serif))
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer(minLength: 6)
+
+                            Button {
+                                HapticManager.buttonPress()
+                                UIPasteboard.general.string = opener
+                                viewModel.showToast("Opener copied", subtitle: "First move, ready to send", isError: false)
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(SimastryColor.gold)
+                                    .padding(8)
+                                    .background(SimastryColor.gold.opacity(0.12), in: Circle())
+                            }
+                            .buttonStyle(SpringPressStyle())
+                            .accessibilityLabel("Copy the first-text opener")
+                        }
+                        .padding(10)
+                        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .surfaceCard(cornerRadius: 20, accent: person.sunSign.color.opacity(0.7))
+                .contentShape(.rect)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("The situation with \(person.displayName): \(status.title), day \(day). Opens their page.")
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+        }
+    }
+
+    // MARK: - Sealed Drafts
+
+    /// The 1am protocol's home on Today: open drafts when they exist, and a
+    /// standing invitation during late-night hours when they don't.
+    @ViewBuilder
+    private var sealedDraftsRow: some View {
+        let store = SealedDraftStore()
+
+        if !sealedDrafts.isEmpty || SealedDraftStore.isLateNight() {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "envelope.badge.clock.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.celestialBlue)
+
+                    Text("SEALED DRAFTS")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+
+                    Spacer()
+
+                    Button {
+                        HapticManager.buttonPress()
+                        showSealedDraftCompose = true
+                    } label: {
+                        Label("Seal one", systemImage: "plus")
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.celestialBlue)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Seal a new draft for morning")
+                }
+
+                if sealedDrafts.isEmpty {
+                    Text("About to send something at this hour? Seal it for morning eyes instead.")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(sealedDrafts) { draft in
+                        Button {
+                            HapticManager.buttonPress()
+                            rereadDraft = draft
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: draft.isReleased() ? "envelope.open.fill" : "envelope.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(draft.isReleased() ? SimastryColor.gold : SimastryColor.mutedSilver)
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(draft.text)
+                                        .font(SimastryFont.labelMedium)
+                                        .foregroundStyle(SimastryColor.offWhite.opacity(draft.isReleased() ? 0.92 : 0.55))
+                                        .lineLimit(1)
+
+                                    Text(draft.isReleased() ? "Unsealed — still true in daylight?" : "Unseals at 8:30")
+                                        .font(SimastryFont.captionSmall)
+                                        .foregroundStyle(draft.isReleased() ? SimastryColor.gold : SimastryColor.textTertiary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(SimastryColor.mutedSilver)
+                            }
+                            .padding(10)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityLabel(draft.isReleased() ? "Unsealed draft, ready to reread" : "Sealed draft, unseals at 8:30")
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.celestialBlue.opacity(0.6))
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+            .sheet(isPresented: $showSealedDraftCompose) {
+                SealedDraftView(viewModel: viewModel) {
+                    sealedDrafts = store.load()
+                }
+            }
+            .sheet(item: $rereadDraft) { draft in
+                SealedDraftView(viewModel: viewModel, existingDraft: draft) {
+                    sealedDrafts = store.load()
+                }
             }
         }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Predict their reply. Paste a conversation and let the stars predict their next text.")
+    }
+
+    // MARK: - Learn (Method course + daily tips, one card)
+
+    /// One learning slot: the Method course leads while it's running, the
+    /// two daily guide tips ride below as compact chips. After graduation
+    /// the tips carry the card alone.
+    private var learnCard: some View {
+        // Establishes an observation on course progress so the card
+        // re-renders after a lesson posts.
+        let _ = viewModel.methodCourseVersion
+        let state = viewModel.methodCourseState
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "graduationcap.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("LEARN")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.5)
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    ForEach(MethodCourseTemplates.lessons) { lesson in
+                        Circle()
+                            .fill(state.postedLessons.contains(lesson.number)
+                                  ? SimastryColor.gold
+                                  : SimastryColor.offWhite.opacity(0.14))
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .accessibilityLabel("\(state.postedLessons.count) of \(MethodCourseTemplates.lessons.count) lessons complete")
+            }
+
+            if !state.isComplete, let lesson = state.currentLesson {
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.openMethodCourseLesson()
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Lesson \(lesson.number) of \(MethodCourseTemplates.lessons.count) · \(lesson.title)")
+                            .font(SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+
+                        Text(viewModel.canPostMethodLessonToday
+                             ? "A two-minute lesson, taught by your panel. Tap to take it."
+                             : "Today's lesson is in your panel — the next one unlocks tomorrow.")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Simastry Method course. Take the next lesson with your panel.")
+
+                Divider().overlay(SimastryColor.offWhite.opacity(0.08))
+            }
+
+            if !todaysTips.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(todaysTips) { tip in
+                        compactTipChip(tip)
+                    }
+                }
+
+                Text(state.isComplete ? "Method Graduate · fresh tips daily" : "Fresh tips tomorrow")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
 
-    private var featureGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
-        return LazyVGrid(columns: columns, spacing: 12) {
-            featureGridCard(
-                title: "Guides",
-                subtitle: "What to say",
-                systemImage: "bubble.left.and.bubble.right.fill",
-                tint: SimastryColor.celestialBlue
-            ) {
-                viewModel.selectedTab = 3
-            }
-
-            featureGridCard(
-                title: "Simulate",
-                subtitle: "Test a reply",
-                systemImage: "wand.and.stars",
-                tint: SimastryColor.risingViolet
-            ) {
-                viewModel.selectedTab = 2
-            }
-
-            featureGridCard(
-                title: "Soulmate",
-                subtitle: "Find your match",
-                systemImage: "heart.circle.fill",
-                tint: SimastryColor.sunCoral
-            ) {
-                viewModel.selectedTab = 0
-                viewModel.homeSetupPhase = .modeSelection
-            }
-
-            featureGridCard(
-                title: "Companions",
-                subtitle: "Your circle",
-                systemImage: "sparkles",
-                tint: SimastryColor.gold
-            ) {
-                viewModel.selectedTab = 1
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 14)
-    }
-
-    private func featureGridCard(
-        title: String,
-        subtitle: String,
-        systemImage: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func compactTipChip(_ tip: DailyGuideTip) -> some View {
         Button {
             HapticManager.buttonPress()
-            action()
+            viewModel.openPanelChatWithTip(lesson: tip.lesson, opener: tip.opener, guideId: tip.profile.id)
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 40, height: 40)
-                    .background(tint.opacity(0.14), in: .rect(cornerRadius: 12))
+            HStack(spacing: 8) {
+                Image(tip.profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 26, height: 26, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(tip.profile.sign.color.opacity(0.6), lineWidth: 1)
+                    }
 
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                Text(tip.title)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .minimumScaleFactor(0.85)
+
+                Spacer(minLength: 0)
+            }
+            .padding(9)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Tip: \(tip.title). Start a conversation with \(tip.profile.name)")
+    }
+
+
+    // MARK: - Your Guides
+
+    private var panelCard: some View {
+        let profile = featuredProfile
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                HStack(spacing: 7) {
+                    Image(systemName: SimastryIcon.astrologers)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.goldLight)
+
+                    Text("YOUR GUIDES")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+                }
+
+                Spacer()
+            }
+
+            featuredGuidePane(profile)
+
+            castRow
+
+            allAstrologersButton
+
+            talkToPanelButton
+        }
+        .padding(14)
+        .surfaceCard(cornerRadius: 24)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+    }
+
+    private var allAstrologersButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            navigationPath.append(HomeRoute.aiAstrologist(profileId: nil))
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: SimastryIcon.astrologers)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.82))
+
+                Text("View Astrologers")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.8))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(SimastryGradient.gold, in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
+            }
+            .shadow(color: SimastryColor.gold.opacity(0.20), radius: 12, y: 6)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("View Astrologers. Opens the complete guides directory.")
+    }
+
+    /// Opens the group thread with the user's three placement guides.
+    private var talkToPanelButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            viewModel.openPanelChat()
+        } label: {
+            HStack(spacing: 10) {
+                panelFaceStack(size: 26)
+
+                Text("Talk to your panel")
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                Spacer()
+
+                if viewModel.unreadPanelCount > 0 {
+                    Text("\(viewModel.unreadPanelCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(SimastryColor.midnight)
+                        .frame(minWidth: 19)
+                        .frame(height: 19)
+                        .background(SimastryColor.gold, in: Capsule())
+                }
+
+                Image(systemName: SimastryIcon.message)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SimastryColor.goldLight.opacity(0.92))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .simastryGlass(cornerRadius: 18)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .background(SimastryColor.surfaceSunken.opacity(0.88), in: Capsule())
             .overlay {
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(tint.opacity(0.1), lineWidth: 1)
+                Capsule()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.16), SimastryColor.gold.opacity(0.16)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
             }
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("\(title). \(subtitle)")
+        .accessibilityLabel("Talk to your panel. Group chat with your three guides.")
     }
 
-    private func companionCard(_ companion: CompanionData) -> some View {
-        let level = RelationshipLevel.from(messageCount: companion.conversationCount)
+    private func panelFaceStack(size: CGFloat) -> some View {
+        HStack(spacing: -10) {
+            ForEach(Array(viewModel.panelGuideEntries.enumerated()), id: \.element.id) { index, entry in
+                Image(entry.profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder(entry.sign.color.opacity(0.65), lineWidth: 1)
+                    }
+                    .background {
+                        Circle().fill(SimastryColor.midnight)
+                            .frame(width: size + 3, height: size + 3)
+                    }
+                    .zIndex(Double(viewModel.panelGuideEntries.count - index))
+            }
+        }
+    }
 
-        return Button {
-            HapticManager.buttonPress()
-            viewModel.selectedTab = 1
-        } label: {
-            HStack(spacing: 14) {
-                GlossyOrbView(
-                    signColors: [
-                        ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
-                        ZodiacSign(rawValue: companion.moonSign)?.color ?? SimastryColor.celestialBlue
+    private func featuredGuidePane(_ profile: FactoryCompanionProfile) -> some View {
+        NavigationLink(value: HomeRoute.guideProfile(profileId: profile.id)) {
+            ZStack(alignment: .bottom) {
+                featuredGuideMedia(profile)
+
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0.35),
+                        .init(color: .black.opacity(0.55), location: 0.72),
+                        .init(color: .black.opacity(0.88), location: 1)
                     ],
-                    state: .idle,
-                    size: 50
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(companion.name)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    HStack(spacing: 6) {
-                        Text(level.name)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(SimastryColor.midnight)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(SimastryColor.gold, in: .capsule)
-
-                        Text("\(companion.conversationCount) sparks")
-                            .font(.system(size: 12))
-                            .foregroundStyle(SimastryColor.mutedSilver)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 5) {
+                        Image(systemName: SimastryIcon.method)
+                            .font(.system(size: 9, weight: .bold))
+                        Text("SIMASTRY METHOD")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
                     }
-                }
+                    .foregroundStyle(SimastryColor.goldLight)
 
-                Spacer()
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(profile.name)
+                            .font(SimastryFont.titleLarge)
+                            .foregroundStyle(.white)
 
-                VStack(spacing: 2) {
-                    Text("\(companion.compatibilityScore)%")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold)
-                    Text("match")
-                        .font(.system(size: 10))
-                        .foregroundStyle(SimastryColor.mutedSilver)
+                        Text("\(profile.sign.displayName) Guide")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(profile.sign.color)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+
+                    Text(profile.headline)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(18)
-            .simastryGlass(cornerRadius: 20)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [profile.sign.color.opacity(0.40), .white.opacity(0.08)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 0.9
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .matchedTransitionSource(id: profile.id, in: panelHeroNamespace)
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("\(companion.name), \(level.name) bond, \(companion.compatibilityScore) percent match")
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 16)
+        .simultaneousGesture(TapGesture().onEnded {
+            HapticManager.buttonPress()
+        })
+        .accessibilityLabel("\(profile.name), \(profile.sign.displayName) Guide. \(profile.headline) Opens guide profile.")
     }
 
-    private func todayEnergyCard(sun: ZodiacSign) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                CelestialRoleIcon(role: .sun, size: 28)
-                Text("Your Energy Today")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(SimastryColor.offWhite)
-                Spacer()
+    @ViewBuilder
+    private func featuredGuideMedia(_ profile: FactoryCompanionProfile) -> some View {
+        ZStack(alignment: .topLeading) {
+            featuredGuideImage(profile)
+
+            if profile.id == "sagittarius-nadia", !reduceMotion {
+                GeometryReader { proxy in
+                    let sourceAspect: CGFloat = 16.0 / 9.0
+                    let videoWidth = max(proxy.size.width, proxy.size.height * sourceAspect)
+                    let rightSideFocusOffset = max(0, videoWidth - proxy.size.width) * 0.66
+
+                    MutedLoopingVideoView(resourceName: "NadiaFeaturedGuide", resourceExtension: "mp4")
+                        .frame(width: videoWidth, height: proxy.size.height)
+                        .offset(x: -rightSideFocusOffset)
+                }
+                .allowsHitTesting(false)
             }
-
-            Text(AstrologyTemplates.sunSign[sun.rawValue] ?? "")
-                .font(.system(size: 14, design: .serif))
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
-                .lineSpacing(3)
         }
-        .padding(18)
-        .simastryGlass(cornerRadius: 20)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 18)
+        .frame(maxWidth: .infinity)
+        .frame(height: 240, alignment: .top)
+        .clipped()
     }
+
+    private func featuredGuideImage(_ profile: FactoryCompanionProfile) -> some View {
+        Image(profile.cardImageName)
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity)
+            .frame(height: 240, alignment: .top)
+            .clipped()
+            .scaleEffect(kenBurnsActive ? 1.07 : 1.0, anchor: .top)
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 14).repeatForever(autoreverses: true),
+                value: kenBurnsActive
+            )
+    }
+
+    private var castRow: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 14) {
+                ForEach(castRowProfiles) { profile in
+                    NavigationLink(value: HomeRoute.guideProfile(profileId: profile.id)) {
+                        VStack(spacing: 6) {
+                            Image(profile.profileImageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 56, height: 56, alignment: .top)
+                                .clipShape(Circle())
+                                .overlay {
+                                    Circle().strokeBorder(profile.sign.color.opacity(0.55), lineWidth: 1.2)
+                                }
+
+                            Text(profile.name)
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .lineLimit(1)
+                        }
+                        .frame(width: 60)
+                        .matchedTransitionSource(id: profile.id, in: panelHeroNamespace)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("\(profile.name), \(profile.sign.displayName) Guide")
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    // MARK: - Derived Copy
 
     private var greetingText: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Good morning" }
-        if hour < 17 { return "Good afternoon" }
-        return "Good evening"
-    }
-}
-
-struct CompanionHeroDeckView: View {
-    let companions: [CompanionData]
-    let onPredict: (CompanionData) -> Void
-    let onOpenCompanions: () -> Void
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var activeIndex = 0
-    @State private var autoRotateTask: Task<Void, Never>?
-
-    private var activeCompanion: CompanionData? {
-        guard companions.indices.contains(activeIndex) else { return companions.first }
-        return companions[activeIndex]
+        if hour < 12 { return localization.string("home.goodMorning") }
+        if hour < 17 { return localization.string("home.goodAfternoon") }
+        return localization.string("home.goodEvening")
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if let activeCompanion {
-                heroCopy(for: activeCompanion)
-            }
-
-            ZStack {
-                ForEach(Array(companions.prefix(6).enumerated()), id: \.element.id) { index, companion in
-                    EditorialCompanionCard(
-                        companion: companion,
-                        isActive: index == activeIndex,
-                        rank: rank(for: index)
-                    ) {
-                        if index == activeIndex {
-                            onPredict(companion)
-                        } else {
-                            setActive(index)
-                        }
-                    }
-                    .zIndex(Double(10 - rank(for: index)))
-                    .offset(x: cardOffset(for: index), y: cardLift(for: index))
-                    .scaleEffect(cardScale(for: index))
-                    .opacity(cardOpacity(for: index))
-                }
-            }
-            .frame(height: 274)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 18)
-                    .onEnded { value in
-                        if value.translation.width < -24 {
-                            advance()
-                        } else if value.translation.width > 24 {
-                            retreat()
-                        }
-                    }
-            )
-
-            HStack(spacing: 10) {
-                Button {
-                    retreat()
-                } label: {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(width: 38, height: 38)
-                }
-                .buttonStyle(SpringPressStyle())
-                .liquidGlassSurface(cornerRadius: 19, tint: SimastryColor.gold.opacity(0.06), interactive: true)
-
-                Button {
-                    advance()
-                } label: {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(width: 38, height: 38)
-                }
-                .buttonStyle(SpringPressStyle())
-                .liquidGlassSurface(cornerRadius: 19, tint: SimastryColor.gold.opacity(0.06), interactive: true)
-
-                Spacer()
-
-                Button {
-                    onOpenCompanions()
-                } label: {
-                    Text("\(min(activeIndex + 1, companions.count)) / \(companions.count)")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(SimastryColor.gold)
-                        .tracking(1.4)
-                        .padding(.horizontal, 14)
-                        .frame(height: 38)
-                }
-                .buttonStyle(SpringPressStyle())
-                .liquidGlassSurface(cornerRadius: 19, tint: SimastryColor.gold.opacity(0.05), interactive: true)
-            }
-            .foregroundStyle(SimastryColor.cream)
+    private var summaryGreeting: String {
+        if let name = viewModel.profile?.displayName {
+            return "\(greetingText), \(name)"
         }
-        .padding(18)
-        .background {
-            if let activeCompanion,
-               let sign = ZodiacSign(rawValue: activeCompanion.sunSign) {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                sign.color.opacity(0.32),
-                                SimastryColor.plum.opacity(0.16),
-                                Color.black.opacity(0.12)
-                            ],
-                            center: .topTrailing,
-                            startRadius: 20,
-                            endRadius: 360
-                        )
-                    )
-            }
-        }
-        .editorialGlassCard(cornerRadius: 30)
-        .onAppear {
-            startAutoRotate()
-        }
-        .onDisappear {
-            autoRotateTask?.cancel()
-        }
-        .onChange(of: companions.map(\.id)) { _, _ in
-            activeIndex = min(activeIndex, max(companions.count - 1, 0))
-            startAutoRotate()
-        }
+        return greetingText
     }
 
-    private func heroCopy(for companion: CompanionData) -> some View {
-        let sign = ZodiacSign(rawValue: companion.sunSign)
-        let level = RelationshipLevel.from(messageCount: companion.conversationCount)
-
-        return HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("CURRENT COMPANION")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .tracking(2.2)
-
-                Text(companion.name)
-                    .font(.system(size: 34, weight: .semibold, design: .serif))
-                    .foregroundStyle(SimastryColor.cream)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-
-                Text("\(sign?.displayName ?? companion.sunSign.capitalized) \(level.name.lowercased()) orbit • \(companion.conversationCount) sparks")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(SimastryColor.mutedSilver)
-            }
-
-            Spacer()
-
-            Text(sign?.glyph ?? "✦")
-                .font(.system(size: 36))
-                .foregroundStyle(sign?.color ?? SimastryColor.gold)
-                .frame(width: 58, height: 58)
-                .background((sign?.color ?? SimastryColor.gold).opacity(0.14), in: Circle())
-        }
+    private var formattedSummaryDate: String {
+        SimastryDateFormatter.summaryDate.string(from: Date())
     }
 
-    private func rank(for index: Int) -> Int {
-        guard !companions.isEmpty else { return 0 }
-        return (index - activeIndex + companions.count) % companions.count
-    }
-
-    private func cardOffset(for index: Int) -> CGFloat {
-        switch rank(for: index) {
-        case 0: return -52
-        case 1: return 44
-        case 2: return 126
-        case 3: return 198
-        default: return 254
-        }
-    }
-
-    private func cardLift(for index: Int) -> CGFloat {
-        rank(for: index) == 0 ? 0 : 12
-    }
-
-    private func cardScale(for index: Int) -> CGFloat {
-        switch rank(for: index) {
-        case 0: return 1
-        case 1: return 0.94
-        case 2: return 0.88
-        default: return 0.82
-        }
-    }
-
-    private func cardOpacity(for index: Int) -> Double {
-        rank(for: index) > 3 ? 0 : 1
-    }
-
-    private func setActive(_ index: Int) {
-        guard companions.indices.contains(index) else { return }
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            activeIndex = index
-        }
-        HapticManager.buttonPress()
-    }
-
-    private func advance() {
-        guard !companions.isEmpty else { return }
-        setActive((activeIndex + 1) % companions.count)
-    }
-
-    private func retreat() {
-        guard !companions.isEmpty else { return }
-        setActive((activeIndex - 1 + companions.count) % companions.count)
-    }
-
-    private func startAutoRotate() {
-        autoRotateTask?.cancel()
-        guard !reduceMotion, companions.count > 1 else { return }
-
-        autoRotateTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(4.8))
-                if Task.isCancelled { return }
-                await MainActor.run {
-                    withAnimation(.spring(SimastrySpring.drift)) {
-                        activeIndex = (activeIndex + 1) % companions.count
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct EditorialCompanionCard: View {
-    let companion: CompanionData
-    let isActive: Bool
-    let rank: Int
-    let action: () -> Void
-
-    var body: some View {
-        let sign = ZodiacSign(rawValue: companion.sunSign)
-        let accent = sign?.color ?? SimastryColor.gold
-
-        Button(action: action) {
-            ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                accent.opacity(0.42),
-                                SimastryColor.espresso.opacity(0.94),
-                                SimastryColor.ink
-                            ],
-                            startPoint: .topTrailing,
-                            endPoint: .bottomLeading
-                        )
-                    )
-
-                Circle()
-                    .fill(accent.opacity(0.26))
-                    .blur(radius: 28)
-                    .offset(x: 56, y: -76)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(sign?.glyph ?? "✦")
-                            .font(.system(size: 27))
-                            .foregroundStyle(accent)
-                        Spacer()
-                    }
-
-                    Spacer()
-
-                    Text(isActive ? "UP NEXT" : companion.mode.replacingOccurrences(of: "_", with: " ").uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(SimastryColor.smoke)
-                        .tracking(1.6)
-
-                    Text(companion.name)
-                        .font(.system(size: isActive ? 30 : 24, weight: .semibold, design: .serif))
-                        .foregroundStyle(SimastryColor.cream)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-
-                    Text(sign?.displayName ?? companion.sunSign.capitalized)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(SimastryColor.gold)
-                        .tracking(1.4)
-                }
-                .padding(18)
-            }
-            .frame(width: isActive ? 190 : 166, height: isActive ? 246 : 226)
-            .overlay {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(isActive ? accent.opacity(0.55) : .white.opacity(0.10), lineWidth: 1)
-            }
-            .brightness(rank == 0 ? 0 : -0.10 * Double(rank))
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("\(companion.name), \(sign?.displayName ?? companion.sunSign) companion")
+    private var remainingPredictionsBadge: String {
+        viewModel.weeklyPredictionLimit == .max ? "Unlimited" : "\(viewModel.remainingWeeklyPredictions) left this week"
     }
 }

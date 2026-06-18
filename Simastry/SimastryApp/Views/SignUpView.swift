@@ -26,11 +26,12 @@ struct SignUpView: View {
                         }
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(.white.opacity(0.7))
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Back to birth details")
 
                     Spacer()
                 }
@@ -39,11 +40,11 @@ struct SignUpView: View {
 
                 VStack(spacing: 8) {
                     Text("Create your account")
-                        .font(.system(size: 28, weight: .bold, design: .serif))
+                        .font(SimastryFont.displayMedium)
                         .foregroundStyle(.white)
 
                     Text("Save your birth chart and unlock your reading")
-                        .font(.system(size: 15))
+                        .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
                 }
@@ -56,9 +57,7 @@ struct SignUpView: View {
                 Spacer()
 
                 VStack(spacing: 16) {
-                    SignInWithAppleButton(.continue) { request in
-                        request.requestedScopes = [.fullName, .email]
-                    } onCompletion: { result in
+                    AppleSignInButton(isEnabled: !isAuthenticating) { result in
                         guard !isAuthenticating else { return }
                         isAuthenticating = true
                         Task {
@@ -67,11 +66,6 @@ struct SignUpView: View {
                             isAuthenticating = false
                         }
                     }
-                    .signInWithAppleButtonStyle(.white)
-                    .frame(height: 54)
-                    .clipShape(.rect(cornerRadius: 999))
-                    .disabled(isAuthenticating)
-                    .opacity(isAuthenticating ? 0.72 : 1)
 
                     GoogleSignInButton(isEnabled: !isAuthenticating) {
                         Task {
@@ -112,12 +106,12 @@ struct SignUpView: View {
 
                 HStack(spacing: 8) {
                     Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 13))
+                        .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
                     Text("We never share or sell your data.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(.white.opacity(0.68))
                 }
                 .padding(.top, 16)
                 .padding(.bottom, 50)
@@ -142,8 +136,8 @@ struct SignUpView: View {
                 .fill(.white.opacity(0.12))
                 .frame(height: 1)
             Text("or")
-                .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.4))
+                .font(SimastryFont.labelMedium)
+                .foregroundStyle(.white.opacity(0.6))
             Rectangle()
                 .fill(.white.opacity(0.12))
                 .frame(height: 1)
@@ -153,7 +147,7 @@ struct SignUpView: View {
     private func authField(title: String, text: Binding<String>, field: Field, isSecure: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(SimastryFont.overline)
                 .foregroundStyle(.white.opacity(0.6))
                 .textCase(.uppercase)
                 .kerning(0.5)

@@ -87,7 +87,7 @@ struct AstropediaView: View {
                 title: "Moon in \(moon.displayName)",
                 subtitle: "Your emotional world",
                 iconName: CelestialRole.moon.iconName,
-                accent: SimastryColor.moonBlue,
+                accent: SimastryColor.celestialBlue,
                 body: AstrologyTemplates.moonSign[moon.rawValue] ?? "Your heart speaks in tides."
             ),
             AstropediaCard(
@@ -317,7 +317,7 @@ struct AstropediaView: View {
 
                     Button {
                         HapticManager.buttonPress()
-                        viewModel.selectedTab = 4
+                        viewModel.selectedTab = 5
                     } label: {
                         Label("Complete my signs", systemImage: "person.crop.circle.badge.plus")
                             .font(.subheadline.weight(.semibold))
@@ -508,7 +508,7 @@ struct AstropediaView: View {
 
                     Button {
                         HapticManager.buttonPress()
-                        viewModel.selectedTab = 4
+                        viewModel.selectedTab = 5
                     } label: {
                         Label("Open Profile", systemImage: "person.circle")
                             .font(.subheadline.weight(.semibold))
@@ -594,10 +594,10 @@ struct AstropediaView: View {
             ViewThatFits {
                 HStack(spacing: 12) {
                     nextStepButton(
-                        title: "Use in Simulate",
-                        subtitle: "Take this sign dynamic into prediction mode.",
-                        iconName: "wand.and.stars",
-                        accent: SimastryColor.risingViolet,
+                        title: "Open Messages",
+                        subtitle: "Take this sign dynamic into a conversation.",
+                        iconName: "message.fill",
+                        accent: SimastryColor.celestialBlue,
                         tabIndex: 2
                     )
 
@@ -612,10 +612,10 @@ struct AstropediaView: View {
 
                 VStack(spacing: 12) {
                     nextStepButton(
-                        title: "Use in Simulate",
-                        subtitle: "Take this sign dynamic into prediction mode.",
-                        iconName: "wand.and.stars",
-                        accent: SimastryColor.risingViolet,
+                        title: "Open Messages",
+                        subtitle: "Take this sign dynamic into a conversation.",
+                        iconName: "message.fill",
+                        accent: SimastryColor.celestialBlue,
                         tabIndex: 2
                     )
 
@@ -928,7 +928,7 @@ struct AstropediaView: View {
                     title: "Inner life",
                     subtitle: "Moon-coded lens",
                     iconName: "moon.fill",
-                    accent: SimastryColor.moonBlue,
+                    accent: SimastryColor.celestialBlue,
                     body: AstrologyTemplates.moonSign[sign.rawValue] ?? "Their emotional life moves in its own rhythm."
                 ),
                 AstropediaCard(
@@ -1036,7 +1036,7 @@ struct AstropediaView: View {
                     title: "How they regulate",
                     subtitle: "What restores them",
                     iconName: "moon.zzz.fill",
-                    accent: SimastryColor.moonBlue,
+                    accent: SimastryColor.celestialBlue,
                     body: regulationStyle(for: sign)
                 ),
                 AstropediaCard(
@@ -1216,7 +1216,7 @@ private struct CommunicationGuideSignCard: View {
     var body: some View {
         VStack(spacing: 10) {
             Text(sign.glyph)
-                .font(.system(size: 32, weight: .semibold, design: .serif))
+                .font(SimastryFont.displayLarge)
                 .foregroundStyle(sign.color)
                 .frame(width: 52, height: 52)
                 .background(sign.color.opacity(isSelected ? 0.22 : 0.12), in: .rect(cornerRadius: 18))

@@ -7,6 +7,7 @@ struct UpsellModalView: View {
     @State private var offerings: Offerings?
     @State private var isPurchasing: Bool = false
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTier: String = "plus"
 
     private var isRevenueCatAvailable: Bool {
@@ -24,6 +25,7 @@ struct UpsellModalView: View {
                 freeTierBenefits
                 tierCards
                 restoreButton
+                subscriptionDisclaimer
             }
             .padding(.horizontal, 20)
             .padding(.top, 28)
@@ -36,12 +38,20 @@ struct UpsellModalView: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task {
+            AnalyticsService.shared.track(.upsellShown)
             if isRevenueCatAvailable {
                 offerings = try? await Purchases.shared.offerings()
             }
-            withAnimation(.spring(SimastrySpring.smooth)) {
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    appeared = true
+                }
             }
+        }
+        .onDisappear {
+            AnalyticsService.shared.track(.upsellDismissed)
         }
     }
 
@@ -49,15 +59,27 @@ struct UpsellModalView: View {
         VStack(spacing: 14) {
             Image(systemName: "sparkles")
                 .font(.system(size: 32, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [SimastryColor.goldLight, SimastryColor.gold],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .symbolEffect(.variableColor.iterative, isActive: appeared)
 
             Text("Unlock the Full Cosmos")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(SimastryColor.offWhite)
+                .font(SimastryFont.titleLarge)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [SimastryColor.offWhite, SimastryColor.goldLight],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
 
             Text("Choose your path among the stars")
-                .font(.system(size: 15))
+                .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .opacity(appeared ? 1 : 0)
@@ -67,19 +89,19 @@ struct UpsellModalView: View {
     private var freeTierBenefits: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("FREE INCLUDES")
-                .font(.system(size: 11, weight: .bold))
+                .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.5)
 
             HStack(spacing: 16) {
                 freeChip("10 msgs/day")
                 freeChip("1 companion")
-                freeChip("3 predictions/wk")
+                freeChip("Chart context")
             }
 
             HStack(spacing: 16) {
                 freeChip("Shareable cards")
-                freeChip("Guides")
+                freeChip("Message tools")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -103,13 +125,13 @@ struct UpsellModalView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("S I M A S T R Y +")
-                            .font(.system(size: 11, weight: .medium))
+                        Text("SIMASTRY+")
+                            .font(SimastryFont.overline)
+                            .italic()
                             .foregroundStyle(SimastryColor.gold)
-                            .tracking(2)
 
                         Text(priceText(for: "plus", fallback: "$6.99 / month"))
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(SimastryFont.titleMedium)
                             .foregroundStyle(SimastryColor.offWhite)
                     }
 
@@ -127,8 +149,8 @@ struct UpsellModalView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     featureRow("Unlimited messages", icon: "message.fill")
                     featureRow("Up to 3 companions", icon: "person.3.fill")
-                    featureRow("Unlimited predictions", icon: "wand.and.stars")
-                    featureRow("Full communication guides", icon: "bubble.left.and.bubble.right.fill")
+                    featureRow("Chart-grounded replies", icon: "scope")
+                    featureRow("Full communication guidance", icon: "bubble.left.and.bubble.right.fill")
                     featureRow("Daily transit readings", icon: "sun.horizon.fill")
                 }
 
@@ -137,13 +159,14 @@ struct UpsellModalView: View {
                 }
             }
             .padding(20)
-            .background {
+            .glossyCard(cornerRadius: 20)
+            .overlay {
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(selectedTier == "plus" ? SimastryColor.gold.opacity(0.5) : .clear, lineWidth: 1.5)
+                    .stroke(selectedTier == "plus" ? SimastryColor.gold.opacity(0.4) : .clear, lineWidth: 1)
             }
-            .simastryGlass(cornerRadius: 20)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Subscribe to Plus plan")
     }
 
     private var proCard: some View {
@@ -154,21 +177,28 @@ struct UpsellModalView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
-                            Text("S I M A S T R Y  P R O")
-                                .font(.system(size: 11, weight: .medium))
+                            Text("SIMASTRY PRO")
+                                .font(SimastryFont.overline)
+                                .italic()
                                 .foregroundStyle(SimastryColor.gold)
-                                .tracking(2)
 
                             Text("BEST VALUE")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(SimastryColor.midnight)
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(Color(red: 20/255, green: 18/255, blue: 12/255))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(SimastryColor.gold, in: .capsule)
+                                .background(
+                                    LinearGradient(
+                                        colors: [SimastryColor.goldDark, SimastryColor.gold, SimastryColor.goldLight],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ),
+                                    in: .capsule
+                                )
                         }
 
                         Text(priceText(for: "pro", fallback: "$14.99 / month"))
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(SimastryFont.titleMedium)
                             .foregroundStyle(SimastryColor.offWhite)
                     }
 
@@ -195,13 +225,28 @@ struct UpsellModalView: View {
                 }
             }
             .padding(20)
-            .background {
+            .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(selectedTier == "pro" ? SimastryColor.gold.opacity(0.5) : .clear, lineWidth: 1.5)
+                    .fill(SimastryColor.gold.opacity(0.04))
+            )
+            .glossyCard(cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                SimastryColor.goldLight.opacity(selectedTier == "pro" ? 0.5 : 0.15),
+                                SimastryColor.gold.opacity(selectedTier == "pro" ? 0.3 : 0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: selectedTier == "pro" ? 1 : 0.5
+                    )
             }
-            .tintedGlass(SimastryColor.gold.opacity(0.08), cornerRadius: 20)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Subscribe to Pro plan")
     }
 
     @ViewBuilder
@@ -223,11 +268,18 @@ struct UpsellModalView: View {
 
     private var activeBadge: some View {
         Text("ACTIVE")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(SimastryColor.midnight)
+            .font(SimastryFont.captionSmall)
+            .foregroundStyle(Color(red: 20/255, green: 18/255, blue: 12/255))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(SimastryColor.gold, in: .capsule)
+            .background(
+                LinearGradient(
+                    colors: [SimastryColor.goldDark, SimastryColor.gold, SimastryColor.goldLight],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: .capsule
+            )
     }
 
     private var restoreButton: some View {
@@ -235,7 +287,7 @@ struct UpsellModalView: View {
             Task { await viewModel.restorePurchases() }
         }) {
             Text("Restore Purchases")
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .buttonStyle(.plain)
@@ -245,7 +297,7 @@ struct UpsellModalView: View {
 
     private func freeChip(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12, weight: .medium))
+            .font(SimastryFont.labelSmall)
             .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -256,10 +308,10 @@ struct UpsellModalView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
+                .foregroundStyle(SimastryColor.goldLight)
                 .frame(width: 18)
             Text(text)
-                .font(.system(size: 14))
+                .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.offWhite)
         }
     }
@@ -312,9 +364,35 @@ struct UpsellModalView: View {
         }
     }
 
+    private var subscriptionDisclaimer: some View {
+        VStack(spacing: 8) {
+            Text("Subscriptions auto-renew monthly unless cancelled at least 24 hours before the end of the current period. Your Apple ID account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions in your App Store account settings.")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 16) {
+                Link("Privacy Policy", destination: AppConfig.privacyPolicyURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                Link("Terms of Service", destination: AppConfig.termsOfServiceURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                Link("EULA", destination: AppConfig.eulaURL)
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+        }
+        .padding(.top, 8)
+        .opacity(appeared ? 1 : 0)
+    }
+
     private func purchasePackage(_ package: Package, type: String) async {
         guard isRevenueCatAvailable else {
-            viewModel.showToast("Subscriptions unavailable", subtitle: "Paid plans are unavailable in this build.", isError: true)
+            viewModel.showToast("Subscriptions unavailable", subtitle: "RevenueCat isn't configured yet", isError: true)
             return
         }
 

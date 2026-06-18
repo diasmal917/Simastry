@@ -37,7 +37,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "105FC5882E9EAD3200EA8BCF"
                BuildableName = "SimastryTests.xctest"
-               BlueprintName = "Simastry"
+               BlueprintName = "SimastryTests"
                ReferencedContainer = "container:Simastry.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -48,7 +48,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "105FC5922E9EAD3200EA8BCF"
                BuildableName = "SimastryUITests.xctest"
-               BlueprintName = "Simastry"
+               BlueprintName = "SimastryUITests"
                ReferencedContainer = "container:Simastry.xcodeproj">
             </BuildableReference>
          </TestableReference>

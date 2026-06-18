@@ -2,11 +2,14 @@ import SwiftUI
 
 nonisolated private enum CompanionDetailRoute: Identifiable {
     case share
+    case coupleRead
 
     var id: String {
         switch self {
         case .share:
             "share"
+        case .coupleRead:
+            "coupleRead"
         }
     }
 }
@@ -16,6 +19,7 @@ struct CompanionDetailSheet: View {
     @Bindable var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var appeared: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activeRoute: CompanionDetailRoute?
 
     private var companionSun: ZodiacSign? { ZodiacSign(rawValue: companion.sunSign) }
@@ -47,11 +51,25 @@ struct CompanionDetailSheet: View {
             switch route {
             case .share:
                 ShareableCardView(viewModel: viewModel, cardType: .compatibility, companion: companion)
+            case .coupleRead:
+                if let userSun = viewModel.userSunSign, let companionSun {
+                    CoupleReadView(
+                        nameA: (viewModel.profile?.displayName ?? "You").components(separatedBy: " ").first ?? "You",
+                        sunA: userSun,
+                        nameB: companion.name,
+                        sunB: companionSun
+                    )
+                }
             }
         }
         .onAppear {
-            withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+            AnalyticsService.shared.track(.companionDetailViewed)
+            if reduceMotion {
                 appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.1)) {
+                    appeared = true
+                }
             }
         }
     }
@@ -68,24 +86,25 @@ struct CompanionDetailSheet: View {
             )
 
             Text(companion.name)
-                .font(.system(size: 24, weight: .medium))
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text(companion.mode.replacingOccurrences(of: "_", with: " ").capitalized)
-                .font(.system(size: 13, weight: .light))
+                .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.5)
                 .textCase(.uppercase)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var quickActionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Rituals")
-                    .font(.system(size: 14, weight: .light))
+                    .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.5)
                     .textCase(.uppercase)
@@ -94,19 +113,21 @@ struct CompanionDetailSheet: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 Text(companionPrompt)
-                    .font(.system(size: 15, design: .serif))
+                    .font(SimastryFont.bodyLarge)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 12) {
                     GoldButton("Send a Spark") {
                         Task {
-                            await viewModel.recordCompanionInteraction(
+                            let didSend = await viewModel.recordCompanionInteraction(
                                 with: companion,
                                 title: "Spark sent",
                                 subtitle: companionPrompt
                             )
-                            dismiss()
+                            if didSend {
+                                dismiss()
+                            }
                         }
                     }
 
@@ -114,7 +135,7 @@ struct CompanionDetailSheet: View {
                         activeRoute = .share
                     } label: {
                         Label("Share Match", systemImage: "square.and.arrow.up")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -122,12 +143,27 @@ struct CompanionDetailSheet: View {
                     }
                     .buttonStyle(SpringPressStyle())
                 }
+
+                Button {
+                    HapticManager.buttonPress()
+                    dismiss()
+                    viewModel.selectedTab = 2
+                } label: {
+                    Label("Open Messages", systemImage: "message.fill")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.midnight)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(SimastryColor.gold, in: .capsule)
+                }
+                .buttonStyle(SpringPressStyle())
             }
             .padding(16)
             .simastryGlass(cornerRadius: 16)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var signsSection: some View {
@@ -144,19 +180,58 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 15)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var compatibilitySection: some View {
         VStack(spacing: 12) {
             HStack {
                 Text("Why You're Compatible")
-                    .font(.system(size: 14, weight: .light))
+                    .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.5)
                     .textCase(.uppercase)
                 Spacer()
                 CompatibilityRingView(score: companion.compatibilityScore, size: 52)
             }
+
+            if viewModel.userSunSign != nil, companionSun != nil {
+                Button {
+                    HapticManager.buttonPress()
+                    activeRoute = .coupleRead
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "heart.text.square.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Couple Read")
+                                .font(SimastryFont.labelLarge)
+                                .foregroundStyle(SimastryColor.offWhite)
+
+                            Text("Commitment, conflict, repair, and money talk")
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .padding(13)
+                    .surfaceCard(cornerRadius: 16, accent: SimastryColor.gold.opacity(0.6))
+                    .contentShape(.rect)
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Open Couple Read with \(companion.name)")
+            }
+
+            compatibilityMethodLayer
 
             if let userSun = viewModel.userSunSign,
                let userMoon = viewModel.userMoonSign,
@@ -170,14 +245,14 @@ struct CompanionDetailSheet: View {
                     let userElement = userSun.element.rawValue
                     let compElement = compSun.element.rawValue
                     Text(AstrologyTemplates.elementPairingText(element1: userElement, element2: compElement))
-                        .font(.system(size: 15, design: .serif))
+                        .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
                         .lineSpacing(3)
 
                     // Sun-Sun breakdown
                     compatibilityRow(
                         icon: "sun.max.fill",
-                        tint: Color(red: 232/255, green: 132/255, blue: 90/255),
+                        tint: SimastryColor.sunCoral,
                         title: "Core Identity",
                         yours: userSun,
                         theirs: compSun,
@@ -187,7 +262,7 @@ struct CompanionDetailSheet: View {
                     // Moon-Moon breakdown
                     compatibilityRow(
                         icon: "moon.stars.fill",
-                        tint: Color(red: 74/255, green: 144/255, blue: 217/255),
+                        tint: SimastryColor.celestialBlue,
                         title: "Emotional Bond",
                         yours: userMoon,
                         theirs: compMoon,
@@ -197,7 +272,7 @@ struct CompanionDetailSheet: View {
                     // Rising-Rising breakdown
                     compatibilityRow(
                         icon: "sparkles",
-                        tint: Color(red: 192/255, green: 132/255, blue: 216/255),
+                        tint: SimastryColor.risingViolet,
                         title: "First Impressions",
                         yours: userRising,
                         theirs: compRising,
@@ -212,11 +287,11 @@ struct CompanionDetailSheet: View {
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(SimastryColor.amber)
                                 Text("Growth Edge")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(SimastryFont.labelLarge)
                                     .foregroundStyle(SimastryColor.amber)
                             }
                             Text(challenge)
-                                .font(.system(size: 13, design: .serif))
+                                .font(SimastryFont.bodyLarge)
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
                                 .lineSpacing(2)
                         }
@@ -227,9 +302,17 @@ struct CompanionDetailSheet: View {
                 .padding(16)
                 .simastryGlass(cornerRadius: 16)
             }
+
+            Text("Compatibility scores reflect placement logic, not relationship destiny. Every relationship is shaped by the people in it.")
+                .font(SimastryFont.captionSmall)
+                .italic()
+                .foregroundStyle(SimastryColor.deepMuted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private func compatibilityRow(icon: String, tint: Color, title: String, yours: ZodiacSign, theirs: ZodiacSign, insight: String) -> some View {
@@ -239,25 +322,115 @@ struct CompanionDetailSheet: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(tint)
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 HStack(spacing: 4) {
                     Text(yours.glyph)
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                     Text("×")
-                        .font(.system(size: 11))
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                     Text(theirs.glyph)
-                        .font(.system(size: 14))
+                        .font(SimastryFont.bodySmall)
                 }
                 .foregroundStyle(tint.opacity(0.8))
             }
             Text(insight)
-                .font(.system(size: 13, design: .serif))
+                .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.75))
                 .lineSpacing(2)
+
+            // Element pairing insight
+            if let pairingInsight = AstrologyTemplates.elementPairingInsightText(
+                element1: yours.element.rawValue,
+                element2: theirs.element.rawValue
+            ) {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(tint.opacity(0.4))
+                        .padding(.top, 2)
+                    Text(pairingInsight)
+                        .font(SimastryFont.caption)
+                        .italic()
+                        .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 2)
+            }
         }
+    }
+
+    private var compatibilityMethodLayer: some View {
+        MethodLayerPanel(
+            title: "Signals used",
+            summary: "This reading compares your chart with \(companion.name)'s guide lens. Sun shows drive, Moon shows emotional pattern, and Rising shows first instinct.",
+            signals: compatibilityMethodSignals,
+            footer: "Astronomy calculates placements. Traditional astrology interprets the pattern. Simastry translates it into compatibility and communication guidance.",
+            accent: companionSun?.color ?? SimastryColor.gold
+        )
+    }
+
+    private var compatibilityMethodSignals: [MethodSignal] {
+        var signals: [MethodSignal] = []
+
+        if let userSunSign = viewModel.userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Your Sun",
+                    detail: userSunSign.displayName,
+                    systemImage: "sun.max.fill",
+                    tint: userSunSign.color
+                )
+            )
+        }
+
+        if let companionSun {
+            signals.append(
+                MethodSignal(
+                    label: "Companion Sun",
+                    detail: "\(companionSun.displayName) lens",
+                    systemImage: "scope",
+                    tint: companionSun.color
+                )
+            )
+        }
+
+        if let userMoonSign = viewModel.userMoonSign,
+           let companionMoon {
+            signals.append(
+                MethodSignal(
+                    label: "Moon pattern",
+                    detail: "\(userMoonSign.glyph) to \(companionMoon.glyph)",
+                    systemImage: "moon.stars.fill",
+                    tint: SimastryColor.celestialBlue
+                )
+            )
+        }
+
+        if let userRisingSign = viewModel.userRisingSign,
+           let companionRising {
+            signals.append(
+                MethodSignal(
+                    label: "Rising instinct",
+                    detail: "\(userRisingSign.glyph) to \(companionRising.glyph)",
+                    systemImage: "sparkles",
+                    tint: SimastryColor.risingViolet
+                )
+            )
+        }
+
+        signals.append(
+            MethodSignal(
+                label: "Method",
+                detail: "Western tropical",
+                systemImage: "scope",
+                tint: SimastryColor.gold
+            )
+        )
+
+        return signals
     }
 
     private func sunSunInsight(user: ZodiacSign, companion: ZodiacSign) -> String {
@@ -322,7 +495,7 @@ struct CompanionDetailSheet: View {
         VStack(spacing: 8) {
             HStack {
                 Text("Relationship")
-                    .font(.system(size: 14, weight: .light))
+                    .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.5)
                     .textCase(.uppercase)
@@ -338,6 +511,7 @@ struct CompanionDetailSheet: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 25)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var statsSection: some View {
@@ -350,6 +524,7 @@ struct CompanionDetailSheet: View {
         .simastryGlass(cornerRadius: 16)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 30)
+        .animation(appeared ? .spring(SimastrySpring.smooth) : .easeOut(duration: 0.2), value: appeared)
     }
 
     private var companionPrompt: String {
@@ -361,10 +536,10 @@ struct CompanionDetailSheet: View {
     private func statItem(value: String, label: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 16, weight: .medium))
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.gold)
             Text(label)
-                .font(.system(size: 11))
+                .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .frame(maxWidth: .infinity)

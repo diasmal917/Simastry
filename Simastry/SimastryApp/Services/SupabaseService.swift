@@ -1,13 +1,31 @@
 import Foundation
 import Supabase
 
-nonisolated final class SupabaseService {
-    let client: SupabaseClient
+nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
+    case notConfigured
+    case invalidRedirectURL
 
-    private var authRedirectURL: URL {
+    var errorDescription: String? {
+        switch self {
+        case .notConfigured:
+            "Authentication is not configured yet."
+        case .invalidRedirectURL:
+            "Authentication redirect URL is invalid."
+        }
+    }
+}
+
+nonisolated final class SupabaseService {
+    private let client: SupabaseClient?
+
+    private var isConfigured: Bool {
+        client != nil
+    }
+
+    private func makeAuthRedirectURL() throws -> URL {
         let scheme = Bundle.main.bundleIdentifier ?? "app.simastry.ios"
         guard let url = URL(string: "\(scheme)://auth/callback") else {
-            preconditionFailure("Invalid auth redirect URL")
+            throw SupabaseServiceError.invalidRedirectURL
         }
         return url
     }
@@ -17,7 +35,8 @@ nonisolated final class SupabaseService {
         let rawKey = AppConfig.supabaseAnonKey
 
         guard !rawURL.isEmpty, let url = URL(string: rawURL), !rawKey.isEmpty else {
-            preconditionFailure("Supabase URL and anon key must be configured")
+            client = nil
+            return
         }
 
         client = SupabaseClient(supabaseURL: url, supabaseKey: rawKey)
@@ -25,28 +44,51 @@ nonisolated final class SupabaseService {
 
     var currentUserId: UUID? {
         get async {
-            try? await client.auth.session.user.id
+            guard let client else { return nil }
+            do {
+                return try await client.auth.session.user.id
+            } catch {
+                return nil
+            }
         }
     }
 
-    func currentAccessToken() async -> String? {
-        do {
-            return try await client.auth.session.accessToken
-        } catch {
-            return nil
-        }
+    /// True when the edge-function AI channel can be reached (Supabase
+    /// configured). The function itself still requires a signed-in session.
+    var canInvokeCompanionReply: Bool {
+        isConfigured
+    }
+
+    /// Calls the `companion-reply` edge function — the server-side Anthropic
+    /// proxy — and returns the generated text.
+    func invokeCompanionReply(
+        kind: CompanionReplyKind,
+        system: String,
+        user: String,
+        maxTokens: Int = 1024
+    ) async throws -> String {
+        let client = try configuredClient()
+        let payload = CompanionReplyPayload(kind: kind.rawValue, system: system, user: user, maxTokens: maxTokens)
+        let response: CompanionReplyResponse = try await client.functions.invoke(
+            "companion-reply",
+            options: FunctionInvokeOptions(body: payload)
+        )
+        return response.text
     }
 
     func signInWithApple(idToken: String) async throws {
+        let client = try configuredClient()
         try await client.auth.signInWithIdToken(
             credentials: .init(provider: .apple, idToken: idToken)
         )
     }
 
     func signInWithGoogle() async throws {
+        let client = try configuredClient()
+        let redirectURL = try makeAuthRedirectURL()
         _ = try await client.auth.signInWithOAuth(
             provider: .google,
-            redirectTo: authRedirectURL,
+            redirectTo: redirectURL,
             scopes: "openid email profile https://www.googleapis.com/auth/userinfo.email"
         )
     }
@@ -57,14 +99,17 @@ nonisolated final class SupabaseService {
     }
 
     func handleAuthCallback(_ url: URL) async throws {
+        let client = try configuredClient()
         try await client.auth.session(from: url)
     }
 
     func signUpWithEmail(email: String, password: String) async throws -> Bool {
+        let client = try configuredClient()
+        let redirectURL = try makeAuthRedirectURL()
         let response = try await client.auth.signUp(
             email: email,
             password: password,
-            redirectTo: authRedirectURL
+            redirectTo: redirectURL
         )
         switch response {
         case .session(_):
@@ -75,23 +120,38 @@ nonisolated final class SupabaseService {
     }
 
     func signInWithEmail(email: String, password: String) async throws {
+        let client = try configuredClient()
         try await client.auth.signIn(email: email, password: password)
     }
 
     func signOut() async throws {
+        guard let client else { return }
         try await client.auth.signOut()
     }
 
-    func isAuthenticated() async -> Bool {
+    enum AuthState: Sendable {
+        /// A valid (possibly just refreshed) session exists.
+        case authenticated
+        /// No session is stored on this device — a definitive sign-out.
+        case signedOut
+        /// A session is stored but could not be verified or refreshed right
+        /// now (offline, Supabase unreachable). Callers must not treat this
+        /// as a sign-out: account-scoped local data has to survive it.
+        case unverified
+    }
+
+    func authState() async -> AuthState {
+        guard let client else { return .signedOut }
         do {
             _ = try await client.auth.session
-            return true
+            return .authenticated
         } catch {
-            return false
+            return client.auth.currentSession == nil ? .signedOut : .unverified
         }
     }
 
     func fetchProfile() async throws -> UserProfile? {
+        let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
         let profiles: [UserProfile] = try await client
             .from("profiles")
@@ -103,10 +163,12 @@ nonisolated final class SupabaseService {
     }
 
     func upsertProfile(_ profile: UserProfile) async throws {
+        let client = try configuredClient()
         try await client.from("profiles").upsert(profile).execute()
     }
 
     func fetchCompanions() async throws -> [CompanionData] {
+        let client = try configuredClient()
         guard let userId = await currentUserId else { return [] }
         let companions: [CompanionData] = try await client
             .from("companions")
@@ -118,10 +180,12 @@ nonisolated final class SupabaseService {
     }
 
     func insertCompanion(_ companion: CompanionData) async throws {
+        let client = try configuredClient()
         try await client.from("companions").insert(companion).execute()
     }
 
     func updateCompanion(_ companion: CompanionData) async throws {
+        let client = try configuredClient()
         try await client.from("companions")
             .update(companion)
             .eq("id", value: companion.id.uuidString)
@@ -129,6 +193,7 @@ nonisolated final class SupabaseService {
     }
 
     func deleteCompanion(id: UUID) async throws {
+        let client = try configuredClient()
         try await client.from("companions")
             .delete()
             .eq("id", value: id.uuidString)
@@ -136,6 +201,7 @@ nonisolated final class SupabaseService {
     }
 
     func fetchMessages(companionId: UUID) async throws -> [MessageData] {
+        let client = try configuredClient()
         let messages: [MessageData] = try await client
             .from("messages")
             .select()
@@ -145,159 +211,306 @@ nonisolated final class SupabaseService {
         return messages
     }
 
-    func searchPublicProfiles(query: String) async throws -> [SearchableUserProfile] {
-        guard let userId = await currentUserId else { return [] }
-        let normalizedQuery = normalizedProfileSearchQuery(query)
-        guard !normalizedQuery.isEmpty else { return [] }
+    func deleteAllCompanions(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("companions")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+    }
 
-        let pattern = "%\(normalizedQuery)%"
-        let profiles: [SearchableUserProfile] = try await client
-            .from("public_profiles")
+    func deleteProfile(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("profiles")
+            .delete()
+            .eq("id", value: userId)
+            .execute()
+    }
+
+    func fetchCurrentSocialProfile() async throws -> SocialProfile? {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return nil }
+        let profiles: [SocialProfile] = try await client
+            .from("social_profiles")
             .select()
-            .eq("is_discoverable", value: true)
-            .neq("id", value: userId.uuidString)
-            .or("username.ilike.\(pattern),display_name.ilike.\(pattern)")
-            .order("username", ascending: true)
-            .limit(8)
+            .eq("id", value: userId.uuidString)
+            .execute()
+            .value
+        return profiles.first
+    }
+
+    func upsertSocialProfile(_ profile: SocialProfile) async throws {
+        let client = try configuredClient()
+        try await client.from("social_profiles").upsert(profile).execute()
+    }
+
+    func fetchVisibleSocialProfiles() async throws -> [SocialProfile] {
+        let client = try configuredClient()
+        return try await client
+            .from("social_profiles")
+            .select()
+            .eq("is_visible", value: true)
+            .execute()
+            .value
+    }
+
+    func deleteSocialProfile(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("social_profiles")
+            .delete()
+            .eq("id", value: userId)
+            .execute()
+    }
+
+    func deleteDiscoveryMessages(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_messages")
+            .delete()
+            .or("sender_id.eq.\(userId),recipient_id.eq.\(userId)")
+            .execute()
+    }
+
+    func deleteDiscoveryBlocks(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_blocks")
+            .delete()
+            .or("blocker_id.eq.\(userId),blocked_id.eq.\(userId)")
+            .execute()
+    }
+
+    func deleteDiscoveryReports(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_reports")
+            .delete()
+            .or("reporter_id.eq.\(userId),reported_id.eq.\(userId)")
+            .execute()
+    }
+
+    func fetchDiscoveryBlocks() async throws -> [DiscoveryBlockData] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+
+        let sentBlocks: [DiscoveryBlockData] = try await client
+            .from("discovery_blocks")
+            .select()
+            .eq("blocker_id", value: userId.uuidString)
             .execute()
             .value
 
-        return profiles
+        let receivedBlocks: [DiscoveryBlockData] = try await client
+            .from("discovery_blocks")
+            .select()
+            .eq("blocked_id", value: userId.uuidString)
+            .execute()
+            .value
+
+        return sentBlocks + receivedBlocks
     }
 
-    func fetchConnectedProfiles() async throws -> [SearchableUserProfile] {
-        let connections: [UserConnectionRow] = try await client
-            .from("user_connections")
-            .select("profile_id")
+    func blockDiscoveryProfile(blockedId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+
+        let block = DiscoveryBlockData(
+            blockerId: userId,
+            blockedId: blockedId,
+            createdAt: Date()
+        )
+
+        try await client.from("discovery_blocks").upsert(block).execute()
+    }
+
+    func reportDiscoveryProfile(_ report: DiscoveryReportData) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_reports").insert(report).execute()
+    }
+
+    func fetchDiscoveryMessages() async throws -> [DiscoveryMessageData] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        let messages: [DiscoveryMessageData] = try await client
+            .from("discovery_messages")
+            .select()
+            .or("sender_id.eq.\(userId.uuidString),recipient_id.eq.\(userId.uuidString)")
             .order("created_at", ascending: false)
             .execute()
             .value
-
-        guard !connections.isEmpty else { return [] }
-
-        let profileIdValues: [any PostgrestFilterValue] = connections.map { $0.profileId.uuidString }
-        let profiles: [SearchableUserProfile] = try await client
-            .from("public_profiles")
-            .select()
-            .in("id", values: profileIdValues)
-            .execute()
-            .value
-
-        let profilesById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
-        return connections.compactMap { profilesById[$0.profileId] }
+        return messages
     }
 
-    func addUserConnection(profileId: UUID) async throws {
+    func sendDiscoveryMessage(_ message: DiscoveryMessageData) async throws {
+        let client = try configuredClient()
+        try await client.from("discovery_messages").insert(message).execute()
+    }
+
+    func markDiscoveryConversationRead(with participantId: UUID) async throws {
+        let client = try configuredClient()
         guard let userId = await currentUserId else { return }
-        let payload = UserConnectionInsert(ownerId: userId, profileId: profileId)
-        try await client
-            .from("user_connections")
-            .insert(payload)
+        try await client.from("discovery_messages")
+            .update(["is_read": true])
+            .eq("recipient_id", value: userId.uuidString)
+            .eq("sender_id", value: participantId.uuidString)
             .execute()
     }
 
-    func removeUserConnection(profileId: UUID) async throws {
+    func deleteDiscoveryConversation(with participantId: UUID) async throws {
+        let client = try configuredClient()
         guard let userId = await currentUserId else { return }
-        try await client
-            .from("user_connections")
+        try await client.from("discovery_messages")
             .delete()
-            .eq("owner_id", value: userId.uuidString)
-            .eq("profile_id", value: profileId.uuidString)
+            .or(
+                "and(sender_id.eq.\(userId.uuidString),recipient_id.eq.\(participantId.uuidString)),and(sender_id.eq.\(participantId.uuidString),recipient_id.eq.\(userId.uuidString))"
+            )
             .execute()
     }
 
-    func upsertPublicProfile(
-        username: String?,
-        displayName: String?,
-        avatarURL: String?,
-        avatarPath: String?,
-        bio: String?,
-        sunSign: ZodiacSign?,
-        moonSign: ZodiacSign?,
-        risingSign: ZodiacSign?,
-        communicationHint: String?,
-        iceBreakers: [String],
-        isDiscoverable: Bool
-    ) async throws -> SearchableUserProfile? {
-        guard let userId = await currentUserId else { return nil }
-        let payload = PublicProfileUpsert(
-            id: userId,
-            username: normalizedUsername(username),
-            displayName: displayName?.trimmedNonEmpty,
-            avatarURL: avatarURL?.trimmedNonEmpty,
-            avatarPath: avatarPath?.trimmedNonEmpty,
-            bio: bio?.trimmedNonEmpty,
-            sunSign: sunSign,
-            moonSign: moonSign,
-            risingSign: risingSign,
-            communicationHint: communicationHint?.trimmedNonEmpty,
-            iceBreakers: Array(iceBreakers.prefix(8)),
-            isDiscoverable: isDiscoverable
-        )
+    // MARK: - Guided Rooms
 
-        let profile: SearchableUserProfile = try await client
-            .from("public_profiles")
-            .upsert(payload)
+    func fetchChatThreadMembershipsForCurrentUser() async throws -> [ChatThreadMember] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        return try await client
+            .from("chat_thread_members")
             .select()
-            .single()
+            .eq("member_kind", value: ChatMemberKind.human.rawValue)
+            .eq("human_user_id", value: userId.uuidString)
+            .eq("is_active", value: true)
             .execute()
             .value
-
-        return profile
     }
 
-    func uploadAvatar(
-        data: Data,
-        contentType: String = "image/jpeg",
-        fileExtension: String = "jpg"
-    ) async throws -> AvatarUploadResult? {
-        guard let userId = await currentUserId else { return nil }
-        let normalizedExtension = fileExtension.trimmingCharacters(in: .alphanumerics.inverted).lowercased()
-        let pathExtension = normalizedExtension.isEmpty ? "jpg" : normalizedExtension
-        let path = "\(userId.uuidString)/avatar.\(pathExtension)"
-
-        try await client.storage
-            .from("avatars")
-            .upload(
-                path,
-                data: data,
-                options: FileOptions(contentType: contentType, upsert: true)
-            )
-
-        let publicURL = try publicAvatarURL(path: path, cacheNonce: UUID().uuidString)
-        return AvatarUploadResult(path: path, publicURL: publicURL)
+    func fetchChatThreads(threadIds: [UUID]) async throws -> [ChatThread] {
+        let client = try configuredClient()
+        guard !threadIds.isEmpty else { return [] }
+        return try await client
+            .from("chat_threads")
+            .select()
+            .or(uuidOrFilter(column: "id", ids: threadIds))
+            .order("updated_at", ascending: false)
+            .execute()
+            .value
     }
 
-    func publicAvatarURL(path: String, cacheNonce: String? = nil) throws -> String {
-        try client.storage
-            .from("avatars")
-            .getPublicURL(path: path, cacheNonce: cacheNonce)
-            .absoluteString
+    func fetchChatThreadMembers(threadIds: [UUID]) async throws -> [ChatThreadMember] {
+        let client = try configuredClient()
+        guard !threadIds.isEmpty else { return [] }
+        return try await client
+            .from("chat_thread_members")
+            .select()
+            .or(uuidOrFilter(column: "thread_id", ids: threadIds))
+            .order("created_at", ascending: true)
+            .execute()
+            .value
     }
 
-    private func normalizedProfileSearchQuery(_ query: String) -> String {
-        let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._- "))
-        return query
-            .lowercased()
-            .unicodeScalars
-            .filter { allowedCharacters.contains($0) }
-            .map(String.init)
-            .joined()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+    func fetchChatMessages(threadIds: [UUID]) async throws -> [ChatMessage] {
+        let client = try configuredClient()
+        guard !threadIds.isEmpty else { return [] }
+        return try await client
+            .from("chat_messages")
+            .select()
+            .or(uuidOrFilter(column: "thread_id", ids: threadIds))
+            .order("created_at", ascending: true)
+            .execute()
+            .value
     }
 
-    private func normalizedUsername(_ username: String?) -> String? {
-        username?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-            .lowercased()
-            .trimmedNonEmpty
+    func fetchChatMessages(threadId: UUID) async throws -> [ChatMessage] {
+        let client = try configuredClient()
+        return try await client
+            .from("chat_messages")
+            .select()
+            .eq("thread_id", value: threadId.uuidString)
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+    }
+
+    func createChatThread(
+        thread: ChatThread,
+        members: [ChatThreadMember],
+        openingMessage: ChatMessage?
+    ) async throws {
+        let client = try configuredClient()
+        try await client.from("chat_threads").insert(thread).execute()
+        try await client.from("chat_thread_members").insert(members).execute()
+        if let openingMessage {
+            try await client.from("chat_messages").insert(openingMessage).execute()
+        }
+    }
+
+    func sendChatMessage(_ message: ChatMessage) async throws {
+        let client = try configuredClient()
+        try await client.from("chat_messages").insert(message).execute()
+    }
+
+    func markChatThreadRead(threadId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+        try await client.from("chat_thread_members")
+            .update(["last_read_at": ISO8601DateFormatter().string(from: Date())])
+            .eq("thread_id", value: threadId.uuidString)
+            .eq("member_kind", value: ChatMemberKind.human.rawValue)
+            .eq("human_user_id", value: userId.uuidString)
+            .execute()
+    }
+
+    func leaveChatThread(threadId: UUID) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return }
+        try await client.from("chat_thread_members")
+            .update(["is_active": false])
+            .eq("thread_id", value: threadId.uuidString)
+            .eq("member_kind", value: ChatMemberKind.human.rawValue)
+            .eq("human_user_id", value: userId.uuidString)
+            .execute()
+    }
+
+    func reportChatThread(_ report: ChatReportData) async throws {
+        let client = try configuredClient()
+        try await client.from("chat_reports").insert(report).execute()
+    }
+
+    func invokeRoomGuideReply(threadId: UUID, guideProfileId: String) async throws -> ChatMessage? {
+        let client = try configuredClient()
+        let payload = RoomGuideReplyRequest(
+            threadId: threadId,
+            guideProfileId: guideProfileId,
+            maxTokens: 360
+        )
+        let response: RoomGuideReplyResponse = try await client.functions.invoke(
+            "room-guide-reply",
+            options: FunctionInvokeOptions(body: payload)
+        )
+        return response.message
+    }
+
+    private func configuredClient() throws -> SupabaseClient {
+        guard let client, isConfigured else {
+            throw SupabaseServiceError.notConfigured
+        }
+        return client
+    }
+
+    private func uuidOrFilter(column: String, ids: [UUID]) -> String {
+        ids.map { "\(column).eq.\($0.uuidString)" }.joined(separator: ",")
     }
 }
 
-private extension String {
-    nonisolated var trimmedNonEmpty: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
+// MARK: - Companion Reply Channel
+
+nonisolated enum CompanionReplyKind: String, Sendable {
+    case prediction
+    case chat
+}
+
+nonisolated struct CompanionReplyPayload: Encodable, Sendable {
+    let kind: String
+    let system: String
+    let user: String
+    let maxTokens: Int
+}
+
+nonisolated struct CompanionReplyResponse: Decodable, Sendable {
+    let text: String
 }

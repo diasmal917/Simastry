@@ -53,7 +53,7 @@ struct SoulCreationView: View {
                 .frame(height: 160)
 
                 Text(phaseText)
-                    .font(.system(size: 16, design: .serif).italic())
+                    .font(SimastryFont.bodyLarge.italic())
                     .foregroundStyle(SimastryColor.gold)
                     .multilineTextAlignment(.center)
                     .opacity(textOpacity)
@@ -110,7 +110,7 @@ struct SoulCreationView: View {
             .frame(width: 40, height: 40)
             .overlay(
                 Text(sign.glyph)
-                    .font(.system(size: 16))
+                    .font(SimastryFont.bodyMedium)
                     .foregroundStyle(SimastryColor.offWhite)
             )
             .offset(offset)
@@ -136,7 +136,7 @@ struct SoulCreationView: View {
                 .shadow(color: SimastryColor.gold.opacity(0.3), radius: 20)
 
             Text(String(viewModel.companionName.prefix(1)).uppercased())
-                .font(.system(size: 48, weight: .medium, design: .serif))
+                .font(SimastryFont.displayLarge)
                 .foregroundStyle(SimastryColor.offWhite)
         }
     }
@@ -144,7 +144,7 @@ struct SoulCreationView: View {
     private var companionSignBadges: some View {
         VStack(spacing: 12) {
             Text(viewModel.companionName)
-                .font(.system(size: 28, weight: .medium))
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.gold)
 
             if let sun = viewModel.companionSunSign {
@@ -164,10 +164,10 @@ struct SoulCreationView: View {
         HStack(spacing: 8) {
             CelestialRoleIcon(role: role, size: 24)
             Text("\(role.displayName) in \(sign.displayName)")
-                .font(.system(size: 13, weight: .medium))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(role.accentColor)
             Text(sign.glyph)
-                .font(.system(size: 13))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
         }
     }
@@ -181,12 +181,12 @@ struct SoulCreationView: View {
 
     private var phaseText: String {
         switch phase {
-        case 0, 1: return "Gathering the stars..."
+        case 0, 1: return "Mapping the placement profile..."
         case 2:
-            let sun = viewModel.companionSunSign?.displayName ?? "cosmic"
-            let moon = viewModel.companionMoonSign?.displayName ?? "lunar"
-            let rising = viewModel.companionRisingSign?.displayName ?? "stellar"
-            return "Weaving \(sun) fire, \(moon) depth, \(rising) light..."
+            let sun = viewModel.companionSunSign?.displayName ?? "Sun"
+            let moon = viewModel.companionMoonSign?.displayName ?? "Moon"
+            let rising = viewModel.companionRisingSign?.displayName ?? "Rising"
+            return "Translating \(sun) drive, \(moon) emotion, and \(rising) instinct..."
         case 3: return ""
         default: return ""
         }

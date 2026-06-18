@@ -59,8 +59,10 @@ nonisolated struct NumerologyTemplates {
     }
 
     static func chineseZodiacAnimal(from date: Date) -> ChineseZodiacAnimal {
-        let year = Calendar.current.component(.year, from: date)
-        let index = year % 12
+        let lunarYear = Calendar(identifier: .chinese).component(.year, from: date)
+        // In Foundation's Chinese calendar, 1984's Rat year is cycle year 1.
+        // The app's animal table uses Gregorian-style indices where Rat is 4.
+        let index = (lunarYear + 3) % 12
         return chineseZodiacAnimals[index] ?? ChineseZodiacAnimal(name: "Unknown", emoji: "✨", trait: "A mysterious cosmic energy")
     }
 

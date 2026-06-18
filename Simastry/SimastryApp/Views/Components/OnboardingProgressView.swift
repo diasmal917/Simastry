@@ -17,37 +17,37 @@ struct OnboardingProgressView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
                 Text(eyebrow.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(SimastryFont.overline)
                     .tracking(1.4)
-                    .foregroundStyle(SimastryColor.gold)
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.72))
 
                 Spacer()
 
                 Text("Step \(step) of \(totalSteps)")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
+                    .font(SimastryFont.labelSmall)
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.62))
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(SimastryColor.offWhite)
+                    .font(SimastryFont.titleLarge)
+                    .foregroundStyle(SimastryColor.midnight)
 
                 Text(subtitle)
-                    .font(.system(size: 14))
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.70))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(.white.opacity(0.08))
+                        .fill(SimastryColor.midnight.opacity(0.10))
 
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [SimastryColor.gold.opacity(0.95), SimastryColor.amber.opacity(0.8)],
+                                colors: [SimastryColor.midnight.opacity(0.62), SimastryColor.midnight.opacity(0.42)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -60,12 +60,12 @@ struct OnboardingProgressView: View {
             HStack(spacing: 8) {
                 ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
                     Text(label)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(index + 1 <= step ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.75))
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.midnight.opacity(index + 1 <= step ? 0.86 : 0.62))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(index + 1 <= step ? SimastryColor.gold : .white.opacity(0.06), in: .capsule)
+                        .background(index + 1 <= step ? .white.opacity(0.35) : .white.opacity(0.14), in: .capsule)
                 }
             }
         }

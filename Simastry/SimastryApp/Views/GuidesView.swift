@@ -2,6 +2,7 @@ import SwiftUI
 
 nonisolated private enum GuidesSheet: String, Identifiable, Sendable {
     case astropediaLibrary
+    case savedGuides
 
     var id: String { rawValue }
 }
@@ -23,6 +24,7 @@ struct GuidesView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         headerSection
+                        savedGuidesCard
                         signPickerSection
                         featuredGuideSection
                         nextStepSection
@@ -30,7 +32,7 @@ struct GuidesView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, SimastrySpacing.tabBarClearance)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -43,6 +45,8 @@ struct GuidesView: View {
                         .presentationDetents([.medium, .large])
                         .presentationDragIndicator(.visible)
                         .presentationContentInteraction(.scrolls)
+                case .savedGuides:
+                    SavedGuidesView(viewModel: viewModel)
                 }
             }
             .task {
@@ -81,11 +85,11 @@ struct GuidesView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("How to talk to every sign")
-                .font(.title2.weight(.bold))
+                .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
-            Text("Practical communication playbooks — less theory, more how to text them, reach them, and not lose the room.")
-                .font(.subheadline)
+            Text(personalizedGuidesIntroText)
+                .font(SimastryFont.bodyMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -94,7 +98,7 @@ struct GuidesView: View {
     private var signPickerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Choose a sign")
-                .font(.headline)
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             ScrollView(.horizontal) {
@@ -108,7 +112,7 @@ struct GuidesView: View {
                         } label: {
                             VStack(spacing: 6) {
                                 Text(sign.glyph)
-                                    .font(.system(size: 24, weight: .semibold, design: .serif))
+                                    .font(SimastryFont.displayMedium)
                                     .foregroundStyle(sign.color)
                                     .frame(width: 48, height: 48)
                                     .background(sign.color.opacity(selectedSign == sign ? 0.22 : 0.10), in: Circle())
@@ -118,7 +122,7 @@ struct GuidesView: View {
                                     }
 
                                 Text(sign.displayName)
-                                    .font(.system(size: 11, weight: selectedSign == sign ? .bold : .medium))
+                                    .font(SimastryFont.labelSmall)
                                     .foregroundStyle(selectedSign == sign ? sign.color : SimastryColor.mutedSilver)
                             }
                             .frame(width: 62)
@@ -138,11 +142,11 @@ struct GuidesView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(selectedSign.displayName)
-                    .font(.title3.weight(.bold))
+                    .font(SimastryFont.titleMedium)
                     .foregroundStyle(selectedSign.color)
 
                 Text(selectedGuideSubtitle)
-                    .font(.subheadline)
+                    .font(SimastryFont.bodyMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
             }
@@ -150,30 +154,22 @@ struct GuidesView: View {
             CommunicationGuideView(sign: selectedSign)
                 .id(selectedSign)
                 .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
-
-            PromptBubbleCarousel(
-                prompts: ConversationPromptLibrary.guidePrompts(for: selectedSign),
-                isEnabled: viewModel.suggestedPromptsEnabled
-            ) { prompt in
-                viewModel.startGuidePrompt(for: selectedSign, question: prompt)
-            }
-            .padding(.top, 2)
         }
     }
 
     private var nextStepSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Use this guide")
-                .font(.headline)
+                .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
             ViewThatFits {
                 HStack(spacing: 12) {
                     nextStepCard(
-                        title: "Try Simulate",
-                        subtitle: "Test a real conversation with a \(selectedSign.displayName).",
-                        systemImage: "wand.and.stars",
-                        accent: SimastryColor.risingViolet
+                        title: "Open Messages",
+                        subtitle: "Use this sign lens in your message thread.",
+                        systemImage: "message.fill",
+                        accent: SimastryColor.celestialBlue
                     ) {
                         viewModel.selectedTab = 2
                     }
@@ -184,16 +180,16 @@ struct GuidesView: View {
                         systemImage: "sparkles",
                         accent: SimastryColor.sunCoral
                     ) {
-                        viewModel.selectedTab = 1
+                        viewModel.openAIAstrologists()
                     }
                 }
 
                 VStack(spacing: 12) {
                     nextStepCard(
-                        title: "Try Simulate",
-                        subtitle: "Test a real conversation with a \(selectedSign.displayName).",
-                        systemImage: "wand.and.stars",
-                        accent: SimastryColor.risingViolet
+                        title: "Open Messages",
+                        subtitle: "Use this sign lens in your message thread.",
+                        systemImage: "message.fill",
+                        accent: SimastryColor.celestialBlue
                     ) {
                         viewModel.selectedTab = 2
                     }
@@ -204,7 +200,7 @@ struct GuidesView: View {
                         systemImage: "sparkles",
                         accent: SimastryColor.sunCoral
                     ) {
-                        viewModel.selectedTab = 1
+                        viewModel.openAIAstrologists()
                     }
                 }
             }
@@ -225,11 +221,11 @@ struct GuidesView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Astropedia Library")
-                        .font(.subheadline.weight(.semibold))
+                        .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
                     Text("Deeper learning — chart reading, compatibility theory, and more.")
-                        .font(.caption)
+                        .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -237,7 +233,7 @@ struct GuidesView: View {
                 Spacer(minLength: 0)
 
                 Image(systemName: "arrow.up.right")
-                    .font(.footnote.weight(.bold))
+                    .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold)
             }
             .padding(16)
@@ -248,6 +244,59 @@ struct GuidesView: View {
             }
         }
         .buttonStyle(SpringPressStyle())
+    }
+
+    private var savedGuidesCard: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeSheet = .savedGuides
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "bookmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                    .frame(width: 42, height: 42)
+                    .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("My Saved Guides")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    if viewModel.savedGuides.isEmpty {
+                        Text("Save guides for your boss, friends, family and more.")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("\(viewModel.savedGuides.count) saved \(viewModel.savedGuides.count == 1 ? "guide" : "guides")")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.celestialBlue)
+            }
+            .padding(16)
+            .tintedGlass(SimastryColor.celestialBlue.opacity(0.12), cornerRadius: 20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(SimastryColor.celestialBlue.opacity(0.15), lineWidth: 1)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("My saved communication guides. \(viewModel.savedGuides.count) saved.")
+        .featureTip(
+            icon: "person.2.fill",
+            title: "Save People You Talk To",
+            body: "Save communication guides for your boss, siblings, friends \u{2014} anyone you want to understand better.",
+            tip: .savedGuides,
+            delay: 0.8
+        )
     }
 
     private var selectedGuideSubtitle: String {
@@ -284,11 +333,11 @@ struct GuidesView: View {
                     .foregroundStyle(accent)
 
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(SimastryFont.labelLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -297,5 +346,13 @@ struct GuidesView: View {
             .tintedGlass(accent.opacity(0.12), cornerRadius: 20)
         }
         .buttonStyle(SpringPressStyle())
+    }
+
+    private var personalizedGuidesIntroText: String {
+        if let signKey = viewModel.userSunSign?.rawValue,
+           let personalized = AstrologyTemplates.personalizedEmptyStates[signKey]?["guides"] {
+            return personalized
+        }
+        return "Practical communication playbooks — less theory, more how to text them, reach them, and not lose the room."
     }
 }

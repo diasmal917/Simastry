@@ -98,6 +98,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
 
 struct LandingView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
     @State private var fallingStars: [FallingStar] = []
@@ -384,7 +385,11 @@ struct LandingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 6)
-                .landingTileSurface(cornerRadius: 16)
+                .background(.black.opacity(0.30), in: .rect(cornerRadius: 16))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.6)
+                }
             }
         }
         .accessibilityElement(children: .combine)
@@ -397,9 +402,13 @@ struct LandingView: View {
         VStack(spacing: 14) {
             methodCredentialLine
 
-            GoldButton("Get Started") {
+            GoldButton(localization.string("landing.getStarted")) {
                 withAnimation(.spring(SimastrySpring.smooth)) {
-                    viewModel.currentScreen = .birthDetails
+                    if viewModel.isAgeVerified {
+                        viewModel.currentScreen = .birthDetails
+                    } else {
+                        viewModel.currentScreen = .ageGate
+                    }
                 }
             }
             .accessibilityHint("Begin creating your astrology profile")
@@ -410,7 +419,7 @@ struct LandingView: View {
                     viewModel.currentScreen = .signIn
                 }
             } label: {
-                Text("I already have an account")
+                Text(localization.string("landing.alreadyHaveAccount"))
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(.white.opacity(0.75))
             }
@@ -418,16 +427,16 @@ struct LandingView: View {
             .accessibilityLabel("Sign in to existing account")
 
             HStack(spacing: 4) {
-                Text("By continuing, you agree to our")
+                Text(localization.string("landing.legalPrefix"))
                     .font(SimastryFont.caption)
                     .foregroundStyle(.white.opacity(0.78))
-                Link("Terms", destination: AppConfig.termsOfServiceURL)
+                Link(localization.string("landing.terms"), destination: AppConfig.termsOfServiceURL)
                     .font(SimastryFont.labelSmall)
                     .foregroundStyle(.white.opacity(0.86))
                 Text("&")
                     .font(SimastryFont.caption)
                     .foregroundStyle(.white.opacity(0.78))
-                Link("Privacy", destination: AppConfig.privacyPolicyURL)
+                Link(localization.string("landing.privacy"), destination: AppConfig.privacyPolicyURL)
                     .font(SimastryFont.labelSmall)
                     .foregroundStyle(.white.opacity(0.86))
             }
@@ -436,7 +445,7 @@ struct LandingView: View {
             HStack(spacing: 4) {
                 Image(systemName: SimastryIcon.privacy)
                     .font(.system(size: 9, weight: .medium))
-                Text("Private by design")
+                Text(localization.string("landing.privacyBadge"))
                     .font(SimastryFont.captionSmall)
             }
             .foregroundStyle(SimastryColor.mutedSilver)
@@ -473,7 +482,11 @@ struct LandingView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .landingCredentialSurface()
+        .background(.black.opacity(0.25), in: .capsule)
+        .overlay {
+            Capsule()
+                .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
+        }
         .accessibilityLabel("24 guides across 12 zodiac lenses, trained in the Simastry Method")
     }
 
@@ -607,46 +620,6 @@ struct LandingView: View {
     }
 }
 
-
-// MARK: - Landing Surfaces
-
-private extension View {
-    @ViewBuilder
-    func landingTileSurface(cornerRadius: CGFloat) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(
-                .regular.tint(.black.opacity(0.24)),
-                in: .rect(cornerRadius: cornerRadius)
-            )
-        } else {
-            self
-                .background(.black.opacity(0.30), in: .rect(cornerRadius: cornerRadius))
-                .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.6)
-                }
-        }
-    }
-
-    @ViewBuilder
-    func landingCredentialSurface() -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .glassEffect(.regular.tint(.black.opacity(0.18)), in: .capsule)
-                .overlay {
-                    Capsule()
-                        .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
-                }
-        } else {
-            self
-                .background(.black.opacity(0.25), in: .capsule)
-                .overlay {
-                    Capsule()
-                        .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
-                }
-        }
-    }
-}
 
 // MARK: - Models
 

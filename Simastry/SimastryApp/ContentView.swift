@@ -3,6 +3,7 @@ import Foundation
 
 struct ContentView: View {
     @State private var viewModel = AppViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -10,6 +11,8 @@ struct ContentView: View {
                 switch viewModel.currentScreen {
                 case .landing:
                     LandingView(viewModel: viewModel)
+                case .ageGate:
+                    AgeGateView(viewModel: viewModel)
                 case .birthDetails:
                     BirthDetailsView(viewModel: viewModel)
                 case .signUp:
@@ -19,11 +22,7 @@ struct ContentView: View {
                 case .loading:
                     loadingView
                 case .home:
-                    if viewModel.homeSetupPhase == .complete {
-                        MainTabView(viewModel: viewModel)
-                    } else {
-                        HomeView(viewModel: viewModel)
-                    }
+                    MainTabView(viewModel: viewModel)
                 }
             }
             .animation(.spring(SimastrySpring.smooth), value: viewModel.currentScreen == .home)
@@ -32,6 +31,12 @@ struct ContentView: View {
         }
         .preferredColorScheme(viewModel.isDarkMode ? .dark : .light)
         .task {
+            #if DEBUG
+            if viewModel.applyDebugPreviewStateIfRequested() {
+                return
+            }
+            #endif
+
             await viewModel.checkAuthState()
             if let pendingDeepLinkURL = AppDelegate.pendingDeepLinkURL {
                 AppDelegate.pendingDeepLinkURL = nil
@@ -47,6 +52,15 @@ struct ContentView: View {
             guard let url = notification.object as? URL else { return }
             viewModel.handleDeepLink(url)
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background {
+                AnalyticsService.shared.endSession()
+            } else if newPhase == .active {
+                Task {
+                    await viewModel.refreshRealtimeSurfaces()
+                }
+            }
+        }
         .sheet(isPresented: $viewModel.showUpsell) {
             UpsellModalView(viewModel: viewModel)
         }
@@ -56,10 +70,10 @@ struct ContentView: View {
         ZStack {
             SimastryColor.midnight.ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("S I M A S T R Y")
-                    .font(.system(size: 24, weight: .medium))
+                Text("SIMASTRY")
+                    .font(SimastryFont.titleLarge)
+                    .italic()
                     .foregroundStyle(SimastryColor.gold)
-                    .tracking(1)
                 ProgressView()
                     .tint(SimastryColor.gold)
             }
