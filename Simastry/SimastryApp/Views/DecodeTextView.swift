@@ -123,6 +123,16 @@ struct DecodeTextView: View {
                 .frame(minHeight: 88)
                 .padding(10)
                 .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(alignment: .topLeading) {
+                    if messageText.isEmpty {
+                        Text("Paste their message…")
+                            .font(SimastryFont.bodyMedium)
+                            .foregroundStyle(SimastryColor.textTertiary)
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 18)
+                            .allowsHitTesting(false)
+                    }
+                }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -253,13 +263,24 @@ struct DecodeTextView: View {
                             Button {
                                 HapticManager.buttonPress()
                                 UIPasteboard.general.string = reply
-                                copiedReplyIndex = index
+                                withAnimation(.spring(SimastrySpring.snappy)) {
+                                    copiedReplyIndex = index
+                                }
+                                Task {
+                                    try? await Task.sleep(for: .seconds(1.6))
+                                    if copiedReplyIndex == index {
+                                        withAnimation(.spring(SimastrySpring.snappy)) {
+                                            copiedReplyIndex = nil
+                                        }
+                                    }
+                                }
                             } label: {
                                 Image(systemName: copiedReplyIndex == index ? "checkmark" : "doc.on.doc")
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(SimastryColor.gold)
                                     .padding(7)
                                     .background(SimastryColor.gold.opacity(0.12), in: Circle())
+                                    .contentTransition(.symbolEffect(.replace))
                             }
                             .buttonStyle(SpringPressStyle())
                             .accessibilityLabel(copiedReplyIndex == index ? "Reply copied" : "Copy this reply")

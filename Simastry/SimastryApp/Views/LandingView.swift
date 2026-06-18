@@ -96,6 +96,113 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
     )
 ]
 
+// Feature rows shown below the first viewport. English copy is hardcoded to
+// match the existing landing strings; nothing here is user-generated.
+private struct LandingShowcaseItem: Identifiable {
+    let id: Int
+    let icon: String
+    let accent: Color
+    let title: String
+    let subtitle: String
+}
+
+private let landingDailyFeatures: [LandingShowcaseItem] = [
+    LandingShowcaseItem(id: 0, icon: SimastryIcon.dailyRead, accent: SimastryColor.sunCoral,
+                        title: "Guidance for today",
+                        subtitle: "Open to a reading tuned to the day's sky and your chart."),
+    LandingShowcaseItem(id: 1, icon: SimastryIcon.lens, accent: SimastryColor.celestialBlue,
+                        title: "Decode any message",
+                        subtitle: "Paste a text and understand what they really meant."),
+    LandingShowcaseItem(id: 2, icon: SimastryIcon.predict, accent: SimastryColor.risingViolet,
+                        title: "Predict their reply",
+                        subtitle: "Sense how a message might land before you send it."),
+    LandingShowcaseItem(id: 3, icon: SimastryIcon.quote, accent: SimastryColor.gold,
+                        title: "Know what to say",
+                        subtitle: "Get wording that still sounds like you, only clearer.")
+]
+
+private let landingWorldFeatures: [LandingShowcaseItem] = [
+    LandingShowcaseItem(id: 0, icon: SimastryIcon.astrologers, accent: SimastryColor.gold,
+                        title: "A panel of guides",
+                        subtitle: "Twenty-four AI astrologers, each with their own voice."),
+    LandingShowcaseItem(id: 1, icon: "person.2.fill", accent: SimastryColor.celestialBlue,
+                        title: "Understand your people",
+                        subtitle: "Add the people who matter and read every dynamic."),
+    LandingShowcaseItem(id: 2, icon: "bookmark.fill", accent: SimastryColor.goldLight,
+                        title: "Save what resonates",
+                        subtitle: "Keep the prompts and readings you'll want again.")
+]
+
+/// Translucent glass CTA for the landing — replaces the heavy gold fill with a
+/// material that reads as Liquid Glass on iOS 26 and a tinted ultra-thin
+/// material on iOS 18. White text keeps contrast high over both treatments.
+private struct LandingGlassCTA: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .background(SimastryColor.surface.opacity(0.16), in: .capsule)
+                .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.13)).interactive(), in: .capsule)
+                .overlay(
+                    Capsule().strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.42), SimastryColor.gold.opacity(0.22)],
+                            startPoint: .top, endPoint: .bottom
+                        ),
+                        lineWidth: 0.9
+                    )
+                )
+                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
+        } else {
+            content
+                .background(SimastryColor.gold.opacity(0.10), in: .capsule)
+                .background(.ultraThinMaterial, in: .capsule)
+                .overlay(
+                    Capsule().strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.40), SimastryColor.gold.opacity(0.20)],
+                            startPoint: .top, endPoint: .bottom
+                        ),
+                        lineWidth: 0.8
+                    )
+                )
+                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
+        }
+    }
+}
+
+private struct LandingPrimaryButton: View {
+    let title: String
+    let action: () -> Void
+    @State private var pressed = false
+
+    var body: some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            HStack(spacing: 9) {
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 17)
+            .modifier(LandingGlassCTA())
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(pressed ? 0.97 : 1)
+        .animation(.spring(SimastrySpring.snappy), value: pressed)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in pressed = true }
+                .onEnded { _ in pressed = false }
+        )
+    }
+}
+
 struct LandingView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
@@ -109,68 +216,23 @@ struct LandingView: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack {
-                Color.black.ignoresSafeArea()
-
-                Image("LandingImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .offset(x: motionOffset.width * 0.6, y: motionOffset.height * 0.6)
-                    .clipped()
-                    .ignoresSafeArea()
-
-                // Calms the busy artwork where text must read: a light veil
-                // behind the wordmark, untouched art behind the collage, and
-                // progressively solid ground under the feature row and CTA.
-                LinearGradient(
-                    stops: [
-                        .init(color: .black.opacity(0.30), location: 0),
-                        .init(color: .black.opacity(0.05), location: 0.18),
-                        .init(color: .clear, location: 0.34),
-                        .init(color: .black.opacity(0.30), location: 0.62),
-                        .init(color: .black.opacity(0.66), location: 0.78),
-                        .init(color: .black.opacity(0.94), location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-                shimmerLayer(size: geo.size)
-                    .offset(x: motionOffset.width * 0.4, y: motionOffset.height * 0.4)
-
-                fallingStarLayer(size: geo.size)
-                    .offset(x: motionOffset.width * 1.0, y: motionOffset.height * 1.0)
-
+            ScrollView {
                 VStack(spacing: 0) {
-                    wordmark
-                        .padding(.top, landingTopPadding(for: geo.size))
+                    heroSection(geo: geo)
+                        .frame(width: geo.size.width, height: geo.size.height)
 
-                    valueStatement
-                        .padding(.top, 10)
-                        .padding(.horizontal, 32)
+                    featureShowcase
+                        .padding(.top, 6)
 
-                    companionWindowArrangement(size: geo.size)
-                        .frame(height: heroWindowHeight(for: geo.size))
-                        .padding(.top, geo.size.height < 720 ? 8 : 16)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 26)
-                        .animation(.spring(SimastrySpring.bouncy).delay(0.22), value: appeared)
+                    trustBand
+                        .padding(.top, 30)
 
-                    Spacer(minLength: 8)
-
-                    featureRow
-                        .padding(.horizontal, 24)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 24)
-                        .animation(.spring(SimastrySpring.smooth).delay(0.34), value: appeared)
-
-                    foregroundPanel
+                    bottomCTA
+                        .padding(.top, 34)
                 }
-                .ignoresSafeArea(.container, edges: .bottom)
             }
+            .scrollIndicators(.hidden)
+            .background(Color.black)
         }
         .ignoresSafeArea()
         .onAppear {
@@ -185,6 +247,71 @@ struct LandingView: View {
             starTimer?.invalidate()
             starTimer = nil
         }
+    }
+
+    // MARK: - Hero (first viewport)
+
+    private func heroSection(geo: GeometryProxy) -> some View {
+        ZStack {
+            Color.black
+
+            Image("LandingImage")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: geo.size.width, height: geo.size.height)
+                .offset(x: motionOffset.width * 0.6, y: motionOffset.height * 0.6)
+                .clipped()
+
+            // Calms the busy artwork where text must read: a light veil
+            // behind the wordmark, untouched art behind the collage, and
+            // progressively solid ground under the feature row and CTA.
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.30), location: 0),
+                    .init(color: .black.opacity(0.05), location: 0.18),
+                    .init(color: .clear, location: 0.34),
+                    .init(color: .black.opacity(0.30), location: 0.62),
+                    .init(color: .black.opacity(0.66), location: 0.78),
+                    .init(color: .black.opacity(0.94), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            shimmerLayer(size: geo.size)
+                .offset(x: motionOffset.width * 0.4, y: motionOffset.height * 0.4)
+
+            fallingStarLayer(size: geo.size)
+                .offset(x: motionOffset.width * 1.0, y: motionOffset.height * 1.0)
+
+            VStack(spacing: 0) {
+                wordmark
+                    .padding(.top, landingTopPadding(for: geo.size))
+
+                valueStatement
+                    .padding(.top, 10)
+                    .padding(.horizontal, 32)
+
+                companionWindowArrangement(size: geo.size)
+                    .frame(height: heroWindowHeight(for: geo.size))
+                    .padding(.top, geo.size.height < 720 ? 8 : 16)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 26)
+                    .animation(.spring(SimastrySpring.bouncy).delay(0.22), value: appeared)
+
+                Spacer(minLength: 8)
+
+                featureRow
+                    .padding(.horizontal, 24)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 24)
+                    .animation(.spring(SimastrySpring.smooth).delay(0.34), value: appeared)
+
+                heroCTA
+            }
+        }
+        .clipped()
     }
 
     private func landingTopPadding(for size: CGSize) -> CGFloat {
@@ -396,51 +523,207 @@ struct LandingView: View {
         .accessibilityLabel("Decode the message. Predict their reply. Know what to say.")
     }
 
-    // MARK: - Bottom Panel
+    // MARK: - Hero CTA
 
-    private var foregroundPanel: some View {
-        VStack(spacing: 14) {
+    private var heroCTA: some View {
+        VStack(spacing: 13) {
             methodCredentialLine
 
-            GoldButton(localization.string("landing.getStarted")) {
-                withAnimation(.spring(SimastrySpring.smooth)) {
-                    if viewModel.isAgeVerified {
-                        viewModel.currentScreen = .birthDetails
-                    } else {
-                        viewModel.currentScreen = .ageGate
-                    }
-                }
+            LandingPrimaryButton(title: localization.string("landing.getStarted")) {
+                beginOnboarding()
             }
             .accessibilityHint("Begin creating your astrology profile")
 
-            Button {
-                HapticManager.buttonPress()
-                withAnimation(.spring(SimastrySpring.smooth)) {
-                    viewModel.currentScreen = .signIn
-                }
-            } label: {
-                Text(localization.string("landing.alreadyHaveAccount"))
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(.white.opacity(0.75))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Sign in to existing account")
+            alreadyHaveAccountButton
 
+            scrollHint
+                .padding(.top, 2)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 18)
+        .padding(.bottom, 46)
+        .background(
+            // The global scrim already grounds this region; this adds a
+            // gentle local reinforcement without a visible gradient seam.
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.35), .black.opacity(0.55)],
+                startPoint: .top, endPoint: .bottom
+            )
+        )
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 30)
+        .animation(.spring(SimastrySpring.bouncy).delay(0.45), value: appeared)
+    }
+
+    private var scrollHint: some View {
+        VStack(spacing: 2) {
+            Text("See what's inside")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(.white.opacity(0.62))
+            Image(systemName: "chevron.compact.down")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var alreadyHaveAccountButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                viewModel.currentScreen = .signIn
+            }
+        } label: {
+            Text(localization.string("landing.alreadyHaveAccount"))
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(.white.opacity(0.78))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Sign in to existing account")
+    }
+
+    private func beginOnboarding() {
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            if viewModel.isAgeVerified {
+                viewModel.currentScreen = .birthDetails
+            } else {
+                viewModel.currentScreen = .ageGate
+            }
+        }
+    }
+
+    // MARK: - Feature Showcase (below the fold)
+
+    private var featureShowcase: some View {
+        VStack(spacing: 26) {
+            showcaseGroup(title: "Your daily companion", items: landingDailyFeatures)
+            showcaseGroup(title: "Built around your world", items: landingWorldFeatures)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func showcaseGroup(title: String, items: [LandingShowcaseItem]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title.uppercased())
+                .font(SimastryFont.overline)
+                .tracking(1.2)
+                .foregroundStyle(SimastryColor.gold.opacity(0.85))
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    showcaseRow(item)
+                    if index < items.count - 1 {
+                        Divider()
+                            .overlay(Color.white.opacity(0.07))
+                            .padding(.leading, 70)
+                    }
+                }
+            }
+            .surfaceCard()
+        }
+    }
+
+    private func showcaseRow(_ item: LandingShowcaseItem) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: item.icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(item.accent)
+                .frame(width: 40, height: 40)
+                .background(item.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(item.accent.opacity(0.28), lineWidth: 0.6)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(.white)
+                Text(item.subtitle)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(item.title). \(item.subtitle)")
+    }
+
+    // MARK: - Trust Band
+
+    private var trustBand: some View {
+        VStack(spacing: 10) {
+            Image(systemName: SimastryIcon.privacy)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 48, height: 48)
+                .background(SimastryColor.gold.opacity(0.10), in: Circle())
+                .overlay(Circle().strokeBorder(SimastryColor.gold.opacity(0.25), lineWidth: 0.7))
+
+            Text("Private by design")
+                .font(SimastryFont.titleMedium)
+                .foregroundStyle(.white)
+
+            Text("Your conversations stay yours. Readings are personal and never shared.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(.white.opacity(0.62))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 36)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Bottom CTA
+
+    private var bottomCTA: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 6) {
+                Text("Start reading the signs")
+                    .font(SimastryFont.titleLarge)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text("Your panel is ready when you are.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+
+            LandingPrimaryButton(title: localization.string("landing.getStarted")) {
+                beginOnboarding()
+            }
+            .accessibilityHint("Begin creating your astrology profile")
+
+            alreadyHaveAccountButton
+
+            legalFooter
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 54)
+    }
+
+    private var legalFooter: some View {
+        VStack(spacing: 8) {
             HStack(spacing: 4) {
                 Text(localization.string("landing.legalPrefix"))
                     .font(SimastryFont.caption)
-                    .foregroundStyle(.white.opacity(0.78))
+                    .foregroundStyle(.white.opacity(0.66))
                 Link(localization.string("landing.terms"), destination: AppConfig.termsOfServiceURL)
                     .font(SimastryFont.labelSmall)
-                    .foregroundStyle(.white.opacity(0.86))
+                    .foregroundStyle(.white.opacity(0.82))
                 Text("&")
                     .font(SimastryFont.caption)
-                    .foregroundStyle(.white.opacity(0.78))
+                    .foregroundStyle(.white.opacity(0.66))
                 Link(localization.string("landing.privacy"), destination: AppConfig.privacyPolicyURL)
                     .font(SimastryFont.labelSmall)
-                    .foregroundStyle(.white.opacity(0.86))
+                    .foregroundStyle(.white.opacity(0.82))
             }
-            .padding(.top, 2)
 
             HStack(spacing: 4) {
                 Image(systemName: SimastryIcon.privacy)
@@ -449,23 +732,7 @@ struct LandingView: View {
                     .font(SimastryFont.captionSmall)
             }
             .foregroundStyle(SimastryColor.mutedSilver)
-            .padding(.top, 4)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 50)
-        .background(
-            // The global scrim already grounds this region; this adds a
-            // gentle local reinforcement without a visible gradient seam.
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.35), .black.opacity(0.55)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea(.container, edges: .bottom)
-        )
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
-        .animation(.spring(SimastrySpring.bouncy).delay(0.45), value: appeared)
     }
 
     private var methodCredentialLine: some View {
