@@ -4,7 +4,9 @@ import PhotosUI
 nonisolated private enum ProfileSheet: Identifiable {
     case companion(CompanionData)
     case share(ShareableCardType)
+    #if DEBUG
     case developerMenu
+    #endif
     case about
     case privacy
     case terms
@@ -20,8 +22,10 @@ nonisolated private enum ProfileSheet: Identifiable {
             "companion_\(companion.id.uuidString)"
         case .share(let type):
             "share_\(type.rawValue)"
+        #if DEBUG
         case .developerMenu:
             "developerMenu"
+        #endif
         case .about:
             "about"
         case .privacy:
@@ -150,8 +154,10 @@ struct ProfileView: View {
                     CompanionDetailSheet(companion: companion, viewModel: viewModel)
                 case .share(let cardType):
                     ShareableCardView(viewModel: viewModel, cardType: cardType)
+                #if DEBUG
                 case .developerMenu:
                     devMenuSheet
+                #endif
                 case .about:
                     aboutSheet
                 case .privacy:
@@ -679,12 +685,12 @@ struct ProfileView: View {
                         Image(systemName: "person.2.wave.2.fill")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
-                        Text("Discovery Coming Soon")
+                        Text("Discovery Unavailable")
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                     }
 
-                    Text("We're still finishing the secure backend for discovery profiles and cross-user messaging.")
+                    Text("Discovery profiles are temporarily unavailable in this build. You can still manage your profile and messages.")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
@@ -692,7 +698,7 @@ struct ProfileView: View {
                 .padding(16)
                 .glossyCard()
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Discovery coming soon. Secure profile discovery and cross-user messaging are still in development.")
+                .accessibilityLabel("Discovery unavailable. Discovery profiles are temporarily unavailable in this build.")
             }
         }
         .opacity(appeared ? 1 : 0)
@@ -1831,6 +1837,7 @@ struct ProfileView: View {
 
     // MARK: - Dev Menu
 
+    #if DEBUG
     private var devMenuSheet: some View {
         VStack(spacing: 20) {
             Text("Developer Menu")
@@ -1885,7 +1892,9 @@ struct ProfileView: View {
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
     }
+    #endif
 
+    #if DEBUG
     private func devTierButton(_ label: String, tier: String) -> some View {
         let isActive = viewModel.profile?.tier == tier
         return Button(action: {
@@ -1903,6 +1912,7 @@ struct ProfileView: View {
         }
         .buttonStyle(.plain)
     }
+    #endif
 }
 
 // MARK: - UIActivityViewController Wrapper
