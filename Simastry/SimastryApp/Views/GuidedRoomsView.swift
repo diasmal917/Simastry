@@ -204,7 +204,7 @@ struct GuidedRoomCreateView: View {
 
     private var guidesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(title: "Guides", subtitle: "Toggle the Sun, Moon, and Rising lenses for this room.")
+            SectionTitle(title: "Your panel", subtitle: "The guides matched to your chart.")
 
             VStack(spacing: 9) {
                 ForEach(viewModel.panelGuideEntries) { entry in
@@ -220,6 +220,12 @@ struct GuidedRoomCreateView: View {
                     }
                 }
             }
+
+            Text("Your panel is chosen for you — one guide for each of your Sun, Moon, and Rising signs. Toggle any off for this room.")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
         }
     }
 

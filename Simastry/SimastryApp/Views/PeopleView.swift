@@ -359,12 +359,22 @@ struct PeopleView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button {
+                HapticManager.buttonPress()
                 isAddingPerson = true
             } label: {
-                Label("Add person", systemImage: "plus")
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Add person")
+                        .font(SimastryFont.labelLarge)
+                }
+                .foregroundStyle(SimastryColor.offWhite)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 13)
+                .goldGlassPill(interactive: true)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(SimastryColor.gold)
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Add person")
         }
         .frame(maxWidth: .infinity)
         .padding(24)

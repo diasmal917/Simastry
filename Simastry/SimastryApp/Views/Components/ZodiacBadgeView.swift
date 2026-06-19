@@ -46,9 +46,6 @@ struct ZodiacBadgeView: View {
                     .fill(sign.color.opacity(0.26))
                     .frame(width: size, height: size)
                     .background(.ultraThinMaterial, in: .circle)
-                    .overlay {
-                        Circle().strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
-                    }
                     .shadow(color: sign.color.opacity(0.35), radius: size * 0.16)
             }
         } else {

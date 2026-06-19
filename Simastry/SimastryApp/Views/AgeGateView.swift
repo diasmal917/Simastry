@@ -22,10 +22,7 @@ struct AgeGateView: View {
                         size: 96
                     )
 
-                    Text("Simastry")
-                        .font(SimastryFont.displayLarge)
-                        .italic()
-                        .foregroundStyle(SimastryColor.offWhite)
+                    SimastryWordmark(font: .system(.largeTitle, weight: .bold).italic())
                 }
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : -16)

@@ -5,8 +5,44 @@ nonisolated struct MethodSignal: Identifiable {
     let detail: String
     let systemImage: String
     let tint: Color
+    let source: String?
+
+    init(
+        label: String,
+        detail: String,
+        systemImage: String,
+        tint: Color,
+        source: String? = nil
+    ) {
+        self.label = label
+        self.detail = detail
+        self.systemImage = systemImage
+        self.tint = tint
+        self.source = source
+    }
 
     var id: String { "\(label)-\(detail)-\(systemImage)" }
+
+    var sourceHelp: String {
+        if let source, !source.isEmpty {
+            return "Source: \(source)"
+        }
+
+        let normalized = label.lowercased()
+        if normalized.contains("message") {
+            return "Source: the pasted or current conversation text."
+        }
+        if normalized.contains("sun") || normalized.contains("moon") || normalized.contains("rising") || normalized.contains("chart") {
+            return "Source: saved birth chart placements."
+        }
+        if normalized.contains("lens") || normalized.contains("guide") || normalized.contains("companion") {
+            return "Source: the selected Simastry guide profile."
+        }
+        if normalized.contains("privacy") {
+            return "Source: Simastry privacy rules for this surface."
+        }
+        return "Source: the Simastry Method layer for this reading."
+    }
 }
 
 struct MethodSignalChip: View {
@@ -41,7 +77,9 @@ struct MethodSignalChip: View {
             Capsule()
                 .stroke(signal.tint.opacity(0.18), lineWidth: 0.5)
         }
+        .help(signal.sourceHelp)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(signal.sourceHelp)
     }
 }
 
@@ -105,5 +143,6 @@ struct MethodLayerPanel: View {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(accent.opacity(0.14), lineWidth: 0.5)
         }
+        .help("Source details are shown on each signal chip.")
     }
 }

@@ -8,6 +8,7 @@ struct MessagesView: View {
     @State private var appeared: Bool = false
     @State private var showPanelChat: Bool = false
     @State private var showCreateRoom: Bool = false
+    @State private var showMessageSearch: Bool = false
     @State private var handledPanelRouteRequest: Int = 0
 
     var body: some View {
@@ -44,17 +45,28 @@ struct MessagesView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button {
                         HapticManager.buttonPress()
                         showCreateRoom = true
                     } label: {
-                        Image(systemName: "plus.bubble.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(SimastryColor.gold)
+                        toolbarActionIcon(systemName: "person.3.fill")
                     }
                     .accessibilityLabel("New Room")
                     .accessibilityHint("Create a private guided room with opted-in people")
+                    .buttonStyle(.plain)
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        HapticManager.buttonPress()
+                        showMessageSearch = true
+                    } label: {
+                        toolbarActionIcon(systemName: "magnifyingglass")
+                    }
+                    .accessibilityLabel("New Message")
+                    .accessibilityHint("Search public users and guides to start a conversation")
+                    .buttonStyle(.plain)
                 }
             }
             .task {
@@ -87,6 +99,9 @@ struct MessagesView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showMessageSearch) {
+                MessageSearchSheet(viewModel: viewModel)
+            }
             .fullScreenCover(item: $selectedRoom) { room in
                 GuidedRoomChatView(viewModel: viewModel, room: room)
             }
@@ -95,6 +110,12 @@ struct MessagesView: View {
 
     private var hasInboxContent: Bool {
         !viewModel.inboxMessages.isEmpty || !viewModel.chatThreadSummaries.isEmpty || !viewModel.connectedProfiles.isEmpty
+    }
+
+    private func toolbarActionIcon(systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(SimastryColor.gold)
     }
 
     private var connectionLoadingState: some View {
@@ -282,11 +303,10 @@ struct MessagesView: View {
                     Text("Open Guides")
                         .font(SimastryFont.labelLarge)
                 }
-                .foregroundStyle(SimastryColor.midnight)
+                .foregroundStyle(SimastryColor.offWhite)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 13)
-                .background(SimastryGradient.gold, in: .capsule)
-                .shadow(color: SimastryColor.gold.opacity(0.25), radius: 14, y: 6)
+                .goldGlassPill(interactive: true)
             }
             .buttonStyle(SpringPressStyle())
             .accessibilityHint("Opens your guides to choose a message lens")
@@ -580,8 +600,12 @@ private struct MessageDetailSheet: View {
     @State private var isSendingReply: Bool = false
     @State private var showSafetyOptions: Bool = false
     @State private var showBlockConfirmation: Bool = false
-    @State private var selectedMode: GuideChatMode = .bestFriend
+    @State private var selectedProfileDestination: MessageProfileDestination?
+    @State private var calibratingProfile: FactoryCompanionProfile?
+    @Namespace private var headerGlass
+    @State private var promptRotationOffset: Int = 0
     @FocusState private var replyFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isCompanionTyping: Bool {
         message.source == .companion && viewModel.typingCompanionIds.contains(message.companionId)
@@ -598,6 +622,15 @@ private struct MessageDetailSheet: View {
 
     private var publicProfile: SocialProfile? {
         viewModel.publicProfile(for: message.companionId)
+    }
+
+    private var guideProfile: FactoryCompanionProfile? {
+        guard message.source == .companion else { return nil }
+        return viewModel.guideProfile(
+            forThreadId: message.companionId,
+            companionName: message.companionName,
+            companionSign: message.companionSign
+        )
     }
 
     private var discoverySafetyProfile: SocialProfile {
@@ -628,17 +661,10 @@ private struct MessageDetailSheet: View {
             VStack(spacing: 0) {
                 dmHeader
 
-                if message.source == .companion {
-                    modeChipsRow
-                }
-
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 14) {
                             timestampDivider
-
-                            messageMethodLayer
-                            iceBreakerBubbles
 
                             ForEach(displayMessages) { threadMessage in
                                 DMMessageBubble(
@@ -688,7 +714,13 @@ private struct MessageDetailSheet: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            replyComposer
+            VStack(spacing: 0) {
+                if viewModel.conversationSuggestionsEnabled {
+                    bottomSuggestionBubbles
+                }
+
+                replyComposer
+            }
                 .simastryToolbarGlass()
                 .overlay(alignment: .top) {
                     Rectangle()
@@ -740,6 +772,40 @@ private struct MessageDetailSheet: View {
         } message: {
             Text("You won't see each other in Simastry anymore. This can't be undone.")
         }
+        .sheet(item: $selectedProfileDestination) { destination in
+            switch destination {
+            case .publicProfile(let profile):
+                ProfileDetailSheet(profile: profile, viewModel: viewModel)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            case .guide(let profile):
+                NavigationStack {
+                    GuideProfileView(viewModel: viewModel, profile: profile)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    selectedProfileDestination = nil
+                                }
+                                .font(SimastryFont.labelMedium)
+                                .foregroundStyle(SimastryColor.gold)
+                            }
+                        }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(item: $calibratingProfile) { profile in
+            GuideCalibrationSheet(viewModel: viewModel, profile: profile) {}
+        }
+        .onReceive(Timer.publish(every: 4.2, on: .main, in: .common).autoconnect()) { _ in
+            guard viewModel.conversationSuggestionsEnabled, !reduceMotion else { return }
+            let prompts = viewModel.iceBreakers(for: message)
+            guard prompts.count > 1 else { return }
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                promptRotationOffset = (promptRotationOffset + 1) % prompts.count
+            }
+        }
         .presentationBackground(SimastryColor.midnight)
     }
 
@@ -752,68 +818,112 @@ private struct MessageDetailSheet: View {
         return thread.isEmpty ? [message] : thread
     }
 
-    /// One guide, four registers — best friend, mentor, teacher, check-in.
-    private var modeChipsRow: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(GuideChatMode.allCases) { mode in
-                    let isActive = selectedMode == mode
+    /// Trailing header controls as a Liquid Glass cluster — on iOS 26 the
+    /// buttons share a `GlassEffectContainer` so their glass blends and morphs;
+    /// older OSes fall back to the flat translucent circles.
+    @ViewBuilder
+    private var headerActions: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 8) {
+                headerActionStack
+            }
+        } else {
+            headerActionStack
+        }
+    }
 
-                    Button {
-                        HapticManager.buttonPress()
-                        selectedMode = mode
-                        viewModel.setGuideChatMode(
-                            mode,
-                            for: message.companionId,
-                            companionName: message.companionName,
-                            companionSign: message.companionSign
-                        )
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: mode.systemImage)
-                                .font(.system(size: 10, weight: .semibold))
-
-                            Text(mode.title)
-                                .font(SimastryFont.labelSmall)
-                        }
-                        .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.82))
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 7)
-                        .background(
-                            isActive
-                                ? AnyShapeStyle(SimastryGradient.gold)
-                                : AnyShapeStyle(Color.white.opacity(0.06)),
-                            in: Capsule()
-                        )
-                        .overlay {
-                            Capsule().strokeBorder(
-                                isActive ? .white.opacity(0.22) : .white.opacity(0.08),
-                                lineWidth: 0.6
-                            )
-                        }
-                    }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel("\(mode.title) mode. \(mode.blurb)")
-                    .accessibilityAddTraits(isActive ? .isSelected : [])
+    private var headerActionStack: some View {
+        HStack(spacing: 8) {
+            if message.source == .discovery {
+                headerIconButton("ellipsis", label: "Conversation safety actions") {
+                    showSafetyOptions = true
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
+
+            if let guide = guideProfile {
+                headerIconButton(
+                    "slider.horizontal.3",
+                    tint: SimastryColor.gold,
+                    label: "Calibrate \(message.companionName)",
+                    hint: "Choose this guide's register, personality lens, and topics"
+                ) {
+                    HapticManager.buttonPress()
+                    calibratingProfile = guide
+                }
+            }
+
+            headerIconButton("xmark", label: "Close messages") {
+                dismiss()
+            }
         }
-        .scrollIndicators(.hidden)
-        .background(.black.opacity(0.18))
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.white.opacity(0.06))
-                .frame(height: 0.5)
+    }
+
+    @ViewBuilder
+    private func headerIconButton(
+        _ systemName: String,
+        tint: Color = SimastryColor.offWhite.opacity(0.84),
+        label: String,
+        hint: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            if #available(iOS 26.0, *) {
+                Image(systemName: systemName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 36, height: 36)
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .glassEffectID(systemName, in: headerGlass)
+            } else {
+                Image(systemName: systemName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.07), in: Circle())
+            }
         }
-        .onAppear {
-            selectedMode = viewModel.guideChatMode(for: message.companionId)
-        }
-        .animation(.spring(SimastrySpring.snappy), value: selectedMode)
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(label)
+        .accessibilityHint(hint ?? "")
     }
 
     private var dmHeader: some View {
+        HStack(spacing: 12) {
+            dmIdentity
+
+            Spacer()
+
+            headerActions
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .simastryToolbarGlass()
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(height: 0.5)
+        }
+    }
+
+    @ViewBuilder
+    private var dmIdentity: some View {
+        if canOpenHeaderProfile {
+            Button {
+                HapticManager.buttonPress()
+                openHeaderProfile()
+            } label: {
+                dmIdentityContent
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open \(message.companionName)'s profile")
+            .accessibilityHint("Shows profile details before continuing the conversation")
+        } else {
+            dmIdentityContent
+        }
+    }
+
+    private var dmIdentityContent: some View {
         HStack(spacing: 12) {
             MessageAvatarView(message: message, size: 44, showGlow: true, avatarURL: publicProfile?.avatarURL)
 
@@ -838,43 +948,28 @@ private struct MessageDetailSheet: View {
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
             }
-
-            Spacer()
-
-            if message.source == .discovery {
-                Button {
-                    showSafetyOptions = true
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
-                        .frame(width: 36, height: 36)
-                        .background(.white.opacity(0.07), in: Circle())
-                }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityLabel("Conversation safety actions")
-            }
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
-                    .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.07), in: Circle())
-            }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Close messages")
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
-        .simastryToolbarGlass()
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.white.opacity(0.08))
-                .frame(height: 0.5)
+    }
+
+    private var canOpenHeaderProfile: Bool {
+        switch message.source {
+        case .discovery:
+            return publicProfile != nil
+        case .companion:
+            return guideProfile != nil
+        }
+    }
+
+    private func openHeaderProfile() {
+        switch message.source {
+        case .discovery:
+            if let publicProfile {
+                selectedProfileDestination = .publicProfile(publicProfile)
+            }
+        case .companion:
+            if let guideProfile {
+                selectedProfileDestination = .guide(guideProfile)
+            }
         }
     }
 
@@ -913,119 +1008,20 @@ private struct MessageDetailSheet: View {
         }
     }
 
-    private var messageMethodLayer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 7) {
-                Image(systemName: "scope")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(zodiacSign?.color ?? SimastryColor.gold)
-
-                Text("Why this chat")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .tracking(1.1)
-                    .textCase(.uppercase)
-
-                Spacer(minLength: 0)
-            }
-
-            Text(viewModel.communicationHint(for: message))
-                .font(SimastryFont.caption)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.76))
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(Array(messageMethodSignals.prefix(4))) { signal in
-                        MethodSignalChip(signal: signal)
-                    }
-                }
-            }
+    private var bottomSuggestionBubbles: some View {
+        MessageSuggestionStrip(prompts: visibleSuggestionPrompts) { prompt in
+            HapticManager.buttonPress()
+            replyText = prompt
+            replyFocused = true
         }
-        .padding(12)
-        .surfaceCard(cornerRadius: 18, accent: (zodiacSign?.color ?? SimastryColor.gold).opacity(0.7))
     }
 
-    private var iceBreakerBubbles: some View {
-        let prompts = viewModel.iceBreakers(for: message)
-
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(prompts.prefix(5), id: \.self) { prompt in
-                    Button {
-                        HapticManager.buttonPress()
-                        replyText = prompt
-                        replyFocused = true
-                    } label: {
-                        Text(prompt)
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .simastryGlassPill(interactive: true)
-                    }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel("Use suggested opener: \(prompt)")
-                }
-            }
-            .padding(.horizontal, 2)
-        }
-        .accessibilityLabel("Suggested questions and ice breakers")
-    }
-
-    private var messageMethodSignals: [MethodSignal] {
-        var signals: [MethodSignal] = [
-            MethodSignal(
-                label: "Message context",
-                detail: conversationMessages.isEmpty ? "Single message" : "\(conversationMessages.count) messages",
-                systemImage: "text.bubble.fill",
-                tint: SimastryColor.celestialBlue
-            )
-        ]
-
-        if let zodiacSign {
-            signals.append(
-                MethodSignal(
-                    label: "Companion lens",
-                    detail: zodiacSign.displayName,
-                    systemImage: "scope",
-                    tint: zodiacSign.color
-                )
-            )
-        }
-
-        if let userSun = viewModel.userSunSign {
-            signals.append(
-                MethodSignal(
-                    label: "Your Sun",
-                    detail: userSun.displayName,
-                    systemImage: "person.crop.circle.fill",
-                    tint: userSun.color
-                )
-            )
-        }
-
-        if let typeSignal = CommunicationTypeProfile.methodSignal(
-            sun: viewModel.userSunSign,
-            moon: viewModel.userMoonSign,
-            rising: viewModel.userRisingSign
-        ) {
-            signals.append(typeSignal)
-        }
-
-        signals.append(
-            MethodSignal(
-                label: "Privacy",
-                detail: "Preview safe",
-                systemImage: "lock.shield.fill",
-                tint: SimastryColor.mutedSilver
-            )
-        )
-
-        return signals
+    private var visibleSuggestionPrompts: [String] {
+        let prompts = viewModel.iceBreakers(for: message).filter { !$0.isEmpty }
+        guard !prompts.isEmpty else { return [] }
+        let offset = promptRotationOffset % prompts.count
+        let rotated = Array(prompts[offset...]) + Array(prompts[..<offset])
+        return Array(rotated.prefix(5))
     }
 
     private var replyComposer: some View {
@@ -1098,6 +1094,41 @@ private struct MessageDetailSheet: View {
                 replyText = ""
             }
             isSendingReply = false
+        }
+    }
+}
+
+private struct MessageSuggestionStrip: View {
+    let prompts: [String]
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        if !prompts.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(prompts, id: \.self) { prompt in
+                        Button {
+                            onSelect(prompt)
+                        } label: {
+                            Text(prompt)
+                                .font(SimastryFont.caption)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .simastryGlassPill(interactive: true)
+                        }
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityLabel("Use suggested reply: \(prompt)")
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 2)
+            }
+            .accessibilityLabel("Suggested questions and replies")
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
 }

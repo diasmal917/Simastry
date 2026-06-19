@@ -27,6 +27,35 @@ extension AppViewModel {
         return id
     }
 
+    func guideProfile(
+        forThreadId companionId: UUID,
+        companionName: String? = nil,
+        companionSign: String? = nil
+    ) -> FactoryCompanionProfile? {
+        let map = (UserDefaults.standard.data(forKey: Self.guideThreadIdsKey))
+            .flatMap { try? JSONDecoder().decode([String: UUID].self, from: $0) } ?? [:]
+
+        if let guideId = map.first(where: { $0.value == companionId })?.key,
+           let profile = FactoryCompanionCatalog.all.first(where: { $0.id == guideId }) {
+            return profile
+        }
+
+        if let companionName {
+            let normalizedName = companionName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if let profile = FactoryCompanionCatalog.all.first(where: { $0.name.lowercased() == normalizedName }) {
+                return profile
+            }
+        }
+
+        if let companionSign,
+           let sign = ZodiacSign(rawValue: companionSign.lowercased())
+            ?? ZodiacSign.allCases.first(where: { $0.displayName.lowercased() == companionSign.lowercased() }) {
+            return FactoryCompanionCatalog.all.first { $0.sign == sign }
+        }
+
+        return nil
+    }
+
     /// The Instagram flow's last step: open a real 1:1 thread with any
     /// catalog guide. First open seeds the guide's greeting so the thread
     /// exists in the inbox; subsequent opens land in the same conversation.

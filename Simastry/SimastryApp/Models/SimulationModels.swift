@@ -8,7 +8,7 @@ nonisolated enum SimulationMode: String, Codable, CaseIterable, Identifiable, Se
     var title: String {
         switch self {
         case .whatWillTheySay:
-            "What Will They Say?"
+            "Simulate Someone"
         }
     }
 
@@ -22,7 +22,7 @@ nonisolated enum SimulationMode: String, Codable, CaseIterable, Identifiable, Se
     var actionTitle: String {
         switch self {
         case .whatWillTheySay:
-            "Predict Their Response"
+            "Run Simulation"
         }
     }
 }

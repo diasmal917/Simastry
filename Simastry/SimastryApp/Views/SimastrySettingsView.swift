@@ -214,6 +214,27 @@ struct SimastrySettingsView: View {
             .padding(14)
             .simastryGlass(cornerRadius: 16)
 
+            Toggle(isOn: Binding(
+                get: { viewModel.conversationSuggestionsEnabled },
+                set: { isEnabled in
+                    HapticManager.buttonPress()
+                    viewModel.conversationSuggestionsEnabled = isEnabled
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Conversation suggestions")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text("Show suggested questions and replies above the message composer.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(SimastryColor.gold)
+            .padding(14)
+            .simastryGlass(cornerRadius: 16)
+
             Menu {
                 ForEach(LocalizationManager.Language.allCases) { language in
                     Button {

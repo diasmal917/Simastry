@@ -725,9 +725,9 @@ nonisolated struct PublicProfile: Identifiable, Codable, Equatable, Sendable {
     }
 
     var signSummary: String {
-        var parts = ["\u{2600}\u{FE0F} \(sunSign.capitalized)"]
-        if let moon = moonSign { parts.append("\u{1F319} \(moon.capitalized)") }
-        if let rising = risingSign { parts.append("\u{2B06}\u{FE0F} \(rising.capitalized)") }
+        var parts = ["Sun \(sunSign.capitalized)"]
+        if let moon = moonSign { parts.append("Moon \(moon.capitalized)") }
+        if let rising = risingSign { parts.append("Rising \(rising.capitalized)") }
         return parts.joined(separator: " \u{00B7} ")
     }
 

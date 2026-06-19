@@ -328,16 +328,12 @@ struct LandingView: View {
     // MARK: - Wordmark & Value
 
     private var wordmark: some View {
-        Text("Simastry")
-            .font(SimastryFont.wordmark)
-            .italic()
-            .foregroundStyle(.white)
-            .shadow(color: SimastryColor.gold.opacity(0.35), radius: 18)
+        SimastryWordmark(font: .system(.largeTitle, weight: .bold).italic())
+            .shadow(color: SimastryColor.gold.opacity(0.30), radius: 18)
             .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : -16)
             .animation(.spring(SimastrySpring.smooth).delay(0.08), value: appeared)
-            .accessibilityAddTraits(.isHeader)
     }
 
     private var valueStatement: some View {

@@ -19,11 +19,11 @@ struct GoldButton: View {
             action()
         }) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isEnabled ? .white : SimastryColor.mutedSilver)
+                .font(SimastryFont.titleSmall)
+                .foregroundStyle(isEnabled ? SimastryColor.offWhite : SimastryColor.mutedSilver)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .goldGlassPill()
+                .goldGlassPill(interactive: isEnabled)
         }
         .buttonStyle(.plain)
         .opacity(isEnabled ? 1.0 : 0.4)

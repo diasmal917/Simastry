@@ -88,10 +88,7 @@ struct ContentView: View {
         ZStack {
             SimastryColor.midnight.ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("SIMASTRY")
-                    .font(SimastryFont.titleLarge)
-                    .italic()
-                    .foregroundStyle(SimastryColor.gold)
+                SimastryWordmark(font: .system(.title2, weight: .bold).italic())
                 ProgressView()
                     .tint(SimastryColor.gold)
             }

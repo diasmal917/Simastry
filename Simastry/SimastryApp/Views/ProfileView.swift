@@ -227,9 +227,7 @@ struct ProfileView: View {
     private var userHeader: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Simastry")
-                    .font(SimastryFont.labelMedium)
-                    .foregroundStyle(SimastryColor.mutedSilver)
+                SimastryWordmark(font: .system(.footnote, weight: .bold).italic(), sparkles: false)
 
                 Text(viewModel.hasCompletedSigns ? "About You" : "Your Stars Await")
                     .font(SimastryFont.titleLarge)
@@ -501,7 +499,7 @@ struct ProfileView: View {
             .accessibilityLabel("Share your Simastry card")
 
             if AppConfig.socialDiscoveryEnabled {
-                // MARK: Social Accounts
+                // MARK: Public Identity
                 socialAccountsSection
             }
 
@@ -706,84 +704,79 @@ struct ProfileView: View {
         .offset(y: appeared ? 0 : 14)
     }
 
-    // MARK: - Social Accounts Section
+    // MARK: - Public Identity Section
 
     private var socialAccountsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        let normalized = PublicProfile.normalizedUsername(viewModel.publicUsername)
+        let hasUsername = !normalized.isEmpty
+        let usernameIsValid = PublicProfile.isValidUsername(normalized)
+
+        return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
-                Image(systemName: "link.circle.fill")
+                Image(systemName: "at.circle.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
-                Text("Social Accounts")
+                Text("Public Identity")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
             }
 
-            Text("Add your socials so others can find you outside Simastry")
+            Text("One Simastry username powers discovery, messages, and share cards.")
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
 
-            socialLinkField(
-                icon: "camera.fill",
-                platform: "Instagram",
-                value: Binding(
-                    get: { viewModel.socialLinks.instagram ?? "" },
-                    set: { newValue in
-                        var links = viewModel.socialLinks
-                        links.instagram = newValue.isEmpty ? nil : newValue
-                        viewModel.updateSocialLinks(links)
-                    }
-                )
-            )
+            VStack(alignment: .leading, spacing: 6) {
+                Text("SIMASTRY USERNAME")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .tracking(0.8)
 
-            socialLinkField(
-                icon: "play.rectangle.fill",
-                platform: "TikTok",
-                value: Binding(
-                    get: { viewModel.socialLinks.tiktok ?? "" },
-                    set: { newValue in
-                        var links = viewModel.socialLinks
-                        links.tiktok = newValue.isEmpty ? nil : newValue
-                        viewModel.updateSocialLinks(links)
-                    }
-                )
-            )
+                HStack(spacing: 10) {
+                    Text("@")
+                        .font(SimastryFont.bodyMedium)
+                        .foregroundStyle(SimastryColor.gold)
 
-            socialLinkField(
-                icon: "at",
-                platform: "Twitter/X",
-                value: Binding(
-                    get: { viewModel.socialLinks.twitter ?? "" },
-                    set: { newValue in
-                        var links = viewModel.socialLinks
-                        links.twitter = newValue.isEmpty ? nil : newValue
-                        viewModel.updateSocialLinks(links)
-                    }
-                )
-            )
+                    TextField("maya.sag", text: $viewModel.publicUsername)
+                        .font(SimastryFont.bodyMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .onChange(of: viewModel.publicUsername) {
+                            viewModel.publicUsername = PublicProfile.normalizedUsername(viewModel.publicUsername)
+                            viewModel.updateSocialProfile()
+                        }
+                        .accessibilityLabel("Simastry username")
+                        .accessibilityHint("This is the only public username Simastry uses.")
+                }
+                .padding(12)
+                .simastryGlass(cornerRadius: 12)
+                .help("Source: your public profile username. This is the single handle shown in Discovery, Messages, and share cards.")
+
+                Text(hasUsername && !usernameIsValid
+                     ? "Use 3-24 lowercase letters, numbers, periods, or underscores."
+                     : "This is the only public handle Simastry shows.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(hasUsername && !usernameIsValid ? SimastryColor.sunCoral : SimastryColor.deepMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 7) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("Outside social handles stay off your core Simastry identity.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .help("Simastry no longer publishes Instagram, TikTok, or X handles from this profile surface.")
         }
         .padding(18)
         .glossyCard()
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 14)
-    }
-
-    private func socialLinkField(icon: String, platform: String, value: Binding<String>) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(SimastryColor.gold)
-                .frame(width: 24)
-
-            TextField("@username", text: value)
-                .font(SimastryFont.bodyMedium)
-                .foregroundStyle(SimastryColor.offWhite)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-        }
-        .padding(12)
-        .simastryGlass(cornerRadius: 12)
-        .accessibilityLabel("\(platform) username")
     }
 
     // MARK: - Profile Image Picker
@@ -1006,6 +999,7 @@ struct ProfileView: View {
 
     private func companionSection(_ companion: CompanionData) -> some View {
         let level = RelationshipLevel.from(messageCount: companion.conversationCount)
+        let matchedProfile = FactoryCompanionCatalog.match(for: companion)
 
         return VStack(alignment: .leading, spacing: 12) {
             Text("Your \(companion.mode.replacingOccurrences(of: "_", with: " ").capitalized)")
@@ -1017,11 +1011,7 @@ struct ProfileView: View {
             }) {
                 VStack(spacing: 14) {
                     HStack(spacing: 14) {
-                        profileSymbolTile(
-                            systemName: "moon.stars.fill",
-                            accent: ZodiacSign(rawValue: companion.sunSign)?.color ?? SimastryColor.gold,
-                            size: 44
-                        )
+                        companionPortraitTile(matchedProfile, size: 48)
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(companion.name)
@@ -1062,6 +1052,20 @@ struct ProfileView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+    }
+
+    private func companionPortraitTile(_ profile: FactoryCompanionProfile, size: CGFloat) -> some View {
+        Image(profile.profileImageName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size, alignment: .top)
+            .clipShape(Circle())
+            .overlay {
+                Circle().strokeBorder(profile.sign.color.opacity(0.72), lineWidth: 1.2)
+            }
+            .shadow(color: profile.sign.color.opacity(0.22), radius: 10, y: 4)
+            .help("Source: the companion portrait matched from this companion's name and Sun sign.")
+            .accessibilityLabel("\(profile.name) portrait")
     }
 
     // MARK: - Subscription Section
@@ -1784,9 +1788,7 @@ struct ProfileView: View {
                     .font(SimastryFont.displayMedium)
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("Simastry")
-                    .font(SimastryFont.titleLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
+                SimastryWordmark(font: .system(.title2, weight: .bold).italic())
 
                 Text("v1.0.0")
                     .font(SimastryFont.labelMedium)

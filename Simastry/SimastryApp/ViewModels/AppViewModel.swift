@@ -41,6 +41,7 @@ class AppViewModel {
     private let auraWalletUseInAuraKey = "simastry_aura_wallet_use_in_aura"
     private let auraWalletLastCheckedAtKey = "simastry_aura_wallet_last_checked_at"
     private let privateNotificationsEnabledKey = "simastry_private_notifications_enabled"
+    private let conversationSuggestionsEnabledKey = "simastry_conversation_suggestions_enabled"
 
     var companionSunSign: ZodiacSign?
     var companionMoonSign: ZodiacSign?
@@ -165,6 +166,14 @@ class AppViewModel {
         : UserDefaults.standard.bool(forKey: "simastry_private_notifications_enabled") {
         didSet {
             UserDefaults.standard.set(privateNotificationsEnabled, forKey: privateNotificationsEnabledKey)
+        }
+    }
+
+    var conversationSuggestionsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_conversation_suggestions_enabled") == nil
+        ? true
+        : UserDefaults.standard.bool(forKey: "simastry_conversation_suggestions_enabled") {
+        didSet {
+            UserDefaults.standard.set(conversationSuggestionsEnabled, forKey: conversationSuggestionsEnabledKey)
         }
     }
 
@@ -677,6 +686,7 @@ class AppViewModel {
         let keys = ["savedGuides", "simastry_companion_messages", "simastry_profile_image_url",
                     "thirdPartyDataConsent", "isDiscoverable", "simastry_referral_info",
                     "simastry_dark_mode", "appLanguage", "ageVerified",
+                    "simastry_conversation_suggestions_enabled",
                     "socialDisplayName", "socialBio", "socialLinks",
                     "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount",
                     "bonusPredictions", "simastry_prediction_history"]
@@ -1401,6 +1411,13 @@ class AppViewModel {
             return
         }
 
+        #if DEBUG
+        if isDebugPreviewStateActive {
+            seedDebugSocialProfiles(now: Date())
+            return
+        }
+        #endif
+
         do {
             let fallbackCurrentUserId = await supabase.currentUserId
             let currentUserId = profile?.id ?? fallbackCurrentUserId
@@ -1418,6 +1435,12 @@ class AppViewModel {
             connectedProfiles = []
             return
         }
+        #if DEBUG
+        if isDebugPreviewStateActive {
+            seedDebugSocialProfiles(now: Date())
+            return
+        }
+        #endif
         do {
             try await profileDiscoveryStore.refreshConnections()
         } catch {
@@ -1651,6 +1674,13 @@ class AppViewModel {
     func loadSocialProfile() async {
         guard AppConfig.socialDiscoveryEnabled else { return }
 
+        #if DEBUG
+        if isDebugPreviewStateActive {
+            seedDebugSocialProfiles(now: Date())
+            return
+        }
+        #endif
+
         do {
             if let remoteProfile = try await supabase.fetchCurrentSocialProfile() {
                 publicUsername = remoteProfile.username ?? ""
@@ -1834,7 +1864,7 @@ class AppViewModel {
             moonSign: moonSign,
             risingSign: risingSign,
             bio: trimmedBio.isEmpty ? nil : trimmedBio,
-            socialLinks: socialLinks.isEmpty ? nil : socialLinks,
+            socialLinks: nil,
             communicationHint: trimmedHint.isEmpty ? defaultCommunicationHint(sunSign: sunSign) : trimmedHint,
             iceBreakers: cleanIceBreakers.isEmpty ? defaultIceBreakers(displayName: resolvedDisplayName, sunSign: sunSign) : Array(cleanIceBreakers),
             isDiscoverable: isVisible,
@@ -1883,10 +1913,10 @@ class AppViewModel {
         return guideIceBreakers(for: message)
     }
 
-    func draftPredictFromToday() {
+    func draftPredictFromToday(targetSign: ZodiacSign? = nil) {
         let guide = FactoryCompanionCatalog.featured
         predictionDraft = PredictionDraft(
-            targetSunSign: guide.sign,
+            targetSunSign: targetSign ?? guide.sign,
             targetMoonSign: nil,
             targetRisingSign: nil,
             question: "What tone is most likely to land well today?",
@@ -1923,13 +1953,65 @@ class AppViewModel {
         return "Ask for timing, tone, or the sentence you should not send yet."
     }
 
+    private func guideCalibrationRole(for message: CompanionMessage) -> GuideCalibrationRole {
+        guard let guide = guideProfile(
+            forThreadId: message.companionId,
+            companionName: message.companionName,
+            companionSign: message.companionSign
+        ) else {
+            return .astrologer
+        }
+        return GuideCalibrationStore.shared.calibration(for: guide.id).role
+    }
+
+    /// Icebreakers tailored to the guide's calibrated register — talking *with*
+    /// the guide, not predicting a reply to send someone else. Astrologer is the
+    /// default register for every guide.
     private func guideIceBreakers(for message: CompanionMessage) -> [String] {
-        [
-            "What is the cleanest way to say this?",
-            "What am I missing in their tone?",
-            "Help me make this warmer without chasing.",
-            "What should I wait to send?"
-        ]
+        switch guideCalibrationRole(for: message) {
+        case .astrologer:
+            return [
+                "What does my chart say about today?",
+                "How do my signs shape the way I come across?",
+                "Which placement should I lean into right now?",
+                "Read me — what am I not seeing?"
+            ]
+        case .bestFriend:
+            return [
+                "Can I vent for a second?",
+                "Honestly — am I overthinking this?",
+                "What would you do if you were me?",
+                "Hype me up before I reply."
+            ]
+        case .soulmate:
+            return [
+                "Help me put words to what I'm feeling.",
+                "What does my heart actually want here?",
+                "Sit with me on this for a minute.",
+                "Why does this one matter so much to me?"
+            ]
+        case .mentor:
+            return [
+                "What's my smartest next move?",
+                "How do I grow from this?",
+                "Where am I getting in my own way?",
+                "Give it to me straight — what should I do?"
+            ]
+        case .teacher:
+            return [
+                "Teach me something about my chart.",
+                "What pattern keeps showing up for me?",
+                "Break down what's happening astrologically.",
+                "What's the lesson I keep missing?"
+            ]
+        case .coach:
+            return [
+                "Give me one small action for today.",
+                "What goal should I focus on?",
+                "Hold me accountable — what's the plan?",
+                "What's the smallest step that moves me forward?"
+            ]
+        }
     }
 
     func currentDiscoveryMessageSender() -> (displayName: String, sunSign: String, moonSign: String?, risingSign: String?)? {
@@ -2523,6 +2605,7 @@ class AppViewModel {
         auraWalletLastCheckedAt = nil
         useAuraWalletForAura = true
         privateNotificationsEnabled = true
+        conversationSuggestionsEnabled = true
 
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: savedGuidesKey)
@@ -2554,6 +2637,7 @@ class AppViewModel {
         defaults.removeObject(forKey: auraWalletUseInAuraKey)
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
+        defaults.removeObject(forKey: conversationSuggestionsEnabledKey)
         defaults.removeObject(forKey: GuideGramStore.defaultsKey)
         todayStore.clearSavedPrompts()
         predictionService.clearHistory()
@@ -2877,6 +2961,7 @@ extension AppViewModel {
         ]
         discoveryMessages = []
         relationshipPeople = RelationshipPeopleStore.previewPeople()
+        seedDebugSocialProfiles(now: now)
 
         savedGuides = [
             SavedGuide(
@@ -3073,6 +3158,76 @@ extension AppViewModel {
                 isRead: false
             )
         ]
+    }
+
+    /// Public Discovery fixtures for screenshots. These profiles mirror the
+    /// production payload shape without touching Supabase.
+    private func seedDebugSocialProfiles(now: Date) {
+        publicUsername = "maya.sag"
+        socialDisplayName = "Maya"
+        socialBio = "Sag Sun, Cancer Moon. Learning to say true things cleanly."
+        communicationHint = "Start direct, keep it warm, and leave room for a real answer."
+        iceBreakers = [
+            "What is your current read on this?",
+            "Which sign do you lead with when texting?",
+            "What usually makes timing feel safer for you?"
+        ]
+        socialLinks = SocialLinks()
+        isDiscoverable = true
+
+        let rowan = SocialProfile(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000001") ?? UUID(),
+            username: "rowan.aries",
+            displayName: "Rowan",
+            sunSign: ZodiacSign.aries.rawValue,
+            moonSign: ZodiacSign.libra.rawValue,
+            risingSign: ZodiacSign.leo.rawValue,
+            bio: "Fast replies, big heart, trying to be less allergic to waiting.",
+            communicationHint: "Be clear and quick. Rowan trusts directness more than hints.",
+            iceBreakers: [
+                "What makes a first message feel alive to you?",
+                "Do you prefer bold honesty or slow proof?"
+            ],
+            isDiscoverable: true,
+            createdAt: now.addingTimeInterval(-8 * 24 * 60 * 60)
+        )
+
+        let lina = SocialProfile(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000002") ?? UUID(),
+            username: "lina.earth",
+            displayName: "Lina",
+            sunSign: ZodiacSign.taurus.rawValue,
+            moonSign: ZodiacSign.pisces.rawValue,
+            risingSign: ZodiacSign.virgo.rawValue,
+            bio: "Soft timing, practical standards, very good at noticing the edit.",
+            communicationHint: "Move slowly and mean it. Specificity reads as care.",
+            iceBreakers: [
+                "What kind of consistency actually feels romantic?",
+                "What do people misunderstand about your pace?"
+            ],
+            isDiscoverable: true,
+            createdAt: now.addingTimeInterval(-12 * 24 * 60 * 60)
+        )
+
+        let noa = SocialProfile(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000003") ?? UUID(),
+            username: "noa.air",
+            displayName: "Noa",
+            sunSign: ZodiacSign.gemini.rawValue,
+            moonSign: ZodiacSign.aquarius.rawValue,
+            risingSign: ZodiacSign.sagittarius.rawValue,
+            bio: "Curious, funny, and better with a question than a speech.",
+            communicationHint: "Keep it light enough to breathe, then ask the real question.",
+            iceBreakers: [
+                "What topic could you talk about forever?",
+                "What is your favorite kind of banter?"
+            ],
+            isDiscoverable: true,
+            createdAt: now.addingTimeInterval(-18 * 24 * 60 * 60)
+        )
+
+        discoveredProfiles = [rowan, lina, noa]
+        connectedProfiles = [lina]
     }
 
     /// Two generated moments with guide comments for screenshots.

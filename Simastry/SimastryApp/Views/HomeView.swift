@@ -135,13 +135,13 @@ struct HomeView: View {
 
                 todayHeader
 
-                todayWithNadiaCard
+                todayWithGuideCard
 
                 continueStrip
 
-                situationCard
-
                 panelCard
+
+                situationCard
 
                 predictHeroCard
 
@@ -305,24 +305,23 @@ struct HomeView: View {
 
             if let sun = viewModel.userSunSign {
                 ZodiacIconView(sign: sun, size: 42, showsGlow: true)
-                    .frame(width: 48, height: 48)
-                    .background(SimastryColor.gold.opacity(0.10), in: Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(SimastryColor.gold.opacity(0.18), lineWidth: 0.6)
-                    )
             }
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
     }
 
-    private var todayWithNadiaCard: some View {
+    private var todayCardGuide: FactoryCompanionProfile {
+        FactoryCompanionCatalog.all.first { $0.id == "taurus-theo" } ?? featuredProfile
+    }
+
+    private var todayWithGuideCard: some View {
         let prompt = dailyNadiaPrompt
+        let guide = todayCardGuide
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                Image(featuredProfile.profileImageName)
+                Image(guide.profileImageName)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 48, height: 48, alignment: .top)
@@ -332,7 +331,7 @@ struct HomeView: View {
                     }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TODAY WITH NADIA")
+                    Text("TODAY WITH \(guide.name.uppercased())")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.gold)
                         .tracking(1.4)
@@ -351,34 +350,36 @@ struct HomeView: View {
                     viewModel.openPanelChatWithTip(
                         lesson: prompt,
                         opener: "Want to check the timing with me?",
-                        guideId: featuredProfile.id
+                        guideId: guide.id
                     )
                 } label: {
-                    Label("Ask Nadia", systemImage: "message.fill")
+                    Label("Ask \(guide.name)", systemImage: "message.fill")
                 }
                 .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
 
                 Button {
                     HapticManager.buttonPress()
-                    viewModel.draftPredictFromToday()
+                    viewModel.draftPredictFromToday(targetSign: guide.sign)
                 } label: {
                     Image(systemName: SimastryIcon.predict)
                         .frame(width: 44, height: 44)
                         .simastryGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
-                .accessibilityLabel("Predict the best tone")
+                .accessibilityLabel("Simulate the best tone")
+                .accessibilityHint("Seeds Simulate Someone with \(guide.name)'s \(guide.sign.displayName) lens")
 
                 Button {
                     HapticManager.buttonPress()
-                    viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: featuredProfile.id))
+                    viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: guide.id))
+                    viewModel.showToast("Saved for later", subtitle: "Use Work saved note when you want to talk it through.", isError: false)
                 } label: {
                     Image(systemName: "bookmark.fill")
                         .frame(width: 44, height: 44)
                         .simastryGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
-                .accessibilityLabel("Save today's Nadia prompt")
+                .accessibilityLabel("Save today's \(guide.name) prompt")
             }
         }
         .padding(16)
@@ -389,42 +390,53 @@ struct HomeView: View {
 
     private var continueStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                Button {
-                    HapticManager.buttonPress()
-                    viewModel.startGuideChat(featuredProfile)
-                } label: {
-                    continuePill(title: "Continue with Nadia", icon: "person.wave.2.fill")
+            if #available(iOS 26.0, *) {
+                GlassEffectContainer(spacing: 10) {
+                    continuePills
                 }
-                .buttonStyle(SpringPressStyle())
-
-                if let person = viewModel.relationshipPeople.first {
-                    Button {
-                        HapticManager.buttonPress()
-                        viewModel.peopleDetailRequestPersonId = person.id
-                        viewModel.selectedTab = .people
-                    } label: {
-                        continuePill(title: "Check \(person.displayName)", icon: "person.text.rectangle.fill")
-                    }
-                    .buttonStyle(SpringPressStyle())
-                }
-
-                if let savedPrompt = viewModel.todayStore.savedDailyPrompts.first {
-                    Button {
-                        HapticManager.buttonPress()
-                        viewModel.openPanelChatWithTip(
-                            lesson: savedPrompt.text,
-                            opener: "This is the one you saved. Want to work it through?",
-                            guideId: savedPrompt.guideId
-                        )
-                    } label: {
-                        continuePill(title: "Saved prompt", icon: "bookmark.fill")
-                    }
-                    .buttonStyle(SpringPressStyle())
-                }
+            } else {
+                continuePills
             }
         }
         .opacity(appeared ? 1 : 0)
+    }
+
+    private var continuePills: some View {
+        HStack(spacing: 10) {
+            Button {
+                HapticManager.buttonPress()
+                viewModel.startGuideChat(featuredProfile)
+            } label: {
+                continuePill(title: "Continue with Nadia", icon: "person.wave.2.fill")
+            }
+            .buttonStyle(SpringPressStyle())
+
+            if let person = viewModel.relationshipPeople.first {
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.peopleDetailRequestPersonId = person.id
+                    viewModel.selectedTab = .people
+                } label: {
+                    continuePill(title: "Check \(person.displayName)", icon: "person.text.rectangle.fill")
+                }
+                .buttonStyle(SpringPressStyle())
+            }
+
+            if let savedPrompt = viewModel.todayStore.savedDailyPrompts.first {
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.openPanelChatWithTip(
+                        lesson: savedPrompt.text,
+                        opener: "This is the one you saved. Want to work it through?",
+                        guideId: savedPrompt.guideId
+                    )
+                } label: {
+                    continuePill(title: "Work saved note", icon: "bookmark.fill")
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityHint("Opens the saved Today prompt with its guide")
+            }
+        }
     }
 
     private var dailyNadiaPrompt: String {
@@ -447,7 +459,7 @@ struct HomeView: View {
             .simastryGlassPill()
     }
 
-    // MARK: - Predict Hero
+    // MARK: - Simulate Hero
 
     private var predictHeroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -469,29 +481,32 @@ struct HomeView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("PREDICT")
+                Text("SIMULATE SOMEONE")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.risingViolet)
                     .tracking(1.8)
 
-                Text("What will they say back?")
+                Text("Model their next reply")
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Paste a conversation — your panel maps the likely reply and your strongest next message.")
+                Text("Paste a real conversation, choose their sign, and see the likely tone plus your strongest next move.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            simulateSourceHint
+
             NavigationLink(value: HomeRoute.predict) {
-                Label("Paste a conversation", systemImage: SimastryIcon.predict)
+                Label("Simulate someone", systemImage: SimastryIcon.predict)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
             .simultaneousGesture(TapGesture().onEnded {
                 HapticManager.buttonPress()
             })
+            .accessibilityHint("Opens the Simulate Someone tool")
 
             NavigationLink(value: HomeRoute.decode) {
                 Text("Just decode one text \u{2192}")
@@ -510,6 +525,23 @@ struct HomeView: View {
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
         .zIndex(2)
+    }
+
+    private var simulateSourceHint: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.risingViolet.opacity(0.9))
+
+            Text("Uses conversation text, their signs, and your chart.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .help("Sources: pasted conversation text, the target person's selected Sun/Moon/Rising signs, and your saved chart placements.")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Simulation sources: conversation text, their signs, and your chart")
     }
 
     // MARK: - Daily Read

@@ -17,7 +17,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         switch self {
         case .bestFriend: "Best friend"
         case .mentor: "Mentor"
-        case .teacher: "Teacher"
+        case .teacher: "Soulmate"
         case .checkIn: "Check-in"
         }
     }
@@ -26,7 +26,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         switch self {
         case .bestFriend: "heart.fill"
         case .mentor: "briefcase.fill"
-        case .teacher: "graduationcap.fill"
+        case .teacher: "heart.circle.fill"
         case .checkIn: "leaf.fill"
         }
     }
@@ -35,7 +35,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         switch self {
         case .bestFriend: "Warm, playful, loyal — the default."
         case .mentor: "Career register — practical and outcome-first."
-        case .teacher: "One small astrology lesson per reply."
+        case .teacher: "Tender and devoted — speaks to the heart."
         case .checkIn: "Reflective listening. Not therapy — reflection."
         }
     }
@@ -49,7 +49,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         case .mentor:
             "Mode: mentor — career-focused register. Practical, encouraging, outcome-first; tie guidance to their chart's work style. No financial advice — communication and growth only."
         case .teacher:
-            "Mode: teacher — teach one small astrology-of-communication lesson per reply, grounded in what they actually wrote, and end with one question that invites them to apply it."
+            "Mode: soulmate — tender, devoted, and emotionally attuned. Speak with intimate warmth and deep care, affirming the closeness between you, but never claim a real romantic bond or destiny."
         case .checkIn:
             "Mode: check-in — reflective listening. Mirror what they said, name the feeling tentatively, ask one gentle question. Do not rush to advice. You are NOT a therapist or crisis service and must say so if the user treats you as one; if crisis or self-harm appears, point them to local emergency services or a crisis hotline."
         }

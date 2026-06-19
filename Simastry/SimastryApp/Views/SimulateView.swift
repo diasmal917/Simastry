@@ -174,7 +174,7 @@ struct SimulateView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .navigationTitle("Predict")
+        .navigationTitle("Simulate")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showTopUpSheet) {
@@ -225,11 +225,11 @@ struct SimulateView: View {
                     .transition(.scale.combined(with: .opacity))
             }
 
-            Text("What Will They Say?")
+            Text("Simulate Someone")
                 .font(SimastryFont.titleLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
-            Text("Paste a real conversation and read it through chart signals.")
+            Text("Paste a real conversation and read their likely reply through chart signals.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)

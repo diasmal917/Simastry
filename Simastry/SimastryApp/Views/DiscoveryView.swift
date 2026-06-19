@@ -650,7 +650,7 @@ struct DiscoveryView: View {
     }
 }
 
-private struct PublicProfileAvatar: View {
+struct PublicProfileAvatar: View {
     let profile: SocialProfile
     let size: CGFloat
 
@@ -695,14 +695,25 @@ private struct PublicProfileAvatar: View {
 
 // MARK: - Profile Detail Sheet
 
-private struct ProfileDetailSheet: View {
+struct ProfileDetailSheet: View {
     let profile: SocialProfile
     @Bindable var viewModel: AppViewModel
+    let onOpenMessages: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
     @State private var showAddConfirmation = false
     @State private var hasSentHi = false
     @State private var showSafetyOptions = false
     @State private var showBlockConfirmation = false
+
+    init(
+        profile: SocialProfile,
+        viewModel: AppViewModel,
+        onOpenMessages: (() -> Void)? = nil
+    ) {
+        self.profile = profile
+        self.viewModel = viewModel
+        self.onOpenMessages = onOpenMessages
+    }
 
     private var compatibility: Int {
         viewModel.compatibilityWithUser(for: profile)
@@ -1021,12 +1032,14 @@ private struct ProfileDetailSheet: View {
         VStack(spacing: 12) {
             Button {
                 if hasSentHi {
-                    dismiss()
-                    viewModel.selectedTab = .messages
+                    openMessagesAndDismiss()
                 } else {
                     Task {
                         let didSend = await viewModel.sendDiscoveryMessage(from: profile)
                         hasSentHi = didSend
+                        if didSend, onOpenMessages != nil {
+                            openMessagesAndDismiss()
+                        }
                     }
                 }
             } label: {
@@ -1089,6 +1102,12 @@ private struct ProfileDetailSheet: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Create a practice companion from \(profile.displayName)")
         }
+    }
+
+    private func openMessagesAndDismiss() {
+        dismiss()
+        viewModel.selectedTab = .messages
+        onOpenMessages?()
     }
 
     // MARK: - Privacy Reminder

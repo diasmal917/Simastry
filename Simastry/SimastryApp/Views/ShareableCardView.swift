@@ -124,16 +124,8 @@ struct ShareableCardView: View {
             cardBackground
 
             VStack(spacing: 0) {
-                Text("SIMASTRY")
-                    .font(SimastryFont.captionSmall)
-                    .italic()
-                    .foregroundStyle(SimastryColor.gold)
+                SimastryWordmark(font: .system(.caption2, weight: .bold).italic(), sparkles: false)
                     .padding(.top, isStoryFormat ? 22 : 14)
-
-                if isStoryFormat, viewModel.profileImage != nil {
-                    ProfileImageView(image: viewModel.profileImage, size: 44, sunSign: viewModel.userSunSign)
-                        .padding(.top, 10)
-                }
 
                 Spacer(minLength: 8)
 
@@ -141,14 +133,7 @@ struct ShareableCardView: View {
                    let moon = viewModel.userMoonSign,
                    let rising = viewModel.userRisingSign {
                     VStack(spacing: isStoryFormat ? 16 : 9) {
-                        ShareGlyphTrio(
-                            sun: sun,
-                            moon: moon,
-                            rising: rising,
-                            circleSize: isStoryFormat ? 58 : 46,
-                            iconSize: isStoryFormat ? 34 : 26,
-                            spacing: isStoryFormat ? 12 : 8
-                        )
+                        shareIdentityRow(sun: sun, moon: moon, rising: rising)
 
                         if let communicationTypeTitle {
                             Text(communicationTypeTitle)
@@ -165,8 +150,8 @@ struct ShareableCardView: View {
 
                 Spacer(minLength: 8)
 
-                if !viewModel.socialLinks.isEmpty {
-                    socialLinksRow
+                if let publicUsername {
+                    publicUsernameRow(publicUsername)
                         .padding(.bottom, 4)
                 }
 
@@ -176,6 +161,29 @@ struct ShareableCardView: View {
                     .padding(.bottom, isStoryFormat ? 18 : 10)
             }
         }
+    }
+
+    private func shareIdentityRow(sun: ZodiacSign, moon: ZodiacSign, rising: ZodiacSign) -> some View {
+        HStack(spacing: isStoryFormat ? 8 : 7) {
+            ProfileImageView(
+                image: viewModel.profileImage,
+                size: isStoryFormat ? 52 : 42,
+                sunSign: sun,
+                sunSignGlyph: viewModel.profileImage == nil ? sun.glyph : nil
+            )
+            .help("Source: your Simastry profile photo.")
+
+            ShareGlyphTrio(
+                sun: sun,
+                moon: moon,
+                rising: rising,
+                circleSize: isStoryFormat ? 52 : 43,
+                iconSize: isStoryFormat ? 48 : 39,
+                spacing: isStoryFormat ? 8 : 7
+            )
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Profile photo with Sun \(sun.displayName), Moon \(moon.displayName), and Rising \(rising.displayName)")
     }
 
     private func howToTalkBlock(sun: ZodiacSign) -> some View {
@@ -220,10 +228,7 @@ struct ShareableCardView: View {
             cardBackground
 
             VStack(spacing: 0) {
-                Text("SIMASTRY")
-                    .font(SimastryFont.captionSmall)
-                    .italic()
-                    .foregroundStyle(SimastryColor.gold)
+                SimastryWordmark(font: .system(.caption2, weight: .bold).italic(), sparkles: false)
                     .padding(.top, isStoryFormat ? 24 : 16)
 
                 Spacer()
@@ -274,10 +279,7 @@ struct ShareableCardView: View {
             cardBackground
 
             VStack(spacing: 0) {
-                Text("SIMASTRY")
-                    .font(SimastryFont.captionSmall)
-                    .italic()
-                    .foregroundStyle(SimastryColor.gold)
+                SimastryWordmark(font: .system(.caption2, weight: .bold).italic(), sparkles: false)
                     .padding(.top, isStoryFormat ? 24 : 16)
 
                 Spacer()
@@ -309,37 +311,21 @@ struct ShareableCardView: View {
         }
     }
 
-    /// Small row of social icons with usernames for shareable cards
-    private var socialLinksRow: some View {
-        HStack(spacing: 12) {
-            if let ig = viewModel.socialLinks.instagram, !ig.isEmpty {
-                HStack(spacing: 3) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 8))
-                    Text("@\(ig)")
-                        .font(.system(size: 8))
-                }
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
-            }
-            if let tt = viewModel.socialLinks.tiktok, !tt.isEmpty {
-                HStack(spacing: 3) {
-                    Image(systemName: "play.rectangle.fill")
-                        .font(.system(size: 8))
-                    Text("@\(tt)")
-                        .font(.system(size: 8))
-                }
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
-            }
-            if let tw = viewModel.socialLinks.twitter, !tw.isEmpty {
-                HStack(spacing: 3) {
-                    Image(systemName: "at")
-                        .font(.system(size: 8))
-                    Text("@\(tw)")
-                        .font(.system(size: 8))
-                }
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
-            }
+    private var publicUsername: String? {
+        let normalized = PublicProfile.normalizedUsername(viewModel.publicUsername)
+        guard PublicProfile.isValidUsername(normalized) else { return nil }
+        return normalized
+    }
+
+    private func publicUsernameRow(_ username: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "at")
+                .font(.system(size: 8, weight: .semibold))
+            Text(username)
+                .font(.system(size: 8, weight: .medium))
         }
+        .foregroundStyle(SimastryColor.offWhite.opacity(0.62))
+        .help("Source: your single Simastry public username.")
     }
 
     private var cardBackground: some View {

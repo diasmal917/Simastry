@@ -8,8 +8,8 @@ struct ShareGlyphCircle: View {
     var body: some View {
         ZodiacIconView(sign: sign, size: iconSize, showsGlow: true)
             .frame(width: circleSize, height: circleSize)
-            .background(sign.color.opacity(0.14), in: Circle())
-            .overlay(Circle().stroke(sign.color.opacity(0.45), lineWidth: 1))
+            .contentShape(Circle())
+            .help("\(sign.displayName) zodiac glyph")
     }
 }
 

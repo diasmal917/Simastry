@@ -26,6 +26,9 @@ struct CompanionDetailSheet: View {
     private var companionMoon: ZodiacSign? { ZodiacSign(rawValue: companion.moonSign) }
     private var companionRising: ZodiacSign? { ZodiacSign(rawValue: companion.risingSign) }
     private var level: RelationshipLevel { RelationshipLevel.from(messageCount: companion.conversationCount) }
+    private var factoryProfile: FactoryCompanionProfile {
+        FactoryCompanionCatalog.match(for: companion)
+    }
 
     var body: some View {
         ScrollView {
@@ -76,14 +79,17 @@ struct CompanionDetailSheet: View {
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            GlossyOrbView(
-                signColors: [
-                    companionSun?.color ?? SimastryColor.gold,
-                    companionMoon?.color ?? SimastryColor.celestialBlue
-                ],
-                state: .idle,
-                size: 80
-            )
+            Image(factoryProfile.profileImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 88, height: 88, alignment: .top)
+                .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder((companionSun?.color ?? SimastryColor.gold).opacity(0.74), lineWidth: 1.5)
+                }
+                .shadow(color: (companionSun?.color ?? SimastryColor.gold).opacity(0.28), radius: 16, y: 7)
+                .help("Source: the companion portrait matched from this companion's name and Sun sign.")
+                .accessibilityLabel("\(companion.name) profile picture")
 
             Text(companion.name)
                 .font(SimastryFont.titleLarge)

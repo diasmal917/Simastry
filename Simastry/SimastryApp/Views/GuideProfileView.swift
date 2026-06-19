@@ -185,7 +185,7 @@ struct GuideProfileView: View {
             )
         }
         .sheet(item: $calibratingProfile) { profile in
-            GuideCalibrationSheet(profile: profile) {
+            GuideCalibrationSheet(viewModel: viewModel, profile: profile) {
                 calibrationRefreshID = UUID()
             }
         }
@@ -435,6 +435,7 @@ struct GuideProfileView: View {
 }
 
 struct GuideCalibrationSheet: View {
+    let viewModel: AppViewModel
     let profile: FactoryCompanionProfile
     let onSave: () -> Void
 
@@ -456,7 +457,8 @@ struct GuideCalibrationSheet: View {
         GuideCalibration.availableTopics + customTopics
     }
 
-    init(profile: FactoryCompanionProfile, onSave: @escaping () -> Void) {
+    init(viewModel: AppViewModel, profile: FactoryCompanionProfile, onSave: @escaping () -> Void) {
+        self.viewModel = viewModel
         self.profile = profile
         self.onSave = onSave
 
@@ -474,6 +476,7 @@ struct GuideCalibrationSheet: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         header
+                        lensSection
                         relationshipSection
                         personalitySection
                         topicsSection
@@ -500,6 +503,7 @@ struct GuideCalibrationSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .sensoryFeedback(.selection, trigger: role)
     }
 
     private var header: some View {
@@ -525,6 +529,64 @@ struct GuideCalibrationSheet: View {
         }
         .padding(16)
         .glossyCard(cornerRadius: 20)
+    }
+
+    /// The transparency card formerly shown in the chat as "Why this chat" —
+    /// now part of calibration, explaining the lens this guide reads you through.
+    private var lensSection: some View {
+        calibrationSection(title: "Why this guide", systemImage: "scope") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(GuideDirectoryCopy.specialty(for: profile))
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(lensSignals) { signal in
+                            MethodSignalChip(signal: signal)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var lensSignals: [MethodSignal] {
+        var signals: [MethodSignal] = [
+            MethodSignal(
+                label: "Companion lens",
+                detail: "\(profile.sign.displayName) guide",
+                systemImage: "scope",
+                tint: profile.sign.color
+            )
+        ]
+        if let userSun = viewModel.userSunSign {
+            signals.append(
+                MethodSignal(
+                    label: "Your Sun",
+                    detail: userSun.displayName,
+                    systemImage: "person.crop.circle.fill",
+                    tint: userSun.color
+                )
+            )
+        }
+        if let typeSignal = CommunicationTypeProfile.methodSignal(
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        ) {
+            signals.append(typeSignal)
+        }
+        signals.append(
+            MethodSignal(
+                label: "Privacy",
+                detail: "Tone & topics only",
+                systemImage: "lock.shield.fill",
+                tint: SimastryColor.mutedSilver
+            )
+        )
+        return signals
     }
 
     private var relationshipSection: some View {
