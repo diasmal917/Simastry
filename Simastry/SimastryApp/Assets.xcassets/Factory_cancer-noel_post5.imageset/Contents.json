@@ -1,12 +1,12 @@
 {
-  "info": {
-    "author": "xcode",
-    "version": 1
-  },
   "images": [
     {
       "filename": "Factory_cancer-noel_post5.jpg",
       "idiom": "universal"
     }
-  ]
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
 }

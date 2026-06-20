@@ -1,0 +1,2031 @@
+{
+  "backup_path": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/app-preview-exports/20260620-100145/previous-ios-assets",
+  "created_at": "2026-06-20T10:01:57.834845+00:00",
+  "exported": [
+    {
+      "asset": "Factory_aries-amara_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_profile.imageset/Factory_aries-amara_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_profile.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_card.imageset/Factory_aries-amara_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_card.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post1.imageset/Factory_aries-amara_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post1.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post2.imageset/Factory_aries-amara_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post2.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post3.imageset/Factory_aries-amara_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post3.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post4.imageset/Factory_aries-amara_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post4.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post5.imageset/Factory_aries-amara_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post5.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post6.imageset/Factory_aries-amara_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post6.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post7.imageset/Factory_aries-amara_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post7.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post8.imageset/Factory_aries-amara_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post8.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post9.imageset/Factory_aries-amara_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post9.jpg"
+    },
+    {
+      "asset": "Factory_aries-amara_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-amara_post10.imageset/Factory_aries-amara_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-amara_post10.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_profile.imageset/Factory_aries-cassian_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_profile.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_card.imageset/Factory_aries-cassian_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_card.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post1.imageset/Factory_aries-cassian_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post1.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post2.imageset/Factory_aries-cassian_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post2.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post3.imageset/Factory_aries-cassian_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post3.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post4.imageset/Factory_aries-cassian_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post4.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post5.imageset/Factory_aries-cassian_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post5.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post6.imageset/Factory_aries-cassian_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post6.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post7.imageset/Factory_aries-cassian_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post7.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post8.imageset/Factory_aries-cassian_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post8.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post9.imageset/Factory_aries-cassian_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post9.jpg"
+    },
+    {
+      "asset": "Factory_aries-cassian_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aries-cassian_post10.imageset/Factory_aries-cassian_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aries-cassian_post10.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_profile.imageset/Factory_taurus-ada_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_profile.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_card.imageset/Factory_taurus-ada_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_card.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post1.imageset/Factory_taurus-ada_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post1.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post2.imageset/Factory_taurus-ada_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post2.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post3.imageset/Factory_taurus-ada_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post3.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post4.imageset/Factory_taurus-ada_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post4.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post5.imageset/Factory_taurus-ada_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post5.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post6.imageset/Factory_taurus-ada_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post6.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post7.imageset/Factory_taurus-ada_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post7.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post8.imageset/Factory_taurus-ada_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post8.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post9.imageset/Factory_taurus-ada_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post9.jpg"
+    },
+    {
+      "asset": "Factory_taurus-ada_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-ada_post10.imageset/Factory_taurus-ada_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-ada_post10.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_profile.imageset/Factory_taurus-theo_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_profile.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_card.imageset/Factory_taurus-theo_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_card.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post1.imageset/Factory_taurus-theo_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post1.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post2.imageset/Factory_taurus-theo_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post2.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post3.imageset/Factory_taurus-theo_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post3.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post4.imageset/Factory_taurus-theo_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post4.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post5.imageset/Factory_taurus-theo_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post5.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post6.imageset/Factory_taurus-theo_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post6.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post7.imageset/Factory_taurus-theo_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post7.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post8.imageset/Factory_taurus-theo_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post8.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post9.imageset/Factory_taurus-theo_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post9.jpg"
+    },
+    {
+      "asset": "Factory_taurus-theo_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_taurus-theo_post10.imageset/Factory_taurus-theo_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_taurus-theo_post10.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_profile.imageset/Factory_gemini-rina_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_profile.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_card.imageset/Factory_gemini-rina_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_card.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post1.imageset/Factory_gemini-rina_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post1.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post2.imageset/Factory_gemini-rina_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post2.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post3.imageset/Factory_gemini-rina_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post3.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post4.imageset/Factory_gemini-rina_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post4.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post5.imageset/Factory_gemini-rina_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post5.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post6.imageset/Factory_gemini-rina_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post6.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post7.imageset/Factory_gemini-rina_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post7.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post8.imageset/Factory_gemini-rina_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post8.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post9.imageset/Factory_gemini-rina_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post9.jpg"
+    },
+    {
+      "asset": "Factory_gemini-rina_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-rina_post10.imageset/Factory_gemini-rina_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-rina_post10.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_profile.imageset/Factory_gemini-arden_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_profile.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_card.imageset/Factory_gemini-arden_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_card.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post1.imageset/Factory_gemini-arden_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post1.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post2.imageset/Factory_gemini-arden_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post2.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post3.imageset/Factory_gemini-arden_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post3.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post4.imageset/Factory_gemini-arden_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post4.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post5.imageset/Factory_gemini-arden_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post5.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post6.imageset/Factory_gemini-arden_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post6.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post7.imageset/Factory_gemini-arden_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post7.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post8.imageset/Factory_gemini-arden_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post8.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post9.imageset/Factory_gemini-arden_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post9.jpg"
+    },
+    {
+      "asset": "Factory_gemini-arden_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_gemini-arden_post10.imageset/Factory_gemini-arden_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_gemini-arden_post10.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_profile.imageset/Factory_cancer-mila_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_profile.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_card.imageset/Factory_cancer-mila_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_card.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post1.imageset/Factory_cancer-mila_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post1.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post2.imageset/Factory_cancer-mila_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post2.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post3.imageset/Factory_cancer-mila_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post3.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post4.imageset/Factory_cancer-mila_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post4.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post5.imageset/Factory_cancer-mila_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post5.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post6.imageset/Factory_cancer-mila_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post6.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post7.imageset/Factory_cancer-mila_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post7.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post8.imageset/Factory_cancer-mila_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post8.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post9.imageset/Factory_cancer-mila_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post9.jpg"
+    },
+    {
+      "asset": "Factory_cancer-mila_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-mila_post10.imageset/Factory_cancer-mila_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-mila_post10.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_profile.imageset/Factory_cancer-noel_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_profile.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_card.imageset/Factory_cancer-noel_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_card.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post1.imageset/Factory_cancer-noel_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post1.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post2.imageset/Factory_cancer-noel_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post2.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post3.imageset/Factory_cancer-noel_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post3.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post4.imageset/Factory_cancer-noel_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post4.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post5.imageset/Factory_cancer-noel_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post5.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post6.imageset/Factory_cancer-noel_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post6.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post7.imageset/Factory_cancer-noel_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post7.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post8.imageset/Factory_cancer-noel_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post8.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post9.imageset/Factory_cancer-noel_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post9.jpg"
+    },
+    {
+      "asset": "Factory_cancer-noel_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_cancer-noel_post10.imageset/Factory_cancer-noel_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_cancer-noel_post10.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_profile.imageset/Factory_leo-leona_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_profile.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_card.imageset/Factory_leo-leona_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_card.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post1.imageset/Factory_leo-leona_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post1.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post2.imageset/Factory_leo-leona_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post2.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post3.imageset/Factory_leo-leona_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post3.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post4.imageset/Factory_leo-leona_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post4.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post5.imageset/Factory_leo-leona_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post5.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post6.imageset/Factory_leo-leona_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post6.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post7.imageset/Factory_leo-leona_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post7.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post8.imageset/Factory_leo-leona_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post8.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post9.imageset/Factory_leo-leona_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post9.jpg"
+    },
+    {
+      "asset": "Factory_leo-leona_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-leona_post10.imageset/Factory_leo-leona_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-leona_post10.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_profile.imageset/Factory_leo-dante_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_profile.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_card.imageset/Factory_leo-dante_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_card.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post1.imageset/Factory_leo-dante_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post1.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post2.imageset/Factory_leo-dante_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post2.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post3.imageset/Factory_leo-dante_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post3.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post4.imageset/Factory_leo-dante_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post4.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post5.imageset/Factory_leo-dante_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post5.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post6.imageset/Factory_leo-dante_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post6.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post7.imageset/Factory_leo-dante_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post7.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post8.imageset/Factory_leo-dante_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post8.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post9.imageset/Factory_leo-dante_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post9.jpg"
+    },
+    {
+      "asset": "Factory_leo-dante_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_leo-dante_post10.imageset/Factory_leo-dante_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_leo-dante_post10.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_profile.imageset/Factory_virgo-mara_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_profile.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_card.imageset/Factory_virgo-mara_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_card.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post1.imageset/Factory_virgo-mara_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post1.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post2.imageset/Factory_virgo-mara_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post2.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post3.imageset/Factory_virgo-mara_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post3.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post4.imageset/Factory_virgo-mara_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post4.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post5.imageset/Factory_virgo-mara_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post5.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post6.imageset/Factory_virgo-mara_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post6.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post7.imageset/Factory_virgo-mara_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post7.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post8.imageset/Factory_virgo-mara_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post8.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post9.imageset/Factory_virgo-mara_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post9.jpg"
+    },
+    {
+      "asset": "Factory_virgo-mara_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-mara_post10.imageset/Factory_virgo-mara_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-mara_post10.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_profile.imageset/Factory_virgo-jonah_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_profile.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_card.imageset/Factory_virgo-jonah_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_card.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post1.imageset/Factory_virgo-jonah_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post1.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post2.imageset/Factory_virgo-jonah_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post2.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post3.imageset/Factory_virgo-jonah_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post3.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post4.imageset/Factory_virgo-jonah_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post4.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post5.imageset/Factory_virgo-jonah_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post5.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post6.imageset/Factory_virgo-jonah_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post6.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post7.imageset/Factory_virgo-jonah_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post7.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post8.imageset/Factory_virgo-jonah_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post8.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post9.imageset/Factory_virgo-jonah_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post9.jpg"
+    },
+    {
+      "asset": "Factory_virgo-jonah_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_virgo-jonah_post10.imageset/Factory_virgo-jonah_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_virgo-jonah_post10.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_profile.imageset/Factory_libra-isolde_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_profile.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_card.imageset/Factory_libra-isolde_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_card.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post1.imageset/Factory_libra-isolde_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post1.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post2.imageset/Factory_libra-isolde_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post2.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post3.imageset/Factory_libra-isolde_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post3.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post4.imageset/Factory_libra-isolde_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post4.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post5.imageset/Factory_libra-isolde_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post5.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post6.imageset/Factory_libra-isolde_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post6.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post7.imageset/Factory_libra-isolde_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post7.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post8.imageset/Factory_libra-isolde_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post8.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post9.imageset/Factory_libra-isolde_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post9.jpg"
+    },
+    {
+      "asset": "Factory_libra-isolde_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-isolde_post10.imageset/Factory_libra-isolde_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-isolde_post10.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_profile.imageset/Factory_libra-mateo_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_profile.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_card.imageset/Factory_libra-mateo_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_card.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post1.imageset/Factory_libra-mateo_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post1.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post2.imageset/Factory_libra-mateo_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post2.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post3.imageset/Factory_libra-mateo_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post3.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post4.imageset/Factory_libra-mateo_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post4.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post5.imageset/Factory_libra-mateo_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post5.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post6.imageset/Factory_libra-mateo_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post6.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post7.imageset/Factory_libra-mateo_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post7.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post8.imageset/Factory_libra-mateo_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post8.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post9.imageset/Factory_libra-mateo_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post9.jpg"
+    },
+    {
+      "asset": "Factory_libra-mateo_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_libra-mateo_post10.imageset/Factory_libra-mateo_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_libra-mateo_post10.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_profile.imageset/Factory_scorpio-vera_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_profile.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_card.imageset/Factory_scorpio-vera_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_card.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post1.imageset/Factory_scorpio-vera_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post1.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post2.imageset/Factory_scorpio-vera_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post2.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post3.imageset/Factory_scorpio-vera_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post3.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post4.imageset/Factory_scorpio-vera_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post4.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post5.imageset/Factory_scorpio-vera_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post5.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post6.imageset/Factory_scorpio-vera_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post6.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post7.imageset/Factory_scorpio-vera_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post7.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post8.imageset/Factory_scorpio-vera_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post8.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post9.imageset/Factory_scorpio-vera_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post9.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-vera_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-vera_post10.imageset/Factory_scorpio-vera_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-vera_post10.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_profile.imageset/Factory_scorpio-elias_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_profile.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_card.imageset/Factory_scorpio-elias_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_card.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post1.imageset/Factory_scorpio-elias_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post1.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post2.imageset/Factory_scorpio-elias_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post2.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post3.imageset/Factory_scorpio-elias_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post3.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post4.imageset/Factory_scorpio-elias_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post4.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post5.imageset/Factory_scorpio-elias_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post5.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post6.imageset/Factory_scorpio-elias_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post6.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post7.imageset/Factory_scorpio-elias_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post7.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post8.imageset/Factory_scorpio-elias_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post8.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post9.imageset/Factory_scorpio-elias_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post9.jpg"
+    },
+    {
+      "asset": "Factory_scorpio-elias_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_scorpio-elias_post10.imageset/Factory_scorpio-elias_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_scorpio-elias_post10.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_profile.imageset/Factory_sagittarius-nadia_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_profile.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_card.imageset/Factory_sagittarius-nadia_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_card.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post1.imageset/Factory_sagittarius-nadia_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post1.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post2.imageset/Factory_sagittarius-nadia_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post2.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post3.imageset/Factory_sagittarius-nadia_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post3.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post4.imageset/Factory_sagittarius-nadia_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post4.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post5.imageset/Factory_sagittarius-nadia_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post5.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post6.imageset/Factory_sagittarius-nadia_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post6.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post7.imageset/Factory_sagittarius-nadia_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post7.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post8.imageset/Factory_sagittarius-nadia_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post8.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post9.imageset/Factory_sagittarius-nadia_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post9.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-nadia_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-nadia_post10.imageset/Factory_sagittarius-nadia_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-nadia_post10.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_profile.imageset/Factory_sagittarius-rafi_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_profile.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_card.imageset/Factory_sagittarius-rafi_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_card.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post1.imageset/Factory_sagittarius-rafi_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post1.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post2.imageset/Factory_sagittarius-rafi_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post2.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post3.imageset/Factory_sagittarius-rafi_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post3.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post4.imageset/Factory_sagittarius-rafi_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post4.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post5.imageset/Factory_sagittarius-rafi_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post5.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post6.imageset/Factory_sagittarius-rafi_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post6.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post7.imageset/Factory_sagittarius-rafi_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post7.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post8.imageset/Factory_sagittarius-rafi_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post8.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post9.imageset/Factory_sagittarius-rafi_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post9.jpg"
+    },
+    {
+      "asset": "Factory_sagittarius-rafi_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_sagittarius-rafi_post10.imageset/Factory_sagittarius-rafi_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_sagittarius-rafi_post10.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_profile.imageset/Factory_capricorn-naomi_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_profile.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_card.imageset/Factory_capricorn-naomi_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_card.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post1.imageset/Factory_capricorn-naomi_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post1.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post2.imageset/Factory_capricorn-naomi_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post2.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post3.imageset/Factory_capricorn-naomi_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post3.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post4.imageset/Factory_capricorn-naomi_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post4.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post5.imageset/Factory_capricorn-naomi_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post5.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post6.imageset/Factory_capricorn-naomi_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post6.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post7.imageset/Factory_capricorn-naomi_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post7.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post8.imageset/Factory_capricorn-naomi_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post8.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post9.imageset/Factory_capricorn-naomi_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post9.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-naomi_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-naomi_post10.imageset/Factory_capricorn-naomi_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-naomi_post10.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_profile",
+      "changed": true,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_profile.imageset/Factory_capricorn-silas_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_profile.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_card.imageset/Factory_capricorn-silas_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_card.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post1.imageset/Factory_capricorn-silas_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post1.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post2.imageset/Factory_capricorn-silas_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post2.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post3.imageset/Factory_capricorn-silas_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post3.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post4.imageset/Factory_capricorn-silas_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post4.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post5.imageset/Factory_capricorn-silas_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post5.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post6.imageset/Factory_capricorn-silas_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post6.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post7.imageset/Factory_capricorn-silas_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post7.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post8.imageset/Factory_capricorn-silas_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post8.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post9.imageset/Factory_capricorn-silas_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post9.jpg"
+    },
+    {
+      "asset": "Factory_capricorn-silas_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_capricorn-silas_post10.imageset/Factory_capricorn-silas_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_capricorn-silas_post10.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_profile.imageset/Factory_aquarius-imani_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_profile.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_card.imageset/Factory_aquarius-imani_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_card.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post1.imageset/Factory_aquarius-imani_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post1.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post2.imageset/Factory_aquarius-imani_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post2.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post3.imageset/Factory_aquarius-imani_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post3.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post4.imageset/Factory_aquarius-imani_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post4.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post5.imageset/Factory_aquarius-imani_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post5.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post6.imageset/Factory_aquarius-imani_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post6.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post7.imageset/Factory_aquarius-imani_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post7.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post8.imageset/Factory_aquarius-imani_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post8.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post9.imageset/Factory_aquarius-imani_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post9.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-imani_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-imani_post10.imageset/Factory_aquarius-imani_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-imani_post10.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_profile.imageset/Factory_aquarius-yarrow_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_profile.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_card.imageset/Factory_aquarius-yarrow_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_card.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post1.imageset/Factory_aquarius-yarrow_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post1.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post2.imageset/Factory_aquarius-yarrow_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post2.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post3.imageset/Factory_aquarius-yarrow_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post3.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post4.imageset/Factory_aquarius-yarrow_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post4.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post5.imageset/Factory_aquarius-yarrow_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post5.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post6.imageset/Factory_aquarius-yarrow_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post6.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post7.imageset/Factory_aquarius-yarrow_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post7.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post8.imageset/Factory_aquarius-yarrow_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post8.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post9.imageset/Factory_aquarius-yarrow_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post9.jpg"
+    },
+    {
+      "asset": "Factory_aquarius-yarrow_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_aquarius-yarrow_post10.imageset/Factory_aquarius-yarrow_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_aquarius-yarrow_post10.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_profile.imageset/Factory_pisces-liora_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_profile.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_card.imageset/Factory_pisces-liora_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_card.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post1.imageset/Factory_pisces-liora_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post1.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post2.imageset/Factory_pisces-liora_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post2.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post3.imageset/Factory_pisces-liora_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post3.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post4.imageset/Factory_pisces-liora_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post4.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post5.imageset/Factory_pisces-liora_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post5.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post6.imageset/Factory_pisces-liora_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post6.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post7.imageset/Factory_pisces-liora_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post7.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post8.imageset/Factory_pisces-liora_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post8.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post9.imageset/Factory_pisces-liora_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post9.jpg"
+    },
+    {
+      "asset": "Factory_pisces-liora_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-liora_post10.imageset/Factory_pisces-liora_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-liora_post10.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_profile",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_profile.imageset/Factory_pisces-zev_profile.jpg",
+      "slot": "profile_avatar",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_profile.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_card",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_card.imageset/Factory_pisces-zev_card.jpg",
+      "slot": "card_portrait",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_card.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post1",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post1.imageset/Factory_pisces-zev_post1.jpg",
+      "slot": "astrogram_01",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post1.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post2",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post2.imageset/Factory_pisces-zev_post2.jpg",
+      "slot": "astrogram_02",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post2.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post3",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post3.imageset/Factory_pisces-zev_post3.jpg",
+      "slot": "astrogram_03",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post3.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post4",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post4.imageset/Factory_pisces-zev_post4.jpg",
+      "slot": "astrogram_04",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post4.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post5",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post5.imageset/Factory_pisces-zev_post5.jpg",
+      "slot": "astrogram_05",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post5.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post6",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post6.imageset/Factory_pisces-zev_post6.jpg",
+      "slot": "astrogram_06",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post6.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post7",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post7.imageset/Factory_pisces-zev_post7.jpg",
+      "slot": "astrogram_07",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post7.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post8",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post8.imageset/Factory_pisces-zev_post8.jpg",
+      "slot": "astrogram_08",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post8.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post9",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post9.imageset/Factory_pisces-zev_post9.jpg",
+      "slot": "astrogram_09",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post9.jpg"
+    },
+    {
+      "asset": "Factory_pisces-zev_post10",
+      "changed": false,
+      "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets/Factory_pisces-zev_post10.imageset/Factory_pisces-zev_post10.jpg",
+      "slot": "astrogram_10",
+      "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post10.jpg"
+    }
+  ],
+  "manifest_path": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/app-preview-exports/20260620-100145/ios-push-manifest.json",
+  "missing": [],
+  "summary": {
+    "changed": 1,
+    "characters": 24,
+    "destination": "/Users/chiburashka/Documents/Codex/Simastry/Simastry/SimastryApp/Assets.xcassets",
+    "exported": 288,
+    "missing": 0
+  }
+}
