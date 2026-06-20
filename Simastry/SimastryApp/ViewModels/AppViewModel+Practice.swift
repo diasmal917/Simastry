@@ -75,7 +75,13 @@ extension AppViewModel {
                 transcript: transcript
             )
             if let reply = await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout, operation: { [supabase] in
-                try await supabase.invokeCompanionReply(kind: .chat, system: system, user: user, maxTokens: 200)
+                try await supabase.invokeCompanionReply(
+                    kind: .chat,
+                    feature: .practice,
+                    system: system,
+                    user: user,
+                    maxTokens: 200
+                )
             }) {
                 return reply
             }

@@ -9,7 +9,7 @@ private struct LandingFeature: Identifiable {
 }
 
 private let landingFeatures: [LandingFeature] = [
-    LandingFeature(id: 0, icon: SimastryIcon.lens, title: "Decode the message", accent: SimastryColor.celestialBlue),
+    LandingFeature(id: 0, icon: SimastryIcon.lens, title: "Decode a message", accent: SimastryColor.celestialBlue),
     LandingFeature(id: 1, icon: SimastryIcon.predict, title: "Predict their reply", accent: SimastryColor.risingViolet),
     LandingFeature(id: 2, icon: SimastryIcon.quote, title: "Know what to say", accent: SimastryColor.gold)
 ]
@@ -344,7 +344,7 @@ struct LandingView: View {
                 .multilineTextAlignment(.center)
                 .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
 
-            Text("Relationships, timing, and what to say next.")
+            Text("Decode the message. Know what to say next.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(.white.opacity(0.82))
                 .multilineTextAlignment(.center)
@@ -516,7 +516,7 @@ struct LandingView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Decode the message. Predict their reply. Know what to say.")
+        .accessibilityLabel("Decode a message. Predict their reply. Know what to say.")
     }
 
     // MARK: - Hero CTA
@@ -581,7 +581,7 @@ struct LandingView: View {
     private func beginOnboarding() {
         withAnimation(.spring(SimastrySpring.smooth)) {
             if viewModel.isAgeVerified {
-                viewModel.currentScreen = .birthDetails
+                viewModel.currentScreen = .firstRead
             } else {
                 viewModel.currentScreen = .ageGate
             }
@@ -737,7 +737,7 @@ struct LandingView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(SimastryColor.goldLight)
 
-            Text("24 guides · 12 zodiac lenses · trained in the Simastry Method")
+            Text("AI guides · private by default")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(.white.opacity(0.82))
                 .lineLimit(1)
@@ -750,7 +750,7 @@ struct LandingView: View {
             Capsule()
                 .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
         }
-        .accessibilityLabel("24 guides across 12 zodiac lenses, trained in the Simastry Method")
+        .accessibilityLabel("AI guides, private by default")
     }
 
     // MARK: - Shimmer Stars

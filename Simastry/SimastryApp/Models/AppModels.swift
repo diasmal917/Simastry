@@ -169,6 +169,97 @@ nonisolated struct UserProfile: Codable, Sendable {
     }
 }
 
+nonisolated struct FirstReadDraft: Identifiable, Codable, Equatable, Sendable {
+    var id: UUID
+    var messageText: String
+    var signRawValue: String
+    var toneRawValue: String
+    var likelyMeaning: String
+    var notAssume: String
+    var suggestedReplies: [String]
+    var bestNextMove: FirstReadBestNextMove?
+    var guideContinuationSeed: String?
+    var safetyLevel: FirstReadSafetyLevel?
+    var confidence: Int?
+    var createdAt: Date
+    var dismissedAt: Date?
+
+    var sign: ZodiacSign? {
+        ZodiacSign(rawValue: signRawValue)
+    }
+
+    var tone: SimulationTone? {
+        SimulationTone(rawValue: toneRawValue)
+    }
+
+    var isDismissed: Bool {
+        dismissedAt != nil
+    }
+
+    init(
+        id: UUID = UUID(),
+        messageText: String,
+        sign: ZodiacSign,
+        tone: SimulationTone,
+        likelyMeaning: String,
+        notAssume: String,
+        suggestedReplies: [String],
+        bestNextMove: FirstReadBestNextMove? = nil,
+        guideContinuationSeed: String? = nil,
+        safetyLevel: FirstReadSafetyLevel? = .ok,
+        confidence: Int? = nil,
+        createdAt: Date = Date(),
+        dismissedAt: Date? = nil
+    ) {
+        self.id = id
+        self.messageText = messageText
+        self.signRawValue = sign.rawValue
+        self.toneRawValue = tone.rawValue
+        self.likelyMeaning = likelyMeaning
+        self.notAssume = notAssume
+        self.suggestedReplies = suggestedReplies
+        self.bestNextMove = bestNextMove
+        self.guideContinuationSeed = guideContinuationSeed
+        self.safetyLevel = safetyLevel
+        self.confidence = confidence
+        self.createdAt = createdAt
+        self.dismissedAt = dismissedAt
+    }
+}
+
+nonisolated final class FirstReadDraftStore {
+    static let defaultsKey = "simastry_first_read_draft"
+
+    private let defaults: UserDefaults
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+    }
+
+    func load() -> FirstReadDraft? {
+        guard let data = defaults.data(forKey: Self.defaultsKey),
+              let draft = try? decoder.decode(FirstReadDraft.self, from: data) else {
+            return nil
+        }
+        return draft
+    }
+
+    func save(_ draft: FirstReadDraft) {
+        guard let data = try? encoder.encode(draft) else { return }
+        defaults.set(data, forKey: Self.defaultsKey)
+    }
+
+    func clear() {
+        defaults.removeObject(forKey: Self.defaultsKey)
+    }
+}
+
 nonisolated struct CompanionData: Codable, Identifiable, Sendable {
     var id: UUID
     var userId: UUID
@@ -317,6 +408,7 @@ nonisolated struct MessageData: Codable, Identifiable, Sendable {
 nonisolated enum AppScreen: Sendable {
     case landing
     case ageGate
+    case firstRead
     case birthDetails
     case signUp
     case signIn

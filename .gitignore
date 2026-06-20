@@ -29,6 +29,8 @@ Package.resolved
 *~
 
 .env
+.env.*
+supabase/.temp/
 core
 node_modules
 .expo

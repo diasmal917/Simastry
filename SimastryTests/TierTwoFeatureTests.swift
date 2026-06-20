@@ -167,4 +167,84 @@ struct TierTwoFeatureTests {
         #expect(!result.predictedMessage.isEmpty)
         #expect(!result.astrologicalBreakdown.isEmpty)
     }
+
+    @Test func predictionFallsBackToLocalComposerWhenRemoteFails() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+
+        let service = PredictionService()
+        service.isRemoteChannelAvailable = { true }
+        service.replyChannel = { _, _ in
+            throw PredictionServiceError.serverError("offline")
+        }
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            conversationText: "hey, are we still on for friday?",
+            targetSunSign: .taurus,
+            targetMoonSign: .cancer,
+            targetRisingSign: nil,
+            question: nil,
+            hypotheticalReply: nil
+        )
+
+        let result = try await service.generatePrediction(request: request, tier: "free")
+        #expect(result.isLocalComposition == true)
+        #expect(!result.predictedMessage.isEmpty)
+        #expect(!result.astrologicalBreakdown.isEmpty)
+    }
+
+    @Test func predictionPropagatesRemoteLimitWithoutLocalFallback() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+
+        let service = PredictionService()
+        service.isRemoteChannelAvailable = { true }
+        service.replyChannel = { _, _ in
+            throw PredictionServiceError.aiUsageLimit("You have reached today's AI guide limit.")
+        }
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            conversationText: "hey, are we still on for friday?",
+            targetSunSign: .taurus,
+            targetMoonSign: .cancer,
+            targetRisingSign: nil,
+            question: nil,
+            hypotheticalReply: nil
+        )
+
+        do {
+            _ = try await service.generatePrediction(request: request, tier: "free")
+            #expect(Bool(false))
+        } catch let error as PredictionServiceError {
+            #expect(error.errorDescription?.contains("AI guide limit") == true)
+            #expect(service.loadHistory().isEmpty)
+        } catch {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test func companionReplyPayloadEncodesFeatureNames() throws {
+        for feature in CompanionReplyFeature.allCases {
+            let payload = CompanionReplyPayload(
+                kind: CompanionReplyKind.chat.rawValue,
+                feature: feature.rawValue,
+                system: "system",
+                user: "user",
+                maxTokens: 123
+            )
+            let data = try JSONEncoder().encode(payload)
+            let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            #expect(object["feature"] as? String == feature.rawValue)
+        }
+    }
+
+    @Test func companionReplyResponseDecodesUsageEventId() throws {
+        let usageEventId = UUID()
+        let data = try JSONEncoder().encode([
+            "text": "Use one short warm line.",
+            "usageEventId": usageEventId.uuidString
+        ])
+
+        let decoded = try JSONDecoder().decode(CompanionReplyResponse.self, from: data)
+        #expect(decoded.text == "Use one short warm line.")
+        #expect(decoded.usageEventId == usageEventId)
+    }
 }

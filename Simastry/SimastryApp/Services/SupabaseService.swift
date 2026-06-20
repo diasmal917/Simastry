@@ -5,6 +5,9 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
     case notConfigured
     case invalidRedirectURL
     case missingSession
+    case invalidFunctionResponse
+    case functionFailed(String)
+    case aiUsageLimit(String)
 
     var errorDescription: String? {
         switch self {
@@ -14,6 +17,12 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
             "Authentication redirect URL is invalid."
         case .missingSession:
             "Please sign in again before continuing."
+        case .invalidFunctionResponse:
+            "The AI guide answered in an unexpected format."
+        case .functionFailed(let message):
+            message
+        case .aiUsageLimit(let message):
+            message
         }
     }
 }
@@ -61,27 +70,82 @@ nonisolated final class SupabaseService {
         }
     }
 
-    /// True when the edge-function AI channel can be reached (Supabase
-    /// configured). The function itself still requires a signed-in session.
+    /// True when the edge-function AI channel should be attempted. Signed-out
+    /// sessions keep using local fallbacks instead of calling the LLM endpoint.
     var canInvokeCompanionReply: Bool {
-        isConfigured
+        isConfigured && client?.auth.currentSession != nil
     }
 
     /// Calls the `companion-reply` edge function — the server-side Anthropic
     /// proxy — and returns the generated text.
     func invokeCompanionReply(
         kind: CompanionReplyKind,
+        feature: CompanionReplyFeature,
         system: String,
         user: String,
         maxTokens: Int = 1024
     ) async throws -> String {
+        try await invokeCompanionReplyResult(
+            kind: kind,
+            feature: feature,
+            system: system,
+            user: user,
+            maxTokens: maxTokens
+        ).text
+    }
+
+    /// Calls the companion-reply edge function and returns response metadata
+    /// used to connect later guide feedback to the exact AI usage event.
+    func invokeCompanionReplyResult(
+        kind: CompanionReplyKind,
+        feature: CompanionReplyFeature,
+        system: String,
+        user: String,
+        maxTokens: Int = 1024
+    ) async throws -> CompanionReplyResult {
         let client = try configuredClient()
-        let payload = CompanionReplyPayload(kind: kind.rawValue, system: system, user: user, maxTokens: maxTokens)
-        let response: CompanionReplyResponse = try await client.functions.invoke(
-            "companion-reply",
-            options: FunctionInvokeOptions(body: payload)
+        guard let session = client.auth.currentSession else {
+            throw SupabaseServiceError.missingSession
+        }
+        guard let url = URL(string: "\(AppConfig.supabaseURL)/functions/v1/companion-reply") else {
+            throw SupabaseServiceError.notConfigured
+        }
+
+        let payload = CompanionReplyPayload(
+            kind: kind.rawValue,
+            feature: feature.rawValue,
+            system: system,
+            user: user,
+            maxTokens: maxTokens
         )
-        return response.text
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(AppConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseServiceError.invalidFunctionResponse
+        }
+
+        if http.statusCode == 429 {
+            throw SupabaseServiceError.aiUsageLimit(
+                CompanionReplyErrorEnvelope.message(from: data)
+                    ?? "You have reached today's AI guide limit."
+            )
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            throw SupabaseServiceError.functionFailed(
+                CompanionReplyErrorEnvelope.message(from: data)
+                    ?? "The AI guide is unavailable right now. Please try again."
+            )
+        }
+
+        let decoded = try JSONDecoder().decode(CompanionReplyResponse.self, from: data)
+        return CompanionReplyResult(text: decoded.text, usageEventId: decoded.usageEventId)
     }
 
     func signInWithApple(idToken: String) async throws {
@@ -156,6 +220,31 @@ nonisolated final class SupabaseService {
         } catch {
             return client.auth.currentSession == nil ? .signedOut : .unverified
         }
+    }
+
+    func syncGuideFeedback(_ feedback: GuideFeedback) async throws {
+        let client = try configuredClient()
+        guard (await currentUserId) != nil else {
+            throw SupabaseServiceError.missingSession
+        }
+
+        try await client
+            .rpc("sync_guide_feedback_event", params: GuideFeedbackSyncPayload(feedback: feedback))
+            .execute()
+    }
+
+    func fetchGuideFeedback(limit: Int = 80) async throws -> [GuideFeedback] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        let rows: [GuideFeedbackEventData] = try await client
+            .from("guide_feedback_events")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .order("created_at", ascending: false)
+            .limit(limit)
+            .execute()
+            .value
+        return rows.compactMap(\.localFeedback)
     }
 
     func fetchProfile() async throws -> UserProfile? {
@@ -586,13 +675,45 @@ nonisolated enum CompanionReplyKind: String, Sendable {
     case chat
 }
 
+nonisolated enum CompanionReplyFeature: String, CaseIterable, Encodable, Sendable {
+    case panelChat = "panel_chat"
+    case companionChat = "companion_chat"
+    case prediction
+    case practice
+    case playbook
+    case momentComment = "moment_comment"
+}
+
 nonisolated struct CompanionReplyPayload: Encodable, Sendable {
     let kind: String
+    let feature: String
     let system: String
     let user: String
     let maxTokens: Int
 }
 
+nonisolated struct CompanionReplyResult: Equatable, Sendable {
+    let text: String
+    let usageEventId: UUID?
+}
+
 nonisolated struct CompanionReplyResponse: Decodable, Sendable {
     let text: String
+    let usageEventId: UUID?
+}
+
+nonisolated private struct CompanionReplyErrorEnvelope: Decodable, Sendable {
+    struct Body: Decodable, Sendable {
+        let code: String?
+        let message: String?
+    }
+
+    let error: Body?
+
+    static func message(from data: Data) -> String? {
+        guard let envelope = try? JSONDecoder().decode(Self.self, from: data) else {
+            return nil
+        }
+        return envelope.error?.message
+    }
 }

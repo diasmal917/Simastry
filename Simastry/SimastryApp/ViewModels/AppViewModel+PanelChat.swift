@@ -152,6 +152,46 @@ extension AppViewModel {
         openPanelChat()
     }
 
+    func openPanelChatWithFirstRead(_ draft: FirstReadDraft) {
+        guard let sign = draft.sign else {
+            openPanelChat()
+            return
+        }
+
+        let senderId = panelGuideEntries.first { $0.sign == sign }?.profile.id
+            ?? FactoryCompanionCatalog.all.first { $0.sign == sign }?.id
+            ?? FactoryCompanionCatalog.featured.id
+        let tone = draft.tone?.displayName ?? "open"
+        let snippet = Self.firstReadPanelSnippet(draft.messageText)
+        let moveLine = draft.bestNextMove.map { " Best next move: \($0.summary)" } ?? ""
+        let content = "I saved your first read: \"\(snippet)\" read as \(tone) through \(sign.displayName). \(draft.likelyMeaning)\(moveLine) Want to keep going from this exact message?"
+
+        let alreadyPosted = panelMessages.suffix(20).contains {
+            $0.senderId == senderId && $0.content == content
+        }
+        if !alreadyPosted {
+            panelMessages.append(
+                PanelMessage(senderId: senderId, content: content, isRead: isPanelThreadOpen)
+            )
+            savePanelMessages()
+            analytics.track(
+                .panelSeededFromFirstRead,
+                params: [
+                    "selectedSign": sign.rawValue,
+                    "bestNextMove": draft.bestNextMove?.type.rawValue ?? "none"
+                ]
+            )
+        }
+
+        openPanelChat()
+    }
+
+    private static func firstReadPanelSnippet(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 96 else { return trimmed }
+        return "\(trimmed.prefix(96))..."
+    }
+
     // MARK: Simastry Method Course
 
     var methodCourseState: MethodCourseState {
@@ -298,10 +338,12 @@ extension AppViewModel {
 
                 // LLM reply when the edge channel is live; template fallback
                 // keeps the human-feel typing delay and never stalls.
-                var content = await self.generatePanelReplyViaLLM(
+                let remoteReply = await self.generatePanelReplyViaLLM(
                     entry: entry,
                     previousGuideName: previousGuideName
                 )
+                var content = remoteReply?.text
+                let aiUsageEventId = remoteReply?.usageEventId
                 if content == nil {
                     try? await Task.sleep(for: .milliseconds(typingLeadIn))
                     content = Self.composePanelReply(
@@ -318,6 +360,7 @@ extension AppViewModel {
                 let reply = PanelMessage(
                     senderId: participantId,
                     content: content ?? "",
+                    aiUsageEventId: aiUsageEventId,
                     isRead: self.isPanelThreadOpen
                 )
                 guard !reply.content.isEmpty else { return }

@@ -166,11 +166,15 @@ struct PanelChatView: View {
                 Spacer(minLength: 0)
             }
 
-            Text("Template-based AI readings through your three placement lenses. Everything stays on this device.")
+            Text("AI guides read this through your Sun, Moon, and Rising lenses. Private by default.")
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.76))
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let firstReadContext {
+                firstReadContextPill(firstReadContext)
+            }
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -194,6 +198,50 @@ struct PanelChatView: View {
         .padding(12)
         .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.7))
         .accessibilityElement(children: .combine)
+    }
+
+    private var firstReadContext: FirstReadDraft? {
+        guard let draft = viewModel.firstReadDraft, !draft.isDismissed else { return nil }
+        return draft
+    }
+
+    private func firstReadContextPill(_ draft: FirstReadDraft) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "text.magnifyingglass")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Continuing your first read")
+                    .font(SimastryFont.captionSmall.weight(.bold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("\"\(panelSnippet(draft.messageText))\"")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.76))
+                    .lineLimit(2)
+
+                if let move = draft.bestNextMove {
+                    Text("Next move: \(move.type.title)")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(SimastryColor.gold.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(SimastryColor.gold.opacity(0.15), lineWidth: 0.6)
+        }
+    }
+
+    private func panelSnippet(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 72 else { return trimmed }
+        return "\(trimmed.prefix(72))..."
     }
 
     // MARK: - Composer
@@ -271,6 +319,8 @@ private struct PanelMessageBubble: View {
     @Bindable var viewModel: AppViewModel
     let message: PanelMessage
     @State private var showGuideProfile: Bool = false
+    @State private var submittedFeedbackTitle: String?
+    @State private var showTuneOptions: Bool = false
 
     private var isFromCurrentUser: Bool {
         message.senderId == PanelParticipant.localUserId
@@ -334,6 +384,10 @@ private struct PanelMessageBubble: View {
                 Text(message.timestamp.panelRelativeDescription)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.offWhite.opacity(isFromCurrentUser ? 0.70 : 0.46))
+
+                if let guideEntry {
+                    guideFeedbackRow(for: guideEntry)
+                }
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 10)
@@ -374,6 +428,96 @@ private struct PanelMessageBubble: View {
         .frame(maxWidth: .infinity, alignment: isFromCurrentUser ? .trailing : .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(isFromCurrentUser ? "You" : (guideEntry?.profile.name ?? "Guide")): \(message.content)")
+    }
+
+    private func guideFeedbackRow(for guideEntry: PanelMatcher.Entry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let submittedFeedbackTitle {
+                Text("\(submittedFeedbackTitle) saved")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.48))
+            } else {
+                HStack(spacing: 6) {
+                    guideFeedbackButton("Helpful", systemImage: "hand.thumbsup.fill") {
+                        submitGuideFeedback(
+                            guideEntry: guideEntry,
+                            helpfulness: .helpful,
+                            reasons: [],
+                            savedTitle: "Helpful"
+                        )
+                    }
+
+                    guideFeedbackButton("Too vague", systemImage: "questionmark.bubble.fill") {
+                        submitGuideFeedback(
+                            guideEntry: guideEntry,
+                            helpfulness: .partlyHelpful,
+                            reasons: [.tooVague],
+                            savedTitle: "Too vague"
+                        )
+                    }
+
+                    guideFeedbackButton("Tune", systemImage: "slider.horizontal.3") {
+                        HapticManager.buttonPress()
+                        withAnimation(.spring(SimastrySpring.snappy)) {
+                            showTuneOptions.toggle()
+                        }
+                    }
+                }
+
+                if showTuneOptions {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 92), spacing: 6)],
+                        alignment: .leading,
+                        spacing: 6
+                    ) {
+                        ForEach(GuideFeedbackTuneOption.allCases) { option in
+                            guideFeedbackButton(option.title, systemImage: option.systemImage) {
+                                submitGuideFeedback(
+                                    guideEntry: guideEntry,
+                                    helpfulness: .partlyHelpful,
+                                    reasons: [option.feedbackReason],
+                                    savedTitle: option.title
+                                )
+                            }
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+    }
+
+    private func guideFeedbackButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(SimastryFont.captionSmall.weight(.semibold))
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.68))
+                .lineLimit(1)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(.white.opacity(0.055), in: Capsule())
+        }
+        .buttonStyle(SpringPressStyle())
+    }
+
+    private func submitGuideFeedback(
+        guideEntry: PanelMatcher.Entry,
+        helpfulness: HelpfulnessRating,
+        reasons: [GuideFeedbackReason],
+        savedTitle: String
+    ) {
+        HapticManager.buttonPress()
+        viewModel.recordGuideFeedback(
+            readId: message.id,
+            aiUsageEventId: message.aiUsageEventId,
+            guideId: guideEntry.profile.id,
+            surface: .panelChat,
+            helpfulness: helpfulness,
+            reasons: reasons
+        )
+        withAnimation(.spring(SimastrySpring.snappy)) {
+            submittedFeedbackTitle = savedTitle
+        }
     }
 }
 

@@ -61,6 +61,78 @@ nonisolated enum MBTIPersonalityType: String, CaseIterable, Identifiable, Codabl
     var id: String { rawValue }
 }
 
+nonisolated enum GuideCalibrationStyleBalance: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
+    case practical
+    case balanced
+    case mystical
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .practical: "Practical"
+        case .balanced: "Balanced"
+        case .mystical: "Mystical"
+        }
+    }
+
+    var promptLine: String {
+        switch self {
+        case .practical: "Prefer practical, concrete advice over symbolic framing."
+        case .balanced: "Balance astrology language with concrete next steps."
+        case .mystical: "Use a little more astrology language while staying practical."
+        }
+    }
+}
+
+nonisolated enum GuideCalibrationDirectness: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
+    case gentle
+    case balanced
+    case direct
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .gentle: "Gentle"
+        case .balanced: "Balanced"
+        case .direct: "Direct"
+        }
+    }
+
+    var promptLine: String {
+        switch self {
+        case .gentle: "Use a softer tone before giving the direct read."
+        case .balanced: "Be warm and clear in equal measure."
+        case .direct: "Be more direct, concise, and action-oriented."
+        }
+    }
+}
+
+nonisolated enum GuideCalibrationDetailLevel: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
+    case short
+    case balanced
+    case detailed
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .short: "Short"
+        case .balanced: "Balanced"
+        case .detailed: "Detailed"
+        }
+    }
+
+    var promptLine: String {
+        switch self {
+        case .short: "Keep guide replies short and immediately usable."
+        case .balanced: "Use normal concise Simastry reply length."
+        case .detailed: "Add a little more reasoning when it helps the user choose."
+        }
+    }
+}
+
 nonisolated struct GuideCalibration: Codable, Equatable, Sendable {
     static let availableTopics: [String] = [
         "relationships",
@@ -80,9 +152,17 @@ nonisolated struct GuideCalibration: Codable, Equatable, Sendable {
     var personalityType: MBTIPersonalityType?
     var topics: [String] = []
     var updatedAt: Date?
+    var styleBalance: GuideCalibrationStyleBalance?
+    var directness: GuideCalibrationDirectness?
+    var detailLevel: GuideCalibrationDetailLevel?
 
     var isDefault: Bool {
-        role == .astrologer && personalityType == nil && topics.isEmpty
+        role == .astrologer
+            && personalityType == nil
+            && topics.isEmpty
+            && (styleBalance == nil || styleBalance == .balanced)
+            && (directness == nil || directness == .balanced)
+            && (detailLevel == nil || detailLevel == .balanced)
     }
 
     var displaySummary: String {
@@ -95,6 +175,15 @@ nonisolated struct GuideCalibration: Codable, Equatable, Sendable {
         }
         if !topics.isEmpty {
             parts.append(topics.prefix(2).joined(separator: ", "))
+        }
+        if let styleBalance, styleBalance != .balanced {
+            parts.append(styleBalance.title)
+        }
+        if let directness, directness != .balanced {
+            parts.append(directness.title)
+        }
+        if let detailLevel, detailLevel != .balanced {
+            parts.append(detailLevel.title)
         }
         return parts.isEmpty ? "Default guide voice" : parts.joined(separator: " • ")
     }
@@ -113,6 +202,15 @@ nonisolated struct GuideCalibration: Codable, Equatable, Sendable {
 
         if !topics.isEmpty {
             lines.append("- Preferred discussion topics: \(topics.joined(separator: ", ")).")
+        }
+        if let styleBalance {
+            lines.append("- Astrology/practical balance: \(styleBalance.title). \(styleBalance.promptLine)")
+        }
+        if let directness {
+            lines.append("- Directness preference: \(directness.title). \(directness.promptLine)")
+        }
+        if let detailLevel {
+            lines.append("- Detail preference: \(detailLevel.title). \(detailLevel.promptLine)")
         }
 
         lines.append("Use calibration only for tone and context. Do not change the guide's zodiac lens, core identity, or safety boundaries.")

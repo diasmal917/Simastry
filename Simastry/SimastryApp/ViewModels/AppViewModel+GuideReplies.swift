@@ -152,7 +152,7 @@ extension AppViewModel {
     func generatePanelReplyViaLLM(
         entry: PanelMatcher.Entry,
         previousGuideName: String?
-    ) async -> String? {
+    ) async -> CompanionReplyResult? {
         guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply else { return nil }
 
         let transcript = sortedPanelMessages.suffix(10).map { message in
@@ -170,7 +170,8 @@ extension AppViewModel {
             user: llmUserContext,
             isPanel: true,
             previousGuideName: previousGuideName,
-            memoryLines: llmMemoryLines
+            memoryLines: llmMemoryLines,
+            feedbackSummary: guideFeedbackPromptSummary(for: entry.profile.id)
         )
         let user = GuideReplyService.threadUserPrompt(
             transcript: Array(transcript),
@@ -178,7 +179,13 @@ extension AppViewModel {
         )
 
         return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
-            try await supabase.invokeCompanionReply(kind: .chat, system: system, user: user, maxTokens: 300)
+            try await supabase.invokeCompanionReplyResult(
+                kind: .chat,
+                feature: .panelChat,
+                system: system,
+                user: user,
+                maxTokens: 300
+            )
         }
     }
 
@@ -213,7 +220,8 @@ extension AppViewModel {
             isPanel: false,
             memoryLines: llmMemoryLines,
             mode: guideChatMode(for: companionId),
-            calibration: GuideCalibrationStore.shared.calibration(for: matched.id)
+            calibration: GuideCalibrationStore.shared.calibration(for: matched.id),
+            feedbackSummary: guideFeedbackPromptSummary(for: matched.id)
         )
         let user = GuideReplyService.threadUserPrompt(
             transcript: Array(transcript),
@@ -221,7 +229,13 @@ extension AppViewModel {
         )
 
         return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
-            try await supabase.invokeCompanionReply(kind: .chat, system: system, user: user, maxTokens: 300)
+            try await supabase.invokeCompanionReply(
+                kind: .chat,
+                feature: .companionChat,
+                system: system,
+                user: user,
+                maxTokens: 300
+            )
         }
     }
 }

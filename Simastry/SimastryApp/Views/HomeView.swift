@@ -137,6 +137,8 @@ struct HomeView: View {
 
                 todayWithGuideCard
 
+                firstReadMemoryCard
+
                 continueStrip
 
                 panelCard
@@ -353,7 +355,9 @@ struct HomeView: View {
                         guideId: guide.id
                     )
                 } label: {
-                    Label("Ask \(guide.name)", systemImage: "message.fill")
+                    Label("Ask what to say", systemImage: "message.fill")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                 }
                 .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
 
@@ -361,12 +365,17 @@ struct HomeView: View {
                     HapticManager.buttonPress()
                     viewModel.draftPredictFromToday(targetSign: guide.sign)
                 } label: {
-                    Image(systemName: SimastryIcon.predict)
-                        .frame(width: 44, height: 44)
+                    Label("Check timing", systemImage: SimastryIcon.predict)
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
                         .simastryGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
-                .accessibilityLabel("Simulate the best tone")
+                .accessibilityLabel("Check timing")
                 .accessibilityHint("Seeds Simulate Someone with \(guide.name)'s \(guide.sign.displayName) lens")
 
                 Button {
@@ -388,6 +397,123 @@ struct HomeView: View {
         .offset(y: appeared ? 0 : 10)
     }
 
+    @ViewBuilder
+    private var firstReadMemoryCard: some View {
+        if let draft = viewModel.firstReadDraft, !draft.isDismissed, let sign = draft.sign {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "text.magnifyingglass")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(sign.color)
+                        .frame(width: 28, height: 28)
+                        .background(sign.color.opacity(0.14), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("YOUR FIRST READ")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.textSecondary)
+                            .tracking(1.4)
+
+                        Text("\(sign.displayName) message · \(draft.tone?.displayName ?? "Read")")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.gold)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        HapticManager.buttonPress()
+                        withAnimation(.spring(SimastrySpring.smooth)) {
+                            viewModel.dismissFirstReadDraft()
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .frame(width: 30, height: 30)
+                            .background(.white.opacity(0.06), in: Circle())
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("Dismiss your first read")
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    if let move = draft.bestNextMove {
+                        HStack(spacing: 7) {
+                            Image(systemName: move.type.systemImage)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(sign.color)
+
+                            Text("Best next move")
+                                .font(SimastryFont.captionSmall.weight(.bold))
+                                .foregroundStyle(SimastryColor.gold)
+
+                            Text(move.type.title)
+                                .font(SimastryFont.captionSmall.weight(.semibold))
+                                .foregroundStyle(SimastryColor.midnight)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(SimastryGradient.gold, in: Capsule())
+                        }
+
+                        Text(move.summary)
+                            .font(SimastryFont.bodyMedium)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(draft.likelyMeaning)
+                            .font(SimastryFont.bodyMedium)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if draft.bestNextMove != nil {
+                        Text(draft.likelyMeaning)
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.analytics.track(
+                        .firstReadContinueGuidesTapped,
+                        params: [
+                            "selectedSign": sign.rawValue,
+                            "bestNextMove": draft.bestNextMove?.type.rawValue ?? "none"
+                        ]
+                    )
+                    viewModel.openPanelChatWithFirstRead(draft)
+                } label: {
+                    Label("Continue this with your guides", systemImage: "message.fill")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+                .buttonStyle(SimastryAccentButtonStyle(accent: sign.color))
+
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: SimastryIcon.privacy)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold.opacity(0.72))
+
+                    Text("Shared with your panel only when you open it.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(16)
+            .surfaceCard(cornerRadius: 22, accent: sign.color.opacity(0.7))
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
+            .accessibilityIdentifier("firstReadMemoryCard")
+        }
+    }
+
     private var continueStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             if #available(iOS 26.0, *) {
@@ -407,7 +533,7 @@ struct HomeView: View {
                 HapticManager.buttonPress()
                 viewModel.startGuideChat(featuredProfile)
             } label: {
-                continuePill(title: "Continue with Nadia", icon: "person.wave.2.fill")
+                continuePill(title: "Open guide chat", icon: "person.wave.2.fill")
             }
             .buttonStyle(SpringPressStyle())
 
@@ -417,7 +543,7 @@ struct HomeView: View {
                     viewModel.peopleDetailRequestPersonId = person.id
                     viewModel.selectedTab = .people
                 } label: {
-                    continuePill(title: "Check \(person.displayName)", icon: "person.text.rectangle.fill")
+                    continuePill(title: "Review \(person.displayName)", icon: "person.text.rectangle.fill")
                 }
                 .buttonStyle(SpringPressStyle())
             }
@@ -481,16 +607,16 @@ struct HomeView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("SIMULATE SOMEONE")
+                Text("PREDICT A REPLY")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.risingViolet)
                     .tracking(1.8)
 
-                Text("Model their next reply")
+                Text("Know how it might land")
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Paste a real conversation, choose their sign, and see the likely tone plus your strongest next move.")
+                Text("Paste a real conversation, choose their sign, and get the likely tone plus your strongest next move.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
@@ -500,7 +626,7 @@ struct HomeView: View {
             simulateSourceHint
 
             NavigationLink(value: HomeRoute.predict) {
-                Label("Simulate someone", systemImage: SimastryIcon.predict)
+                Label("Predict their reply", systemImage: SimastryIcon.predict)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
             .simultaneousGesture(TapGesture().onEnded {
@@ -509,7 +635,7 @@ struct HomeView: View {
             .accessibilityHint("Opens the Simulate Someone tool")
 
             NavigationLink(value: HomeRoute.decode) {
-                Text("Just decode one text \u{2192}")
+                Text("Decode one text instead \u{2192}")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.risingViolet)
                     .frame(maxWidth: .infinity)

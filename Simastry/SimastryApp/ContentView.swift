@@ -13,6 +13,8 @@ struct ContentView: View {
                     LandingView(viewModel: viewModel)
                 case .ageGate:
                     AgeGateView(viewModel: viewModel)
+                case .firstRead:
+                    FirstReadView(viewModel: viewModel)
                 case .birthDetails:
                     BirthDetailsView(viewModel: viewModel)
                 case .signUp:

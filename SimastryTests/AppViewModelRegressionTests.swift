@@ -106,6 +106,160 @@ struct AppViewModelRegressionTests {
         #expect(UserDefaults.standard.data(forKey: pendingChartKey) == nil)
     }
 
+    @Test func firstReadDraftSavesDismissesAndClears() {
+        UserDefaults.standard.removeObject(forKey: FirstReadDraftStore.defaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: FirstReadDraftStore.defaultsKey) }
+
+        let viewModel = AppViewModel()
+        let nextMove = FirstReadBestNextMove(
+            type: .clarify,
+            summary: "Ask one clean question.",
+            timingNote: "One direct reply is enough."
+        )
+        let draft = FirstReadDraft(
+            messageText: "haha yeah maybe, this week is kind of crazy though",
+            sign: .taurus,
+            tone: .confident,
+            likelyMeaning: "A slow, complete reply means they thought about it.",
+            notAssume: "No emoji doesn't mean no feeling.",
+            suggestedReplies: ["Take your time."],
+            bestNextMove: nextMove,
+            createdAt: Date(timeIntervalSince1970: 1_000)
+        )
+
+        viewModel.saveFirstReadDraft(draft)
+        #expect(viewModel.firstReadDraft == draft)
+        #expect(FirstReadDraftStore().load() == draft)
+        #expect(FirstReadDraftStore().load()?.bestNextMove == nextMove)
+
+        viewModel.dismissFirstReadDraft()
+        #expect(viewModel.firstReadDraft?.isDismissed == true)
+        #expect(FirstReadDraftStore().load()?.isDismissed == true)
+
+        viewModel.clearFirstReadDraft()
+        #expect(viewModel.firstReadDraft == nil)
+        #expect(FirstReadDraftStore().load() == nil)
+    }
+
+    @Test func guideFeedbackSavesDedupesClearsAndBuildsPromptSummary() {
+        UserDefaults.standard.removeObject(forKey: GuideFeedbackStore.defaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: GuideFeedbackStore.defaultsKey) }
+
+        let viewModel = AppViewModel()
+        let readId = UUID()
+        let usageEventId = UUID()
+
+        viewModel.recordGuideFeedback(
+            readId: readId,
+            aiUsageEventId: usageEventId,
+            guideId: "taurus-theo",
+            surface: .panelChat,
+            helpfulness: .partlyHelpful,
+            reasons: [.tooVague]
+        )
+        #expect(viewModel.guideFeedbackEvents.count == 1)
+        #expect(viewModel.guideFeedbackEvents.first?.aiUsageEventId == usageEventId)
+        let originalFeedbackId = viewModel.guideFeedbackEvents.first?.id
+        #expect(GuideFeedbackStore().load().count == 1)
+
+        viewModel.recordGuideFeedback(
+            readId: readId,
+            guideId: "taurus-theo",
+            surface: .panelChat,
+            helpfulness: .notHelpful,
+            reasons: [.tooIntense]
+        )
+        #expect(viewModel.guideFeedbackEvents.count == 1)
+        #expect(viewModel.guideFeedbackEvents.first?.id == originalFeedbackId)
+        #expect(viewModel.guideFeedbackEvents.first?.aiUsageEventId == usageEventId)
+        #expect(viewModel.guideFeedbackEvents.first?.reasons == [.tooIntense])
+
+        let summary = viewModel.guideFeedbackPromptSummary(for: "taurus-theo")
+        #expect(summary?.contains("lower the intensity") == true)
+
+        viewModel.clearGuideFeedback()
+        #expect(viewModel.guideFeedbackEvents.isEmpty)
+        #expect(GuideFeedbackStore().load().isEmpty)
+    }
+
+    @Test func guideFeedbackSyncPayloadStoresMetadataOnly() throws {
+        let readId = UUID()
+        let usageEventId = UUID()
+        let feedback = GuideFeedback(
+            id: UUID(),
+            readId: readId,
+            aiUsageEventId: usageEventId,
+            guideId: "sagittarius-nadia",
+            surface: .panelChat,
+            helpfulness: .partlyHelpful,
+            reasons: [.tooLong],
+            freeformNote: nil,
+            createdAt: Date(),
+            syncedAt: nil
+        )
+
+        let payload = GuideFeedbackSyncPayload(feedback: feedback)
+        let data = try JSONEncoder().encode(payload)
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let encoded = String(data: data, encoding: .utf8) ?? ""
+
+        #expect(object["user_id"] == nil)
+        #expect(object["p_ai_usage_event_id"] as? String == usageEventId.uuidString)
+        #expect(object["p_read_id"] as? String == readId.uuidString)
+        #expect(object["p_guide_id"] as? String == "sagittarius-nadia")
+        #expect(object["p_surface"] as? String == FeedbackSurface.panelChat.rawValue)
+        #expect(object["p_helpfulness"] as? String == HelpfulnessRating.partlyHelpful.rawValue)
+        #expect(object["p_reasons"] as? [String] == [GuideFeedbackReason.tooLong.rawValue])
+        #expect(!encoded.contains("prompt"))
+        #expect(!encoded.contains("reply_text"))
+        #expect(!encoded.contains("message_content"))
+    }
+
+    @Test func guideFeedbackTuneOptionsMapToPromptHints() {
+        let expectedReasons: Set<GuideFeedbackReason> = [
+            .tooHarsh,
+            .tooSoft,
+            .tooLong,
+            .tooMystical,
+            .notPractical
+        ]
+        #expect(Set(GuideFeedbackTuneOption.allCases.map(\.feedbackReason)) == expectedReasons)
+
+        let events = GuideFeedbackTuneOption.allCases.map { option in
+            GuideFeedback(
+                id: UUID(),
+                readId: UUID(),
+                aiUsageEventId: nil,
+                guideId: "sagittarius-nadia",
+                surface: .panelChat,
+                helpfulness: .partlyHelpful,
+                reasons: [option.feedbackReason],
+                freeformNote: nil,
+                createdAt: Date(),
+                syncedAt: nil
+            )
+        }
+        let summary = GuideFeedbackPromptBuilder.promptSummary(from: events, guideId: "sagittarius-nadia")
+        #expect(summary?.contains("Recent user feedback") == true)
+        #expect(GuideFeedbackTuneOption.lessMystical.feedbackReason.promptHint == "use less astrology jargon")
+        #expect(GuideFeedbackTuneOption.morePractical.feedbackReason.promptHint == "make the next step more practical")
+        #expect(GuideFeedbackTuneOption.shorter.feedbackReason.promptHint == "keep replies shorter")
+    }
+
+    @Test func panelMessageRoundTripsAIUsageEventId() throws {
+        let usageEventId = UUID()
+        let message = PanelMessage(
+            senderId: "sagittarius-nadia",
+            content: "Short live reply",
+            aiUsageEventId: usageEventId,
+            isRead: true
+        )
+
+        let data = try JSONEncoder().encode(message)
+        let decoded = try JSONDecoder().decode(PanelMessage.self, from: data)
+        #expect(decoded.aiUsageEventId == usageEventId)
+    }
+
     @Test func startPredictionCreatesCompanionDraft() {
         let viewModel = AppViewModel()
         let companion = CompanionData(

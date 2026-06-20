@@ -7,6 +7,7 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
     case emptyResponse
     case blockedByPrivacy(String)
     case serverError(String)
+    case aiUsageLimit(String)
 
     var errorDescription: String? {
         switch self {
@@ -21,6 +22,8 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
         case .blockedByPrivacy(let message):
             message
         case .serverError(let message):
+            message
+        case .aiUsageLimit(let message):
             message
         }
     }
@@ -100,10 +103,17 @@ nonisolated final class PredictionService {
         do {
             text = try await replyChannel(systemPrompt, userPrompt)
         } catch {
-            throw PredictionServiceError.serverError(
-                (error as? LocalizedError)?.errorDescription
-                    ?? "The prediction request failed. Please try again."
+            if let limitError = Self.aiUsageLimitError(from: error) {
+                throw limitError
+            }
+            let result = composeLocalPrediction(
+                request: request,
+                preparedConversation: preparedConversation,
+                preparedQuestion: preparedQuestion,
+                preparedHypotheticalReply: preparedHypotheticalReply
             )
+            save(result)
+            return result
         }
 
         // Parse the structured response from Claude
@@ -136,6 +146,18 @@ nonisolated final class PredictionService {
 
         save(result)
         return result
+    }
+
+    private static func aiUsageLimitError(from error: Error) -> PredictionServiceError? {
+        if let predictionError = error as? PredictionServiceError,
+           case let .aiUsageLimit(message) = predictionError {
+            return .aiUsageLimit(message)
+        }
+        if let supabaseError = error as? SupabaseServiceError,
+           case let .aiUsageLimit(message) = supabaseError {
+            return .aiUsageLimit(message)
+        }
+        return nil
     }
 
     // MARK: - Local Placement-Logic Composer

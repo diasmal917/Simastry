@@ -61,7 +61,7 @@ enum LocalizedStrings {
         // Landing
         "landing.title": "Simastry",
         "landing.subtitle": "Understand people through chart signals",
-        "landing.getStarted": "Get Started",
+        "landing.getStarted": "Get your first read",
         "landing.signIn": "Already have an account? Sign in",
         "landing.terms": "Terms",
         "landing.privacy": "Privacy",
@@ -155,7 +155,7 @@ enum LocalizedStrings {
         // Landing
         "landing.title": "Simastry",
         "landing.subtitle": "Entiende a las personas a través de las estrellas",
-        "landing.getStarted": "Comenzar",
+        "landing.getStarted": "Obtén tu primera lectura",
         "landing.signIn": "¿Ya tienes cuenta? Inicia sesión",
         "landing.terms": "Términos",
         "landing.privacy": "Privacidad",
@@ -249,7 +249,7 @@ enum LocalizedStrings {
         // Landing
         "landing.title": "Simastry",
         "landing.subtitle": "Entenda as pessoas através das estrelas",
-        "landing.getStarted": "Começar",
+        "landing.getStarted": "Receba sua primeira leitura",
         "landing.signIn": "Já tem uma conta? Entrar",
         "landing.terms": "Termos",
         "landing.privacy": "Privacidade",

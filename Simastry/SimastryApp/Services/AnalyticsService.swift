@@ -29,6 +29,22 @@ final class AnalyticsService {
         case companionDeleted = "companion_deleted"
         case companionDetailViewed = "companion_detail_viewed"
 
+        // First Read Activation
+        case firstReadStarted = "first_read_started"
+        case firstReadMessageEntered = "first_read_message_entered"
+        case firstReadSignSelected = "first_read_sign_selected"
+        case firstReadGeneratedTemplate = "first_read_generated_template"
+        case firstReadGeneratedAI = "first_read_generated_ai"
+        case firstReadFailed = "first_read_failed"
+        case firstReadFallbackUsed = "first_read_fallback_used"
+        case firstReadSaved = "first_read_saved"
+        case firstReadContinueGuidesTapped = "first_read_continue_guides_tapped"
+        case panelSeededFromFirstRead = "panel_seeded_from_first_read"
+        case replyOptionCopied = "reply_option_copied"
+        case replyOptionTuned = "reply_option_tuned"
+        case guideFeedbackSubmitted = "guide_feedback_submitted"
+        case firstReadHelpfulnessSubmitted = "first_read_helpfulness_submitted"
+
         // Guides
         case guideViewed = "guide_viewed"
         case guideSaved = "guide_saved"

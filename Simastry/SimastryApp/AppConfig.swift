@@ -19,7 +19,8 @@ nonisolated enum AppConfig {
     static let appStoreURL = websiteURL
 
     static let socialDiscoveryEnabled = true
-    static let llmChatEnabled = false
+    static let llmChatEnabled = true
+    static let roomGuideReplyEnabled = false
 
     static let privacyPolicyURL = URL(string: "https://simastry.vercel.app/privacy")!
     static let termsOfServiceURL = URL(string: "https://simastry.vercel.app/terms")!

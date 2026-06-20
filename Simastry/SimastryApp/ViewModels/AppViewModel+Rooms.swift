@@ -384,6 +384,7 @@ extension AppViewModel {
 
     private func requestRoomGuideReplyIfNeeded(threadId: UUID) async {
         guard AppConfig.llmChatEnabled,
+              AppConfig.roomGuideReplyEnabled,
               let summary = roomSummary(for: threadId),
               !summary.guideMembers.isEmpty else {
             return

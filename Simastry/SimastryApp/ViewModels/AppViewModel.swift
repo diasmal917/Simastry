@@ -209,6 +209,8 @@ class AppViewModel {
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
     var predictionDraft: PredictionDraft?
+    var firstReadDraft: FirstReadDraft?
+    var guideFeedbackEvents: [GuideFeedback] = []
     var referralInfo: ReferralInfo?
 
     // MARK: - Companion DM State
@@ -333,6 +335,8 @@ class AppViewModel {
     private let companionMessagesKey = "simastry_companion_messages"
     private let lastMessageGenerationKey = "simastry_last_message_generation"
     private let lastDiscoveryMessageTimestampKey = "simastry_last_discovery_message_timestamp"
+    private let firstReadDraftStore = FirstReadDraftStore()
+    private let guideFeedbackStore = GuideFeedbackStore()
     private let relationshipPeopleStore = RelationshipPeopleStore()
 
     var hasAuraWalletContext: Bool {
@@ -350,6 +354,8 @@ class AppViewModel {
         todayStore = TodayStore()
         loadReferralInfo()
         loadRelationshipPeople()
+        loadFirstReadDraft()
+        loadGuideFeedback()
         loadPanelMessages()
         loadPanelMemoryNotes()
         loadMoments()
@@ -357,7 +363,12 @@ class AppViewModel {
         // Server-proxied AI channel: predictions route through the
         // companion-reply edge function when Supabase is configured.
         predictionService.replyChannel = { [supabase] system, user in
-            try await supabase.invokeCompanionReply(kind: .prediction, system: system, user: user)
+            try await supabase.invokeCompanionReply(
+                kind: .prediction,
+                feature: .prediction,
+                system: system,
+                user: user
+            )
         }
         predictionService.isRemoteChannelAvailable = { [supabase] in
             supabase.canInvokeCompanionReply
@@ -373,7 +384,7 @@ class AppViewModel {
 
     func completeAgeVerification() {
         verifyAge()
-        currentScreen = .birthDetails
+        currentScreen = .firstRead
     }
 
     // MARK: - Third-Party Data Consent
@@ -417,6 +428,150 @@ class AppViewModel {
     func addRelationshipPerson(_ person: RelationshipPerson) {
         relationshipPeople.append(person)
         saveRelationshipPeople()
+    }
+
+    private func loadFirstReadDraft() {
+        firstReadDraft = firstReadDraftStore.load()
+    }
+
+    private func loadGuideFeedback() {
+        guideFeedbackEvents = guideFeedbackStore.load()
+    }
+
+    func saveFirstReadDraft(_ draft: FirstReadDraft) {
+        firstReadDraft = draft
+        firstReadDraftStore.save(draft)
+    }
+
+    func dismissFirstReadDraft() {
+        guard var draft = firstReadDraft else { return }
+        draft.dismissedAt = Date()
+        saveFirstReadDraft(draft)
+    }
+
+    func clearFirstReadDraft() {
+        firstReadDraft = nil
+        firstReadDraftStore.clear()
+    }
+
+    func recordGuideFeedback(
+        readId: UUID,
+        aiUsageEventId: UUID? = nil,
+        guideId: String?,
+        surface: FeedbackSurface,
+        helpfulness: HelpfulnessRating,
+        reasons: [GuideFeedbackReason] = [],
+        freeformNote: String? = nil
+    ) {
+        let existing = guideFeedbackEvents.first {
+            $0.matches(readId: readId, guideId: guideId, surface: surface)
+        }
+        let event = GuideFeedback(
+            id: existing?.id ?? UUID(),
+            readId: readId,
+            aiUsageEventId: aiUsageEventId ?? existing?.aiUsageEventId,
+            guideId: guideId,
+            surface: surface,
+            helpfulness: helpfulness,
+            reasons: reasons,
+            freeformNote: freeformNote,
+            createdAt: existing?.createdAt ?? Date(),
+            syncedAt: nil
+        )
+
+        guideFeedbackEvents.removeAll {
+            $0.matches(readId: readId, guideId: guideId, surface: surface)
+        }
+        guideFeedbackEvents.append(event)
+        guideFeedbackStore.save(guideFeedbackEvents)
+        syncGuideFeedbackIfPossible(event)
+
+        analytics.track(
+            surface == .firstRead ? .firstReadHelpfulnessSubmitted : .guideFeedbackSubmitted,
+            params: [
+                "surface": surface.rawValue,
+                "guideId": guideId ?? "none",
+                "helpfulness": helpfulness.rawValue,
+                "reasonCount": "\(reasons.count)"
+            ]
+        )
+    }
+
+    func guideFeedbackPromptSummary(for guideId: String?) -> String? {
+        GuideFeedbackPromptBuilder.promptSummary(from: guideFeedbackEvents, guideId: guideId)
+    }
+
+    func refreshGuideFeedbackFromRemote() async {
+        guard isAuthenticated else { return }
+        do {
+            let remoteEvents = try await supabase.fetchGuideFeedback()
+            mergeGuideFeedbackEvents(remoteEvents)
+            syncPendingGuideFeedbackIfPossible()
+        } catch {
+            // Feedback sync is quality-improvement metadata. Local feedback
+            // remains authoritative when the network is unavailable.
+        }
+    }
+
+    func clearGuideFeedback() {
+        guideFeedbackEvents = []
+        guideFeedbackStore.clear()
+    }
+
+    private func syncGuideFeedbackIfPossible(_ event: GuideFeedback) {
+        guard isAuthenticated else { return }
+        Task { [weak self, event] in
+            guard let self else { return }
+            do {
+                try await self.supabase.syncGuideFeedback(event)
+                self.markGuideFeedbackSynced(event.id)
+            } catch {
+                // Keep the local event; a future authenticated launch can
+                // merge/fetch server feedback without blocking the user.
+            }
+        }
+    }
+
+    private func syncPendingGuideFeedbackIfPossible() {
+        guard isAuthenticated else { return }
+        guideFeedbackEvents
+            .filter { $0.syncedAt == nil }
+            .forEach(syncGuideFeedbackIfPossible)
+    }
+
+    private func markGuideFeedbackSynced(_ eventId: UUID) {
+        guard let index = guideFeedbackEvents.firstIndex(where: { $0.id == eventId }) else { return }
+        guideFeedbackEvents[index].syncedAt = Date()
+        guideFeedbackStore.save(guideFeedbackEvents)
+    }
+
+    private func mergeGuideFeedbackEvents(_ remoteEvents: [GuideFeedback]) {
+        guard !remoteEvents.isEmpty else { return }
+        var mergedById = Dictionary(uniqueKeysWithValues: guideFeedbackEvents.map { ($0.id, $0) })
+        for remote in remoteEvents {
+            if let local = mergedById[remote.id], local.syncedAt == nil {
+                var updated = local
+                updated.syncedAt = remote.syncedAt ?? Date()
+                mergedById[remote.id] = updated
+            } else {
+                mergedById[remote.id] = remote
+            }
+        }
+        guideFeedbackEvents = dedupedGuideFeedback(Array(mergedById.values))
+        guideFeedbackStore.save(guideFeedbackEvents)
+    }
+
+    private func dedupedGuideFeedback(_ events: [GuideFeedback]) -> [GuideFeedback] {
+        var bestByKey: [String: GuideFeedback] = [:]
+        for event in events.sorted(by: { $0.createdAt < $1.createdAt }) {
+            let key = [
+                event.readId.uuidString,
+                event.guideId ?? "",
+                event.surface.rawValue
+            ].joined(separator: "|")
+            bestByKey[key] = event
+        }
+        return bestByKey.values.sorted { $0.createdAt < $1.createdAt }
     }
 
     func updateRelationshipPerson(_ person: RelationshipPerson) {
@@ -478,6 +633,9 @@ class AppViewModel {
         if let userId = await supabase.currentUserId {
             CrashReporter.setUser(id: userId.uuidString)
         }
+        Task {
+            await refreshGuideFeedbackFromRemote()
+        }
         await navigateAfterAuth()
     }
 
@@ -494,6 +652,7 @@ class AppViewModel {
                 try await supabase.signInWithApple(idToken: tokenString)
                 isAuthenticated = true
                 analytics.track(.signInApple)
+                Task { await refreshGuideFeedbackFromRemote() }
                 await navigateAfterAuth()
                 showToast("Welcome back", subtitle: "You're signed in with Apple", isError: false)
             } catch {
@@ -533,6 +692,7 @@ class AppViewModel {
             try await supabase.signInWithEmail(email: credentials.email, password: credentials.password)
             isAuthenticated = true
             analytics.track(.signInEmail)
+            Task { await refreshGuideFeedbackFromRemote() }
             await navigateAfterAuth()
             showToast("Welcome back", subtitle: "You're signed in", isError: false)
         } catch {
@@ -579,6 +739,8 @@ class AppViewModel {
         }
         notificationService.clearScheduledNotifications()
         clearPendingOnboardingChart()
+        clearFirstReadDraft()
+        clearGuideFeedback()
         clearAccountScopedLocalState()
         SharedDefaults.clearAll()
         WidgetCenter.shared.reloadAllTimelines()
@@ -681,6 +843,8 @@ class AppViewModel {
 
     private func clearAllLocalData() {
         clearAccountScopedLocalState()
+        clearFirstReadDraft()
+        clearGuideFeedback()
 
         // Clear UserDefaults
         let keys = ["savedGuides", "simastry_companion_messages", "simastry_profile_image_url",
@@ -702,6 +866,8 @@ class AppViewModel {
     func clearLocalDeviceData() {
         notificationService.clearScheduledNotifications()
         clearPendingOnboardingChart()
+        clearFirstReadDraft()
+        clearGuideFeedback()
         clearAccountScopedLocalState()
         SharedDefaults.clearAll()
         WidgetCenter.shared.reloadAllTimelines()
@@ -2581,6 +2747,7 @@ class AppViewModel {
         panelMessages = []
         panelTypingParticipantIds = []
         panelMemoryNotes = []
+        guideFeedbackEvents = []
         moments = []
         momentTypingKeys = []
         momentsStore.deleteAll()
@@ -2617,6 +2784,7 @@ class AppViewModel {
         defaults.removeObject(forKey: Self.panelWelcomeBackDayKey)
         defaults.removeObject(forKey: Self.methodCourseProgressKey)
         defaults.removeObject(forKey: SealedDraftStore.defaultsKey)
+        defaults.removeObject(forKey: GuideFeedbackStore.defaultsKey)
         defaults.removeObject(forKey: Self.guideThreadIdsKey)
         defaults.removeObject(forKey: Self.practiceThreadsKey)
         openThreadRequestCompanionId = nil
@@ -2892,6 +3060,12 @@ extension AppViewModel {
             currentScreen = .birthDetails
             return true
         }
+        if debugPreviewScreen(from: arguments) == "firstRead" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            currentScreen = .firstRead
+            return true
+        }
 
         let userId = UUID(uuidString: "10000000-0000-0000-0000-000000000001") ?? UUID()
         let companionId = UUID(uuidString: "20000000-0000-0000-0000-000000000001") ?? UUID()
@@ -2903,6 +3077,7 @@ extension AppViewModel {
         hasAcceptedThirdPartyConsent = true
         currentScreen = .home
         homeSetupPhase = .complete
+        clearFirstReadDraft()
 
         profile = UserProfile(
             id: userId,
@@ -3015,6 +3190,8 @@ extension AppViewModel {
                 try? await Task.sleep(for: .seconds(1))
                 self.openPredict()
             }
+        case "firstReadHome":
+            seedDebugFirstReadDraft(now: now)
         case "panelChat":
             seedDebugPanelMessages(now: now)
             selectedTab = .messages
@@ -3294,6 +3471,36 @@ extension AppViewModel {
         }
 
         moments = seeded
+    }
+
+    private func seedDebugFirstReadDraft(now: Date) {
+        let sign = ZodiacSign.taurus
+        let element = sign.element.rawValue
+        let likely = AstrologyTemplates.decodeSubtext[element]?.last
+            ?? "A slow, complete reply means they thought about it."
+        let notAssume = AstrologyTemplates.decodeDontReadInto[element]?.last
+            ?? "No emoji doesn't mean no feeling."
+        let replies = AstrologyTemplates.suggestedReplies[sign.displayName] ?? []
+
+        saveFirstReadDraft(
+            FirstReadDraft(
+                messageText: "haha yeah maybe, this week is kind of crazy though",
+                sign: sign,
+                tone: .confident,
+                likelyMeaning: likely,
+                notAssume: notAssume,
+                suggestedReplies: Array(replies.prefix(3)),
+                bestNextMove: FirstReadBestNextMove(
+                    type: .clarify,
+                    summary: "Answer the actual words, then ask one clean question if the timing still feels unclear.",
+                    timingNote: "One direct reply beats several careful hints."
+                ),
+                guideContinuationSeed: "Message read as Confident through Taurus. Best next move: ask one clean question.",
+                safetyLevel: .ok,
+                confidence: 74,
+                createdAt: now.addingTimeInterval(-45 * 60)
+            )
+        )
     }
 
     private func debugPreviewScreen(from arguments: [String]) -> String? {

@@ -53,7 +53,8 @@ nonisolated enum GuideReplyService {
         previousGuideName: String? = nil,
         memoryLines: [String] = [],
         mode: GuideChatMode = .bestFriend,
-        calibration: GuideCalibration? = nil
+        calibration: GuideCalibration? = nil,
+        feedbackSummary: String? = nil
     ) -> String {
         var lines: [String] = []
 
@@ -91,6 +92,10 @@ nonisolated enum GuideReplyService {
 
         if !memoryLines.isEmpty {
             lines.append("Recent context you remember: " + memoryLines.joined(separator: "; ") + ".")
+        }
+
+        if let feedbackSummary, !feedbackSummary.isEmpty {
+            lines.append(feedbackSummary)
         }
 
         lines.append(SimastryVoice.promptBlock)
@@ -262,11 +267,11 @@ nonisolated enum GuideReplyService {
     }
 
     /// Races an async operation against a timeout; nil on timeout or error.
-    static func withTimeout(
+    static func withTimeout<Output: Sendable>(
         seconds: Double,
-        operation: @escaping @Sendable () async throws -> String
-    ) async -> String? {
-        await withTaskGroup(of: String?.self) { group in
+        operation: @escaping @Sendable () async throws -> Output
+    ) async -> Output? {
+        await withTaskGroup(of: Output?.self) { group in
             group.addTask {
                 try? await operation()
             }

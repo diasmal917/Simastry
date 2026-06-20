@@ -38,6 +38,7 @@ extension AppViewModel {
         return await GuideReplyService.withTimeout(seconds: GuideReplyService.deliberateReplyTimeout) { [supabase] in
             try await supabase.invokeCompanionReply(
                 kind: .chat,
+                feature: .playbook,
                 system: prompts.system,
                 user: prompts.user,
                 maxTokens: 200

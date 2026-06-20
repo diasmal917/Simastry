@@ -442,6 +442,9 @@ struct GuideCalibrationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var role: GuideCalibrationRole
     @State private var personalityType: MBTIPersonalityType?
+    @State private var styleBalance: GuideCalibrationStyleBalance
+    @State private var directness: GuideCalibrationDirectness
+    @State private var detailLevel: GuideCalibrationDetailLevel
     @State private var selectedTopics: Set<String>
     @State private var customTopic: String = ""
     @State private var errorMessage: String?
@@ -465,6 +468,9 @@ struct GuideCalibrationSheet: View {
         let saved = GuideCalibrationStore.shared.calibration(for: profile.id)
         _role = State(initialValue: saved.role)
         _personalityType = State(initialValue: saved.personalityType)
+        _styleBalance = State(initialValue: saved.styleBalance ?? .balanced)
+        _directness = State(initialValue: saved.directness ?? .balanced)
+        _detailLevel = State(initialValue: saved.detailLevel ?? .balanced)
         _selectedTopics = State(initialValue: Set(saved.topics))
     }
 
@@ -478,6 +484,7 @@ struct GuideCalibrationSheet: View {
                         header
                         lensSection
                         relationshipSection
+                        styleSection
                         personalitySection
                         topicsSection
                     }
@@ -622,6 +629,54 @@ struct GuideCalibrationSheet: View {
         }
     }
 
+    private var styleSection: some View {
+        calibrationSection(title: "Guide style", systemImage: "slider.horizontal.3") {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Practical / mystical")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 94), spacing: 8)], spacing: 8) {
+                        ForEach(GuideCalibrationStyleBalance.allCases) { option in
+                            calibrationChip(option.title, isActive: styleBalance == option) {
+                                styleBalance = option
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Gentle / direct")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 94), spacing: 8)], spacing: 8) {
+                        ForEach(GuideCalibrationDirectness.allCases) { option in
+                            calibrationChip(option.title, isActive: directness == option) {
+                                directness = option
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Short / detailed")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 94), spacing: 8)], spacing: 8) {
+                        ForEach(GuideCalibrationDetailLevel.allCases) { option in
+                            calibrationChip(option.title, isActive: detailLevel == option) {
+                                detailLevel = option
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var topicsSection: some View {
         calibrationSection(title: "Topics", systemImage: "bubble.left.and.text.bubble.right.fill") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 8)], spacing: 8) {
@@ -762,7 +817,10 @@ struct GuideCalibrationSheet: View {
             role: role,
             personalityType: personalityType,
             topics: builtIn + custom,
-            updatedAt: Date()
+            updatedAt: Date(),
+            styleBalance: styleBalance,
+            directness: directness,
+            detailLevel: detailLevel
         )
 
         GuideCalibrationStore.shared.save(calibration, for: profile.id)

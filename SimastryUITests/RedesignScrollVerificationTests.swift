@@ -82,6 +82,67 @@ final class RedesignScrollVerificationTests: XCTestCase {
         attachShot(app, name: "predict-4-action-privacy")
     }
 
+    @MainActor
+    func testFirstReadAhaFlow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "firstRead"]
+        app.launch()
+        sleep(3)
+
+        attachShot(app, name: "first-read-1-prefilled")
+
+        let decodeButton = app.buttons["Decode my first read"].firstMatch
+        XCTAssertTrue(decodeButton.waitForExistence(timeout: 3))
+        decodeButton.tap()
+        sleep(2)
+
+        XCTAssertTrue(app.staticTexts["WHAT IT LIKELY MEANS"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["BEST NEXT MOVE"].waitForExistence(timeout: 3))
+        attachShot(app, name: "first-read-2-result")
+
+        let continueButton = app.buttons["Save this with my chart"].firstMatch
+        if !continueButton.isHittable {
+            app.swipeUp()
+            sleep(1)
+        }
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(continueButton.isHittable)
+        continueButton.tap()
+        sleep(2)
+
+        XCTAssertTrue(app.staticTexts["What should your guides call you?"].waitForExistence(timeout: 3))
+        attachShot(app, name: "first-read-3-birth-details")
+    }
+
+    @MainActor
+    func testFirstReadMemoryCardOpensPanel() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "firstReadHome"]
+        app.launch()
+        sleep(3)
+
+        XCTAssertTrue(app.staticTexts["YOUR FIRST READ"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Best next move"].waitForExistence(timeout: 3))
+        attachShot(app, name: "first-read-home-1-card")
+
+        let continueButton = app.buttons["Continue this with your guides"].firstMatch
+        if !continueButton.isHittable {
+            app.swipeUp()
+            sleep(1)
+        }
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(continueButton.isHittable)
+        continueButton.tap()
+        sleep(2)
+
+        XCTAssertTrue(app.staticTexts["Your Panel"].waitForExistence(timeout: 3))
+        let seededMessage = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS 'I saved your first read'")
+        ).firstMatch
+        XCTAssertTrue(seededMessage.waitForExistence(timeout: 3))
+        attachShot(app, name: "first-read-home-2-panel")
+    }
+
     /// Today's Tips row sits one swipe below the fold, after the Predict
     /// hero; the Method course card follows the daily read.
     @MainActor

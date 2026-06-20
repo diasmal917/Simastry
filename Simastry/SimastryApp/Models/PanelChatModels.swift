@@ -29,6 +29,7 @@ nonisolated struct PanelMessage: Identifiable, Codable, Equatable, Sendable {
     let senderId: String
     let content: String
     let timestamp: Date
+    let aiUsageEventId: UUID?
     var isRead: Bool
 
     init(
@@ -37,6 +38,7 @@ nonisolated struct PanelMessage: Identifiable, Codable, Equatable, Sendable {
         senderId: String,
         content: String,
         timestamp: Date = Date(),
+        aiUsageEventId: UUID? = nil,
         isRead: Bool
     ) {
         self.id = id
@@ -44,6 +46,7 @@ nonisolated struct PanelMessage: Identifiable, Codable, Equatable, Sendable {
         self.senderId = senderId
         self.content = content
         self.timestamp = timestamp
+        self.aiUsageEventId = aiUsageEventId
         self.isRead = isRead
     }
 }

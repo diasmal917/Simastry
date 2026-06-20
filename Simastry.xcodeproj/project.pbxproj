@@ -85,8 +85,8 @@
 			isa = PBXGroup;
 			children = (
 				105FC57C2E9EAD3100EA8BCF /* Simastry */,
-				105FC58C2E9EAD3200EA8BCF /* SimastryAppTests */,
-				105FC5962E9EAD3200EA8BCF /* SimastryAppUITests */,
+				105FC58C2E9EAD3200EA8BCF /* SimastryTests */,
+				105FC5962E9EAD3200EA8BCF /* SimastryUITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -129,9 +129,9 @@
 			productReference = 105FC57A2E9EAD3100EA8BCF /* Simastry.app */;
 			productType = "com.apple.product-type.application";
 		};
-			105FC5882E9EAD3200EA8BCF /* SimastryTests */ = {
-				isa = PBXNativeTarget;
-				buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "SimastryTests" */;
+		105FC5882E9EAD3200EA8BCF /* SimastryTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "SimastryTests" */;
 			buildPhases = (
 				105FC5852E9EAD3200EA8BCF /* Sources */,
 				105FC5862E9EAD3200EA8BCF /* Frameworks */,
@@ -143,18 +143,18 @@
 				105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC58C2E9EAD3200EA8BCF /* SimastryAppTests */,
+				105FC58C2E9EAD3200EA8BCF /* SimastryTests */,
 			);
-				name = SimastryTests;
-				packageProductDependencies = (
-				);
-				productName = SimastryTests;
-				productReference = 105FC5892E9EAD3200EA8BCF /* SimastryTests.xctest */;
-				productType = "com.apple.product-type.bundle.unit-test";
-			};
-			105FC5922E9EAD3200EA8BCF /* SimastryUITests */ = {
-				isa = PBXNativeTarget;
-				buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "SimastryUITests" */;
+			name = SimastryTests;
+			packageProductDependencies = (
+			);
+			productName = SimastryTests;
+			productReference = 105FC5892E9EAD3200EA8BCF /* SimastryTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		105FC5922E9EAD3200EA8BCF /* SimastryUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "SimastryUITests" */;
 			buildPhases = (
 				105FC58F2E9EAD3200EA8BCF /* Sources */,
 				105FC5902E9EAD3200EA8BCF /* Frameworks */,
@@ -166,15 +166,15 @@
 				105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC5962E9EAD3200EA8BCF /* SimastryAppUITests */,
+				105FC5962E9EAD3200EA8BCF /* SimastryUITests */,
 			);
-				name = SimastryUITests;
-				packageProductDependencies = (
-				);
-				productName = SimastryUITests;
-				productReference = 105FC5932E9EAD3200EA8BCF /* SimastryUITests.xctest */;
-				productType = "com.apple.product-type.bundle.ui-testing";
-			};
+			name = SimastryUITests;
+			packageProductDependencies = (
+			);
+			productName = SimastryUITests;
+			productReference = 105FC5932E9EAD3200EA8BCF /* SimastryUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -207,19 +207,19 @@
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				XX5B1D3E7A9C2F8401E6D5XX /* XCRemoteSwiftPackageReference "SwissEphemeris" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 105FC57B2E9EAD3100EA8BCF /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				105FC5792E9EAD3100EA8BCF /* Simastry */,
-					105FC5882E9EAD3200EA8BCF /* SimastryTests */,
-					105FC5922E9EAD3200EA8BCF /* SimastryUITests */,
-			);
-			packageReferences = (
-				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
-				XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
-				XX5B1D3E7A9C2F8401E6D5XX /* XCRemoteSwiftPackageReference "SwissEphemeris" */,
+				105FC5882E9EAD3200EA8BCF /* SimastryTests */,
+				105FC5922E9EAD3200EA8BCF /* SimastryUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -586,7 +586,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "Simastry" */ = {
+		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "SimastryTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A12E9EAD3200EA8BCF /* Debug */,
@@ -595,7 +595,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "Simastry" */ = {
+		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "SimastryUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
@@ -639,15 +639,15 @@
 			package = XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
 		};
-		XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCat;
-		};
 		XX7F2E8A4D1B3C6E05F9A2XX /* SwissEphemeris */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = XX5B1D3E7A9C2F8401E6D5XX /* XCRemoteSwiftPackageReference "SwissEphemeris" */;
 			productName = SwissEphemeris;
+		};
+		XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

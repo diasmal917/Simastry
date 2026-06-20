@@ -152,7 +152,7 @@ struct PeopleView: View {
                     .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Team Read")
+                    Text("Read this group")
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
@@ -174,7 +174,7 @@ struct PeopleView: View {
             .contentShape(.rect)
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityLabel("Team Read. How this group communicates.")
+        .accessibilityLabel("Read this group. How this group communicates.")
     }
 
     private var peopleSubtitle: String {
@@ -198,7 +198,7 @@ struct PeopleView: View {
                 }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("PRIVATE WORKSPACE")
+                Text("RELATIONSHIP MEMORY")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .tracking(1.4)
@@ -229,9 +229,9 @@ struct PeopleView: View {
             moon: viewModel.userMoonSign,
             rising: viewModel.userRisingSign
         ) {
-            return "\(type.title) • private relationship context"
+            return "\(type.title) • private relationship memory"
         }
-        return "Private, manual relationship context"
+        return "Private, manual relationship memory"
     }
 
     private var allPeopleSection: some View {
@@ -248,7 +248,7 @@ struct PeopleView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("Recently reflected on", systemImage: "bookmark.fill")
+            sectionTitle("Recent reads", systemImage: "bookmark.fill")
             ForEach(recentlyReflectedPeople.prefix(2)) { person in
                 NavigationLink(value: person) {
                     relationshipPersonCard(person)
@@ -266,7 +266,7 @@ struct PeopleView: View {
                     Image(systemName: "moon.haze.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
-                    Text("Needs attention")
+                    Text("Best next move")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .tracking(1.2)

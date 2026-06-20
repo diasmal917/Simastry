@@ -1,0 +1,4 @@
+project_id = "veufwogjdfwjxweftfws"
+
+[functions.companion-reply]
+verify_jwt = true

@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Simastry
 
+@Suite(.serialized)
 @MainActor
 struct PanelMomentsInviteTests {
     private func cleanPanelDefaults() {
@@ -27,6 +28,17 @@ struct PanelMomentsInviteTests {
         profile.tier = "pro"
         viewModel.profile = profile
         return viewModel
+    }
+
+    private func waitUntil(
+        timeout: TimeInterval = 7,
+        _ predicate: @MainActor () -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if predicate() { return }
+            try await Task.sleep(for: .milliseconds(100))
+        }
     }
 
     // MARK: - PanelMatcher
@@ -110,6 +122,41 @@ struct PanelMomentsInviteTests {
         cleanPanelDefaults()
     }
 
+    @Test func openPanelChatWithFirstReadPostsOnceAndRoutes() {
+        cleanPanelDefaults()
+        defer { cleanPanelDefaults() }
+
+        let viewModel = seededViewModel()
+        viewModel.panelMessages = []
+        let draft = FirstReadDraft(
+            messageText: "haha yeah maybe, this week is kind of crazy though",
+            sign: .sagittarius,
+            tone: .confident,
+            likelyMeaning: "A blunt line from a fire sign is usually exactly what it says.",
+            notAssume: "Punctuation isn't a clue here.",
+            suggestedReplies: ["No rush on this."],
+            bestNextMove: FirstReadBestNextMove(
+                type: .replyNow,
+                summary: "Match the directness with one clean reply.",
+                timingNote: nil
+            )
+        )
+
+        viewModel.openPanelChatWithFirstRead(draft)
+
+        #expect(viewModel.selectedTab == .messages)
+        #expect(viewModel.panelChatRouteRequest == 1)
+        #expect(viewModel.panelMessages.count == 1)
+        #expect(viewModel.panelMessages.first?.senderId == "sagittarius-nadia")
+        #expect(viewModel.panelMessages.first?.content.contains("I saved your first read") == true)
+        #expect(viewModel.panelMessages.first?.content.contains("read as Confident") == true)
+        #expect(viewModel.panelMessages.first?.content.contains("Best next move") == true)
+
+        viewModel.openPanelChatWithFirstRead(draft)
+        #expect(viewModel.panelMessages.count == 1)
+        #expect(viewModel.panelChatRouteRequest == 2)
+    }
+
     @Test func shareCardCopyCoversAllSignsWithoutPronouns() {
         for sign in ZodiacSign.allCases {
             let copy = CommunicationTemplates.shareCardCopy[sign]
@@ -151,9 +198,9 @@ struct PanelMomentsInviteTests {
             #expect(decoded.count == 1)
         }
 
-        // First staggered guide reply lands ~1.3s after sending; generous
-        // margin because the suite's async tests share the main actor.
-        try await Task.sleep(for: .milliseconds(3_200))
+        try await waitUntil {
+            viewModel.panelMessages.count >= 2
+        }
         #expect(viewModel.panelMessages.count >= 2)
         #expect(viewModel.panelMessages.last?.senderId != PanelParticipant.localUserId)
     }
@@ -200,8 +247,9 @@ struct PanelMomentsInviteTests {
         viewModel.seedPanelWelcomeIfNeeded()
         viewModel.seedPanelWelcomeIfNeeded()
 
-        // Welcome posts stagger over ~3.5s; the content guard dedupes the double call.
-        try await Task.sleep(for: .milliseconds(4_400))
+        try await waitUntil {
+            viewModel.panelMessages.count == viewModel.panelGuideEntries.count
+        }
         #expect(viewModel.panelMessages.count == viewModel.panelGuideEntries.count)
     }
 
