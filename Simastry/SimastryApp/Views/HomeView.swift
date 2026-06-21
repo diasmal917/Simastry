@@ -805,9 +805,12 @@ struct HomeView: View {
             })
             .accessibilityLabel("Decode one received text")
         }
-        .padding(18)
+        .padding(SimastryRadius.large)
         .heroGlass(SimastryColor.risingViolet)
+        .softShadow(.hero)
+        .padding(.vertical, SimastrySpacing.xxs)
         .opacity(appeared ? 1 : 0)
+        .scaleEffect(appeared ? 1 : 0.94)
         .offset(y: appeared ? 0 : 12)
         .zIndex(2)
     }

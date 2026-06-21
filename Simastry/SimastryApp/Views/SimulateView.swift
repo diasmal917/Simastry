@@ -358,8 +358,9 @@ struct SimulateView: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
-                    .stroke(isSelected ? category.accentColor.opacity(0.58) : Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(isSelected ? category.accentColor.opacity(0.58) : SimastryColor.hairline, lineWidth: 1)
             }
+            .selectionElevation(isSelected, accent: category.accentColor)
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Ask about \(category.title)")
