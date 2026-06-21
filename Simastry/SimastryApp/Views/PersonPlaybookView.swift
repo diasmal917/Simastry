@@ -208,7 +208,7 @@ struct PersonPlaybookSection: View {
 
             HStack(spacing: 5) {
                 Image(systemName: llmScript == nil ? "iphone" : "sparkles")
-                    .font(.system(size: 9, weight: .medium))
+                    .font(SimastryFont.microMedium)
                 Text(llmScript == nil ? "Placement logic, on device" : "AI-assisted, chart-grounded")
                     .font(SimastryFont.captionSmall)
             }

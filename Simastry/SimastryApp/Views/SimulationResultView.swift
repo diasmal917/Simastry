@@ -630,7 +630,7 @@ struct SimulationResultView: View {
     private var aiDisclosureBadge: some View {
         HStack(spacing: 6) {
             Image(systemName: result.isLocalComposition == true ? "scope" : "cpu")
-                .font(.system(size: 10, weight: .medium))
+                .font(SimastryFont.microMedium)
                 .foregroundStyle(SimastryColor.deepMuted)
 
             Text(result.isLocalComposition == true

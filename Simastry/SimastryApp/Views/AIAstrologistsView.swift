@@ -187,7 +187,7 @@ struct AIAstrologistsView: View {
                 HStack(spacing: 4) {
                     ZodiacIconView(sign: profile.sign, size: 11, showsGlow: false)
                     Text(profile.sign.displayName)
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(SimastryFont.microSemibold)
                         .foregroundStyle(profile.sign.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -211,9 +211,9 @@ struct AIAstrologistsView: View {
     private var calibratedCardBadge: some View {
         HStack(spacing: 3) {
             Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 7, weight: .bold))
+                .font(SimastryFont.microBold)
             Text("Calibrated")
-                .font(.system(size: 8, weight: .semibold))
+                .font(SimastryFont.microSemibold)
         }
         .foregroundStyle(SimastryColor.midnight)
         .padding(.horizontal, 6)

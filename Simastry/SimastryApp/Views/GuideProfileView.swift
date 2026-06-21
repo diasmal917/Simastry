@@ -234,7 +234,7 @@ struct GuideProfileView: View {
 
                 HStack(spacing: 5) {
                     Image(systemName: SimastryIcon.timing)
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(SimastryFont.microSemibold)
                         .foregroundStyle(SimastryColor.gold)
                     Text("Always available · replies instantly")
                         .font(SimastryFont.captionSmall)
@@ -416,7 +416,7 @@ struct GuideProfileView: View {
     private func calibratedBadge(summary: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 10, weight: .semibold))
+                .font(SimastryFont.microSemibold)
             Text("Calibrated")
                 .font(SimastryFont.labelSmall)
             Text(summary)
@@ -996,7 +996,7 @@ struct GramPostDetailSheet: View {
                         .frame(width: 26, height: 26)
                         .overlay {
                             Image(systemName: "sparkles")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(SimastryFont.microBold)
                                 .foregroundStyle(SimastryColor.gold)
                         }
 

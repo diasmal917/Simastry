@@ -352,7 +352,7 @@ struct CompanionDetailSheet: View {
             ) {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 10))
+                        .font(SimastryFont.micro)
                         .foregroundStyle(tint.opacity(0.4))
                         .padding(.top, 2)
                     Text(pairingInsight)

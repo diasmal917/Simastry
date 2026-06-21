@@ -213,7 +213,7 @@ struct SavedGuidesView: View {
                             .foregroundStyle(guide.sunSign.color)
 
                         Image(systemName: guide.category.icon)
-                            .font(.system(size: 10))
+                            .font(SimastryFont.micro)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                 }

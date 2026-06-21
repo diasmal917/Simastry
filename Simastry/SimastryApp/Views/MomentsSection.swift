@@ -99,7 +99,7 @@ struct MomentsSection: View {
 
             HStack(spacing: 5) {
                 Image(systemName: SimastryIcon.privacy)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(SimastryFont.microMedium)
                 Text("Moments stay on this device.")
                     .font(SimastryFont.captionSmall)
             }
@@ -158,9 +158,9 @@ struct MomentsSection: View {
                 if !moment.comments.isEmpty {
                     HStack(spacing: 3) {
                         Image(systemName: SimastryIcon.quote)
-                            .font(.system(size: 8, weight: .bold))
+                            .font(SimastryFont.microBold)
                         Text("\(moment.comments.count)")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(SimastryFont.microBold)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
@@ -454,7 +454,7 @@ struct MomentDetailSheet: View {
 
                     if case .guide = comment.authorKind {
                         Text("AI")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(SimastryFont.microBold)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1.5)
@@ -515,7 +515,7 @@ struct MomentDetailSheet: View {
             .frame(width: 26, height: 26)
             .overlay {
                 Image(systemName: SimastryIcon.astrologers)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(SimastryFont.microBold)
                     .foregroundStyle(SimastryColor.gold)
             }
             .accessibilityHidden(true)

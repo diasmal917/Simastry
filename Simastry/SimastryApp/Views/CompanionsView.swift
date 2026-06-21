@@ -232,7 +232,7 @@ struct CompanionsView: View {
     private func castSignalPill(systemImage: String, text: String, tint: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
-                .font(.system(size: 10, weight: .semibold))
+                .font(SimastryFont.microSemibold)
                 .foregroundStyle(tint)
 
             Text(text)

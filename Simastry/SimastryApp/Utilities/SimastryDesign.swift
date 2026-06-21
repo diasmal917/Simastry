@@ -1,6 +1,16 @@
 import SwiftUI
 
 struct SimastrySpacing {
+    /// 4pt base grid. Prefer these tokens over ad-hoc literals so vertical
+    /// rhythm and horizontal gutters stay consistent across screens.
+    static let xxs: CGFloat = 4
+    static let xs: CGFloat = 8
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 20
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+
     static let tabBarClearance: CGFloat = 72
 }
 
@@ -509,6 +519,14 @@ struct SimastryFont {
 
     // Tracking/uppercase labels
     static let overline = Font.system(.caption2, weight: .semibold)
+
+    // Micro — capsule badges, status pills, sign tags. Mapped to caption2 so
+    // they honor Dynamic Type and never render below the ~11pt legibility
+    // floor (these replace raw sub-11pt .system(size:) calls in UI chrome).
+    static let micro = Font.system(.caption2)
+    static let microMedium = Font.system(.caption2, weight: .medium)
+    static let microSemibold = Font.system(.caption2, weight: .semibold)
+    static let microBold = Font.system(.caption2, weight: .bold)
 }
 
 struct SkeletonShimmer: ViewModifier {

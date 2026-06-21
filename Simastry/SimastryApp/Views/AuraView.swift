@@ -787,7 +787,7 @@ private struct AuraShareCard: View {
     private func metric(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .semibold))
+                .font(SimastryFont.microSemibold)
                 .tracking(0.6)
                 .foregroundStyle(SimastryColor.deepMuted)
             Text(value)

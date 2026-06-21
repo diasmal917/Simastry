@@ -700,7 +700,7 @@ struct LandingView: View {
 
             HStack(spacing: 6) {
                 Image(systemName: SimastryIcon.privacy)
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(SimastryFont.microSemibold)
                 Text(localization.string("landing.privateGuides"))
                     .font(SimastryFont.captionSmall.weight(.semibold))
                 Text("·")
@@ -947,9 +947,9 @@ struct LandingView: View {
             if window.isHero {
                 HStack(spacing: 4) {
                     Image(systemName: SimastryIcon.method)
-                        .font(.system(size: 8, weight: .bold))
+                        .font(SimastryFont.microBold)
                     Text("SIMASTRY METHOD")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(SimastryFont.microBold)
                         .tracking(0.8)
                 }
                 .foregroundStyle(SimastryColor.goldLight)
@@ -1214,7 +1214,7 @@ struct LandingView: View {
 
             HStack(spacing: 4) {
                 Image(systemName: SimastryIcon.privacy)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(SimastryFont.microMedium)
                 Text(localization.string("landing.privacyBadge"))
                     .font(SimastryFont.captionSmall)
             }
@@ -1225,7 +1225,7 @@ struct LandingView: View {
     private var methodCredentialLine: some View {
         HStack(spacing: 6) {
             Image(systemName: SimastryIcon.method)
-                .font(.system(size: 10, weight: .semibold))
+                .font(SimastryFont.microSemibold)
                 .foregroundStyle(SimastryColor.goldLight)
 
             Text(localization.string("landing.methodCredential"))

@@ -279,10 +279,15 @@ struct PeopleView: View {
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(reading.whatToAvoid)
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .fixedSize(horizontal: false, vertical: true)
+                (
+                    Text("Avoid: ")
+                        .font(SimastryFont.caption.weight(.semibold))
+                        .foregroundStyle(SimastryColor.gold.opacity(0.85))
+                    + Text(reading.whatToAvoid)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                )
+                .fixedSize(horizontal: false, vertical: true)
             }
             .padding(18)
             .tintedGlass(SimastryColor.gold, cornerRadius: 22)
@@ -481,7 +486,7 @@ struct RelationshipPersonDetailView: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: status.systemImage)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(SimastryFont.microSemibold)
 
                 Text(status.title)
                     .font(SimastryFont.labelSmall)
@@ -980,7 +985,7 @@ struct RelationshipPersonDetailView: View {
                     ForEach(Array(guide.tips.prefix(3).enumerated()), id: \.offset) { _, tip in
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "sparkle")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(SimastryFont.microSemibold)
                                 .foregroundStyle(SimastryColor.gold)
                                 .padding(.top, 4)
                             Text(tip)

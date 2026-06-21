@@ -434,7 +434,7 @@ struct SimulateView: View {
 
             HStack(spacing: 5) {
                 Image(systemName: SimastryIcon.privacy)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(SimastryFont.microMedium)
                 Text("Screenshots are read with Apple Vision on this device — the image never leaves your iPhone.")
                     .font(SimastryFont.captionSmall)
                     .fixedSize(horizontal: false, vertical: true)
@@ -668,7 +668,7 @@ struct SimulateView: View {
     private var privacyNote: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: "lock.fill")
-                .font(.system(size: 10, weight: .semibold))
+                .font(SimastryFont.microSemibold)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .padding(.top, 2)
 

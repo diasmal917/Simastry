@@ -76,7 +76,7 @@ struct FirstReadChoiceView: View {
     @State private var appeared = false
 
     private let cardCornerRadius: CGFloat = 22
-    private let cardPadding: CGFloat = 17
+    private let cardPadding: CGFloat = SimastrySpacing.md
     private let iconContainerSize: CGFloat = 46
     private let arrowColumnWidth: CGFloat = 24
 
@@ -85,12 +85,12 @@ struct FirstReadChoiceView: View {
             CelestialBackground()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    Spacer().frame(height: 12)
+                VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
+                    Spacer().frame(height: SimastrySpacing.sm)
 
                     header
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: SimastrySpacing.sm) {
                         ForEach(firstReadEntryOptions) { option in
                             entryCard(option)
                         }
@@ -100,7 +100,7 @@ struct FirstReadChoiceView: View {
 
                     Spacer().frame(height: 42)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, SimastrySpacing.lg)
                 .padding(.bottom, 58)
             }
             .scrollIndicators(.hidden)

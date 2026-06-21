@@ -350,7 +350,7 @@ struct HomeView: View {
                 }
             }
 
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
                 Button {
                     HapticManager.buttonPress()
                     viewModel.openPanelChatWithTip(
@@ -360,39 +360,39 @@ struct HomeView: View {
                     )
                 } label: {
                     Label("Ask what to say", systemImage: "message.fill")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
                 }
                 .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
 
-                Button {
-                    HapticManager.buttonPress()
-                    viewModel.draftPredictFromToday(targetSign: guide.sign)
-                } label: {
-                    Label("Check timing", systemImage: SimastryIcon.predict)
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 12)
-                        .simastryGlassPill(interactive: true)
-                }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityLabel("Check timing")
-                .accessibilityHint("Seeds Ask the Future with \(guide.name)'s \(guide.sign.displayName) lens")
+                HStack(spacing: 8) {
+                    Button {
+                        HapticManager.buttonPress()
+                        viewModel.draftPredictFromToday(targetSign: guide.sign)
+                    } label: {
+                        Label("Check timing", systemImage: SimastryIcon.predict)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .simastryGlassPill(interactive: true)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("Check timing")
+                    .accessibilityHint("Seeds Ask the Future with \(guide.name)'s \(guide.sign.displayName) lens")
 
-                Button {
-                    HapticManager.buttonPress()
-                    viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: guide.id))
-                    viewModel.showToast("Saved for later", subtitle: "Use Work saved note when you want to talk it through.", isError: false)
-                } label: {
-                    Image(systemName: "bookmark.fill")
-                        .frame(width: 44, height: 44)
-                        .simastryGlassPill(interactive: true)
+                    Button {
+                        HapticManager.buttonPress()
+                        viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: guide.id))
+                        viewModel.showToast("Saved for later", subtitle: "Find it in your saved notes.", isError: false)
+                    } label: {
+                        Image(systemName: "bookmark.fill")
+                            .frame(width: 50, height: 50)
+                            .simastryGlassPill(interactive: true)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel("Save today's \(guide.name) prompt")
                 }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityLabel("Save today's \(guide.name) prompt")
             }
         }
         .padding(16)
@@ -404,25 +404,26 @@ struct HomeView: View {
     private var dailyDeciderCard: some View {
         let latest = viewModel.todayStore.latestDailyDecision
 
-        return VStack(alignment: .leading, spacing: 13) {
-            HStack(alignment: .top, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
                 Image(systemName: "wand.and.stars")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 32, height: 32)
                     .background(SimastryColor.celestialBlue.opacity(0.14), in: Circle())
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("DAILY DECIDER")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.celestialBlue)
                         .tracking(1.4)
 
-                    Text("One small choice, less overthinking.")
-                        .font(SimastryFont.bodyLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if latest == nil {
+                        Text("Can't decide? Tap one below.")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer()
@@ -430,11 +431,6 @@ struct HomeView: View {
 
             if let latest {
                 dailyDecisionResult(latest)
-            } else {
-                Text("Pick a lane and let today answer quickly.")
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .fixedSize(horizontal: false, vertical: true)
             }
 
             ScrollView(.horizontal) {
@@ -464,15 +460,6 @@ struct HomeView: View {
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.textSecondary)
                     .tracking(1.2)
-
-                if decision.isFallback {
-                    Text("LOCAL")
-                        .font(SimastryFont.captionSmall.weight(.semibold))
-                        .foregroundStyle(SimastryColor.deepMuted)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(SimastryColor.offWhite.opacity(0.08), in: Capsule())
-                }
             }
 
             Text(decision.pick)
@@ -600,7 +587,7 @@ struct HomeView: View {
                         }
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(SimastryFont.microBold)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .frame(width: 30, height: 30)
                             .background(.white.opacity(0.06), in: Circle())
@@ -669,7 +656,7 @@ struct HomeView: View {
 
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: SimastryIcon.privacy)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(SimastryFont.microSemibold)
                         .foregroundStyle(SimastryColor.gold.opacity(0.72))
 
                     Text("Shared with your panel only when you open it.")
@@ -729,7 +716,7 @@ struct HomeView: View {
                         guideId: savedPrompt.guideId
                     )
                 } label: {
-                    continuePill(title: "Work saved note", icon: "bookmark.fill")
+                    continuePill(title: "Open saved note", icon: "bookmark.fill")
                 }
                 .buttonStyle(SpringPressStyle())
                 .accessibilityHint("Opens the saved Today prompt with its guide")
@@ -788,7 +775,7 @@ struct HomeView: View {
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Ask what is opening next and get a short answer, likely window, and one practical move.")
+                Text("Ask one question — get a short answer, a likely window, and one move.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
@@ -831,7 +818,7 @@ struct HomeView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(SimastryColor.risingViolet.opacity(0.9))
 
-            Text("Uses your chart, optional relationship context, and conversation text when you ask about replies.")
+            Text("Reads your chart and the details you add.")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.deepMuted)
                 .lineLimit(2)
@@ -1192,7 +1179,7 @@ struct HomeView: View {
                                 Spacer()
 
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(SimastryFont.microSemibold)
                                     .foregroundStyle(SimastryColor.mutedSilver)
                             }
                             .padding(10)
@@ -1491,9 +1478,9 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 5) {
                         Image(systemName: SimastryIcon.method)
-                            .font(.system(size: 9, weight: .bold))
+                            .font(SimastryFont.microBold)
                         Text("SIMASTRY METHOD")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(SimastryFont.microBold)
                             .tracking(1.0)
                     }
                     .foregroundStyle(SimastryColor.goldLight)

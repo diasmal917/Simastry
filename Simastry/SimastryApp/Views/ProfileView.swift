@@ -236,7 +236,7 @@ struct ProfileView: View {
                 if let communicationType {
                     HStack(spacing: 6) {
                         Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(SimastryFont.microSemibold)
                             .foregroundStyle(communicationType.accent)
                         Text(communicationType.title)
                             .font(SimastryFont.labelSmall)
@@ -890,7 +890,7 @@ struct ProfileView: View {
                     ForEach(Array(guide.tips.enumerated()), id: \.offset) { _, tip in
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "sparkle")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(SimastryFont.microSemibold)
                                 .foregroundStyle(SimastryColor.gold)
                                 .padding(.top, 3)
                             Text(tip)
@@ -1158,7 +1158,7 @@ struct ProfileView: View {
     private func unlimitedChip(_ text: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: "infinity")
-                .font(.system(size: 10, weight: .bold))
+                .font(SimastryFont.microBold)
             Text(text)
                 .font(SimastryFont.labelSmall)
         }

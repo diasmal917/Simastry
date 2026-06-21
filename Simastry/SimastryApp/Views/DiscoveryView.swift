@@ -954,7 +954,7 @@ struct ProfileDetailSheet: View {
                 if let insight {
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "sparkle")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(SimastryFont.microSemibold)
                             .foregroundStyle(SimastryColor.gold)
                             .padding(.top, 3)
                         Text(insight)

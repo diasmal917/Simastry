@@ -175,13 +175,13 @@ nonisolated final class DailyDecisionService {
             return [
                 (
                     "Wear a clean base, one soft layer, and comfortable shoes.",
-                    "Today favors calm confidence over effort. A simple silhouette gives your energy room to lead.",
+                    "Simple beats fussy today — let the basics carry it.",
                     "Choose the shoes first, then build everything around them.",
                     nil
                 ),
                 (
                     "Pick one color that makes you feel awake and keep the rest simple.",
-                    "The chart leans toward clarity today. One intentional accent will do more than a complicated look.",
+                    "One good accent does more than a busy outfit today.",
                     "Put on the accent piece before you can second-guess it.",
                     nil
                 )
@@ -190,13 +190,13 @@ nonisolated final class DailyDecisionService {
             return [
                 (
                     "Choose something warm, familiar, and grounding.",
-                    "Your day needs steadiness more than novelty. A simple meal you already trust is the move.",
+                    "Steady beats new today — eat something you already trust.",
                     "Pick the easiest warm option available and add water before anything else.",
                     "Follow any allergies, medical guidance, or dietary needs first."
                 ),
                 (
                     "Go with a low-drama comfort meal.",
-                    "The signal today is about reducing friction. Food does not need to become another decision spiral.",
+                    "Keep it easy — food doesn't need to be another decision today.",
                     "Choose the place or plate you would recommend to a tired friend.",
                     "This is a vibe suggestion, not medical or nutrition advice."
                 )
@@ -205,13 +205,13 @@ nonisolated final class DailyDecisionService {
             return [
                 (
                     "Do the thing with the clearest next step.",
-                    "Momentum matters more than the perfect priority today. The chart rewards movement once the first domino falls.",
+                    "Momentum beats the perfect plan today — just start.",
                     "Set a 20-minute timer and start before you optimize.",
                     nil
                 ),
                 (
                     "Focus on the task that removes future noise.",
-                    "Today is built for clearing one loop, not opening five new ones.",
+                    "Close one loop today instead of opening five.",
                     "Write the one sentence that defines done.",
                     nil
                 )
@@ -220,13 +220,13 @@ nonisolated final class DailyDecisionService {
             return [
                 (
                     "Send one warm check-in with no hidden agenda.",
-                    "Your social signal works best when it is light and clean. Connection does not need a whole production.",
+                    "Keep it light today — connection doesn't need a production.",
                     "Text the person whose reply would make you smile, then let it breathe.",
                     nil
                 ),
                 (
                     "Choose the plan that leaves you with energy afterward.",
-                    "Today favors sustainable closeness. You do not need to prove availability to be loved.",
+                    "Pick the closeness that leaves you with energy.",
                     "Say yes to one thing and no to the extra add-on.",
                     nil
                 )
@@ -235,13 +235,13 @@ nonisolated final class DailyDecisionService {
             return [
                 (
                     "Keep it warm, short, and specific.",
-                    "The tone today lands better when it has room around it. Too much explanation may blur the point.",
+                    "A little room lands better today — don't over-explain.",
                     "Send one clean sentence and skip the apology preamble.",
                     nil
                 ),
                 (
                     "Ask the direct question kindly.",
-                    "Today rewards clarity without pressure. A question beats a paragraph.",
+                    "A clear question beats a paragraph today.",
                     "Draft it once, remove one extra sentence, then send.",
                     nil
                 )
@@ -250,13 +250,13 @@ nonisolated final class DailyDecisionService {
             return [
                 (
                     "Go relaxed, curious, and a little playful.",
-                    "The read today favors presence over performance. Let the chemistry answer instead of auditioning for it.",
+                    "Be present, not impressive — let the chemistry do the work.",
                     "Pick one easy question you actually want to know.",
                     nil
                 ),
                 (
                     "Choose simple plans with good lighting and low pressure.",
-                    "Today wants chemistry to have space. A calm setting will tell you more than a high-stakes setup.",
+                    "A calm setting tells you more than a big production.",
                     "Choose the place that makes conversation easiest.",
                     nil
                 )

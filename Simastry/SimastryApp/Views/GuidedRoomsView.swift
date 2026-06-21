@@ -717,7 +717,7 @@ private struct GuidedRoomMessageBubble: View {
 
                         if isFromCurrentUser {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(SimastryFont.microBold)
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.62))
                         }
                     }
