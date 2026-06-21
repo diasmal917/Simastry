@@ -63,7 +63,7 @@ struct AgeGateView: View {
                 } else {
                     // Buttons
                     VStack(spacing: 14) {
-                        GoldButton(localization.string("ageGate.over13")) {
+                        GoldButton(localization.string("ageGate.over18")) {
                             HapticManager.buttonPress()
                             withAnimation(.spring(SimastrySpring.smooth)) {
                                 viewModel.completeAgeVerification()
@@ -76,7 +76,7 @@ struct AgeGateView: View {
                                 showUnderageMessage = true
                             }
                         } label: {
-                            Text(localization.string("ageGate.under13"))
+                            Text(localization.string("ageGate.under18"))
                                 .font(SimastryFont.bodySmall)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                                 .frame(maxWidth: .infinity)

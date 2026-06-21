@@ -934,6 +934,16 @@ private struct MessageDetailSheet: View {
                         .foregroundStyle(SimastryColor.offWhite)
                         .lineLimit(1)
 
+                    if message.source == .companion {
+                        Text("AI")
+                            .font(SimastryFont.microBold)
+                            .foregroundStyle(SimastryColor.midnight)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(SimastryColor.gold.opacity(0.92), in: Capsule())
+                            .accessibilityLabel("AI guide")
+                    }
+
                     if let zodiacSign {
                         ZodiacIconView(sign: zodiacSign, size: 18, showsGlow: false)
                     }
@@ -977,7 +987,7 @@ private struct MessageDetailSheet: View {
         if message.source == .discovery {
             return "\(message.companionSign) lens • private chat"
         }
-        return "\(message.companionSign) Guide • Simastry Method"
+        return "\(message.companionSign) AI Guide • Simastry Method"
     }
 
     /// Bond level with this guide — companion threads only.

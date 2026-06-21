@@ -5,6 +5,9 @@ struct ContentModerationService {
     struct ModerationResult {
         let isAllowed: Bool
         let reason: String?
+        /// True when the block was triggered by self-harm/crisis language, so
+        /// the UI can surface a tappable 988 lifeline instead of a plain toast.
+        var isCrisis: Bool = false
     }
 
     // Keywords/patterns that indicate harmful content
@@ -29,7 +32,8 @@ struct ContentModerationService {
             if lowered.contains(pattern) {
                 return ModerationResult(
                     isAllowed: false,
-                    reason: "This conversation contains sensitive content that we can't process. If you or someone you know is in crisis, please contact the 988 Suicide & Crisis Lifeline (call or text 988)."
+                    reason: "This conversation contains sensitive content that we can't process. If you or someone you know is in crisis, please contact the 988 Suicide & Crisis Lifeline (call or text 988).",
+                    isCrisis: true
                 )
             }
         }

@@ -22,6 +22,8 @@ struct SimulateView: View {
     @State private var appeared: Bool = false
     @State private var phaseTask: Task<Void, Never>?
     @State private var showTopUpSheet = false
+    @State private var showCrisisAlert = false
+    @Environment(\.openURL) private var openURL
 
     private var suggestionChips: [String] {
         selectedCategory.suggestedQuestions
@@ -214,6 +216,17 @@ struct SimulateView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showTopUpSheet) {
             PredictionTopUpView(viewModel: viewModel)
+        }
+        .alert("If you're in crisis", isPresented: $showCrisisAlert) {
+            Button("Call 988") {
+                if let url = URL(string: "tel://988") { openURL(url) }
+            }
+            Button("Text 988") {
+                if let url = URL(string: "sms:988") { openURL(url) }
+            }
+            Button("Close", role: .cancel) {}
+        } message: {
+            Text("Simastry is an AI astrology app and can't help with this. The 988 Suicide & Crisis Lifeline has trained counselors available free, confidential, 24/7. Call or text 988.")
         }
         .sheet(item: $selectedResult) { result in
             SimulationResultView(
@@ -964,7 +977,11 @@ struct SimulateView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let moderation = ContentModerationService.moderateConversation(moderationInput)
         if !moderation.isAllowed {
-            viewModel.showToast("Unable to process", subtitle: moderation.reason ?? "Unable to process this content", isError: true)
+            if moderation.isCrisis {
+                showCrisisAlert = true
+            } else {
+                viewModel.showToast("Unable to process", subtitle: moderation.reason ?? "Unable to process this content", isError: true)
+            }
             return
         }
 
@@ -1045,7 +1062,11 @@ struct SimulateView: View {
 
         let moderation = ContentModerationService.moderateConversation(alternativeReply)
         if !moderation.isAllowed {
-            viewModel.showToast("Unable to process", subtitle: moderation.reason ?? "Unable to process this content", isError: true)
+            if moderation.isCrisis {
+                showCrisisAlert = true
+            } else {
+                viewModel.showToast("Unable to process", subtitle: moderation.reason ?? "Unable to process this content", isError: true)
+            }
             return
         }
 

@@ -165,7 +165,7 @@ struct AIAstrologistsView: View {
                         )
                     }
                     .overlay(alignment: .topTrailing) {
-                        OnlineStatusDot()
+                        AIGuideBadge()
                             .padding(7)
                     }
                     .overlay(alignment: .topLeading) {
@@ -224,35 +224,20 @@ struct AIAstrologistsView: View {
 
 }
 
-private struct OnlineStatusDot: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isPulsing = false
-
-    private let green = Color(red: 0.31, green: 0.94, blue: 0.52)
-
+/// Compact "AI" tag shown on every guide poster so it is always clear the
+/// companions are AI, never a live human. Replaces the old presence dot.
+private struct AIGuideBadge: View {
     var body: some View {
-        ZStack {
-            Circle()
-                .strokeBorder(green.opacity(isPulsing ? 0.10 : 0.36), lineWidth: 1)
-                .frame(width: isPulsing ? 13 : 8, height: isPulsing ? 13 : 8)
-
-            Circle()
-                .fill(green)
-                .frame(width: 6, height: 6)
-                .overlay {
-                    Circle()
-                        .strokeBorder(.black.opacity(0.58), lineWidth: 0.8)
-                }
-                .shadow(color: green.opacity(isPulsing ? 0.22 : 0.42), radius: isPulsing ? 3 : 2, y: 1)
-        }
-        .frame(width: 14, height: 14)
-        .accessibilityHidden(true)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                isPulsing = true
+        Text("AI")
+            .font(SimastryFont.microBold)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.black.opacity(0.55), in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(.white.opacity(0.45), lineWidth: 0.6)
             }
-        }
+            .accessibilityLabel("AI guide")
     }
 }
 
