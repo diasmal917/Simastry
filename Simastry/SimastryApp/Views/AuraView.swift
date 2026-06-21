@@ -638,7 +638,7 @@ private struct AuraShareSheet: View {
                         }
                         .tint(SimastryColor.gold)
                         .padding(16)
-                        .simastryGlass(cornerRadius: 18)
+                        .simastryGlass(cornerRadius: SimastryRadius.large)
 
                         if let shareImage {
                             ShareLink(

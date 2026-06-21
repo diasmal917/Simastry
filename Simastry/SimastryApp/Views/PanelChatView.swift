@@ -196,7 +196,7 @@ struct PanelChatView: View {
             }
         }
         .padding(12)
-        .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.7))
+        .surfaceCard(cornerRadius: SimastryRadius.large, accent: SimastryColor.gold.opacity(0.7))
         .accessibilityElement(children: .combine)
     }
 
@@ -231,9 +231,9 @@ struct PanelChatView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(SimastryColor.gold.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .background(SimastryColor.gold.opacity(0.08), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
+            RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous)
                 .strokeBorder(SimastryColor.gold.opacity(0.15), lineWidth: 0.6)
         }
     }
@@ -394,19 +394,19 @@ private struct PanelMessageBubble: View {
             .frame(maxWidth: 276, alignment: isFromCurrentUser ? .trailing : .leading)
             .background {
                 if isFromCurrentUser {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
                                     SimastryColor.celestialBlue.opacity(0.96),
-                                    Color(red: 56/255, green: 110/255, blue: 205/255)
+                                    SimastryColor.linkBlue
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                 } else {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [SimastryColor.surfaceElevated, SimastryColor.surface],
@@ -415,7 +415,7 @@ private struct PanelMessageBubble: View {
                             )
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                            RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                                 .stroke((guideEntry?.sign.color ?? .white).opacity(0.14), lineWidth: 0.7)
                         }
                 }

@@ -197,9 +197,9 @@ struct AIAstrologistsView: View {
                 .background(profile.sign.color.opacity(0.10))
             }
             .frame(width: width)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous)
                     .strokeBorder(profile.sign.color.opacity(0.30), lineWidth: 0.7)
             }
             .contentShape(.rect)

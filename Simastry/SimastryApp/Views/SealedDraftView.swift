@@ -108,7 +108,7 @@ struct SealedDraftView: View {
                 .foregroundStyle(SimastryColor.offWhite)
                 .frame(minHeight: 110)
                 .padding(10)
-                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)

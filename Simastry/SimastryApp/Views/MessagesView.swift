@@ -1187,19 +1187,19 @@ private struct DMMessageBubble: View {
             .frame(maxWidth: 276, alignment: isFromCurrentUser ? .trailing : .leading)
             .background {
                 if isFromCurrentUser {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
                                     SimastryColor.celestialBlue.opacity(0.96),
-                                    Color(red: 56/255, green: 110/255, blue: 205/255)
+                                    SimastryColor.linkBlue
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                 } else {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [SimastryColor.surfaceElevated, SimastryColor.surface],
@@ -1208,7 +1208,7 @@ private struct DMMessageBubble: View {
                             )
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                            RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                                 .stroke(.white.opacity(0.09), lineWidth: 0.7)
                         }
                 }

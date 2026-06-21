@@ -107,7 +107,7 @@ struct SimastrySettingsView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 42, height: 42)
-                    .simastryGlass(cornerRadius: 14)
+                    .simastryGlass(cornerRadius: SimastryRadius.medium)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Settings")
@@ -268,7 +268,7 @@ struct SimastrySettingsView: View {
                         .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                         .frame(width: 40, height: 40)
-                        .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: 13))
+                        .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: SimastryRadius.small))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Read-only wallet for Aura")
@@ -308,9 +308,9 @@ struct SimastrySettingsView: View {
                         .autocorrectionDisabled()
                         .lineLimit(2...4)
                         .padding(12)
-                        .background(Color.white.opacity(0.05), in: .rect(cornerRadius: 14))
+                        .background(Color.white.opacity(0.05), in: .rect(cornerRadius: SimastryRadius.medium))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 14)
+                            RoundedRectangle(cornerRadius: SimastryRadius.medium)
                                 .stroke(walletBorderColor, lineWidth: 0.8)
                         }
 

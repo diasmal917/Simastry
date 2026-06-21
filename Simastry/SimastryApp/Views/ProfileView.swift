@@ -263,7 +263,7 @@ struct ProfileView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 42, height: 42)
-                    .simastryGlass(cornerRadius: 14)
+                    .simastryGlass(cornerRadius: SimastryRadius.medium)
             }
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel("Open settings")
@@ -1046,7 +1046,7 @@ struct ProfileView: View {
                     }
                 }
                 .padding(18)
-                .simastryGlass(cornerRadius: 18)
+                .simastryGlass(cornerRadius: SimastryRadius.large)
             }
             .buttonStyle(SpringPressStyle())
         }
@@ -1132,7 +1132,7 @@ struct ProfileView: View {
                 }
             }
             .padding(20)
-            .simastryGlass(cornerRadius: 18)
+            .simastryGlass(cornerRadius: SimastryRadius.large)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 25)
@@ -1432,9 +1432,9 @@ struct ProfileView: View {
                         .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                         .frame(width: 44, height: 44)
-                        .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: 14))
+                        .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: SimastryRadius.medium))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14)
+                            RoundedRectangle(cornerRadius: SimastryRadius.medium)
                                 .stroke(SimastryColor.gold.opacity(0.15), lineWidth: 0.5)
                         )
 
@@ -1752,7 +1752,7 @@ struct ProfileView: View {
                     .foregroundStyle(.red.opacity(0.8))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .simastryGlass(cornerRadius: 14)
+                    .simastryGlass(cornerRadius: SimastryRadius.medium)
             }
             .buttonStyle(SpringPressStyle())
 

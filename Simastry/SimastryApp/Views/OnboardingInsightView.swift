@@ -313,7 +313,7 @@ struct OnboardingInsightView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard(cornerRadius: 18)
+        .surfaceCard(cornerRadius: SimastryRadius.large)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Your \(role) in \(sign.displayName). \(line)")
     }

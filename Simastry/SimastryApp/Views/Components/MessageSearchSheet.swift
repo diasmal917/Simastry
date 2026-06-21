@@ -639,7 +639,7 @@ private struct MessageSearchGuideRow: View {
                 .foregroundStyle(SimastryColor.deepMuted)
         }
         .padding(14)
-        .simastryGlass(cornerRadius: 18)
+        .simastryGlass(cornerRadius: SimastryRadius.large)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(profile.name), \(profile.sign.displayName) guide. \(GuideDirectoryCopy.specialty(for: profile))")
     }
@@ -814,7 +814,7 @@ private struct MessageSearchUserRow: View {
                 .foregroundStyle(SimastryColor.deepMuted)
         }
         .padding(14)
-        .simastryGlass(cornerRadius: 18)
+        .simastryGlass(cornerRadius: SimastryRadius.large)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(profile.displayName), \(profile.signSummary)")
     }

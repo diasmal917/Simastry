@@ -146,7 +146,7 @@ struct ModeSelectionView: View {
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(accent)
                         .frame(width: 40, height: 40)
-                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
 
                     Spacer()
 

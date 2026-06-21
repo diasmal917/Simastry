@@ -269,7 +269,7 @@ struct GuideProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
     }
 
     private var bioBlock: some View {
@@ -364,9 +364,9 @@ struct GuideProfileView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(SimastryColor.gold.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(SimastryColor.gold.opacity(0.06), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
+            RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous)
                 .strokeBorder(SimastryColor.gold.opacity(0.14), lineWidth: 0.6)
         }
     }
@@ -621,7 +621,7 @@ struct GuideCalibrationSheet: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
 
             Text("Optional. This shapes the guide's language without changing their zodiac lens.")
                 .font(SimastryFont.captionSmall)
@@ -1006,7 +1006,7 @@ struct GramPostDetailSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(12)
-                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
             }
 
             HStack(spacing: 8) {

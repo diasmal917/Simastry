@@ -127,7 +127,7 @@ struct PredictionTopUpView: View {
                     if let savings = pack.savings {
                         Text(savings)
                             .font(SimastryFont.captionSmall)
-                            .foregroundStyle(isBestValue ? Color(red: 20/255, green: 18/255, blue: 12/255) : SimastryColor.gold)
+                            .foregroundStyle(isBestValue ? SimastryColor.textOnGold : SimastryColor.gold)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(

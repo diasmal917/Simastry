@@ -204,9 +204,9 @@ struct BirthDetailsView: View {
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 18)
                 .padding(.horizontal, 20)
-                .background(.white.opacity(0.07), in: .rect(cornerRadius: 18))
+                .background(.white.opacity(0.07), in: .rect(cornerRadius: SimastryRadius.large))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .stroke(
                             nameFocused ? SimastryColor.gold.opacity(0.5) : .white.opacity(0.14),
                             lineWidth: 1

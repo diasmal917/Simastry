@@ -143,7 +143,7 @@ struct MomentsSection: View {
                 .accessibilityLabel("Moment\(moment.caption.map { ": \($0)" } ?? ""), \(moment.comments.count) comments")
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
     }
 
     @ViewBuilder
@@ -472,7 +472,7 @@ struct MomentDetailSheet: View {
             Spacer(minLength: 0)
         }
         .padding(11)
-        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(comment.authorName): \(comment.content)")
     }

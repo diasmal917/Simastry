@@ -255,10 +255,10 @@ struct SimulationShareCardView: View {
         .padding(.vertical, isStoryFormat ? 12 : 8)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: SimastryRadius.medium)
                 .fill(.white.opacity(0.06))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: SimastryRadius.medium)
                         .stroke(SimastryColor.gold.opacity(0.12), lineWidth: 0.5)
                 )
         )

@@ -233,7 +233,7 @@ struct HomeView: View {
                         // Grid skeleton
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                             ForEach(0..<4, id: \.self) { _ in
-                                RoundedRectangle(cornerRadius: 18)
+                                RoundedRectangle(cornerRadius: SimastryRadius.large)
                                     .fill(SimastryColor.surface)
                                     .frame(height: 104)
                             }
@@ -753,7 +753,7 @@ struct HomeView: View {
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet)
                     .frame(width: 44, height: 44)
-                    .background(SimastryColor.risingViolet.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(SimastryColor.risingViolet.opacity(0.16), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
 
                 Spacer()
 
@@ -1511,9 +1511,9 @@ struct HomeView: View {
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: [profile.sign.color.opacity(0.40), .white.opacity(0.08)],
@@ -1523,7 +1523,7 @@ struct HomeView: View {
                         lineWidth: 0.9
                     )
             }
-            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous))
             .matchedTransitionSource(id: profile.id, in: panelHeroNamespace)
         }
         .buttonStyle(SpringPressStyle())

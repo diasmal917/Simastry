@@ -183,9 +183,9 @@ struct SignSelectionView: View {
             content()
         }
         .padding(16)
-        .simastryGlass(cornerRadius: 18)
+        .simastryGlass(cornerRadius: SimastryRadius.large)
         .overlay {
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: SimastryRadius.large)
                 .stroke(role.accentColor.opacity(0.14), lineWidth: 1)
         }
     }

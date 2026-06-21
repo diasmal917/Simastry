@@ -224,7 +224,7 @@ struct CareerReadView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(bossSign.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(bossSign.color.opacity(0.08), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

@@ -332,7 +332,7 @@ struct DiscoveryView: View {
             Spacer()
         }
         .padding(12)
-        .simastryGlassLight(cornerRadius: 14)
+        .simastryGlassLight(cornerRadius: SimastryRadius.medium)
     }
 
     private func uploadSelectedAvatar(_ item: PhotosPickerItem?) async {
@@ -376,7 +376,7 @@ struct DiscoveryView: View {
                 .lineSpacing(2)
         }
         .padding(14)
-        .simastryGlassLight(cornerRadius: 14)
+        .simastryGlassLight(cornerRadius: SimastryRadius.medium)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(viewModel.isDiscoverable
                             ? "Privacy notice: Your display name and signs are visible to others."

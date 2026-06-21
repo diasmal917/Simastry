@@ -108,7 +108,7 @@ struct CommunicationGuideView: View {
                                 }
                             }
                             .padding(12)
-                            .simastryGlass(cornerRadius: 14)
+                            .simastryGlass(cornerRadius: SimastryRadius.medium)
                         }
                     }
                     .padding(18)

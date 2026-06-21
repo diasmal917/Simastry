@@ -155,7 +155,7 @@ struct FirstReadChoiceView: View {
                             option.id == .predict
                                 ? AnyShapeStyle(SimastryGradient.gold)
                                 : AnyShapeStyle(option.accent.opacity(0.14)),
-                            in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous)
                         )
 
                     VStack(alignment: .leading, spacing: 5) {
@@ -349,9 +349,9 @@ struct FirstPredictionView: View {
                 .tint(SimastryColor.gold)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 13)
-                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous)
                         .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 0.8)
                 }
 
@@ -703,7 +703,7 @@ struct DecodeTextView: View {
                 .foregroundStyle(SimastryColor.offWhite)
                 .frame(minHeight: 88)
                 .padding(10)
-                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
                 .overlay(alignment: .topLeading) {
                     if messageText.isEmpty {
                         Text("Paste their message…")
@@ -1039,7 +1039,7 @@ struct FirstReadView: View {
                 .foregroundStyle(SimastryColor.offWhite)
                 .frame(minHeight: 92)
                 .padding(10)
-                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
                 .overlay(alignment: .topLeading) {
                     if messageText.isEmpty {
                         Text(localization.string("firstRead.placeholder"))

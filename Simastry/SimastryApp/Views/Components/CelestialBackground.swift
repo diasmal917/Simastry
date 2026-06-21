@@ -6,7 +6,7 @@ struct CelestialBackground: View {
             LinearGradient(
                 colors: [
                     SimastryColor.midnight,
-                    Color(red: 15/255, green: 22/255, blue: 41/255),
+                    SimastryColor.nightHorizon,
                     SimastryColor.midnight
                 ],
                 startPoint: .top,

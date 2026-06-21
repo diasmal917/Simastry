@@ -574,7 +574,7 @@ struct LandingView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
                     .padding(12)
-                    .tintedGlass(accent, cornerRadius: 18)
+                    .tintedGlass(accent, cornerRadius: SimastryRadius.large)
                 }
             }
         }
@@ -659,9 +659,9 @@ struct LandingView: View {
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(13)
-                .background(accent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(accent, in: RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .strokeBorder(.white.opacity(0.12), lineWidth: 0.7)
                 }
             if alignment == .leading { Spacer(minLength: 36) }

@@ -29,10 +29,10 @@ struct TypingDotsBubble<Avatar: View>: View {
             .padding(.horizontal, 15)
             .padding(.vertical, 13)
             .background {
-                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                     .fill(SimastryColor.surface.opacity(0.94))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                             .stroke(.white.opacity(0.08), lineWidth: 0.7)
                     }
             }

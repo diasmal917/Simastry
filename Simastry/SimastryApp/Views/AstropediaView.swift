@@ -271,7 +271,7 @@ struct AstropediaView: View {
                         .font(.title3)
                         .foregroundStyle(SimastryColor.risingViolet)
                         .frame(width: 42, height: 42)
-                        .background(SimastryColor.risingViolet.opacity(0.16), in: .rect(cornerRadius: 14))
+                        .background(SimastryColor.risingViolet.opacity(0.16), in: .rect(cornerRadius: SimastryRadius.medium))
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(todayInsightTitle)
@@ -554,7 +554,7 @@ struct AstropediaView: View {
                             HStack(spacing: 12) {
                                 ZodiacIconView(sign: lookup.sign, size: 28, showsGlow: false)
                                     .frame(width: 42, height: 42)
-                                    .background(.white.opacity(0.05), in: .rect(cornerRadius: 14))
+                                    .background(.white.opacity(0.05), in: .rect(cornerRadius: SimastryRadius.medium))
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("\(lookup.sign.displayName) • \(lookup.topic.title)")
@@ -573,7 +573,7 @@ struct AstropediaView: View {
                                     .foregroundStyle(SimastryColor.gold)
                             }
                             .padding(16)
-                            .simastryGlass(cornerRadius: 18)
+                            .simastryGlass(cornerRadius: SimastryRadius.large)
                         }
                         .buttonStyle(SpringPressStyle())
                     }
@@ -676,7 +676,7 @@ struct AstropediaView: View {
                                     .multilineTextAlignment(.leading)
                             }
                             .padding(16)
-                            .simastryGlass(cornerRadius: 18)
+                            .simastryGlass(cornerRadius: SimastryRadius.large)
                         }
                         .buttonStyle(SpringPressStyle())
                     }
@@ -711,9 +711,9 @@ struct AstropediaView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
-            .background(selectedTopic == topic ? topic.accent.opacity(0.12) : .white.opacity(0.05), in: .rect(cornerRadius: 18))
+            .background(selectedTopic == topic ? topic.accent.opacity(0.12) : .white.opacity(0.05), in: .rect(cornerRadius: SimastryRadius.large))
             .overlay {
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: SimastryRadius.large)
                     .stroke(selectedTopic == topic ? topic.accent.opacity(0.4) : .white.opacity(0.08), lineWidth: 1)
             }
         }
@@ -1213,7 +1213,7 @@ private struct CommunicationGuideSignCard: View {
         VStack(spacing: 10) {
             ZodiacIconView(sign: sign, size: 38, showsGlow: isSelected)
                 .frame(width: 52, height: 52)
-                .background(sign.color.opacity(isSelected ? 0.22 : 0.12), in: .rect(cornerRadius: 18))
+                .background(sign.color.opacity(isSelected ? 0.22 : 0.12), in: .rect(cornerRadius: SimastryRadius.large))
 
             Text(sign.displayName)
                 .font(.subheadline.weight(.semibold))

@@ -184,7 +184,7 @@ struct PracticeChatView: View {
                 .padding(.horizontal, 13)
                 .padding(.vertical, 10)
                 .background {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .fill(message.isUser
                               ? AnyShapeStyle(SimastryColor.gold.opacity(0.22))
                               : AnyShapeStyle(Color.white.opacity(0.07)))
@@ -206,7 +206,7 @@ struct PracticeChatView: View {
                 .lineLimit(1...4)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous))
                 .focused($composerFocused)
 
             Button {

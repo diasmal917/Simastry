@@ -354,10 +354,10 @@ struct SimulateView: View {
                 isSelected
                     ? category.accentColor.opacity(0.18)
                     : Color.white.opacity(0.045),
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                in: RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                     .stroke(isSelected ? category.accentColor.opacity(0.58) : Color.white.opacity(0.08), lineWidth: 1)
             }
         }
@@ -371,7 +371,7 @@ struct SimulateView: View {
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(selectedCategory.accentColor)
                 .frame(width: 42, height: 42)
-                .background(selectedCategory.accentColor.opacity(0.14), in: .rect(cornerRadius: 14))
+                .background(selectedCategory.accentColor.opacity(0.14), in: .rect(cornerRadius: SimastryRadius.medium))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(selectedCategory.title)
@@ -442,7 +442,7 @@ struct SimulateView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.6))
+            .surfaceCard(cornerRadius: SimastryRadius.large, accent: SimastryColor.risingViolet.opacity(0.6))
             .accessibilityLabel("Paste your conversation")
 
             HStack(spacing: 5) {
@@ -562,7 +562,7 @@ struct SimulateView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .foregroundStyle(SimastryColor.offWhite)
-                .surfaceCard(cornerRadius: 18, accent: selectedCategory.accentColor.opacity(0.6))
+                .surfaceCard(cornerRadius: SimastryRadius.large, accent: selectedCategory.accentColor.opacity(0.6))
 
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
@@ -815,7 +815,7 @@ struct SimulateView: View {
             .contentMargins(.horizontal, 0)
         }
         .padding(16)
-        .simastryGlass(cornerRadius: 18)
+        .simastryGlass(cornerRadius: SimastryRadius.large)
     }
 
     private func historyRow(_ item: PredictionResult) -> some View {
@@ -862,7 +862,7 @@ struct SimulateView: View {
                         .foregroundStyle(confidenceColor(item.confidence))
                 }
                 .padding(16)
-                .simastryGlass(cornerRadius: 18)
+                .simastryGlass(cornerRadius: SimastryRadius.large)
             }
             .buttonStyle(SpringPressStyle())
 
@@ -876,7 +876,7 @@ struct SimulateView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.red.opacity(0.9))
                     .frame(width: 40, height: 40)
-                    .simastryGlass(cornerRadius: 14)
+                    .simastryGlass(cornerRadius: SimastryRadius.medium)
             }
             .buttonStyle(SpringPressStyle())
         }

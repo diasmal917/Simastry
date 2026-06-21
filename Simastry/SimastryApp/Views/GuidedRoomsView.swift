@@ -270,7 +270,7 @@ struct GuidedRoomCreateView: View {
                 .lineSpacing(3)
         }
         .padding(14)
-        .surfaceCard(cornerRadius: 18)
+        .surfaceCard(cornerRadius: SimastryRadius.large)
     }
 
     private func toggleProfile(_ profile: SocialProfile) {
@@ -553,7 +553,7 @@ struct GuidedRoomChatView: View {
             }
         }
         .padding(12)
-        .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.55))
+        .surfaceCard(cornerRadius: SimastryRadius.large, accent: SimastryColor.gold.opacity(0.55))
         .accessibilityElement(children: .combine)
     }
 
@@ -726,10 +726,10 @@ private struct GuidedRoomMessageBubble: View {
                 .padding(.vertical, 10)
                 .frame(maxWidth: 276, alignment: isFromCurrentUser ? .trailing : .leading)
                 .background {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                         .fill(bubbleFill)
                         .overlay {
-                            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                            RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                                 .stroke(message.senderKind == .guide ? SimastryColor.gold.opacity(0.20) : .white.opacity(0.09), lineWidth: 0.7)
                         }
                 }
@@ -757,7 +757,7 @@ private struct GuidedRoomMessageBubble: View {
             return LinearGradient(
                 colors: [
                     SimastryColor.celestialBlue.opacity(0.96),
-                    Color(red: 56/255, green: 110/255, blue: 205/255)
+                    SimastryColor.linkBlue
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -850,7 +850,7 @@ private struct GuidedRoomActivityMessageCard: View {
         }
         .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.55))
+        .surfaceCard(cornerRadius: SimastryRadius.large, accent: SimastryColor.risingViolet.opacity(0.55))
         .accessibilityElement(children: .combine)
     }
 }

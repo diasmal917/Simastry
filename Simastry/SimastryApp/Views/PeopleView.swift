@@ -149,7 +149,7 @@ struct PeopleView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 42, height: 42)
-                    .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Read this group")
@@ -191,9 +191,9 @@ struct PeopleView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 42, height: 42)
-                .background(SimastryColor.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .background(SimastryColor.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous)
                         .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 0.6)
                 }
 
@@ -330,7 +330,7 @@ struct PeopleView: View {
             ZodiacIconView(sign: person.sunSign, size: 34, showsGlow: false)
         }
         .padding(16)
-        .glossyCard(cornerRadius: 18)
+        .glossyCard(cornerRadius: SimastryRadius.large)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -612,7 +612,7 @@ struct RelationshipPersonDetailView: View {
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(9)
-            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
             .contentShape(.rect)
         }
         .buttonStyle(SpringPressStyle())
@@ -717,9 +717,9 @@ struct RelationshipPersonDetailView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous)
                     .strokeBorder(.white.opacity(0.08), lineWidth: 0.6)
             }
 
@@ -789,7 +789,7 @@ struct RelationshipPersonDetailView: View {
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                         .frame(width: 40, height: 40)
-                        .background(SimastryColor.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        .background(SimastryColor.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Couple Read")
@@ -810,7 +810,7 @@ struct RelationshipPersonDetailView: View {
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(14)
-                .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.6))
+                .surfaceCard(cornerRadius: SimastryRadius.large, accent: SimastryColor.gold.opacity(0.6))
                 .contentShape(.rect)
             }
             .buttonStyle(SpringPressStyle())
@@ -1079,7 +1079,7 @@ struct RelationshipPersonDetailView: View {
                     .frame(minHeight: 110)
                     .scrollContentBackground(.hidden)
                     .padding(10)
-                    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Button {
@@ -1185,7 +1185,7 @@ struct RelationshipPersonDetailView: View {
             }
         }
         .padding(16)
-        .glossyCard(cornerRadius: 18)
+        .glossyCard(cornerRadius: SimastryRadius.large)
     }
 
     private func sectionTitle(_ title: String, systemImage: String) -> some View {
@@ -1427,7 +1427,7 @@ struct AddRelationshipPersonView: View {
                 .frame(minHeight: 96)
                 .scrollContentBackground(.hidden)
                 .padding(10)
-                .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
                 .foregroundStyle(SimastryColor.offWhite)
                 .glossyCard(cornerRadius: 20)
         }

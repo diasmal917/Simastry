@@ -58,6 +58,32 @@ struct SimastryColor {
     static let textSecondary = mutedSilver
     static let textTertiary = deepMuted
     static let accentPredict = risingViolet
+
+    // Shared brand literals that were previously duplicated across views.
+    /// Messaging/link blue — outgoing-bubble and inline-link accent.
+    static let linkBlue = Color(red: 56/255, green: 110/255, blue: 205/255)
+    /// Dark ink used for text/icons sitting on a gold fill.
+    static let textOnGold = Color(red: 20/255, green: 18/255, blue: 12/255)
+    /// Mid stop of the celestial gradient; reused by share cards.
+    static let nightHorizon = Color(red: 15/255, green: 22/255, blue: 41/255)
+
+    // Canonical element palette — single source of truth (was scattered per view).
+    static let elementFire = Color(red: 232/255, green: 132/255, blue: 90/255)
+    static let elementEarth = Color(red: 212/255, green: 175/255, blue: 55/255)
+    static let elementAir = Color(red: 192/255, green: 132/255, blue: 216/255)
+    static let elementWater = Color(red: 74/255, green: 144/255, blue: 217/255)
+
+    // Relationship tiers.
+    static let relationshipAcquaintance = Color(red: 180/255, green: 190/255, blue: 205/255)
+    static let relationshipFamiliar = Color(red: 192/255, green: 205/255, blue: 225/255)
+
+    // Semantic overlays — replace ad-hoc `.white/.black.opacity(...)` literals so
+    // hairlines, faint fills, and scrims stay consistent across screens.
+    static let hairlineFaint = Color.white.opacity(0.05)
+    static let hairline = Color.white.opacity(0.08)
+    static let hairlineBright = Color.white.opacity(0.16)
+    static let fillFaint = Color.white.opacity(0.05)
+    static let scrim = Color.black.opacity(0.35)
 }
 
 enum SimastryGradient {
@@ -484,6 +510,115 @@ enum SimastryRadius {
     static let panel: CGFloat = 28
 }
 
+/// Fixed SF Symbol point sizes so icon chrome stays on a single scale and is
+/// never confused with the text type ramp in `SimastryFont`.
+enum SimastryIconSize {
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 22
+    static let xl: CGFloat = 30
+}
+
+/// Three-step elevation scale. Use via `.softShadow(_:)` so every surface casts
+/// a shadow that matches its tier instead of an ad-hoc radius/opacity pair.
+enum SimastryElevation {
+    case pill
+    case card
+    case hero
+
+    var radius: CGFloat {
+        switch self {
+        case .pill: return 12
+        case .card: return 16
+        case .hero: return 22
+        }
+    }
+
+    var yOffset: CGFloat {
+        switch self {
+        case .pill: return 6
+        case .card: return 8
+        case .hero: return 12
+        }
+    }
+
+    var opacity: Double {
+        switch self {
+        case .pill: return 0.22
+        case .card: return 0.30
+        case .hero: return 0.38
+        }
+    }
+}
+
+extension View {
+    /// Tier-consistent soft shadow. Replaces scattered `.shadow(...)` literals.
+    func softShadow(_ level: SimastryElevation) -> some View {
+        shadow(color: .black.opacity(level.opacity), radius: level.radius, y: level.yOffset)
+    }
+
+    /// Consistent circular avatar border + soft accent glow. Use on guide/person
+    /// portraits so every avatar reads as part of the same system.
+    func avatarRing(_ accent: Color, lineWidth: CGFloat = 1.1) -> some View {
+        overlay(Circle().strokeBorder(accent.opacity(0.58), lineWidth: lineWidth))
+            .shadow(color: accent.opacity(0.22), radius: 8, y: 3)
+    }
+
+    /// Lifts a selected card/chip (scale + translate + accent shadow) so
+    /// selection reads as tactile elevation, not just a color change.
+    func selectionElevation(_ isSelected: Bool, accent: Color) -> some View {
+        scaleEffect(isSelected ? 1.04 : 1.0)
+            .offset(y: isSelected ? -2 : 0)
+            .shadow(color: accent.opacity(isSelected ? 0.18 : 0), radius: isSelected ? 10 : 0, y: isSelected ? 4 : 0)
+            .animation(.spring(SimastrySpring.snappy), value: isSelected)
+    }
+}
+
+/// Unified empty-state card — one visual language for "nothing here yet" across
+/// Messages, Companions, Saved, etc. Built on the shared glass surface.
+struct SimastryEmptyState: View {
+    let icon: String
+    let title: String
+    let message: String
+    var actionLabel: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(spacing: SimastrySpacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
+                .foregroundStyle(SimastryColor.mutedSilver.opacity(0.7))
+
+            VStack(spacing: SimastrySpacing.xs) {
+                Text(title)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .multilineTextAlignment(.center)
+                Text(message)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+            }
+
+            if let actionLabel, let action {
+                Button(action: action) {
+                    Text(actionLabel)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.textOnGold)
+                        .padding(.horizontal, SimastrySpacing.xl)
+                        .padding(.vertical, SimastrySpacing.sm)
+                        .background(SimastryGradient.gold, in: Capsule())
+                }
+                .buttonStyle(SpringPressStyle())
+                .padding(.top, SimastrySpacing.xxs)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(SimastrySpacing.xxl)
+        .simastryGlass(cornerRadius: SimastryRadius.large)
+    }
+}
+
 struct SimastryFont {
     // Display — large titles, hero text. Bold for Apple-level confidence.
     static let displayLarge = Font.system(.largeTitle, design: .default, weight: .bold)
@@ -590,9 +725,9 @@ struct SimastryPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(SimastryColor.offWhite)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 15)
-            .goldGlassRect(cornerRadius: 18, interactive: true)
+            .goldGlassRect(cornerRadius: SimastryRadius.large, interactive: true)
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                     .strokeBorder(SimastryColor.goldLight.opacity(configuration.isPressed ? 0.36 : 0.24), lineWidth: 0.8)
             }
             .shadow(color: SimastryColor.gold.opacity(configuration.isPressed ? 0.08 : 0.14), radius: 18, x: 0, y: 10)
@@ -618,9 +753,9 @@ struct SimastryAccentButtonStyle: ButtonStyle {
             .foregroundStyle(textColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 15)
-            .tintedGlass(accent, cornerRadius: 18)
+            .tintedGlass(accent, cornerRadius: SimastryRadius.large)
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: SimastryRadius.large, style: .continuous)
                     .strokeBorder(accent.opacity(configuration.isPressed ? 0.30 : 0.42), lineWidth: 0.8)
             }
             .shadow(color: accent.opacity(configuration.isPressed ? 0.10 : 0.18), radius: 16, x: 0, y: 8)

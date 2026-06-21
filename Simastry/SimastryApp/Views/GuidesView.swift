@@ -215,7 +215,7 @@ struct GuidesView: View {
                     .font(.title3)
                     .foregroundStyle(AstropediaColors.gold)
                     .frame(width: 42, height: 42)
-                    .background(AstropediaColors.gold.opacity(0.14), in: .rect(cornerRadius: 14))
+                    .background(AstropediaColors.gold.opacity(0.14), in: .rect(cornerRadius: SimastryRadius.medium))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Astropedia Library")
@@ -254,7 +254,7 @@ struct GuidesView: View {
                     .font(.title3)
                     .foregroundStyle(SimastryColor.celestialBlue)
                     .frame(width: 42, height: 42)
-                    .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: 14))
+                    .background(SimastryColor.celestialBlue.opacity(0.14), in: .rect(cornerRadius: SimastryRadius.medium))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("My Saved Guides")

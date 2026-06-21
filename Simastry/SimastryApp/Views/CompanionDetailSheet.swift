@@ -302,7 +302,7 @@ struct CompanionDetailSheet: View {
                                 .lineSpacing(2)
                         }
                         .padding(14)
-                        .tintedGlass(SimastryColor.amber.opacity(0.08), cornerRadius: 14)
+                        .tintedGlass(SimastryColor.amber.opacity(0.08), cornerRadius: SimastryRadius.medium)
                     }
                 }
                 .padding(16)

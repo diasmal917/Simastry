@@ -407,7 +407,7 @@ struct CompanionsView: View {
                         Spacer()
                     }
                     .padding(18)
-                    .simastryGlass(cornerRadius: 18)
+                    .simastryGlass(cornerRadius: SimastryRadius.large)
                 }
                 .buttonStyle(SpringPressStyle())
                 .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: SimastrySpacing.tabBarClearance, trailing: 20))

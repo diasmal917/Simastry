@@ -200,7 +200,7 @@ struct SavedGuidesView: View {
             HStack(spacing: 14) {
                 ZodiacIconView(sign: guide.sunSign, size: 30, showsGlow: false)
                     .frame(width: 44, height: 44)
-                    .background(guide.sunSign.color.opacity(0.14), in: .rect(cornerRadius: 14))
+                    .background(guide.sunSign.color.opacity(0.14), in: .rect(cornerRadius: SimastryRadius.medium))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(guide.name)
@@ -225,7 +225,7 @@ struct SavedGuidesView: View {
                     .foregroundStyle(SimastryColor.deepMuted)
             }
             .padding(14)
-            .simastryGlass(cornerRadius: 18)
+            .simastryGlass(cornerRadius: SimastryRadius.large)
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(guide.name), \(guide.sunSign.displayName), \(guide.category.rawValue)")
@@ -280,7 +280,7 @@ private struct AddGuideSheet: View {
                                 .font(SimastryFont.bodyMedium)
                                 .foregroundStyle(SimastryColor.offWhite)
                                 .padding(14)
-                                .simastryGlass(cornerRadius: 14)
+                                .simastryGlass(cornerRadius: SimastryRadius.medium)
                                 .focused($nameFieldFocused)
                                 .accessibilityLabel("Person's name")
                         }
@@ -314,7 +314,7 @@ private struct AddGuideSheet: View {
                                 .foregroundStyle(SimastryColor.offWhite)
                                 .lineLimit(3...6)
                                 .padding(14)
-                                .simastryGlass(cornerRadius: 14)
+                                .simastryGlass(cornerRadius: SimastryRadius.medium)
                                 .accessibilityLabel("Optional notes")
                         }
 
@@ -483,7 +483,7 @@ private struct AddGuideSheet: View {
             .buttonStyle(SpringPressStyle())
         }
         .padding(16)
-        .tintedGlass(SimastryColor.gold.opacity(0.12), cornerRadius: 18)
+        .tintedGlass(SimastryColor.gold.opacity(0.12), cornerRadius: SimastryRadius.large)
     }
 }
 
@@ -590,7 +590,7 @@ private struct GuideDetailSheet: View {
         HStack(alignment: .center, spacing: 14) {
             ZodiacIconView(sign: guide.sunSign, size: 40, showsGlow: true)
                 .frame(width: 56, height: 56)
-                .background(guide.sunSign.color.opacity(0.14), in: .rect(cornerRadius: 18))
+                .background(guide.sunSign.color.opacity(0.14), in: .rect(cornerRadius: SimastryRadius.large))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(guide.name)'s Communication Guide")
@@ -720,7 +720,7 @@ private struct GuideDetailSheet: View {
                     }
                 }
                 .padding(12)
-                .simastryGlass(cornerRadius: 14)
+                .simastryGlass(cornerRadius: SimastryRadius.medium)
             }
         }
         .padding(18)
@@ -859,7 +859,7 @@ private struct EditGuideSheet: View {
                                 .font(SimastryFont.bodyMedium)
                                 .foregroundStyle(SimastryColor.offWhite)
                                 .padding(14)
-                                .simastryGlass(cornerRadius: 14)
+                                .simastryGlass(cornerRadius: SimastryRadius.medium)
                                 .focused($nameFieldFocused)
                                 .accessibilityLabel("Person's name")
                         }
@@ -893,7 +893,7 @@ private struct EditGuideSheet: View {
                                 .foregroundStyle(SimastryColor.offWhite)
                                 .lineLimit(3...6)
                                 .padding(14)
-                                .simastryGlass(cornerRadius: 14)
+                                .simastryGlass(cornerRadius: SimastryRadius.medium)
                                 .accessibilityLabel("Optional notes")
                         }
 

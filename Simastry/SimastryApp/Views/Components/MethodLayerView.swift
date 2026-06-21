@@ -138,9 +138,9 @@ struct MethodLayerPanel: View {
             }
         }
         .padding(14)
-        .tintedGlass(accent.opacity(0.10), cornerRadius: 18)
+        .tintedGlass(accent.opacity(0.10), cornerRadius: SimastryRadius.large)
         .overlay {
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: SimastryRadius.large)
                 .stroke(accent.opacity(0.14), lineWidth: 0.5)
         }
         .help("Source details are shown on each signal chip.")

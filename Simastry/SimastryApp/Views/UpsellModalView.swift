@@ -184,7 +184,7 @@ struct UpsellModalView: View {
 
                             Text("BEST VALUE")
                                 .font(SimastryFont.captionSmall)
-                                .foregroundStyle(Color(red: 20/255, green: 18/255, blue: 12/255))
+                                .foregroundStyle(SimastryColor.textOnGold)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(
@@ -269,7 +269,7 @@ struct UpsellModalView: View {
     private var activeBadge: some View {
         Text("ACTIVE")
             .font(SimastryFont.captionSmall)
-            .foregroundStyle(Color(red: 20/255, green: 18/255, blue: 12/255))
+            .foregroundStyle(SimastryColor.textOnGold)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
