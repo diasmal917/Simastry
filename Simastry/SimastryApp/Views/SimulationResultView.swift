@@ -18,7 +18,7 @@ struct SimulationResultView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accentColor: Color {
-        result.targetSunSign?.color ?? SimastryColor.risingViolet
+        result.targetSunSign?.color ?? result.categoryOrDefault.accentColor
     }
 
     var body: some View {
@@ -26,12 +26,13 @@ struct SimulationResultView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     cascaded(predictionBubble, step: 0)
-                    cascaded(suggestedReplySection, step: 1)
-                    cascaded(resultMethodLayer, step: 2)
-                    cascaded(breakdownSection, step: 3)
-                    cascaded(shareResultButton, step: 4)
-                    if let sign = result.targetSunSign {
-                        cascaded(guideFollowUpCard(sign: sign), step: 5)
+                    cascaded(timingAndNextMoveSection, step: 1)
+                    cascaded(suggestedReplySection, step: 2)
+                    cascaded(resultMethodLayer, step: 3)
+                    cascaded(breakdownSection, step: 4)
+                    cascaded(shareResultButton, step: 5)
+                    if result.isMessageOutcome, let sign = result.targetSunSign {
+                        cascaded(guideFollowUpCard(sign: sign), step: 6)
                     }
                     whatIfSection
                     confidenceFooter
@@ -41,7 +42,7 @@ struct SimulationResultView: View {
                     }
 
                     // Real conversation nudge
-                    Text("Use this as preparation, then have the real conversation.")
+                    Text(result.isMessageOutcome ? "Use this as preparation, then have the real conversation." : "Use this as a timing read, then choose the next practical move.")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
@@ -133,7 +134,7 @@ struct SimulationResultView: View {
 
     private var predictionBubble: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Likely next text")
+            Text(result.categoryOrDefault.resultTitle)
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(1.4)
@@ -144,13 +145,18 @@ struct SimulationResultView: View {
                     Circle()
                         .fill(accentColor.opacity(0.2))
                         .frame(width: 38, height: 38)
-                    Text(result.targetSunSign?.glyph ?? "✦")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
+
+                    if let sign = result.targetSunSign {
+                        ZodiacIconView(sign: sign, size: 25, showsGlow: false)
+                    } else {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(SimastryColor.offWhite)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(result.predictedMessage)
+                    Text(result.displayAnswer)
                         .font(.system(.body, design: .serif))
                         .foregroundStyle(SimastryColor.offWhite)
                         .lineSpacing(3)
@@ -164,6 +170,15 @@ struct SimulationResultView: View {
                             .padding(.vertical, 6)
                             .background(accentColor.opacity(0.14), in: .capsule)
                     }
+
+                    if let timing = result.timingWindow, !timing.isEmpty {
+                        Label(timing, systemImage: "clock.fill")
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(SimastryColor.gold)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(SimastryColor.gold.opacity(0.12), in: Capsule())
+                    }
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -174,7 +189,7 @@ struct SimulationResultView: View {
                 }
             }
 
-            Text("This is a pattern-based prediction, not a guarantee. Real conversations are shaped by context, mood, and history.")
+            Text(result.safetyNote ?? "This is a pattern-based prediction, not a guarantee. Real life is shaped by context, consent, choices, and timing.")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.deepMuted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -242,7 +257,8 @@ struct SimulationResultView: View {
     }
 
     private var suggestedReplyText: String? {
-        guard let sign = result.targetSunSign,
+        guard result.isMessageOutcome,
+              let sign = result.targetSunSign,
               let options = AstrologyTemplates.suggestedReplies[sign.displayName],
               !options.isEmpty else { return nil }
         let seed = abs((result.conversationText?.count ?? 0) &+ result.predictedMessage.count)
@@ -251,7 +267,7 @@ struct SimulationResultView: View {
 
     private var breakdownSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Why they'd say this")
+            Text(result.categoryOrDefault.reasoningTitle)
                 .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
 
@@ -279,6 +295,14 @@ struct SimulationResultView: View {
     }
 
     private var resultMethodSummary: String {
+        if !result.isMessageOutcome {
+            let category = result.categoryOrDefault
+            if let userSunSign = result.userSunSign ?? userSunSign {
+                return "This reads \(category.title.lowercased()) through your \(userSunSign.displayName) chart lens, then turns it into a probability, timing window, and next move."
+            }
+            return "This reads \(category.title.lowercased()) as a probability, timing window, and next move. Adding chart details makes future answers sharper."
+        }
+
         guard let targetSign = result.targetSunSign else {
             return "This reading uses the pasted message, the selected chart signals, and traditional astrology to model a possible reply."
         }
@@ -289,10 +313,12 @@ struct SimulationResultView: View {
     private var resultMethodSignals: [MethodSignal] {
         var signals: [MethodSignal] = [
             MethodSignal(
-                label: "Message context",
-                detail: result.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "Included" : "Limited",
-                systemImage: "text.bubble.fill",
-                tint: SimastryColor.celestialBlue
+                label: result.isMessageOutcome ? "Message context" : "Question type",
+                detail: result.isMessageOutcome
+                    ? (result.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? "Included" : "Limited")
+                    : result.categoryOrDefault.title,
+                systemImage: result.isMessageOutcome ? "text.bubble.fill" : result.categoryOrDefault.systemImage,
+                tint: result.categoryOrDefault.accentColor
             )
         ]
 
@@ -420,51 +446,103 @@ struct SimulationResultView: View {
         }
     }
 
-    private var whatIfSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("What if I said…")
-                .font(SimastryFont.titleSmall)
-                .foregroundStyle(SimastryColor.offWhite)
-
-            TextField(
-                "Type the message you're considering sending",
-                text: $alternativeReply,
-                axis: .vertical
-            )
-            .lineLimit(3...6)
-            .padding(16)
-            .foregroundStyle(SimastryColor.offWhite)
-            .tintedGlass(SimastryColor.risingViolet.opacity(0.2), cornerRadius: 16)
-
-            Button {
-                HapticManager.buttonPress()
-                onRegenerate(alternativeReply)
-            } label: {
-                HStack(spacing: 8) {
-                    if isRegenerating {
-                        ProgressView()
-                            .tint(SimastryColor.midnight)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-
-                    Text(isRegenerating ? "Updating prediction" : "See New Response")
-                        .font(SimastryFont.titleSmall)
+    @ViewBuilder
+    private var timingAndNextMoveSection: some View {
+        if !result.isMessageOutcome,
+           (result.timingWindow?.isEmpty == false || result.practicalNextMove?.isEmpty == false) {
+            VStack(alignment: .leading, spacing: 14) {
+                if let timing = result.timingWindow, !timing.isEmpty {
+                    resultInsightRow(
+                        title: "Most likely window",
+                        body: timing,
+                        systemImage: "clock.fill",
+                        tint: SimastryColor.gold
+                    )
                 }
-                .foregroundStyle(SimastryColor.midnight)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .goldGlassPill()
+
+                if let nextMove = result.practicalNextMove, !nextMove.isEmpty {
+                    resultInsightRow(
+                        title: "What to do next",
+                        body: nextMove,
+                        systemImage: "arrow.up.forward.circle.fill",
+                        tint: accentColor
+                    )
+                }
             }
-            .buttonStyle(SpringPressStyle())
-            .disabled(alternativeReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRegenerating)
-            .opacity(alternativeReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRegenerating ? 0.5 : 1)
+            .padding(18)
+            .simastryGlass(cornerRadius: 20)
         }
-        .padding(18)
-        .simastryGlass(cornerRadius: 20)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
+    }
+
+    private func resultInsightRow(title: String, body: String, systemImage: String, tint: Color) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title.uppercased())
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.2)
+
+                Text(body)
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var whatIfSection: some View {
+        if result.isMessageOutcome {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("What if I said...")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                TextField(
+                    "Type the message you're considering sending",
+                    text: $alternativeReply,
+                    axis: .vertical
+                )
+                .lineLimit(3...6)
+                .padding(16)
+                .foregroundStyle(SimastryColor.offWhite)
+                .tintedGlass(SimastryColor.risingViolet.opacity(0.2), cornerRadius: 16)
+
+                Button {
+                    HapticManager.buttonPress()
+                    onRegenerate(alternativeReply)
+                } label: {
+                    HStack(spacing: 8) {
+                        if isRegenerating {
+                            ProgressView()
+                                .tint(SimastryColor.midnight)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+
+                        Text(isRegenerating ? "Updating prediction" : "See New Response")
+                            .font(SimastryFont.titleSmall)
+                    }
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .goldGlassPill()
+                }
+                .buttonStyle(SpringPressStyle())
+                .disabled(alternativeReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRegenerating)
+                .opacity(alternativeReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRegenerating ? 0.5 : 1)
+            }
+            .padding(18)
+            .simastryGlass(cornerRadius: 20)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+        }
     }
 
     private var shareResultButton: some View {
@@ -503,7 +581,7 @@ struct SimulationResultView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("\(result.confidence)% confidence - based on message context and placement logic")
+                Text("\(result.confidence)% confidence - based on \(confidenceBasis)")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
@@ -530,6 +608,9 @@ struct SimulationResultView: View {
     }
 
     private var confidenceReasoningText: String? {
+        guard result.isMessageOutcome else {
+            return nil
+        }
         guard let userSign = userSunSign,
               let targetSign = result.targetSunSign else {
             return nil
@@ -538,6 +619,12 @@ struct SimulationResultView: View {
             userElement: userSign.element.rawValue,
             targetElement: targetSign.element.rawValue
         )
+    }
+
+    private var confidenceBasis: String {
+        result.isMessageOutcome
+            ? "message context and placement logic"
+            : "chart context, question type, and timing pattern"
     }
 
     private var aiDisclosureBadge: some View {

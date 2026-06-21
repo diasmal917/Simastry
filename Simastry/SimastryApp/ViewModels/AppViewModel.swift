@@ -318,6 +318,18 @@ class AppViewModel {
     // MARK: - Safety Gates
     var isAgeVerified: Bool = UserDefaults.standard.bool(forKey: "ageVerified")
     var hasAcceptedThirdPartyConsent: Bool = UserDefaults.standard.bool(forKey: "thirdPartyDataConsent")
+    var firstReadOnboardingIntent: FirstReadOnboardingIntent? = {
+        UserDefaults.standard.string(forKey: "simastry_first_read_onboarding_intent")
+            .flatMap(FirstReadOnboardingIntent.init(rawValue:))
+    }() {
+        didSet {
+            if let firstReadOnboardingIntent {
+                UserDefaults.standard.set(firstReadOnboardingIntent.rawValue, forKey: "simastry_first_read_onboarding_intent")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "simastry_first_read_onboarding_intent")
+            }
+        }
+    }
 
     let analytics = AnalyticsService.shared
     let supabase = SupabaseService()
@@ -325,12 +337,14 @@ class AppViewModel {
     let todayStore: TodayStore
     let notificationService = NotificationService()
     let predictionService = PredictionService()
+    let dailyDecisionService = DailyDecisionService()
     let predictionRateLimiter = RateLimiter(config: .init(
         maxPerMinute: AppConfig.predictionRateLimit.perMinute,
         maxPerHour: AppConfig.predictionRateLimit.perHour,
         maxPerDay: AppConfig.predictionRateLimit.perDay
     ))
     private let pendingOnboardingChartKey = "simastry_pending_onboarding_chart"
+    static let firstReadOnboardingIntentDefaultsKey = "simastry_first_read_onboarding_intent"
     private let referralInfoKey = "simastry_referral_info"
     private let companionMessagesKey = "simastry_companion_messages"
     private let lastMessageGenerationKey = "simastry_last_message_generation"
@@ -373,6 +387,19 @@ class AppViewModel {
         predictionService.isRemoteChannelAvailable = { [supabase] in
             supabase.canInvokeCompanionReply
         }
+
+        dailyDecisionService.replyChannel = { [supabase] system, user in
+            try await supabase.invokeCompanionReply(
+                kind: .chat,
+                feature: .dailyDecision,
+                system: system,
+                user: user,
+                maxTokens: 180
+            )
+        }
+        dailyDecisionService.isRemoteChannelAvailable = { [supabase] in
+            supabase.canInvokeCompanionReply
+        }
     }
 
     // MARK: - Age Verification
@@ -384,7 +411,34 @@ class AppViewModel {
 
     func completeAgeVerification() {
         verifyAge()
-        currentScreen = .firstRead
+        currentScreen = .firstReadChoice
+    }
+
+    func chooseFirstReadIntent(_ intent: FirstReadOnboardingIntent) {
+        firstReadOnboardingIntent = intent
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            switch intent {
+            case .predict:
+                currentScreen = .firstPrediction
+            case .astrologer:
+                currentScreen = .birthDetails
+            case .decode:
+                currentScreen = .firstRead
+            }
+        }
+    }
+
+    func continueToBirthDetails(after intent: FirstReadOnboardingIntent? = nil) {
+        if let intent {
+            firstReadOnboardingIntent = intent
+        }
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            currentScreen = .birthDetails
+        }
+    }
+
+    func clearFirstReadOnboardingIntent() {
+        firstReadOnboardingIntent = nil
     }
 
     // MARK: - Third-Party Data Consent
@@ -452,6 +506,25 @@ class AppViewModel {
     func clearFirstReadDraft() {
         firstReadDraft = nil
         firstReadDraftStore.clear()
+    }
+
+    func consumeFirstReadOnboardingIntentIfReady() {
+        guard currentScreen == .home,
+              homeSetupPhase == .complete,
+              let intent = firstReadOnboardingIntent else {
+            return
+        }
+
+        clearFirstReadOnboardingIntent()
+
+        switch intent {
+        case .predict:
+            openPredict()
+        case .astrologer:
+            openAIAstrologists()
+        case .decode:
+            break
+        }
     }
 
     func recordGuideFeedback(
@@ -1051,9 +1124,9 @@ class AppViewModel {
         SharedDefaults.writeCompanionData(
             companionName: topCompanion.name,
             companionSunSign: topCompanion.sunSign,
-            companionGlyph: companionSign?.glyph ?? "✦",
+            companionGlyph: companionSign?.compactCode ?? "SIM",
             userSunSign: userSign?.rawValue ?? "",
-            userGlyph: userSign?.glyph ?? "✦",
+            userGlyph: userSign?.compactCode ?? "YOU",
             compatibilityScore: topCompanion.compatibilityScore,
             companionId: topCompanion.id.uuidString
         )
@@ -1379,6 +1452,7 @@ class AppViewModel {
 
         schedulePanelStarterNotification()
         scheduleDailyBriefNotification()
+        notificationService.scheduleDailyDecider()
         notificationService.scheduleGuideTipNudges()
     }
 
@@ -1416,6 +1490,31 @@ class AppViewModel {
         notificationService.scheduleDailyBrief(focusName: focusName, body: line)
     }
 
+    func generateDailyDecision(
+        category: DailyDecisionCategory,
+        transitReading: DailyTransitReading?
+    ) async -> DailyDecision {
+        let communicationType = CommunicationTypeProfile.make(
+            sun: userSunSign,
+            moon: userMoonSign,
+            rising: userRisingSign
+        )
+        let context = DailyDecisionContext(
+            userSunSign: userSunSign,
+            userMoonSign: userMoonSign,
+            userRisingSign: userRisingSign,
+            communicationTypeTitle: communicationType?.title,
+            transitHeadline: transitReading?.headline,
+            transitGuidance: transitReading?.guidance
+        )
+        let decision = await dailyDecisionService.generateDecision(
+            category: category,
+            context: context
+        )
+        todayStore.saveDailyDecision(decision)
+        return decision
+    }
+
     func navigateAfterAuth() async {
         await loadProfile()
         await loadSocialProfile()
@@ -1445,6 +1544,8 @@ class AppViewModel {
         } else if let pendingDeepLinkURL {
             self.pendingDeepLinkURL = nil
             handleDeepLink(pendingDeepLinkURL)
+        } else {
+            consumeFirstReadOnboardingIntentIfReady()
         }
     }
 
@@ -1538,6 +1639,7 @@ class AppViewModel {
         await setupNotifications()
         updateWidgetData()
         generateWelcomeMessage(for: companion)
+        consumeFirstReadOnboardingIntentIfReady()
     }
 
     // MARK: - Social Discovery
@@ -2755,6 +2857,7 @@ class AppViewModel {
         connectedProfiles = []
         relationshipPeople = []
         predictionDraft = nil
+        clearFirstReadOnboardingIntent()
         pendingInviteCodeForConfirmation = nil
         bonusPredictions = 0
         isDiscoverable = false
@@ -2806,8 +2909,10 @@ class AppViewModel {
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
         defaults.removeObject(forKey: conversationSuggestionsEnabledKey)
+        defaults.removeObject(forKey: Self.firstReadOnboardingIntentDefaultsKey)
         defaults.removeObject(forKey: GuideGramStore.defaultsKey)
         todayStore.clearSavedPrompts()
+        todayStore.clearDailyDecisions()
         predictionService.clearHistory()
 
         relationshipPeopleStore.deleteAll()

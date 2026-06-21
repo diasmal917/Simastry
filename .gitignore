@@ -23,10 +23,20 @@ xcuserdata/
 .swiftpm/
 Package.resolved
 
+# Python
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
 *.swp
 *~
+
+# Factory local preview/backups
+Factory/workspace/*contact-sheet*.jpg
+Factory/workspace/archived-originals/
+Factory/workspace/app-preview-exports/
+Factory/workspace/ios-companion-exports/*/previous-ios-assets/
 
 .env
 .env.*

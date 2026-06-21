@@ -207,11 +207,9 @@ struct OnboardingInsightView: View {
                 }
                 .shadow(color: sunSign.color.opacity(0.3), radius: 20, y: 4)
 
-            Text(sunSign.glyph)
-                .font(.system(size: 44))
-                .foregroundStyle(sunSign.color)
+            ZodiacIconView(sign: sunSign, size: 58, showsGlow: true)
         }
-        .accessibilityLabel("\(sunSign.displayName) sign glyph")
+        .accessibilityLabel("\(sunSign.displayName) sign")
     }
 
     @ViewBuilder

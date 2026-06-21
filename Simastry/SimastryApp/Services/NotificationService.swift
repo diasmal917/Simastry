@@ -192,6 +192,31 @@ final class NotificationService {
         center.add(request)
     }
 
+    /// One low-stakes morning nudge for the Daily Decider. Privacy-safe:
+    /// it never mentions food, body, outfits, messages, or private context.
+    func scheduleDailyDecider() {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["daily_decider"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Daily Decider"
+        content.body = [
+            "Need today's pick? Your chart has a clear vibe.",
+            "If you are stuck choosing, let Simastry pick one thing.",
+            "One small choice, less overthinking. Your daily pick is ready."
+        ].randomElement() ?? "Need today's pick? Your chart has a clear vibe."
+        content.sound = .default
+        content.userInfo = ["deeplink": "simastry://home"]
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = 8
+        dateComponents.minute = 15
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+
+        let request = UNNotificationRequest(identifier: "daily_decider", content: content, trigger: trigger)
+        center.add(request)
+    }
+
     /// Evening nudge with the day's Tips-row headline, attributed to its
     /// guide ("New tip from Theo"). Scheduled as individual fires for the
     /// next several evenings so each notification matches that day's
@@ -354,6 +379,7 @@ final class NotificationService {
             withIdentifiers: [
                 "daily_transit",
                 "daily_brief",
+                "daily_decider",
                 "evening_checkin",
                 "companion_hook",
                 "inactive_reengagement",

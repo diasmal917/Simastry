@@ -682,6 +682,7 @@ nonisolated enum CompanionReplyFeature: String, CaseIterable, Encodable, Sendabl
     case practice
     case playbook
     case momentComment = "moment_comment"
+    case dailyDecision = "daily_decision"
 }
 
 nonisolated struct CompanionReplyPayload: Encodable, Sendable {

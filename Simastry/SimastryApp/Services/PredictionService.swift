@@ -14,7 +14,7 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
         case .serviceUnavailable:
             "The prediction channel is not connected yet."
         case .invalidRequest:
-            "Your simulation needs a conversation and a sign to continue."
+            "Add the missing details for this question, then try again."
         case .invalidResponse:
             "The stars answered in an unexpected format."
         case .emptyResponse:
@@ -58,15 +58,15 @@ nonisolated final class PredictionService {
     }
 
     func generatePrediction(request: PredictionRequest, tier: String) async throws -> PredictionResult {
-        guard !request.trimmedConversationText.isEmpty else {
-            throw PredictionServiceError.invalidRequest
-        }
+        try validateRequest(request)
 
         let preparedConversation = privacyService.prepare(request.trimmedConversationText)
         let preparedQuestion = request.trimmedQuestion.map { privacyService.prepare($0) }
         let preparedHypotheticalReply = request.trimmedHypotheticalReply.map { privacyService.prepare($0) }
 
-        try validatePrivacy(preparedConversation)
+        if !request.trimmedConversationText.isEmpty {
+            try validatePrivacy(preparedConversation)
+        }
         if let preparedQuestion {
             try validatePrivacy(preparedQuestion)
         }
@@ -118,21 +118,30 @@ nonisolated final class PredictionService {
 
         // Parse the structured response from Claude
         let parsed = parseClaudeResponse(text)
+        let displayAnswer = parsed.directAnswer ?? parsed.predictedMessage
 
-        guard !parsed.predictedMessage.isEmpty, !parsed.breakdown.isEmpty else {
+        guard !displayAnswer.isEmpty, !parsed.breakdown.isEmpty else {
             throw PredictionServiceError.emptyResponse
         }
 
         let result = PredictionResult(
             id: UUID(),
             mode: request.mode,
-            question: preparedQuestion?.redactedText ?? "",
-            conversationText: preparedConversation.redactedText,
+            category: request.category,
+            question: preparedQuestion?.redactedText ?? request.category.defaultQuestion,
+            conversationText: preparedConversation.redactedText.isEmpty ? nil : preparedConversation.redactedText,
+            userSunSign: request.userSunSign,
+            userMoonSign: request.userMoonSign,
+            userRisingSign: request.userRisingSign,
             targetSunSign: request.targetSunSign,
             targetMoonSign: request.targetMoonSign,
             targetRisingSign: request.targetRisingSign,
-            predictedMessage: parsed.predictedMessage,
+            predictedMessage: parsed.predictedMessage.isEmpty ? displayAnswer : parsed.predictedMessage,
+            directAnswer: parsed.directAnswer,
+            timingWindow: parsed.timingWindow,
             astrologicalBreakdown: parsed.breakdown,
+            practicalNextMove: parsed.practicalNextMove,
+            safetyNote: parsed.safetyNote,
             confidence: min(max(parsed.confidence, 0), 100),
             tone: parsed.tone,
             privacySummary: combinedPrivacySummary(
@@ -171,7 +180,16 @@ nonisolated final class PredictionService {
         preparedQuestion: ConversationPrivacyResult?,
         preparedHypotheticalReply: ConversationPrivacyResult?
     ) -> PredictionResult {
-        let sun = request.targetSunSign
+        guard request.category == .messageOutcome else {
+            return composeLocalFutureAnswer(
+                request: request,
+                preparedConversation: preparedConversation,
+                preparedQuestion: preparedQuestion,
+                preparedHypotheticalReply: preparedHypotheticalReply
+            )
+        }
+
+        let sun = request.targetSunSign ?? request.userSunSign ?? .libra
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
         let seed = abs(preparedConversation.redactedText.count
             &+ (preparedHypotheticalReply?.redactedText.count ?? 0)
@@ -198,8 +216,12 @@ nonisolated final class PredictionService {
         return PredictionResult(
             id: UUID(),
             mode: request.mode,
-            question: preparedQuestion?.redactedText ?? "",
+            category: request.category,
+            question: preparedQuestion?.redactedText ?? request.category.defaultQuestion,
             conversationText: preparedConversation.redactedText,
+            userSunSign: request.userSunSign,
+            userMoonSign: request.userMoonSign,
+            userRisingSign: request.userRisingSign,
             targetSunSign: request.targetSunSign,
             targetMoonSign: request.targetMoonSign,
             targetRisingSign: request.targetRisingSign,
@@ -219,9 +241,65 @@ nonisolated final class PredictionService {
         )
     }
 
+    private func composeLocalFutureAnswer(
+        request: PredictionRequest,
+        preparedConversation: ConversationPrivacyResult,
+        preparedQuestion: ConversationPrivacyResult?,
+        preparedHypotheticalReply: ConversationPrivacyResult?
+    ) -> PredictionResult {
+        let question = preparedQuestion?.redactedText ?? request.category.defaultQuestion
+        let anchor = request.userSunSign ?? request.targetSunSign
+        let anchorName = anchor?.displayName ?? "your chart"
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let seed = abs(question.count &+ (anchor?.rawValue.count ?? 0) &+ dayOfYear)
+        let timingWindow = localTimingWindow(for: request.category, seed: seed)
+        let answer = localDirectAnswer(
+            for: request.category,
+            question: question,
+            anchorName: anchorName,
+            timingWindow: timingWindow
+        )
+        let nextMove = localNextMove(for: request.category, question: question)
+        let safetyNote = localSafetyNote(for: request.category)
+        let breakdown = localFutureBreakdown(for: request.category, anchor: anchor, target: request.targetSunSign)
+
+        return PredictionResult(
+            id: UUID(),
+            mode: request.mode,
+            category: request.category,
+            question: question,
+            conversationText: preparedConversation.redactedText.isEmpty ? nil : preparedConversation.redactedText,
+            userSunSign: request.userSunSign,
+            userMoonSign: request.userMoonSign,
+            userRisingSign: request.userRisingSign,
+            targetSunSign: request.targetSunSign,
+            targetMoonSign: request.targetMoonSign,
+            targetRisingSign: request.targetRisingSign,
+            predictedMessage: answer,
+            directAnswer: answer,
+            timingWindow: timingWindow,
+            astrologicalBreakdown: breakdown,
+            practicalNextMove: nextMove,
+            safetyNote: safetyNote,
+            confidence: localFutureConfidence(for: request),
+            tone: localTone(for: anchor ?? .libra, seed: seed),
+            privacySummary: combinedPrivacySummary(
+                conversation: preparedConversation,
+                question: preparedQuestion,
+                hypotheticalReply: preparedHypotheticalReply
+            ),
+            createdAt: Date(),
+            isLocalComposition: true
+        )
+    }
+
     private func localConfidence(for request: PredictionRequest, conversationLength: Int) -> Int {
+        guard let targetSunSign = request.targetSunSign else {
+            return localFutureConfidence(for: request)
+        }
+
         var confidence = 58
-        switch request.targetSunSign.element {
+        switch targetSunSign.element {
         case .fire, .earth: confidence += 8   // steadier texting patterns
         case .air: confidence += 4
         case .water: confidence += 2
@@ -230,6 +308,123 @@ nonisolated final class PredictionService {
         if request.targetRisingSign != nil { confidence += 5 }
         if conversationLength > 240 { confidence += 6 } else if conversationLength > 80 { confidence += 3 }
         return min(confidence, 86)
+    }
+
+    private func localFutureConfidence(for request: PredictionRequest) -> Int {
+        var confidence = 58
+        if request.userSunSign != nil { confidence += 8 }
+        if request.userMoonSign != nil { confidence += 5 }
+        if request.userRisingSign != nil { confidence += 4 }
+        if request.targetSunSign != nil { confidence += 3 }
+        switch request.category {
+        case .careerSuccess, .messageOutcome:
+            confidence += 4
+        case .moneyDirection, .familyPath:
+            confidence -= 3
+        case .loveTiming, .commitment:
+            break
+        }
+        return min(max(confidence, 48), 78)
+    }
+
+    private func localTimingWindow(for category: FutureQuestionCategory, seed: Int) -> String {
+        let windows: [String]
+        switch category {
+        case .loveTiming:
+            windows = ["the next 6 to 10 weeks", "late this season", "the next 3 months"]
+        case .commitment:
+            windows = ["the next 9 to 18 months", "after one more consistency test", "the next serious relationship chapter"]
+        case .familyPath:
+            windows = ["the next 12 to 24 months", "after your home base feels steadier", "the next chapter where care and stability become louder"]
+        case .careerSuccess:
+            windows = ["the next 4 to 8 weeks", "the next quarter", "the next visible work cycle"]
+        case .moneyDirection:
+            windows = ["the next 3 to 6 months", "after one cleaner structure is in place", "the next practical earning cycle"]
+        case .messageOutcome:
+            windows = ["the next reply window"]
+        }
+        return windows[seed % windows.count]
+    }
+
+    private func localDirectAnswer(
+        for category: FutureQuestionCategory,
+        question: String,
+        anchorName: String,
+        timingWindow: String
+    ) -> String {
+        let lowercasedQuestion = question.lowercased()
+
+        switch category {
+        case .loveTiming:
+            if lowercasedQuestion.contains("text") || lowercasedQuestion.contains("reply") {
+                return "A reply or small signal is more likely around \(timingWindow), but the stronger sign is whether they follow up without you carrying the whole thread."
+            }
+            return "A real romantic opening looks more likely around \(timingWindow), especially if you stop treating low-effort attention as the main signal."
+        case .commitment:
+            return "Commitment is possible, but the strongest window is \(timingWindow). The pattern favors consistency over a dramatic declaration."
+        case .familyPath:
+            return "A family or home-building chapter is showing, but not as a fixed child count. The clearer window is \(timingWindow)."
+        case .careerSuccess:
+            return "Yes, success is available here. The next opening looks like \(timingWindow), with \(anchorName) needing visible follow-through instead of quiet competence."
+        case .moneyDirection:
+            return "Wealth grows through structure, not a lucky spike. The next money opening is \(timingWindow), but it needs practical choices."
+        case .messageOutcome:
+            return "They are likely to answer, but the tone depends on the thread."
+        }
+    }
+
+    private func localFutureBreakdown(for category: FutureQuestionCategory, anchor: ZodiacSign?, target: ZodiacSign?) -> String {
+        let anchorLine = anchor.map { "\($0.displayName)'s \($0.element.rawValue) \(($0.modality)) pattern" } ?? "the chart pattern you gave"
+        let targetLine = target.map { " The other person's \($0.displayName) lens adds timing sensitivity." } ?? ""
+        switch category {
+        case .loveTiming:
+            return "\(anchorLine) opens fastest when desire has room and repetition. Love timing looks strongest when the pattern moves from curiosity into consistent presence.\(targetLine)"
+        case .commitment:
+            return "\(anchorLine) needs proof before promise. The commitment signal is less about one perfect date and more about whether the same effort repeats.\(targetLine)"
+        case .familyPath:
+            return "\(anchorLine) points toward care, belonging, and home as themes, but astrology should not name an exact child count as fate."
+        case .careerSuccess:
+            return "\(anchorLine) shows growth through visible action, useful skill, and choosing the room where your strengths can be seen."
+        case .moneyDirection:
+            return "\(anchorLine) points to prosperity through cleaner structure, steadier choices, and fewer energy leaks. This is not investment advice."
+        case .messageOutcome:
+            return "\(anchorLine) shapes the next reply through tone, pacing, and emotional timing.\(targetLine)"
+        }
+    }
+
+    private func localNextMove(for category: FutureQuestionCategory, question: String) -> String {
+        let lowercasedQuestion = question.lowercased()
+
+        switch category {
+        case .loveTiming:
+            if lowercasedQuestion.contains("text") || lowercasedQuestion.contains("reply") {
+                return "Send one clean, low-pressure message only if it gives them room to answer clearly."
+            }
+            return "Say yes to one concrete invitation or new room this week, then watch who follows up twice."
+        case .commitment:
+            return "Measure consistency for two weeks before asking for reassurance. Repeated action is the answer."
+        case .familyPath:
+            return "Name the version of home you actually want, then make one practical move that supports it."
+        case .careerSuccess:
+            return "Pick the one visible move with the highest upside and put it where someone can notice."
+        case .moneyDirection:
+            return "Clean up one recurring leak, then choose one skill or offer that can compound."
+        case .messageOutcome:
+            return "Give the thread enough space to show you whether interest is being matched."
+        }
+    }
+
+    private func localSafetyNote(for category: FutureQuestionCategory) -> String? {
+        switch category {
+        case .familyPath:
+            return "This is not medical or fertility advice, and it should not be read as a fixed child count."
+        case .moneyDirection:
+            return "This is not financial, investing, tax, or legal advice."
+        case .commitment:
+            return "This is a timing pattern, not a guaranteed marriage date."
+        default:
+            return nil
+        }
     }
 
     private func localTone(for sign: ZodiacSign, seed: Int) -> SimulationTone {
@@ -277,17 +472,30 @@ nonisolated final class PredictionService {
         }
     }
 
-    /// Parse Claude's text response into structured prediction data
-    private func parseClaudeResponse(_ text: String) -> (predictedMessage: String, breakdown: String, confidence: Int, tone: SimulationTone?) {
+    /// Parse Claude's text response into structured prediction data.
+    private func parseClaudeResponse(_ text: String) -> (
+        predictedMessage: String,
+        directAnswer: String?,
+        timingWindow: String?,
+        breakdown: String,
+        practicalNextMove: String?,
+        safetyNote: String?,
+        confidence: Int,
+        tone: SimulationTone?
+    ) {
         // Try JSON parsing first (if Claude returns structured JSON)
         if let jsonData = text.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-            let message = json["predicted_message"] as? String ?? ""
+            let directAnswer = cleanParsedText(json["direct_answer"] as? String)
+            let message = cleanParsedText(json["predicted_message"] as? String) ?? directAnswer ?? ""
+            let timingWindow = cleanParsedText(json["timing_window"] as? String)
             let breakdown = json["astrological_breakdown"] as? String ?? ""
+            let practicalNextMove = cleanParsedText(json["practical_next_move"] as? String)
+            let safetyNote = cleanParsedText(json["safety_note"] as? String)
             let confidence = json["confidence"] as? Int ?? 75
             let toneStr = json["tone"] as? String
             let tone = toneStr.flatMap { SimulationTone(rawValue: $0.lowercased()) }
-            return (message, breakdown, confidence, tone)
+            return (message, directAnswer, timingWindow, breakdown, practicalNextMove, safetyNote, confidence, tone)
         }
 
         // Fallback: parse sections from plain text
@@ -320,7 +528,15 @@ nonisolated final class PredictionService {
         else if lowerText.contains("confident") || lowerText.contains("direct") { tone = .confident }
         else if lowerText.contains("anxious") || lowerText.contains("nervous") { tone = .anxious }
 
-        return (message, breakdown, confidence, tone)
+        return (message, message, nil, breakdown, nil, nil, confidence, tone)
+    }
+
+    private func cleanParsedText(_ raw: String?) -> String? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
     }
 
     func loadHistory() -> [PredictionResult] {
@@ -360,7 +576,16 @@ nonisolated final class PredictionService {
     }
 
     private func makeSystemPrompt(for request: PredictionRequest) -> String {
-        let sunDescription = AstrologyTemplates.sunSign[request.targetSunSign.rawValue] ?? ""
+        if request.category == .messageOutcome {
+            return makeMessageOutcomeSystemPrompt(for: request)
+        }
+
+        return makeFutureAnswerSystemPrompt(for: request)
+    }
+
+    private func makeMessageOutcomeSystemPrompt(for request: PredictionRequest) -> String {
+        let targetSunSign = request.targetSunSign ?? .libra
+        let sunDescription = AstrologyTemplates.sunSign[targetSunSign.rawValue] ?? ""
         let moonDescription = request.targetMoonSign.flatMap { AstrologyTemplates.moonSign[$0.rawValue] }
         let risingDescription = request.targetRisingSign.flatMap { AstrologyTemplates.risingSign[$0.rawValue] }
 
@@ -368,7 +593,7 @@ nonisolated final class PredictionService {
         You are Simastry's prediction engine. Predict how someone would respond in a text conversation.
 
         The person you are predicting has these zodiac placements:
-        - Sun in \(request.targetSunSign.displayName): \(sunDescription)
+        - Sun in \(targetSunSign.displayName): \(sunDescription)
         """
 
         if let targetMoonSign = request.targetMoonSign, let moonDescription {
@@ -379,7 +604,7 @@ nonisolated final class PredictionService {
             prompt += "\n- Rising in \(targetRisingSign.displayName): \(risingDescription)"
         }
 
-        if let personality = AstrologyTemplates.companionPersonality[request.targetSunSign.rawValue] {
+        if let personality = AstrologyTemplates.companionPersonality[targetSunSign.rawValue] {
             prompt += "\n\nPersonality style: \(personality)"
         }
 
@@ -396,15 +621,38 @@ nonisolated final class PredictionService {
         - The predicted message must sound like a real text message
         - Keep it concise and natural
         - The astrological breakdown should be specific, short, and placement-aware
-        - Channel their zodiac energy — don't just describe their sign, embody their texting personality
+        - Channel their zodiac energy - don't just describe their sign, embody their texting personality
         - Return your response as valid JSON with exactly these fields:
-          {"predicted_message": "the predicted text message", "astrological_breakdown": "2-3 sentences explaining why based on their signs", "confidence": 75, "tone": "casual"}
+          {"predicted_message": "the predicted text message", "direct_answer": "short answer to the user's question", "timing_window": "likely timing window if relevant", "astrological_breakdown": "2-3 sentences explaining why based on their signs", "practical_next_move": "one action the user can take", "safety_note": "short caution if needed, otherwise null", "confidence": 75, "tone": "warm"}
         - tone must be one of: playful, guarded, warm, cold, anxious, confident, flirty, distant
         - confidence is 0-100 representing how predictable this response is
         - Return ONLY the JSON object, no other text
         """
 
         return prompt
+    }
+
+    private func makeFutureAnswerSystemPrompt(for request: PredictionRequest) -> String {
+        """
+        You are Simastry's future-answer engine. Give quick astrology-grounded answers to common future questions.
+
+        Category: \(request.category.title)
+
+        Rules:
+        - Frame the answer as probability, timing, and pattern - never fixed fate.
+        - Use likely, opening, window, pattern, or signal. Do not say will definitely.
+        - Do not give a guaranteed marriage date.
+        - Do not give an exact child count as fate.
+        - Do not give medical, fertility, legal, investing, tax, or financial advice.
+        - If the user asks about money, discuss prosperity patterns, career behavior, and practical structure only.
+        - If the user asks about children or pregnancy, avoid medical claims and keep it about family/home themes.
+        - Keep the answer concise, warm, practical, and a little magical.
+        - Return valid JSON with exactly these fields:
+          {"predicted_message": "one-line shareable answer", "direct_answer": "Short answer", "timing_window": "Most likely window", "astrological_breakdown": "Why this shows up astrologically in 2-3 sentences", "practical_next_move": "What to do next in one specific action", "safety_note": "short caution if needed, otherwise null", "confidence": 68, "tone": "warm"}
+        - tone must be one of: playful, guarded, warm, cold, anxious, confident, flirty, distant
+        - confidence is 0-100 and should stay conservative for broad life questions.
+        - Return ONLY the JSON object, no markdown.
+        """
     }
 
     private func makeUserPrompt(
@@ -423,12 +671,36 @@ nonisolated final class PredictionService {
             sections.append("Privacy handling:\n\(privacySummary)")
         }
 
-        sections.append("Conversation:\n\(preparedConversation.redactedText)")
+        sections.append("Prediction category:\n\(request.category.title)")
+
+        if !preparedConversation.redactedText.isEmpty {
+            sections.append("Conversation:\n\(preparedConversation.redactedText)")
+        }
 
         if let preparedQuestion {
             sections.append("What the user wants to know:\n\(preparedQuestion.redactedText)")
         } else {
-            sections.append("What the user wants to know:\nPredict the other person's most likely next text.")
+            sections.append("What the user wants to know:\n\(request.category.defaultQuestion)")
+        }
+
+        let userChart = chartLine(
+            label: "User chart",
+            sun: request.userSunSign,
+            moon: request.userMoonSign,
+            rising: request.userRisingSign
+        )
+        if let userChart {
+            sections.append(userChart)
+        }
+
+        let targetChart = chartLine(
+            label: request.category == .messageOutcome ? "Other person's chart" : "Optional other person's chart",
+            sun: request.targetSunSign,
+            moon: request.targetMoonSign,
+            rising: request.targetRisingSign
+        )
+        if let targetChart {
+            sections.append(targetChart)
         }
 
         if let preparedHypotheticalReply {
@@ -436,6 +708,25 @@ nonisolated final class PredictionService {
         }
 
         return sections.joined(separator: "\n\n")
+    }
+
+    private func chartLine(label: String, sun: ZodiacSign?, moon: ZodiacSign?, rising: ZodiacSign?) -> String? {
+        var parts: [String] = []
+        if let sun { parts.append("Sun in \(sun.displayName)") }
+        if let moon { parts.append("Moon in \(moon.displayName)") }
+        if let rising { parts.append("Rising in \(rising.displayName)") }
+        guard !parts.isEmpty else { return nil }
+        return "\(label):\n\(parts.joined(separator: ", "))"
+    }
+
+    private func validateRequest(_ request: PredictionRequest) throws {
+        if request.category.requiresConversation && request.trimmedConversationText.isEmpty {
+            throw PredictionServiceError.invalidRequest
+        }
+
+        if request.category.requiresTargetSign && request.targetSunSign == nil {
+            throw PredictionServiceError.invalidRequest
+        }
     }
 
     private func validatePrivacy(_ result: ConversationPrivacyResult) throws {

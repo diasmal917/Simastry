@@ -1,5 +1,586 @@
 import SwiftUI
 
+private struct FirstReadEntryOption: Identifiable {
+    let id: FirstReadOnboardingIntent
+    let titleKey: String
+    let subtitleKey: String
+    let detailKey: String
+    let icon: String
+    let accent: Color
+    let tagsKey: String
+}
+
+private let firstReadEntryOptions: [FirstReadEntryOption] = [
+    FirstReadEntryOption(
+        id: .predict,
+        titleKey: "firstReadChoice.predict.title",
+        subtitleKey: "firstReadChoice.predict.subtitle",
+        detailKey: "firstReadChoice.predict.detail",
+        icon: SimastryIcon.predict,
+        accent: SimastryColor.risingViolet,
+        tagsKey: "firstReadChoice.predict.tags"
+    ),
+    FirstReadEntryOption(
+        id: .astrologer,
+        titleKey: "firstReadChoice.astrologer.title",
+        subtitleKey: "firstReadChoice.astrologer.subtitle",
+        detailKey: "firstReadChoice.astrologer.detail",
+        icon: SimastryIcon.astrologers,
+        accent: SimastryColor.gold,
+        tagsKey: "firstReadChoice.astrologer.tags"
+    ),
+    FirstReadEntryOption(
+        id: .decode,
+        titleKey: "firstReadChoice.decode.title",
+        subtitleKey: "firstReadChoice.decode.subtitle",
+        detailKey: "firstReadChoice.decode.detail",
+        icon: SimastryIcon.lens,
+        accent: SimastryColor.celestialBlue,
+        tagsKey: "firstReadChoice.decode.tags"
+    )
+]
+
+private struct FirstPredictionPrompt: Identifiable, Equatable {
+    let id: String
+    let questionKey: String
+    let category: FutureQuestionCategory
+}
+
+private let firstPredictionPrompts: [FirstPredictionPrompt] = [
+    FirstPredictionPrompt(
+        id: "next",
+        questionKey: "firstPrediction.prompt.next",
+        category: .loveTiming
+    ),
+    FirstPredictionPrompt(
+        id: "text",
+        questionKey: "firstPrediction.prompt.text",
+        category: .loveTiming
+    ),
+    FirstPredictionPrompt(
+        id: "love",
+        questionKey: "firstPrediction.prompt.love",
+        category: .commitment
+    ),
+    FirstPredictionPrompt(
+        id: "success",
+        questionKey: "firstPrediction.prompt.success",
+        category: .careerSuccess
+    )
+]
+
+struct FirstReadChoiceView: View {
+    @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
+    private let cardCornerRadius: CGFloat = 22
+    private let cardPadding: CGFloat = 17
+    private let iconContainerSize: CGFloat = 46
+    private let arrowColumnWidth: CGFloat = 24
+
+    var body: some View {
+        ZStack {
+            CelestialBackground()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Spacer().frame(height: 12)
+
+                    header
+
+                    VStack(spacing: 12) {
+                        ForEach(firstReadEntryOptions) { option in
+                            entryCard(option)
+                        }
+                    }
+
+                    privacyFooter
+
+                    Spacer().frame(height: 42)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 58)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .onAppear {
+            guard !appeared else { return }
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.08)) {
+                    appeared = true
+                }
+            }
+        }
+    }
+
+    private var header: some View {
+        VStack(spacing: 10) {
+            SimastryWordmark(font: .system(.title, weight: .bold).italic())
+
+            Text(localization.string("firstReadChoice.title"))
+                .font(SimastryFont.displayMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(localization.string("firstReadChoice.subtitle"))
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 14)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+    }
+
+    private func entryCard(_ option: FirstReadEntryOption) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            viewModel.chooseFirstReadIntent(option.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: option.icon)
+                        .font(.system(size: option.id == .predict ? 21 : 18, weight: .semibold))
+                        .foregroundStyle(option.id == .predict ? SimastryColor.midnight : option.accent)
+                        .frame(width: iconContainerSize, height: iconContainerSize)
+                        .background(
+                            option.id == .predict
+                                ? AnyShapeStyle(SimastryGradient.gold)
+                                : AnyShapeStyle(option.accent.opacity(0.14)),
+                            in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        )
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(localization.string(option.titleKey))
+                            .font(option.id == .predict ? SimastryFont.titleMedium : SimastryFont.titleSmall)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(localization.string(option.subtitleKey))
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(option.accent)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(option.id == .predict ? SimastryColor.gold : SimastryColor.mutedSilver)
+                        .frame(width: arrowColumnWidth, height: arrowColumnWidth, alignment: .center)
+                        .padding(.top, 2)
+                }
+
+                Text(localization.string(option.detailKey))
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    ForEach(localization.list(option.tagsKey), id: \.self) { tag in
+                        Text(tag)
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(option.accent.opacity(0.12), in: Capsule())
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(cardPadding)
+            .heroGlass(option.accent, cornerRadius: cardCornerRadius)
+            .overlay {
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                    .stroke(option.accent.opacity(option.id == .predict ? 0.32 : 0.18), lineWidth: 1)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(localization.string(option.titleKey))
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 16)
+    }
+
+    private var privacyFooter: some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: SimastryIcon.privacy)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold.opacity(0.78))
+
+            Text(localization.string("firstReadChoice.privacy"))
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 8)
+        .opacity(appeared ? 1 : 0)
+    }
+}
+
+struct FirstPredictionView: View {
+    @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
+    @State private var questionText = ""
+    @State private var selectedPrompt = firstPredictionPrompts[0]
+    @State private var result: PredictionResult?
+    @State private var errorMessage: String?
+    @State private var isGenerating = false
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let localPredictionService = PredictionService()
+
+    private var trimmedQuestion: String {
+        questionText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canAsk: Bool {
+        !isGenerating && !trimmedQuestion.isEmpty
+    }
+
+    private func promptQuestion(_ prompt: FirstPredictionPrompt) -> String {
+        localization.string(prompt.questionKey)
+    }
+
+    var body: some View {
+        ZStack {
+            CelestialBackground()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Spacer().frame(height: 12)
+
+                    header
+                    questionCard
+
+                    if isGenerating {
+                        loadingCard
+                    } else if let result {
+                        resultCard(result)
+                    } else {
+                        GoldButton(localization.string("firstPrediction.button"), isEnabled: canAsk) {
+                            generatePrediction()
+                        }
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(SimastryFont.bodySmall)
+                            .foregroundStyle(SimastryColor.amber)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    SecondaryButton(title: localization.string("firstPrediction.chooseDifferent")) {
+                        withAnimation(.spring(SimastrySpring.smooth)) {
+                            viewModel.currentScreen = .firstReadChoice
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    privacyLine
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .onAppear {
+            if questionText.isEmpty {
+                questionText = promptQuestion(selectedPrompt)
+            }
+            guard !appeared else { return }
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(SimastrySpring.smooth).delay(0.08)) {
+                    appeared = true
+                }
+            }
+        }
+        .onChange(of: localization.currentLanguage) {
+            questionText = promptQuestion(selectedPrompt)
+            result = nil
+            errorMessage = nil
+        }
+    }
+
+    private var header: some View {
+        VStack(spacing: 10) {
+            SimastryWordmark(font: .system(.title, weight: .bold).italic())
+
+            Text(localization.string("firstPrediction.title"))
+                .font(SimastryFont.displayMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .multilineTextAlignment(.center)
+
+            Text(localization.string("firstPrediction.subtitle"))
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 14)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+    }
+
+    private var questionCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(localization.string("firstPrediction.ask"))
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.textSecondary)
+                .tracking(1.3)
+
+            TextField(localization.string("firstPrediction.placeholder"), text: $questionText)
+                .textInputAutocapitalization(.sentences)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .tint(SimastryColor.gold)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 0.8)
+                }
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 9) {
+                    ForEach(firstPredictionPrompts) { prompt in
+                        Button {
+                            HapticManager.buttonPress()
+                            selectedPrompt = prompt
+                            questionText = promptQuestion(prompt)
+                            result = nil
+                            errorMessage = nil
+                        } label: {
+                            Text(promptQuestion(prompt))
+                                .font(SimastryFont.labelSmall)
+                                .foregroundStyle(selectedPrompt == prompt ? SimastryColor.midnight : SimastryColor.offWhite)
+                                .lineLimit(1)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
+                                .background(
+                                    selectedPrompt == prompt ? AnyShapeStyle(SimastryGradient.gold) : AnyShapeStyle(Color.white.opacity(0.07)),
+                                    in: Capsule()
+                                )
+                        }
+                        .buttonStyle(SpringPressStyle())
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.6))
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 14)
+        .onChange(of: questionText) {
+            result = nil
+            errorMessage = nil
+        }
+    }
+
+    private var loadingCard: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(SimastryColor.gold)
+            Text(localization.string("firstPrediction.loading"))
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+    }
+
+    private func resultCard(_ result: PredictionResult) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            resultRow(title: localization.string("firstPrediction.row.shortAnswer"), body: localizedPredictionAnswer(result))
+
+            if let timingWindow = result.timingWindow, !timingWindow.isEmpty {
+                resultRow(title: localization.string("firstPrediction.row.window"), body: localizedTimingWindow(timingWindow))
+            }
+
+            if result.practicalNextMove?.isEmpty == false {
+                resultRow(title: localization.string("firstPrediction.row.nextMove"), body: localizedPredictionNextMove(result))
+            }
+
+            Text(localizedPredictionSafety(result))
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            GoldButton(localization.string("firstPrediction.personalize")) {
+                viewModel.continueToBirthDetails(after: .predict)
+            }
+
+            SecondaryButton(title: localization.string("firstPrediction.askAnother")) {
+                withAnimation(.spring(SimastrySpring.snappy)) {
+                    self.result = nil
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(18)
+        .heroGlass(result.categoryOrDefault.accentColor, cornerRadius: 24)
+    }
+
+    private func resultRow(title: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(SimastryFont.overline)
+                .tracking(1.2)
+                .foregroundStyle(SimastryColor.textSecondary)
+
+            Text(body)
+                .font(SimastryFont.titleSmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func localizedPredictionAnswer(_ result: PredictionResult) -> String {
+        localization.string(
+            "firstPrediction.answer.\(predictionLocalizationSuffix(for: result))",
+            replacements: ["window": localizedTimingWindow(result.timingWindow ?? "")]
+        )
+    }
+
+    private func localizedPredictionNextMove(_ result: PredictionResult) -> String {
+        localization.string("firstPrediction.next.\(predictionLocalizationSuffix(for: result))")
+    }
+
+    private func localizedPredictionSafety(_ result: PredictionResult) -> String {
+        switch result.categoryOrDefault {
+        case .commitment:
+            localization.string("firstPrediction.safety.commitment")
+        case .familyPath:
+            localization.string("firstPrediction.safety.family")
+        case .moneyDirection:
+            localization.string("firstPrediction.safety.money")
+        default:
+            localization.string("firstPrediction.safety")
+        }
+    }
+
+    private func predictionLocalizationSuffix(for result: PredictionResult) -> String {
+        if selectedPrompt.id == "text" || result.categoryOrDefault == .messageOutcome {
+            return "text"
+        }
+
+        switch result.categoryOrDefault {
+        case .commitment:
+            return "commitment"
+        case .familyPath:
+            return "family"
+        case .careerSuccess:
+            return "career"
+        case .moneyDirection:
+            return "money"
+        case .loveTiming, .messageOutcome:
+            return "love"
+        }
+    }
+
+    private func localizedTimingWindow(_ timingWindow: String) -> String {
+        switch timingWindow {
+        case "the next 6 to 10 weeks":
+            localization.string("firstPrediction.window.6to10")
+        case "late this season":
+            localization.string("firstPrediction.window.lateSeason")
+        case "the next 3 months":
+            localization.string("firstPrediction.window.3months")
+        case "the next 9 to 18 months":
+            localization.string("firstPrediction.window.9to18")
+        case "after one more consistency test":
+            localization.string("firstPrediction.window.consistency")
+        case "the next serious relationship chapter":
+            localization.string("firstPrediction.window.seriousChapter")
+        case "the next 12 to 24 months":
+            localization.string("firstPrediction.window.12to24")
+        case "after your home base feels steadier":
+            localization.string("firstPrediction.window.homeBase")
+        case "the next chapter where care and stability become louder":
+            localization.string("firstPrediction.window.familyChapter")
+        case "the next 4 to 8 weeks":
+            localization.string("firstPrediction.window.4to8")
+        case "the next quarter":
+            localization.string("firstPrediction.window.quarter")
+        case "the next visible work cycle":
+            localization.string("firstPrediction.window.workCycle")
+        case "the next 3 to 6 months":
+            localization.string("firstPrediction.window.3to6")
+        case "after one cleaner structure is in place":
+            localization.string("firstPrediction.window.structure")
+        case "the next practical earning cycle":
+            localization.string("firstPrediction.window.earningCycle")
+        case "the next reply window":
+            localization.string("firstPrediction.window.reply")
+        default:
+            timingWindow
+        }
+    }
+
+    private var privacyLine: some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: SimastryIcon.privacy)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold.opacity(0.78))
+
+            Text(localization.string("firstPrediction.privacy"))
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 8)
+    }
+
+    private func generatePrediction() {
+        guard canAsk else { return }
+        isGenerating = true
+        errorMessage = nil
+        result = nil
+
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            category: selectedPrompt.category,
+            conversationText: "",
+            userSunSign: viewModel.userSunSign,
+            userMoonSign: viewModel.userMoonSign,
+            userRisingSign: viewModel.userRisingSign,
+            targetSunSign: nil,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: trimmedQuestion,
+            hypotheticalReply: nil
+        )
+
+        Task { @MainActor in
+            defer { isGenerating = false }
+            do {
+                let generated = try await localPredictionService.generatePrediction(request: request, tier: "free")
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    result = generated
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+}
+
 /// Predict's little sister and the most frequent moment: paste the one
 /// message you just received and get the tone, the subtext by their sign —
 /// and what NOT to read into it. Fully on-device.
@@ -325,6 +906,7 @@ struct DecodeTextView: View {
 /// before birth details or account creation.
 struct FirstReadView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
 
     @State private var messageText: String = ""
     @State private var theirSign: ZodiacSign?
@@ -367,7 +949,7 @@ struct FirstReadView: View {
                     inputCard
                     signPicker
 
-                    GoldButton("Decode my first read", isEnabled: canDecode) {
+                    GoldButton(localization.string("firstRead.decodeButton"), isEnabled: canDecode) {
                         decode()
                     }
 
@@ -382,7 +964,7 @@ struct FirstReadView: View {
                         resultStack(sign: theirSign)
                             .transition(.opacity.combined(with: .move(edge: .top)))
 
-                        GoldButton("Save this with my chart") {
+                        GoldButton(localization.string("firstRead.saveButton")) {
                             saveFirstReadAndContinue()
                         }
                     }
@@ -426,12 +1008,12 @@ struct FirstReadView: View {
             SimastryWordmark(font: .system(.title, weight: .bold).italic())
 
             VStack(spacing: 6) {
-                Text("Get your first read")
+                Text(localization.string("firstRead.title"))
                     .font(SimastryFont.displayMedium)
                     .foregroundStyle(SimastryColor.offWhite)
                     .multilineTextAlignment(.center)
 
-                Text("Paste the message you keep rereading. Simastry will decode the tone and show what to say next.")
+                Text(localization.string("firstRead.subtitle"))
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
@@ -446,7 +1028,7 @@ struct FirstReadView: View {
 
     private var inputCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("THEIR MESSAGE")
+            Text(localization.string("firstRead.messageLabel"))
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.textSecondary)
                 .tracking(1.3)
@@ -460,7 +1042,7 @@ struct FirstReadView: View {
                 .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(alignment: .topLeading) {
                     if messageText.isEmpty {
-                        Text("Paste their message...")
+                        Text(localization.string("firstRead.placeholder"))
                             .font(SimastryFont.bodyMedium)
                             .foregroundStyle(SimastryColor.textTertiary)
                             .padding(.horizontal, 15)
@@ -476,7 +1058,7 @@ struct FirstReadView: View {
 
     private var signPicker: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("THEIR SIGN")
+            Text(localization.string("firstRead.signLabel"))
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.textSecondary)
                 .tracking(1.3)
@@ -490,7 +1072,7 @@ struct FirstReadView: View {
                                     theirSign = theirSign == sign ? nil : sign
                                 }
                             }
-                            .accessibilityLabel("Decode as a \(sign.displayName)")
+                            .accessibilityLabel(localization.string("firstRead.decodeAs", replacements: ["sign": sign.displayName]))
 
                             Text(sign.displayName)
                                 .font(SimastryFont.captionSmall)
@@ -512,14 +1094,14 @@ struct FirstReadView: View {
             HapticManager.buttonPress()
             continueToBirthDetails()
         } label: {
-            Text("Skip for now")
+            Text(localization.string("firstRead.skip"))
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Continue to birth details without a first read")
+        .accessibilityHint(localization.string("firstRead.skipHint"))
     }
 
     private var privacyLine: some View {
@@ -528,7 +1110,7 @@ struct FirstReadView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold.opacity(0.78))
 
-            Text("This first read stays on this iPhone. Next, your chart makes it more personal.")
+            Text(localization.string("firstRead.privacy"))
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -541,7 +1123,7 @@ struct FirstReadView: View {
         let prepared = privacyService.prepare(messageText)
         guard prepared.canProceed else {
             privacyBlockMessage = prepared.blockingMessage
-                ?? "This message includes content Simastry can't safely read."
+                ?? localization.string("firstRead.privacyError")
             viewModel.analytics.track(
                 .firstReadFailed,
                 params: ["reason": "privacy", "messageLengthBucket": messageLengthBucket(prepared.redactedText)]
@@ -565,9 +1147,7 @@ struct FirstReadView: View {
     }
 
     private func continueToBirthDetails() {
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            viewModel.currentScreen = .birthDetails
-        }
+        viewModel.continueToBirthDetails(after: .decode)
     }
 
     private func saveFirstReadAndContinue() {
@@ -591,12 +1171,12 @@ struct FirstReadView: View {
         return VStack(alignment: .leading, spacing: 14) {
             if let tone {
                 HStack(spacing: 8) {
-                    Text("READS AS")
+                    Text(localization.string("firstRead.readsAs"))
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.textSecondary)
                         .tracking(1.3)
 
-                    Text(tone.rawValue.capitalized)
+                    Text(localizedTone(tone))
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.midnight)
                         .padding(.horizontal, 12)
@@ -618,14 +1198,14 @@ struct FirstReadView: View {
                 }
 
                 firstReadCard(
-                    title: "WHAT IT LIKELY MEANS",
+                    title: localization.string("firstRead.likelyMeans"),
                     icon: "text.magnifyingglass",
                     tint: SimastryColor.celestialBlue,
                     body: draft.likelyMeaning
                 )
 
                 firstReadCard(
-                    title: "WHAT NOT TO ASSUME",
+                    title: localization.string("firstRead.notAssume"),
                     icon: "heart.slash.circle.fill",
                     tint: SimastryColor.amber,
                     body: draft.notAssume
@@ -651,20 +1231,31 @@ struct FirstReadView: View {
         guard !subtextLines.isEmpty, !dontLines.isEmpty else { return nil }
 
         let replies = AstrologyTemplates.suggestedReplies[sign.displayName] ?? []
-        let bestNextMove = makeBestNextMove(sign: sign, tone: tone)
+        let isLocalized = localization.currentLanguage != .english
+        let localizedReplies = localization.list("firstRead.reply.\(element)")
+        let likelyMeaning = isLocalized
+            ? localization.string("firstRead.meaning.\(element)")
+            : subtextLines[seed % subtextLines.count]
+        let notAssume = isLocalized
+            ? localization.string("firstRead.notAssume.\(element)")
+            : dontLines[seed % dontLines.count]
+        let suggestedReplies = isLocalized && !localizedReplies.isEmpty
+            ? Array(localizedReplies.prefix(3))
+            : Array(replies.prefix(3))
+        let bestNextMove = localizedBestNextMove(makeBestNextMove(sign: sign, tone: tone))
         let continuationSeed = [
             "Message read as \(tone.displayName) through \(sign.displayName).",
             "Best next move: \(bestNextMove.summary)",
-            "Likely meaning: \(subtextLines[seed % subtextLines.count])"
+            "Likely meaning: \(likelyMeaning)"
         ].joined(separator: " ")
 
         return FirstReadDraft(
             messageText: prepared.redactedText.trimmingCharacters(in: .whitespacesAndNewlines),
             sign: sign,
             tone: tone,
-            likelyMeaning: subtextLines[seed % subtextLines.count],
-            notAssume: dontLines[seed % dontLines.count],
-            suggestedReplies: Array(replies.prefix(3)),
+            likelyMeaning: likelyMeaning,
+            notAssume: notAssume,
+            suggestedReplies: suggestedReplies,
             bestNextMove: bestNextMove,
             guideContinuationSeed: continuationSeed,
             safetyLevel: .ok,
@@ -679,14 +1270,14 @@ struct FirstReadView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(sign.color)
 
-                Text("BEST NEXT MOVE")
+                Text(localization.string("firstRead.bestNextMove"))
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.textSecondary)
                     .tracking(1.3)
 
                 Spacer()
 
-                Text(move.type.title)
+                Text(localizedMoveTitle(move.type))
                     .font(SimastryFont.captionSmall.weight(.bold))
                     .foregroundStyle(SimastryColor.midnight)
                     .padding(.horizontal, 10)
@@ -743,7 +1334,7 @@ struct FirstReadView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("WAYS TO REPLY")
+                Text(localization.string("firstRead.replyWays"))
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.textSecondary)
                     .tracking(1.3)
@@ -793,7 +1384,7 @@ struct FirstReadView: View {
                                 .contentTransition(.symbolEffect(.replace))
                         }
                         .buttonStyle(SpringPressStyle())
-                        .accessibilityLabel(copiedReplyIndex == index ? "Reply copied" : "Copy this reply")
+                        .accessibilityLabel(copiedReplyIndex == index ? localization.string("firstRead.replyCopied") : localization.string("firstRead.copyReply"))
                     }
 
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -834,7 +1425,7 @@ struct FirstReadView: View {
                 onTap()
             }
         } label: {
-            Label(action.title, systemImage: action.systemImage)
+            Label(localizedTuneTitle(action), systemImage: action.systemImage)
                 .font(SimastryFont.captionSmall.weight(.semibold))
                 .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.84))
                 .lineLimit(1)
@@ -856,13 +1447,13 @@ struct FirstReadView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("TUNE YOUR GUIDES")
+                Text(localization.string("firstRead.tuneGuides"))
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.textSecondary)
                     .tracking(1.3)
             }
 
-            Text("Was this helpful?")
+            Text(localization.string("firstRead.wasHelpful"))
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.offWhite)
 
@@ -884,7 +1475,7 @@ struct FirstReadView: View {
             }
 
             if feedbackRating != nil {
-                Text("Saved for your guides.")
+                Text(localization.string("firstRead.savedGuides"))
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.textTertiary)
                     .transition(.opacity)
@@ -913,7 +1504,7 @@ struct FirstReadView: View {
                 submitFeedback(for: draft)
             }
         } label: {
-            Text(rating.title)
+            Text(localizedRatingTitle(rating))
                 .font(SimastryFont.labelSmall)
                 .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.86))
                 .frame(maxWidth: .infinity)
@@ -940,7 +1531,7 @@ struct FirstReadView: View {
                 submitFeedback(for: draft)
             }
         } label: {
-            Text(reason.title)
+            Text(localizedReasonTitle(reason))
                 .font(SimastryFont.captionSmall.weight(.semibold))
                 .foregroundStyle(isActive ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.84))
                 .lineLimit(1)
@@ -972,6 +1563,49 @@ struct FirstReadView: View {
         tunedReplies = [:]
         feedbackRating = nil
         feedbackReasons = []
+    }
+
+    private func localizedTone(_ tone: SimulationTone) -> String {
+        let key = "firstRead.tone.\(tone.rawValue)"
+        let localized = localization.string(key)
+        return localized == key ? tone.displayName : localized
+    }
+
+    private func localizedMoveTitle(_ type: FirstReadBestNextMoveType) -> String {
+        let key = "firstRead.move.\(type.rawValue)"
+        let localized = localization.string(key)
+        return localized == key ? type.title : localized
+    }
+
+    private func localizedBestNextMove(_ move: FirstReadBestNextMove) -> FirstReadBestNextMove {
+        let summaryKey = "firstRead.moveSummary.\(move.type.rawValue)"
+        let timingKey = "firstRead.moveTiming.\(move.type.rawValue)"
+        let localizedSummary = localization.string(summaryKey)
+        let localizedTiming = localization.string(timingKey)
+
+        return FirstReadBestNextMove(
+            type: move.type,
+            summary: localizedSummary == summaryKey ? move.summary : localizedSummary,
+            timingNote: localizedTiming == timingKey ? move.timingNote : localizedTiming
+        )
+    }
+
+    private func localizedRatingTitle(_ rating: HelpfulnessRating) -> String {
+        let key = "firstRead.rating.\(rating.rawValue)"
+        let localized = localization.string(key)
+        return localized == key ? rating.title : localized
+    }
+
+    private func localizedReasonTitle(_ reason: GuideFeedbackReason) -> String {
+        let key = "firstRead.reason.\(reason.rawValue)"
+        let localized = localization.string(key)
+        return localized == key ? reason.title : localized
+    }
+
+    private func localizedTuneTitle(_ action: ReplyTuneAction) -> String {
+        let key = "firstRead.tune.\(action.rawValue)"
+        let localized = localization.string(key)
+        return localized == key ? action.title : localized
     }
 
     private func makeBestNextMove(sign: ZodiacSign, tone: SimulationTone) -> FirstReadBestNextMove {
@@ -1014,9 +1648,9 @@ struct FirstReadView: View {
         let trimmed = reply.trimmingCharacters(in: .whitespacesAndNewlines)
         switch action {
         case .warmer:
-            return "\(trimmed) I am glad you told me."
+            return "\(trimmed) \(localization.string("firstRead.tuned.warmerAppend"))"
         case .moreDirect:
-            return trimmed.hasSuffix("?") ? trimmed : "\(trimmed) What feels realistic for you?"
+            return trimmed.hasSuffix("?") ? trimmed : "\(trimmed) \(localization.string("firstRead.tuned.directQuestion"))"
         case .shorter:
             let sentence = trimmed.split(separator: ".").first.map(String.init) ?? trimmed
             return sentence.count < trimmed.count ? "\(sentence)." : String(trimmed.prefix(96))

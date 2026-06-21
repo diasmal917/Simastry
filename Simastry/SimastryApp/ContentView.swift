@@ -13,6 +13,10 @@ struct ContentView: View {
                     LandingView(viewModel: viewModel)
                 case .ageGate:
                     AgeGateView(viewModel: viewModel)
+                case .firstReadChoice:
+                    FirstReadChoiceView(viewModel: viewModel)
+                case .firstPrediction:
+                    FirstPredictionView(viewModel: viewModel)
                 case .firstRead:
                     FirstReadView(viewModel: viewModel)
                 case .birthDetails:
@@ -30,6 +34,21 @@ struct ContentView: View {
             .animation(.spring(SimastrySpring.smooth), value: viewModel.currentScreen == .home)
 
             ToastOverlay(message: $viewModel.toastMessage)
+
+            if showsFloatingOnboardingLanguageMenu {
+                VStack {
+                    HStack {
+                        Spacer()
+                        OnboardingLanguageMenu()
+                    }
+                    .padding(.top, 12)
+                    .padding(.trailing, 18)
+
+                    Spacer()
+                }
+                .transition(.opacity)
+                .zIndex(5)
+            }
         }
         .preferredColorScheme(viewModel.isDarkMode ? .dark : .light)
         .task {
@@ -86,6 +105,15 @@ struct ContentView: View {
         )
     }
 
+    private var showsFloatingOnboardingLanguageMenu: Bool {
+        switch viewModel.currentScreen {
+        case .landing, .ageGate, .firstReadChoice, .firstPrediction, .firstRead, .birthDetails, .signIn, .signUp:
+            true
+        case .loading, .home:
+            false
+        }
+    }
+
     private var loadingView: some View {
         ZStack {
             SimastryColor.midnight.ignoresSafeArea()
@@ -95,5 +123,38 @@ struct ContentView: View {
                     .tint(SimastryColor.gold)
             }
         }
+    }
+}
+
+struct OnboardingLanguageMenu: View {
+    @ObservedObject private var localization = LocalizationManager.shared
+
+    var body: some View {
+        Menu {
+            ForEach(LocalizationManager.Language.allCases) { language in
+                Button {
+                    HapticManager.buttonPress()
+                    localization.currentLanguage = language
+                } label: {
+                    Label {
+                        Text("\(language.shortCode) · \(language.displayName)")
+                    } icon: {
+                        if language == localization.currentLanguage {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "globe")
+                .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(SimastryColor.offWhite)
+            .frame(width: 42, height: 42)
+            .contentShape(Capsule())
+            .simastryGlassPill(interactive: true)
+        }
+        .menuStyle(.button)
+        .accessibilityLabel(localization.string("language.change"))
+        .accessibilityValue(localization.currentLanguage.displayName)
     }
 }

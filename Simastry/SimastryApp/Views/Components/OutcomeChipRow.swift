@@ -5,14 +5,18 @@ struct OutcomeChipRow: View {
     let onSelect: (PredictionOutcome?) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            outcomeButton(.landed)
-            outcomeButton(.missed)
-            if currentOutcome != nil {
-                Button("Clear") { onSelect(nil) }
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .buttonStyle(.plain)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(PredictionOutcome.allCases, id: \.rawValue) { outcome in
+                    outcomeButton(outcome)
+                }
+
+                if currentOutcome != nil {
+                    Button("Clear") { onSelect(nil) }
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .buttonStyle(.plain)
+                }
             }
         }
     }

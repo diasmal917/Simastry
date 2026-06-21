@@ -141,6 +141,149 @@ struct AppViewModelRegressionTests {
         #expect(FirstReadDraftStore().load() == nil)
     }
 
+    @Test func ageVerificationRoutesToFirstReadChoice() {
+        UserDefaults.standard.removeObject(forKey: "ageVerified")
+        UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: "ageVerified")
+            UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey)
+        }
+
+        let viewModel = AppViewModel()
+
+        viewModel.completeAgeVerification()
+
+        #expect(viewModel.isAgeVerified)
+        #expect(viewModel.currentScreen == .firstReadChoice)
+        #expect(UserDefaults.standard.bool(forKey: "ageVerified"))
+    }
+
+    @Test func firstReadChoicePersistsIntentAndRoutesToSelectedEntry() {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) }
+
+        let viewModel = AppViewModel()
+
+        viewModel.chooseFirstReadIntent(.predict)
+        #expect(viewModel.currentScreen == .firstPrediction)
+        #expect(viewModel.firstReadOnboardingIntent == .predict)
+        #expect(UserDefaults.standard.string(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) == "predict")
+
+        viewModel.chooseFirstReadIntent(.decode)
+        #expect(viewModel.currentScreen == .firstRead)
+        #expect(viewModel.firstReadOnboardingIntent == .decode)
+        #expect(UserDefaults.standard.string(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) == "decode")
+
+        viewModel.chooseFirstReadIntent(.astrologer)
+        #expect(viewModel.currentScreen == .birthDetails)
+        #expect(viewModel.firstReadOnboardingIntent == .astrologer)
+        #expect(UserDefaults.standard.string(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) == "astrologer")
+    }
+
+    @Test func coreEightOnboardingLanguagesExposeCriticalStrings() throws {
+        let languages = LocalizationManager.Language.allCases
+        #expect(languages.map(\.rawValue) == ["en", "es", "pt-BR", "fr", "de", "ru", "tr", "th"])
+
+        let requiredKeys = [
+            "language.change",
+            "landing.getStarted",
+            "landing.slide.future.title",
+            "ageGate.over13",
+            "firstReadChoice.predict.title",
+            "firstPrediction.prompt.text",
+            "firstPrediction.answer.love",
+            "firstRead.decodeButton",
+            "firstRead.replyWays",
+            "birth.name.title",
+            "auth.signUp.title",
+            "auth.signIn.title"
+        ]
+
+        for language in languages {
+            let strings = try #require(LocalizedStrings.strings[language.rawValue])
+            for key in requiredKeys {
+                #expect(strings[key]?.isEmpty == false)
+            }
+        }
+    }
+
+    @Test func coreEightOnboardingLanguagesCoverEveryOnboardingKey() throws {
+        let expectedKeys = Set(LocalizedStrings.onboardingEn.keys)
+
+        for language in LocalizationManager.Language.allCases {
+            let strings = try #require(LocalizedStrings.strings[language.rawValue])
+            let missingKeys = expectedKeys.filter { strings[$0]?.isEmpty != false }
+
+            #expect(missingKeys.isEmpty)
+        }
+    }
+
+    @Test func languagePickerLabelsUseSafeTextCodes() {
+        for language in LocalizationManager.Language.allCases {
+            let label = "\(language.shortCode) · \(language.displayName)"
+            let hasRegionalIndicator = label.unicodeScalars.contains { scalar in
+                (0x1F1E6...0x1F1FF).contains(Int(scalar.value))
+            }
+
+            #expect(language.shortCode.allSatisfy { $0.isASCII && $0.isLetter })
+            #expect(!hasRegionalIndicator)
+        }
+    }
+
+    @Test func firstReadAstrologerIntentWaitsForCompleteHomeThenOpensGuides() {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) }
+
+        let viewModel = AppViewModel()
+        viewModel.currentScreen = .home
+        viewModel.homeSetupPhase = .modeSelection
+        viewModel.firstReadOnboardingIntent = .astrologer
+
+        viewModel.consumeFirstReadOnboardingIntentIfReady()
+
+        #expect(viewModel.firstReadOnboardingIntent == .astrologer)
+        #expect(viewModel.aiAstrologistsRouteRequest == 0)
+
+        viewModel.homeSetupPhase = .complete
+        viewModel.consumeFirstReadOnboardingIntentIfReady()
+
+        #expect(viewModel.firstReadOnboardingIntent == nil)
+        #expect(UserDefaults.standard.string(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) == nil)
+        #expect(viewModel.selectedTab == .today)
+        #expect(viewModel.aiAstrologistsRouteRequest == 1)
+    }
+
+    @Test func firstReadPredictIntentConsumesToPredictRoute() {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) }
+
+        let viewModel = AppViewModel()
+        viewModel.currentScreen = .home
+        viewModel.homeSetupPhase = .complete
+        viewModel.firstReadOnboardingIntent = .predict
+
+        viewModel.consumeFirstReadOnboardingIntentIfReady()
+
+        #expect(viewModel.firstReadOnboardingIntent == nil)
+        #expect(viewModel.selectedTab == .today)
+        #expect(viewModel.predictRouteRequest == 1)
+    }
+
+    @Test func firstReadDecodeIntentClearsAfterSetupWithoutReopeningDecode() {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppViewModel.firstReadOnboardingIntentDefaultsKey) }
+
+        let viewModel = AppViewModel()
+        viewModel.currentScreen = .home
+        viewModel.homeSetupPhase = .complete
+        viewModel.firstReadOnboardingIntent = .decode
+
+        viewModel.consumeFirstReadOnboardingIntentIfReady()
+
+        #expect(viewModel.firstReadOnboardingIntent == nil)
+        #expect(viewModel.decodeRouteRequest == 0)
+    }
+
     @Test func guideFeedbackSavesDedupesClearsAndBuildsPromptSummary() {
         UserDefaults.standard.removeObject(forKey: GuideFeedbackStore.defaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: GuideFeedbackStore.defaultsKey) }

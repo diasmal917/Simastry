@@ -8,7 +8,8 @@ type CompanionReplyFeature =
   | "prediction"
   | "practice"
   | "playbook"
-  | "moment_comment";
+  | "moment_comment"
+  | "daily_decision";
 
 type CompanionReplyRequest = {
   kind?: CompanionReplyKind;
@@ -63,6 +64,7 @@ const featureOutputCaps: Record<CompanionReplyFeature, number> = {
   practice: 220,
   playbook: 220,
   moment_comment: 140,
+  daily_decision: 180,
 };
 
 const corsHeaders = {

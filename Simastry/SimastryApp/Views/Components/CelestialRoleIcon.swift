@@ -39,9 +39,8 @@ struct SignEntryView: View {
                     Text("\(role.displayName) in \(sign.displayName)")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(role.accentColor)
-                    Text(sign.glyph)
-                        .font(.system(size: 14))
-                        .foregroundStyle(SimastryColor.offWhite.opacity(0.7))
+                    ZodiacIconView(sign: sign, size: 16, showsGlow: false)
+                        .opacity(0.7)
                 }
 
                 Text(role.subtitle)

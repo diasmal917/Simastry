@@ -11,9 +11,7 @@ struct CommunicationGuideView: View {
             VStack(alignment: .leading, spacing: 16) {
                 animatedSection(index: 0) {
                     HStack(alignment: .center, spacing: 12) {
-                        Text(sign.glyph)
-                            .font(SimastryFont.displayMedium)
-                            .foregroundStyle(sign.color)
+                        ZodiacIconView(sign: sign, size: 34, showsGlow: true)
                             .frame(width: 48, height: 48)
                             .background(sign.color.opacity(0.14), in: .rect(cornerRadius: 16))
 

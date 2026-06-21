@@ -580,16 +580,16 @@ struct DiscoveryView: View {
                                     .foregroundStyle(SimastryColor.deepMuted)
                             }
 
-                            // Sign glyphs
+                            // Sign badges
                             HStack(spacing: 12) {
                                 if let sun = sunSign {
-                                    signPill(glyph: sun.glyph, label: "Sun", color: SimastryColor.sunCoral)
+                                    signPill(sign: sun, label: "Sun", color: SimastryColor.sunCoral)
                                 }
                                 if let moon = moonSign {
-                                    signPill(glyph: moon.glyph, label: "Moon", color: SimastryColor.celestialBlue)
+                                    signPill(sign: moon, label: "Moon", color: SimastryColor.celestialBlue)
                                 }
                                 if let rising = risingSign {
-                                    signPill(glyph: rising.glyph, label: "Rising", color: SimastryColor.risingViolet)
+                                    signPill(sign: rising, label: "Rising", color: SimastryColor.risingViolet)
                                 }
                             }
                         }
@@ -637,16 +637,15 @@ struct DiscoveryView: View {
         .accessibilityHint("Double tap to view full profile")
     }
 
-    private func signPill(glyph: String, label: String, color: Color) -> some View {
+    private func signPill(sign: ZodiacSign, label: String, color: Color) -> some View {
         HStack(spacing: 4) {
-            Text(glyph)
-                .font(.system(size: 14))
+            ZodiacIconView(sign: sign, size: 14, showsGlow: false)
             Text(label)
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(color.opacity(0.8))
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) sign: \(glyph)")
+        .accessibilityLabel("\(label) sign: \(sign.displayName)")
     }
 }
 
@@ -671,17 +670,13 @@ struct PublicProfileAvatar: View {
                             .resizable()
                             .scaledToFill()
                     default:
-                        Text(sunSign?.glyph ?? "\u{2726}")
-                            .font(.system(size: size * 0.42))
-                            .foregroundStyle(sunSign?.color ?? SimastryColor.gold)
+                        discoveryAvatarFallback(size: size, sunSign: sunSign)
                     }
                 }
                 .frame(width: size, height: size)
                 .clipShape(Circle())
             } else {
-                Text(sunSign?.glyph ?? "\u{2726}")
-                    .font(.system(size: size * 0.42))
-                    .foregroundStyle(sunSign?.color ?? SimastryColor.gold)
+                discoveryAvatarFallback(size: size, sunSign: sunSign)
             }
         }
         .frame(width: size, height: size)
@@ -690,6 +685,17 @@ struct PublicProfileAvatar: View {
                 .stroke(SimastryGradient.gold, lineWidth: 1.4)
         }
         .accessibilityLabel("\(profile.displayName) profile picture")
+    }
+
+    @ViewBuilder
+    private func discoveryAvatarFallback(size: CGFloat, sunSign: ZodiacSign?) -> some View {
+        if let sunSign {
+            ZodiacIconView(sign: sunSign, size: size * 0.58, showsGlow: false)
+        } else {
+            Image(systemName: "sparkles")
+                .font(.system(size: size * 0.32, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+        }
     }
 }
 
@@ -896,8 +902,7 @@ struct ProfileDetailSheet: View {
                 Image(systemName: role.iconName)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(role.accentColor)
-                Text(sign.glyph)
-                    .font(.system(size: 20))
+                ZodiacIconView(sign: sign, size: 22, showsGlow: false)
             }
             .frame(width: 36)
 

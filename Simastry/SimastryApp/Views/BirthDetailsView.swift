@@ -3,6 +3,7 @@ import MapKit
 
 struct BirthDetailsView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var currentStep: Int = 0
     @State private var isCalculating: Bool = false
     @State private var displayName: String = ""
@@ -73,14 +74,14 @@ struct BirthDetailsView: View {
                     VStack(spacing: 10) {
                         ProgressView()
                             .tint(SimastryColor.gold)
-                        Text("Calculating your birth chart...")
+                        Text(localization.string("birth.calculating"))
                             .font(SimastryFont.labelMedium)
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 50)
                 } else {
-                    GoldButton(currentStep == totalSteps - 1 ? "Reveal My Chart" : "Continue", isEnabled: canAdvance) {
+                    GoldButton(currentStep == totalSteps - 1 ? localization.string("birth.reveal") : localization.string("birth.continue"), isEnabled: canAdvance) {
                         advanceStep()
                     }
                     .padding(.horizontal, 24)
@@ -96,7 +97,7 @@ struct BirthDetailsView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button(localization.string("birth.keyboardDone")) {
                     nameFocused = false
                     birthplaceFocused = false
                 }
@@ -113,33 +114,37 @@ struct BirthDetailsView: View {
     }
 
     private var header: some View {
-        HStack {
-            Button {
-                HapticManager.buttonPress()
-                if currentStep > 0 {
-                    withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
-                        currentStep -= 1
+        ZStack {
+            HStack {
+                Button {
+                    HapticManager.buttonPress()
+                    if currentStep > 0 {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                            currentStep -= 1
+                        }
+                    } else {
+                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                            viewModel.currentScreen = .landing
+                        }
                     }
-                } else {
-                    withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
-                        viewModel.currentScreen = .landing
-                    }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(width: 44, height: 44)
                 }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 44, height: 44)
+                .buttonStyle(.plain)
+                .accessibilityLabel(currentStep > 0 ? localization.string("common.previousStep") : localization.string("common.backToLanding"))
+
+                Spacer()
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(currentStep > 0 ? "Previous step" : "Back to landing")
 
-            Spacer()
-
-            Text("Step \(currentStep + 1) of \(totalSteps)")
+            Text(localization.string("birth.step", replacements: ["current": "\(currentStep + 1)", "total": "\(totalSteps)"]))
                 .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
-                .padding(.trailing, 16)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 72)
         }
         .padding(.horizontal, 12)
     }
@@ -170,21 +175,21 @@ struct BirthDetailsView: View {
 
     private var nameStep: some View {
         VStack(spacing: 18) {
-            stepEyebrow("Your advisory panel")
+            stepEyebrow(localization.string("birth.name.eyebrow"))
 
-            Text("What should your guides call you?")
+            Text(localization.string("birth.name.title"))
                 .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Every reading is written to you — your name, your chart, your conversations.")
+            Text(localization.string("birth.name.subtitle"))
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
-            TextField("Your name", text: $displayName)
+            TextField(localization.string("birth.name.placeholder"), text: $displayName)
                 .focused($nameFocused)
                 .textContentType(.givenName)
                 .textInputAutocapitalization(.words)
@@ -219,21 +224,21 @@ struct BirthDetailsView: View {
 
     private var birthdayStep: some View {
         VStack(spacing: 18) {
-            stepEyebrow("Sun · core drive")
+            stepEyebrow(localization.string("birth.birthday.eyebrow"))
 
-            Text(firstName.isEmpty ? "When were you born?" : "Nice to meet you, \(firstName).\nWhen were you born?")
+            Text(firstName.isEmpty ? localization.string("birth.birthday.title") : localization.string("birth.birthday.titleNamed", replacements: ["name": firstName]))
                 .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Your birthday sets your Sun and Moon — the heart of how you communicate.")
+            Text(localization.string("birth.birthday.subtitle"))
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
-            DatePicker("Birthday", selection: $birthday, in: ...Date(), displayedComponents: .date)
+            DatePicker(localization.string("birth.birthday"), selection: $birthday, in: ...Date(), displayedComponents: .date)
                 .datePickerStyle(.wheel)
                 .labelsHidden()
                 .colorScheme(.dark)
@@ -244,23 +249,23 @@ struct BirthDetailsView: View {
 
     private var birthTimeStep: some View {
         VStack(spacing: 18) {
-            stepEyebrow("Rising · first impression")
+            stepEyebrow(localization.string("birth.time.eyebrow"))
 
-            Text("What time were you born?")
+            Text(localization.string("birth.time.title"))
                 .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Birth time pins down your Rising sign — the tone people read first.")
+            Text(localization.string("birth.time.subtitle"))
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
             if !birthTimeUnknown {
-                DatePicker("Birth Time", selection: $birthTime, displayedComponents: .hourAndMinute)
+                DatePicker(localization.string("birth.time"), selection: $birthTime, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .colorScheme(.dark)
@@ -276,7 +281,7 @@ struct BirthDetailsView: View {
                     Image(systemName: birthTimeUnknown ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(birthTimeUnknown ? SimastryColor.gold : SimastryColor.mutedSilver)
-                    Text("I don't know my birth time")
+                    Text(localization.string("birth.unknownTime"))
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(birthTimeUnknown ? SimastryColor.offWhite : SimastryColor.mutedSilver)
                 }
@@ -285,7 +290,7 @@ struct BirthDetailsView: View {
             .buttonStyle(.plain)
 
             if birthTimeUnknown {
-                Text("No worries — your Sun and Moon stay accurate. We'll estimate your Rising sign from your birthday.")
+                Text(localization.string("birth.unknownTimeNote"))
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                     .multilineTextAlignment(.center)
@@ -297,16 +302,16 @@ struct BirthDetailsView: View {
 
     private var birthplaceStep: some View {
         VStack(spacing: 18) {
-            stepEyebrow("Chart · final signal")
+            stepEyebrow(localization.string("birth.place.eyebrow"))
 
-            Text(firstName.isEmpty ? "Where were you born?" : "Last one, \(firstName).\nWhere were you born?")
+            Text(firstName.isEmpty ? localization.string("birth.place.title") : localization.string("birth.place.titleNamed", replacements: ["name": firstName]))
                 .font(SimastryFont.displayMedium)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(spacing: 8) {
-                TextField("City, Country", text: $birthplace)
+                TextField(localization.string("birth.placePlaceholder"), text: $birthplace)
                     .focused($birthplaceFocused)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
@@ -372,7 +377,7 @@ struct BirthDetailsView: View {
                 }
 
                 if !showSuggestions || locationCompleter.suggestions.isEmpty {
-                    Text("Resolves your chart timezone and Rising sign")
+                    Text(localization.string("birth.placeHelp"))
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
@@ -399,7 +404,7 @@ struct BirthDetailsView: View {
                 .font(SimastryFont.labelSmall)
                 .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
-            Text("We use this to generate your astrological birth chart. We never share or sell your data.")
+            Text(localization.string("birth.privacy"))
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
@@ -424,7 +429,7 @@ struct BirthDetailsView: View {
         } else {
             let trimmedBirthplace = birthplace.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedBirthplace.isEmpty else {
-                viewModel.showToast("Birthplace required", subtitle: "Enter your birthplace so we can calculate your Rising sign accurately.", isError: true)
+                viewModel.showToast(localization.string("birth.requiredTitle"), subtitle: localization.string("birth.requiredSubtitle"), isError: true)
                 return
             }
 
@@ -438,7 +443,7 @@ struct BirthDetailsView: View {
             Task {
                 guard let location = await birthplaceGeocodingService.resolve(trimmedBirthplace) else {
                     isCalculating = false
-                    viewModel.showToast("We couldn't find that location", subtitle: "Try a city name like 'London, UK'", isError: true)
+                    viewModel.showToast(localization.string("birth.notFoundTitle"), subtitle: localization.string("birth.notFoundSubtitle"), isError: true)
                     return
                 }
 
@@ -453,7 +458,7 @@ struct BirthDetailsView: View {
 
                 guard chart.risingSign != nil else {
                     isCalculating = false
-                    viewModel.showToast("Couldn't calculate your Rising sign", subtitle: "Double-check your birth time and birthplace, then try again.", isError: true)
+                    viewModel.showToast(localization.string("birth.risingFailedTitle"), subtitle: localization.string("birth.risingFailedSubtitle"), isError: true)
                     return
                 }
 

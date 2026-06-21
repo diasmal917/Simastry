@@ -25,6 +25,7 @@ struct HomeView: View {
     @State private var sealedDrafts: [SealedDraft] = []
     @State private var showSealedDraftCompose: Bool = false
     @State private var rereadDraft: SealedDraft?
+    @State private var generatingDailyDecisionCategory: DailyDecisionCategory?
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -137,6 +138,8 @@ struct HomeView: View {
 
                 todayWithGuideCard
 
+                dailyDeciderCard
+
                 firstReadMemoryCard
 
                 continueStrip
@@ -161,6 +164,7 @@ struct HomeView: View {
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
                 sealedDrafts = SealedDraftStore().load()
                 viewModel.todayStore.reloadSavedPrompts()
+                viewModel.todayStore.reloadDailyDecisions()
                 if !reduceMotion {
                     kenBurnsActive = true
                 }
@@ -376,7 +380,7 @@ struct HomeView: View {
                 }
                 .buttonStyle(SpringPressStyle())
                 .accessibilityLabel("Check timing")
-                .accessibilityHint("Seeds Simulate Someone with \(guide.name)'s \(guide.sign.displayName) lens")
+                .accessibilityHint("Seeds Ask the Future with \(guide.name)'s \(guide.sign.displayName) lens")
 
                 Button {
                     HapticManager.buttonPress()
@@ -395,6 +399,174 @@ struct HomeView: View {
         .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.7))
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
+    }
+
+    private var dailyDeciderCard: some View {
+        let latest = viewModel.todayStore.latestDailyDecision
+
+        return VStack(alignment: .leading, spacing: 13) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                    .frame(width: 34, height: 34)
+                    .background(SimastryColor.celestialBlue.opacity(0.14), in: Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DAILY DECIDER")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.celestialBlue)
+                        .tracking(1.4)
+
+                    Text("One small choice, less overthinking.")
+                        .font(SimastryFont.bodyLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+            }
+
+            if let latest {
+                dailyDecisionResult(latest)
+            } else {
+                Text("Pick a lane and let today answer quickly.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(DailyDecisionCategory.allCases) { category in
+                        dailyDecisionChip(category)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 22, accent: SimastryColor.celestialBlue.opacity(0.7))
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
+    }
+
+    private func dailyDecisionResult(_ decision: DailyDecision) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                Image(systemName: decision.category.systemImage)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.celestialBlue)
+
+                Text(decision.category.title.uppercased())
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.2)
+
+                if decision.isFallback {
+                    Text("LOCAL")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.deepMuted)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(SimastryColor.offWhite.opacity(0.08), in: Capsule())
+                }
+            }
+
+            Text(decision.pick)
+                .font(SimastryFont.titleSmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(decision.whyToday)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(alignment: .top, spacing: 7) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .padding(.top, 2)
+
+                Text(decision.tinyNextMove)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.goldLight)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let safetyNote = decision.safetyNote {
+                Text(safetyNote)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(SimastryColor.offWhite.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(decision.category.title) pick. \(decision.pick). \(decision.whyToday). \(decision.tinyNextMove)")
+    }
+
+    private func dailyDecisionChip(_ category: DailyDecisionCategory) -> some View {
+        let isLoading = generatingDailyDecisionCategory == category
+
+        return Button {
+            chooseDailyDecision(category)
+        } label: {
+            HStack(spacing: 7) {
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(SimastryColor.celestialBlue)
+                        .frame(width: 14, height: 14)
+                } else {
+                    Image(systemName: category.systemImage)
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 14, height: 14)
+                }
+
+                Text(category.title)
+                    .font(SimastryFont.labelMedium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .foregroundStyle(SimastryColor.offWhite)
+            .frame(minWidth: 86, minHeight: 38)
+            .padding(.horizontal, 10)
+            .background(SimastryColor.offWhite.opacity(0.08), in: Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(SimastryColor.celestialBlue.opacity(0.24), lineWidth: 1)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .disabled(generatingDailyDecisionCategory != nil)
+        .accessibilityLabel("Choose \(category.title)")
+    }
+
+    private func chooseDailyDecision(_ category: DailyDecisionCategory) {
+        guard generatingDailyDecisionCategory == nil else { return }
+        HapticManager.buttonPress()
+        generatingDailyDecisionCategory = category
+
+        Task {
+            let decision = await viewModel.generateDailyDecision(
+                category: category,
+                transitReading: transitReading
+            )
+            generatingDailyDecisionCategory = nil
+            viewModel.showToast(
+                "Daily pick ready",
+                subtitle: decision.category.title,
+                isError: false
+            )
+        }
     }
 
     @ViewBuilder
@@ -607,16 +779,16 @@ struct HomeView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("PREDICT A REPLY")
+                Text("ASK THE FUTURE")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.risingViolet)
                     .tracking(1.8)
 
-                Text("Know how it might land")
+                Text("Love, timing, money, career, replies")
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Paste a real conversation, choose their sign, and get the likely tone plus your strongest next move.")
+                Text("Ask what is opening next and get a short answer, likely window, and one practical move.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
@@ -626,13 +798,13 @@ struct HomeView: View {
             simulateSourceHint
 
             NavigationLink(value: HomeRoute.predict) {
-                Label("Predict their reply", systemImage: SimastryIcon.predict)
+                Label("Ask a question", systemImage: SimastryIcon.predict)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
             .simultaneousGesture(TapGesture().onEnded {
                 HapticManager.buttonPress()
             })
-            .accessibilityHint("Opens the Simulate Someone tool")
+            .accessibilityHint("Opens Ask the Future")
 
             NavigationLink(value: HomeRoute.decode) {
                 Text("Decode one text instead \u{2192}")
@@ -659,15 +831,15 @@ struct HomeView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(SimastryColor.risingViolet.opacity(0.9))
 
-            Text("Uses conversation text, their signs, and your chart.")
+            Text("Uses your chart, optional relationship context, and conversation text when you ask about replies.")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.deepMuted)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .help("Sources: pasted conversation text, the target person's selected Sun/Moon/Rising signs, and your saved chart placements.")
+        .help("Sources: your saved chart placements, optional relationship signs, and pasted conversation text for reply predictions.")
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Simulation sources: conversation text, their signs, and your chart")
+        .accessibilityLabel("Future answer sources: your chart, optional relationship signs, and conversation text for replies")
     }
 
     // MARK: - Daily Read
@@ -762,7 +934,7 @@ struct HomeView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 7) {
-                            Text(reading.body.glyph)
+                            Image(systemName: reading.body.systemImageName)
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(accent)
 

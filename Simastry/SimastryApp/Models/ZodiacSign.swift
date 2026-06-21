@@ -12,6 +12,23 @@ nonisolated enum ZodiacSign: String, CaseIterable, Codable, Identifiable, Sendab
 
     var displayName: String { rawValue.capitalized }
 
+    var compactCode: String {
+        switch self {
+        case .aries: "ARI"
+        case .taurus: "TAU"
+        case .gemini: "GEM"
+        case .cancer: "CAN"
+        case .leo: "LEO"
+        case .virgo: "VIR"
+        case .libra: "LIB"
+        case .scorpio: "SCO"
+        case .sagittarius: "SAG"
+        case .capricorn: "CAP"
+        case .aquarius: "AQU"
+        case .pisces: "PIS"
+        }
+    }
+
     var iconAssetName: String {
         "Zodiacs_\(rawValue)"
     }

@@ -1,5 +1,5 @@
 {
-  "backup_path": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/app-preview-exports/20260620-100145/previous-ios-assets",
+  "backup_path": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/ios-companion-exports/20260620-100145/previous-ios-assets",
   "created_at": "2026-06-20T10:01:57.834845+00:00",
   "exported": [
     {
@@ -2019,7 +2019,7 @@
       "source": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/originals/Factory_pisces-zev_post10.jpg"
     }
   ],
-  "manifest_path": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/app-preview-exports/20260620-100145/ios-push-manifest.json",
+  "manifest_path": "/Users/chiburashka/Documents/Codex/Simastry/Factory/workspace/ios-companion-exports/20260620-100145/ios-push-manifest.json",
   "missing": [],
   "summary": {
     "changed": 1,

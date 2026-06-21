@@ -279,21 +279,21 @@ struct ProfileView: View {
     private var placeholderSignCards: some View {
         VStack(spacing: 16) {
             placeholderSignCard(
-                icon: "☉",
+                systemImage: CelestialRole.sun.iconName,
                 title: "Your Sun Sign",
                 subtitle: "Your core identity",
                 description: "Discover who you are at your center",
                 delay: 0
             )
             placeholderSignCard(
-                icon: "☽",
+                systemImage: CelestialRole.moon.iconName,
                 title: "Your Moon Sign",
                 subtitle: "Your emotional world",
                 description: "Understand how you feel and process",
                 delay: 0.1
             )
             placeholderSignCard(
-                icon: "↑★",
+                systemImage: CelestialRole.rising.iconName,
                 title: "Your Rising Sign",
                 subtitle: "Your outer energy",
                 description: "See how the world experiences you",
@@ -309,7 +309,7 @@ struct ProfileView: View {
         }
     }
 
-    private func placeholderSignCard(icon: String, title: String, subtitle: String, description: String, delay: Double) -> some View {
+    private func placeholderSignCard(systemImage: String, title: String, subtitle: String, description: String, delay: Double) -> some View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
@@ -319,8 +319,8 @@ struct ProfileView: View {
                     )
                     .frame(width: 48, height: 48)
 
-                Text(icon)
-                    .font(SimastryFont.titleMedium)
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold.opacity(0.4))
             }
 
@@ -1238,8 +1238,11 @@ struct ProfileView: View {
                 showLanguagePicker = true
             }) {
                 HStack(spacing: 10) {
-                    Text(localization.currentLanguage.flag)
-                        .font(.system(size: 16))
+                    Text(localization.currentLanguage.shortCode)
+                        .font(SimastryFont.captionSmall.weight(.bold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .frame(width: 34, height: 24)
+                        .background(SimastryColor.gold.opacity(0.12), in: Capsule())
                     Text(localization.currentLanguage.displayName)
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
@@ -1278,8 +1281,11 @@ struct ProfileView: View {
                                 showLanguagePicker = false
                             }) {
                                 HStack(spacing: 14) {
-                                    Text(language.flag)
-                                        .font(.system(size: 24))
+                                    Text(language.shortCode)
+                                        .font(SimastryFont.captionSmall.weight(.bold))
+                                        .foregroundStyle(SimastryColor.gold)
+                                        .frame(width: 42, height: 28)
+                                        .background(SimastryColor.gold.opacity(0.12), in: Capsule())
 
                                     Text(language.displayName)
                                         .font(SimastryFont.titleSmall)

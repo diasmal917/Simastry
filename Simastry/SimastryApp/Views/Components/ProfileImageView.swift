@@ -5,14 +5,12 @@ struct ProfileImageView: View {
     let size: CGFloat
     let showEditBadge: Bool
     let sunSign: ZodiacSign?
-    let sunSignGlyph: String?
 
-    init(image: UIImage?, size: CGFloat, showEditBadge: Bool = false, sunSign: ZodiacSign? = nil, sunSignGlyph: String? = nil) {
+    init(image: UIImage?, size: CGFloat, showEditBadge: Bool = false, sunSign: ZodiacSign? = nil) {
         self.image = image
         self.size = size
         self.showEditBadge = showEditBadge
         self.sunSign = sunSign
-        self.sunSignGlyph = sunSignGlyph
     }
 
     var body: some View {
@@ -60,23 +58,15 @@ struct ProfileImageView: View {
                     )
                     .overlay(
                         VStack(spacing: size > 60 ? 4 : 2) {
-                            if let glyph = sunSignGlyph, !glyph.isEmpty {
-                                Text(glyph)
-                                    .font(.system(size: size * 0.4))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [SimastryColor.goldLight, SimastryColor.gold],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
+                            if let sunSign {
+                                ZodiacIconView(sign: sunSign, size: size * 0.46, showsGlow: false)
                             } else {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: size * 0.2, weight: .medium))
                                     .foregroundStyle((sunSign?.color ?? SimastryColor.gold).opacity(0.78))
                             }
 
-                            if size >= 80 && sunSignGlyph == nil {
+                            if size >= 80 {
                                 Text("Add Photo")
                                     .font(SimastryFont.captionSmall)
                                     .foregroundStyle(SimastryColor.gold.opacity(0.5))

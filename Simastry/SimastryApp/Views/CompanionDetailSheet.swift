@@ -332,15 +332,13 @@ struct CompanionDetailSheet: View {
                     .foregroundStyle(SimastryColor.offWhite)
                 Spacer()
                 HStack(spacing: 4) {
-                    Text(yours.glyph)
-                        .font(SimastryFont.bodySmall)
+                    ZodiacIconView(sign: yours, size: 16, showsGlow: false)
                     Text("×")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
-                    Text(theirs.glyph)
-                        .font(SimastryFont.bodySmall)
+                    ZodiacIconView(sign: theirs, size: 16, showsGlow: false)
                 }
-                .foregroundStyle(tint.opacity(0.8))
+                .opacity(0.85)
             }
             Text(insight)
                 .font(SimastryFont.bodyLarge)
@@ -408,7 +406,7 @@ struct CompanionDetailSheet: View {
             signals.append(
                 MethodSignal(
                     label: "Moon pattern",
-                    detail: "\(userMoonSign.glyph) to \(companionMoon.glyph)",
+                    detail: "\(userMoonSign.displayName) to \(companionMoon.displayName)",
                     systemImage: "moon.stars.fill",
                     tint: SimastryColor.celestialBlue
                 )
@@ -420,7 +418,7 @@ struct CompanionDetailSheet: View {
             signals.append(
                 MethodSignal(
                     label: "Rising instinct",
-                    detail: "\(userRisingSign.glyph) to \(companionRising.glyph)",
+                    detail: "\(userRisingSign.displayName) to \(companionRising.displayName)",
                     systemImage: "sparkles",
                     tint: SimastryColor.risingViolet
                 )

@@ -109,9 +109,7 @@ struct SoulCreationView: View {
             .fill(sign.color.opacity(0.3))
             .frame(width: 40, height: 40)
             .overlay(
-                Text(sign.glyph)
-                    .font(SimastryFont.bodyMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
+                ZodiacIconView(sign: sign, size: 25, showsGlow: false)
             )
             .offset(offset)
     }
@@ -166,9 +164,8 @@ struct SoulCreationView: View {
             Text("\(role.displayName) in \(sign.displayName)")
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(role.accentColor)
-            Text(sign.glyph)
-                .font(SimastryFont.labelMedium)
-                .foregroundStyle(SimastryColor.offWhite.opacity(0.6))
+            ZodiacIconView(sign: sign, size: 18, showsGlow: false)
+                .opacity(0.7)
         }
     }
 

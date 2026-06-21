@@ -198,9 +198,7 @@ struct SavedGuidesView: View {
             activeSheet = .guideDetail(guide)
         } label: {
             HStack(spacing: 14) {
-                Text(guide.sunSign.glyph)
-                    .font(SimastryFont.titleMedium)
-                    .foregroundStyle(guide.sunSign.color)
+                ZodiacIconView(sign: guide.sunSign, size: 30, showsGlow: false)
                     .frame(width: 44, height: 44)
                     .background(guide.sunSign.color.opacity(0.14), in: .rect(cornerRadius: 14))
 
@@ -401,9 +399,7 @@ private struct AddGuideSheet: View {
                     }
                 } label: {
                     VStack(spacing: 4) {
-                        Text(sign.glyph)
-                            .font(SimastryFont.titleMedium)
-                            .foregroundStyle(sign.color)
+                        ZodiacIconView(sign: sign, size: 28, showsGlow: selectedSign == sign)
                             .frame(width: 44, height: 44)
                             .background(sign.color.opacity(selectedSign == sign ? 0.24 : 0.10), in: Circle())
                             .overlay {
@@ -592,9 +588,7 @@ private struct GuideDetailSheet: View {
 
     private var headerSection: some View {
         HStack(alignment: .center, spacing: 14) {
-            Text(guide.sunSign.glyph)
-                .font(SimastryFont.displayMedium)
-                .foregroundStyle(guide.sunSign.color)
+            ZodiacIconView(sign: guide.sunSign, size: 40, showsGlow: true)
                 .frame(width: 56, height: 56)
                 .background(guide.sunSign.color.opacity(0.14), in: .rect(cornerRadius: 18))
 
@@ -603,7 +597,7 @@ private struct GuideDetailSheet: View {
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("\(guide.sunSign.displayName) \(guide.sunSign.glyph)")
+                Text(guide.sunSign.displayName)
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(guide.sunSign.color)
             }
@@ -808,9 +802,9 @@ private struct GuideDetailSheet: View {
 
     private var shareText: String {
         guard let guideData = CommunicationTemplates.guides[guide.sunSign] else {
-            return "\(guide.name) is a \(guide.sunSign.displayName) \(guide.sunSign.glyph)"
+            return "\(guide.name) is a \(guide.sunSign.displayName)"
         }
-        var text = "\(guide.sunSign.glyph) \(guide.name)'s Communication Guide (\(guide.sunSign.displayName))\n\n"
+        var text = "\(guide.name)'s Communication Guide (\(guide.sunSign.displayName))\n\n"
         text += "Best Approach: \(guideData.bestApproach)\n\n"
         text += "Tips:\n"
         for tip in guideData.tips {
@@ -967,9 +961,7 @@ private struct EditGuideSheet: View {
                     }
                 } label: {
                     VStack(spacing: 4) {
-                        Text(sign.glyph)
-                            .font(SimastryFont.titleMedium)
-                            .foregroundStyle(sign.color)
+                        ZodiacIconView(sign: sign, size: 28, showsGlow: selectedSign == sign)
                             .frame(width: 44, height: 44)
                             .background(sign.color.opacity(selectedSign == sign ? 0.24 : 0.10), in: Circle())
                             .overlay {

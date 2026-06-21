@@ -552,9 +552,7 @@ struct AstropediaView: View {
                             }
                         } label: {
                             HStack(spacing: 12) {
-                                Text(lookup.sign.glyph)
-                                    .font(.title3)
-                                    .foregroundStyle(lookup.sign.color)
+                                ZodiacIconView(sign: lookup.sign, size: 28, showsGlow: false)
                                     .frame(width: 42, height: 42)
                                     .background(.white.opacity(0.05), in: .rect(cornerRadius: 14))
 
@@ -664,9 +662,7 @@ struct AstropediaView: View {
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(SimastryColor.offWhite)
                                     Spacer()
-                                    Text(entry.sign.glyph)
-                                        .font(.headline)
-                                        .foregroundStyle(entry.sign.color)
+                                    ZodiacIconView(sign: entry.sign, size: 22, showsGlow: false)
                                 }
 
                                 Text(entry.subtitle)
@@ -1215,9 +1211,7 @@ private struct CommunicationGuideSignCard: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Text(sign.glyph)
-                .font(SimastryFont.displayLarge)
-                .foregroundStyle(sign.color)
+            ZodiacIconView(sign: sign, size: 38, showsGlow: isSelected)
                 .frame(width: 52, height: 52)
                 .background(sign.color.opacity(isSelected ? 0.22 : 0.12), in: .rect(cornerRadius: 18))
 

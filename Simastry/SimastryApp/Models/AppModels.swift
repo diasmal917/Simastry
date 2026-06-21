@@ -408,12 +408,20 @@ nonisolated struct MessageData: Codable, Identifiable, Sendable {
 nonisolated enum AppScreen: Sendable {
     case landing
     case ageGate
+    case firstReadChoice
+    case firstPrediction
     case firstRead
     case birthDetails
     case signUp
     case signIn
     case loading
     case home
+}
+
+nonisolated enum FirstReadOnboardingIntent: String, Codable, Sendable {
+    case predict
+    case astrologer
+    case decode
 }
 
 nonisolated enum HomeSetupPhase: Sendable {

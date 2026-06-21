@@ -9,9 +9,9 @@ struct PredictionScorecard {
     static func from(_ history: [PredictionResult]) -> PredictionScorecard {
         let rated = history.compactMap(\.outcome)
         guard rated.count >= 3 else {
-            return PredictionScorecard(rated: rated.count, landed: rated.filter { $0 == .landed }.count, line: nil, captionLine: nil)
+            return PredictionScorecard(rated: rated.count, landed: rated.filter(\.countsAsAccurate).count, line: nil, captionLine: nil)
         }
-        let landed = rated.filter { $0 == .landed }.count
+        let landed = rated.filter(\.countsAsAccurate).count
         return PredictionScorecard(
             rated: rated.count,
             landed: landed,

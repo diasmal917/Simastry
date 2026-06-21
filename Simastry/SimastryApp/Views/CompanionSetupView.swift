@@ -474,9 +474,13 @@ struct CompanionSetupView: View {
         VStack(spacing: 6) {
             CelestialRoleIcon(role: role, size: 28)
 
-            Text(sign?.glyph ?? "—")
-                .font(SimastryFont.titleSmall)
-                .foregroundStyle(SimastryColor.offWhite)
+            if let sign {
+                ZodiacIconView(sign: sign, size: 22, showsGlow: false)
+            } else {
+                Text("-")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
 
             Text(role.displayName)
                 .font(SimastryFont.labelSmall)

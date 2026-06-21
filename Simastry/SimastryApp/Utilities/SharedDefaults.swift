@@ -45,11 +45,11 @@ enum SharedDefaults {
     }
 
     static func readCompanionGlyph() -> String {
-        shared?.string(forKey: Key.companionGlyph) ?? "✦"
+        shared?.string(forKey: Key.companionGlyph) ?? "SIM"
     }
 
     static func readUserGlyph() -> String {
-        shared?.string(forKey: Key.userGlyph) ?? "✦"
+        shared?.string(forKey: Key.userGlyph) ?? "YOU"
     }
 
     static func readCompatibilityScore() -> Int {

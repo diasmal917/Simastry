@@ -157,25 +157,25 @@ struct SimulationShareCardView: View {
             // User sun sign
             signGlyph(
                 sign: userSunSign,
-                fallbackGlyph: "☉",
+                fallbackSystemImage: "sun.max.fill",
                 size: isStoryFormat ? 52 : 38
             )
 
             // Divider symbol
-            Text("✦")
-                .font(.system(size: isStoryFormat ? 22 : 16, weight: .light))
+            Image(systemName: "sparkles")
+                .font(.system(size: isStoryFormat ? 18 : 14, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
 
             // Target sun sign
             signGlyph(
                 sign: result.targetSunSign,
-                fallbackGlyph: "✦",
+                fallbackSystemImage: "sparkles",
                 size: isStoryFormat ? 52 : 38
             )
         }
     }
 
-    private func signGlyph(sign: ZodiacSign?, fallbackGlyph: String, size: CGFloat) -> some View {
+    private func signGlyph(sign: ZodiacSign?, fallbackSystemImage: String, size: CGFloat) -> some View {
         let signColor = sign?.color ?? SimastryColor.risingViolet
         return VStack(spacing: 4) {
             ZStack {
@@ -194,9 +194,13 @@ struct SimulationShareCardView: View {
                     .stroke(signColor.opacity(0.5), lineWidth: 1.5)
                     .frame(width: size, height: size)
 
-                Text(sign?.glyph ?? fallbackGlyph)
-                    .font(.system(size: size * 0.45))
-                    .foregroundStyle(SimastryColor.offWhite)
+                if let sign {
+                    ZodiacIconView(sign: sign, size: size * 0.64, showsGlow: false)
+                } else {
+                    Image(systemName: fallbackSystemImage)
+                        .font(.system(size: size * 0.36, weight: .semibold))
+                        .foregroundStyle(SimastryColor.offWhite)
+                }
             }
 
             if let sign = sign {

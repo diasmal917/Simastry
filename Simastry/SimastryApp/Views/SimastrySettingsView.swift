@@ -186,7 +186,7 @@ struct SimastrySettingsView: View {
                     Text("Private reminders")
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
-                    Text("Subtle chart-signal reminders. No private conversation content in previews.")
+                    Text("Subtle chart-signal reminders and daily picks. No private conversation content in previews.")
                         .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }

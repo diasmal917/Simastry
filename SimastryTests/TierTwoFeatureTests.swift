@@ -3,6 +3,20 @@ import Testing
 import UIKit
 @testable import Simastry
 
+private actor PromptCapture {
+    private var capturedSystem = ""
+    private var capturedUser = ""
+
+    func record(system: String, user: String) {
+        capturedSystem = system
+        capturedUser = user
+    }
+
+    func values() -> (system: String, user: String) {
+        (capturedSystem, capturedUser)
+    }
+}
+
 @MainActor
 struct TierTwoFeatureTests {
     // MARK: - Conversation OCR
@@ -168,6 +182,209 @@ struct TierTwoFeatureTests {
         #expect(!result.astrologicalBreakdown.isEmpty)
     }
 
+    @Test func futureQuestionCategoriesWorkWithoutConversationPaste() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+
+        let service = PredictionService()
+
+        for category in FutureQuestionCategory.allCases where category != .messageOutcome {
+            let request = PredictionRequest(
+                mode: .whatWillTheySay,
+                category: category,
+                conversationText: "",
+                userSunSign: .leo,
+                userMoonSign: .taurus,
+                userRisingSign: .libra,
+                targetSunSign: category.allowsTargetSign ? .sagittarius : nil,
+                targetMoonSign: nil,
+                targetRisingSign: nil,
+                question: category.defaultQuestion,
+                hypotheticalReply: nil
+            )
+
+            let result = try await service.generatePrediction(request: request, tier: "free")
+            #expect(result.categoryOrDefault == category)
+            #expect(result.conversationText == nil)
+            #expect(!result.displayAnswer.isEmpty)
+            #expect(result.timingWindow?.isEmpty == false)
+            #expect(result.practicalNextMove?.isEmpty == false)
+            #expect(result.confidence <= 78)
+        }
+    }
+
+    @Test func firstReadTextingPromptUsesLocalFutureFallbackWithoutConversation() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+
+        let service = PredictionService()
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            category: .loveTiming,
+            conversationText: "",
+            userSunSign: nil,
+            userMoonSign: nil,
+            userRisingSign: nil,
+            targetSunSign: nil,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: "Will they text me?",
+            hypotheticalReply: nil
+        )
+
+        let result = try await service.generatePrediction(request: request, tier: "free")
+
+        #expect(result.isLocalComposition == true)
+        #expect(result.conversationText == nil)
+        #expect(result.displayAnswer.lowercased().contains("reply"))
+        #expect(result.practicalNextMove?.lowercased().contains("message") == true)
+    }
+
+    @Test func futureSensitiveCategoriesCarrySafetyNotes() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+
+        let service = PredictionService()
+        let categories: [FutureQuestionCategory] = [.commitment, .familyPath, .moneyDirection]
+
+        for category in categories {
+            let request = PredictionRequest(
+                mode: .whatWillTheySay,
+                category: category,
+                conversationText: "",
+                userSunSign: .cancer,
+                userMoonSign: nil,
+                userRisingSign: nil,
+                targetSunSign: nil,
+                targetMoonSign: nil,
+                targetRisingSign: nil,
+                question: category.defaultQuestion,
+                hypotheticalReply: nil
+            )
+
+            let result = try await service.generatePrediction(request: request, tier: "free")
+            #expect(result.safetyNote?.isEmpty == false)
+            #expect(!result.displayAnswer.lowercased().contains("will definitely"))
+        }
+    }
+
+    @Test func dailyDecisionFallbackCoversEveryCategorySafely() async {
+        let service = DailyDecisionService()
+        let context = DailyDecisionContext(
+            userSunSign: .sagittarius,
+            userMoonSign: .cancer,
+            userRisingSign: .libra,
+            communicationTypeTitle: "Diplomatic Explorer",
+            transitHeadline: "Mercury trine your Sun",
+            transitGuidance: "Say the clear thing."
+        )
+
+        for category in DailyDecisionCategory.allCases {
+            let decision = await service.generateDecision(category: category, context: context)
+            #expect(decision.category == category)
+            #expect(decision.isFallback)
+            #expect(!decision.pick.isEmpty)
+            #expect(!decision.whyToday.isEmpty)
+            #expect(!decision.tinyNextMove.isEmpty)
+
+            if category == .eat {
+                #expect(decision.safetyNote?.lowercased().contains("medical") == true)
+            }
+            if category == .wear {
+                #expect(!decision.pick.lowercased().contains("hide"))
+            }
+        }
+    }
+
+    @Test func liveDailyDecisionPromptCarriesCategoryChartAndParsesJson() async {
+        let service = DailyDecisionService()
+        service.isRemoteChannelAvailable = { true }
+
+        let promptCapture = PromptCapture()
+        service.replyChannel = { system, user in
+            await promptCapture.record(system: system, user: user)
+            return """
+            {"pick":"Wear navy with one silver detail.","why_today":"Mercury supports clean choices today, and your Libra rising wants polish without fuss.","tiny_next_move":"Choose the silver detail first.","safety_note":null}
+            """
+        }
+
+        let decision = await service.generateDecision(
+            category: .wear,
+            context: DailyDecisionContext(
+                userSunSign: .leo,
+                userMoonSign: .taurus,
+                userRisingSign: .libra,
+                communicationTypeTitle: "Magnetic Builder",
+                transitHeadline: "Mercury sextile your Rising",
+                transitGuidance: "Keep the signal clean."
+            )
+        )
+
+        #expect(!decision.isFallback)
+        #expect(decision.pick == "Wear navy with one silver detail.")
+        #expect(decision.tinyNextMove == "Choose the silver detail first.")
+        let capturedPrompt = await promptCapture.values()
+        #expect(capturedPrompt.system.contains("Daily Decider"))
+        #expect(capturedPrompt.system.contains("Do not give medical, diet, weight-loss, allergy, fertility, or nutrition advice."))
+        #expect(capturedPrompt.user.contains("Decision category:"))
+        #expect(capturedPrompt.user.contains("User chart:"))
+        #expect(capturedPrompt.user.contains("Sun in Leo"))
+        #expect(capturedPrompt.user.contains("Private message text:\nnot provided"))
+    }
+
+    @Test func dailyDecisionStoreKeepsOnePerCategoryPerDay() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: DailyDecisionStore.defaultsKey)
+        defer { defaults.removeObject(forKey: DailyDecisionStore.defaultsKey) }
+
+        let store = DailyDecisionStore(defaults: defaults)
+        store.save(DailyDecision(category: .wear, pick: "First", whyToday: "Now", tinyNextMove: "Start"))
+        store.save(DailyDecision(category: .wear, pick: "Second", whyToday: "Now", tinyNextMove: "Start"))
+        store.save(DailyDecision(category: .eat, pick: "Warm", whyToday: "Ground", tinyNextMove: "Choose"))
+
+        let decisions = store.load()
+        #expect(decisions.count == 2)
+        #expect(decisions.first { $0.category == .wear }?.pick == "Second")
+        #expect(store.latestForToday() != nil)
+    }
+
+    @Test func remoteFuturePromptCarriesCategoryAndParsesStructuredAnswer() async throws {
+        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+
+        let service = PredictionService()
+        service.isRemoteChannelAvailable = { true }
+        let promptCapture = PromptCapture()
+        service.replyChannel = { system, user in
+            await promptCapture.record(system: system, user: user)
+            return """
+            {"predicted_message":"Career opens through visible proof.","direct_answer":"Yes, success is likely if you choose the visible lane.","timing_window":"the next quarter","astrological_breakdown":"Leo Sun wants visibility while Taurus Moon needs repeatable structure.","practical_next_move":"Put one useful result in front of a decision maker this week.","safety_note":null,"confidence":69,"tone":"confident"}
+            """
+        }
+
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            category: .careerSuccess,
+            conversationText: "",
+            userSunSign: .leo,
+            userMoonSign: .taurus,
+            userRisingSign: nil,
+            targetSunSign: nil,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: "Will I be successful?",
+            hypotheticalReply: nil
+        )
+
+        let result = try await service.generatePrediction(request: request, tier: "free")
+        let capturedPrompt = await promptCapture.values()
+        #expect(capturedPrompt.system.contains("Category: Career success"))
+        #expect(capturedPrompt.system.contains("Do not give medical, fertility, legal, investing, tax, or financial advice."))
+        #expect(capturedPrompt.user.contains("Prediction category:"))
+        #expect(capturedPrompt.user.contains("User chart:"))
+        #expect(result.categoryOrDefault == .careerSuccess)
+        #expect(result.directAnswer == "Yes, success is likely if you choose the visible lane.")
+        #expect(result.timingWindow == "the next quarter")
+        #expect(result.practicalNextMove?.contains("decision maker") == true)
+        #expect(result.tone == .confident)
+    }
+
     @Test func predictionFallsBackToLocalComposerWhenRemoteFails() async throws {
         defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
 
@@ -222,6 +439,8 @@ struct TierTwoFeatureTests {
     }
 
     @Test func companionReplyPayloadEncodesFeatureNames() throws {
+        #expect(CompanionReplyFeature.dailyDecision.rawValue == "daily_decision")
+
         for feature in CompanionReplyFeature.allCases {
             let payload = CompanionReplyPayload(
                 kind: CompanionReplyKind.chat.rawValue,

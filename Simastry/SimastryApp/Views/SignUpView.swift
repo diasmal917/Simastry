@@ -3,6 +3,7 @@ import AuthenticationServices
 
 struct SignUpView: View {
     @Bindable var viewModel: AppViewModel
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var isAuthenticating: Bool = false
@@ -31,7 +32,7 @@ struct SignUpView: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Back to birth details")
+                    .accessibilityLabel(localization.string("common.backToBirthDetails"))
 
                     Spacer()
                 }
@@ -39,11 +40,11 @@ struct SignUpView: View {
                 .padding(.top, 16)
 
                 VStack(spacing: 8) {
-                    Text("Create your account")
+                    Text(localization.string("auth.signUp.title"))
                         .font(SimastryFont.displayMedium)
                         .foregroundStyle(.white)
 
-                    Text("Save your birth chart and unlock your reading")
+                    Text(localization.string("auth.signUp.subtitle"))
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .multilineTextAlignment(.center)
@@ -79,8 +80,8 @@ struct SignUpView: View {
                     dividerRow
 
                     VStack(spacing: 12) {
-                        authField(title: "Email", text: $email, field: .email, isSecure: false)
-                        authField(title: "Password", text: $password, field: .password, isSecure: true)
+                        authField(title: localization.string("common.email"), text: $email, field: .email, isSecure: false)
+                        authField(title: localization.string("common.password"), text: $password, field: .password, isSecure: true)
                     }
                     .padding(16)
                     .background(.white.opacity(0.06), in: .rect(cornerRadius: 22))
@@ -89,7 +90,7 @@ struct SignUpView: View {
                             .stroke(.white.opacity(0.12), lineWidth: 1)
                     }
 
-                    GoldButton("Create Account", isEnabled: !email.isEmpty && !password.isEmpty && !isAuthenticating) {
+                    GoldButton(localization.string("auth.signUp.button"), isEnabled: !email.isEmpty && !password.isEmpty && !isAuthenticating) {
                         focusedField = nil
                         Task {
                             isAuthenticating = true
@@ -109,7 +110,7 @@ struct SignUpView: View {
                         .font(SimastryFont.labelSmall)
                         .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
-                    Text("We never share or sell your data.")
+                    Text(localization.string("auth.privacy"))
                         .font(SimastryFont.caption)
                         .foregroundStyle(.white.opacity(0.68))
                 }
@@ -125,7 +126,7 @@ struct SignUpView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { focusedField = nil }
+                Button(localization.string("common.done")) { focusedField = nil }
             }
         }
     }
@@ -135,7 +136,7 @@ struct SignUpView: View {
             Rectangle()
                 .fill(.white.opacity(0.12))
                 .frame(height: 1)
-            Text("or")
+            Text(localization.string("common.or"))
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(.white.opacity(0.6))
             Rectangle()

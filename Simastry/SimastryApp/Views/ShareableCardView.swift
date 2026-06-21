@@ -168,8 +168,7 @@ struct ShareableCardView: View {
             ProfileImageView(
                 image: viewModel.profileImage,
                 size: isStoryFormat ? 52 : 42,
-                sunSign: sun,
-                sunSignGlyph: viewModel.profileImage == nil ? sun.glyph : nil
+                sunSign: sun
             )
             .help("Source: your Simastry profile photo.")
 

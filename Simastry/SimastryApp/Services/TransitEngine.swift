@@ -25,13 +25,13 @@ nonisolated enum TransitBody: String, CaseIterable, Sendable {
         }
     }
 
-    var glyph: String {
+    var systemImageName: String {
         switch self {
-        case .mercury: "☿"
-        case .venus: "♀"
-        case .mars: "♂"
-        case .sun: "☉"
-        case .moon: "☽"
+        case .mercury: "message.fill"
+        case .venus: "heart.fill"
+        case .mars: "bolt.fill"
+        case .sun: "sun.max.fill"
+        case .moon: "moon.fill"
         }
     }
 

@@ -111,9 +111,7 @@ struct GuidesView: View {
                             }
                         } label: {
                             VStack(spacing: 6) {
-                                Text(sign.glyph)
-                                    .font(SimastryFont.displayMedium)
-                                    .foregroundStyle(sign.color)
+                                ZodiacIconView(sign: sign, size: 34, showsGlow: selectedSign == sign)
                                     .frame(width: 48, height: 48)
                                     .background(sign.color.opacity(selectedSign == sign ? 0.22 : 0.10), in: Circle())
                                     .overlay {
