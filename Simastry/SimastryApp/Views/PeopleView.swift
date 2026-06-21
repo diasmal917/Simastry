@@ -74,7 +74,9 @@ struct PeopleView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search people or signs")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                // One trailing group so iOS 26 renders the filter + add controls
+                // as a single blended Liquid Glass cluster that morphs together.
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Menu {
                         Picker("Filter by relationship", selection: $selectedType) {
                             Text("All people").tag(RelationshipType?.none)
@@ -87,9 +89,7 @@ struct PeopleView: View {
                         Label("Filter", systemImage: "line.3.horizontal.decrease")
                     }
                     .tint(selectedType == nil ? SimastryColor.mutedSilver : SimastryColor.gold)
-                }
 
-                ToolbarItem(placement: .primaryAction) {
                     Button {
                         isAddingPerson = true
                     } label: {

@@ -24,6 +24,7 @@ struct SimulateView: View {
     @State private var showTopUpSheet = false
     @State private var showCrisisAlert = false
     @Environment(\.openURL) private var openURL
+    @Namespace private var chipGlass
 
     private var suggestionChips: [String] {
         selectedCategory.suggestedQuestions
@@ -566,28 +567,58 @@ struct SimulateView: View {
                 .surfaceCard(cornerRadius: SimastryRadius.large, accent: selectedCategory.accentColor.opacity(0.6))
 
             ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(suggestionChips, id: \.self) { chip in
-                        Button {
-                            HapticManager.buttonPress()
-                            questionText = chip
-                        } label: {
-                            Text(chip)
-                                .font(SimastryFont.labelMedium)
-                                .foregroundStyle(questionText == chip ? SimastryColor.midnight : SimastryColor.offWhite)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(questionText == chip ? SimastryColor.gold : .white.opacity(0.06), in: .capsule)
-                        }
-                        .buttonStyle(SpringPressStyle())
-                    }
-                }
+                suggestionChipRow
             }
             .scrollIndicators(.hidden)
             .contentMargins(.horizontal, 0)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 22)
+    }
+
+    /// Suggestion chips as a Liquid Glass cluster on iOS 26 — each chip shares
+    /// a `GlassEffectContainer` and carries a `glassEffectID`, so the glass
+    /// blends across the row and the highlight morphs as selection moves.
+    /// Pre-26 keeps the flat capsule fill.
+    @ViewBuilder
+    private var suggestionChipRow: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 10) {
+                HStack(spacing: 10) {
+                    ForEach(suggestionChips, id: \.self) { chip in
+                        suggestionChip(chip)
+                            .glassEffect(
+                                .regular
+                                    .tint(questionText == chip ? SimastryColor.gold.opacity(0.9) : Color.clear)
+                                    .interactive(true),
+                                in: .capsule
+                            )
+                            .glassEffectID(chip, in: chipGlass)
+                    }
+                }
+            }
+        } else {
+            HStack(spacing: 10) {
+                ForEach(suggestionChips, id: \.self) { chip in
+                    suggestionChip(chip)
+                        .background(questionText == chip ? SimastryColor.gold : SimastryColor.fillFaint, in: .capsule)
+                }
+            }
+        }
+    }
+
+    private func suggestionChip(_ chip: String) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            questionText = chip
+        } label: {
+            Text(chip)
+                .font(SimastryFont.labelMedium)
+                .foregroundStyle(questionText == chip ? SimastryColor.midnight : SimastryColor.offWhite)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+        }
+        .buttonStyle(SpringPressStyle())
     }
 
     @ViewBuilder
