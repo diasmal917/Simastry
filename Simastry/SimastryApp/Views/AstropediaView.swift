@@ -13,6 +13,7 @@ struct AstropediaView: View {
     @State private var hasInitialized: Bool = false
     @State private var selectedCommunicationGuideSign: ZodiacSign?
     @State private var hasRevealedCommunicationGuides: Bool = false
+    @Namespace private var topicGlass
 
     private static let recentLookupsKey: String = "astropedia_recent_lookups"
     private let communicationGuideColumns: [GridItem] = [
@@ -229,33 +230,63 @@ struct AstropediaView: View {
             }
 
             ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(AstropediaTopic.allCases) { topic in
-                        Button {
-                            HapticManager.buttonPress()
-                            withAnimation(.spring(SimastrySpring.smooth)) {
-                                selectedTopic = topic
-                            }
-                            recordLookup(sign: focusedSign, topic: topic)
-                        } label: {
-                            Label(topic.shortTitle, systemImage: topic.iconName)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(selectedTopic == topic ? SimastryColor.midnight : SimastryColor.offWhite)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(selectedTopic == topic ? topic.accent : .white.opacity(0.06), in: .capsule)
-                                .overlay {
-                                    Capsule()
-                                        .stroke(selectedTopic == topic ? topic.accent.opacity(0.2) : .white.opacity(0.08), lineWidth: 1)
-                                }
-                        }
-                        .buttonStyle(SpringPressStyle())
-                    }
-                }
+                topicFilterRow
             }
             .scrollIndicators(.hidden)
             .contentMargins(.horizontal, 0)
         }
+    }
+
+    /// Topic filter as a Liquid Glass cluster on iOS 26 — the chips share a
+    /// `GlassEffectContainer` and each carries a `glassEffectID`, so the glass
+    /// blends across the row and the accent highlight morphs to the selected
+    /// topic. Pre-26 keeps the flat capsule fill + stroke.
+    @ViewBuilder
+    private var topicFilterRow: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 10) {
+                HStack(spacing: 10) {
+                    ForEach(AstropediaTopic.allCases) { topic in
+                        topicChip(topic)
+                            .glassEffect(
+                                .regular
+                                    .tint(selectedTopic == topic ? topic.accent.opacity(0.9) : Color.clear)
+                                    .interactive(true),
+                                in: .capsule
+                            )
+                            .glassEffectID(topic, in: topicGlass)
+                    }
+                }
+            }
+        } else {
+            HStack(spacing: 10) {
+                ForEach(AstropediaTopic.allCases) { topic in
+                    topicChip(topic)
+                        .background(selectedTopic == topic ? topic.accent : SimastryColor.fillFaint, in: .capsule)
+                        .overlay {
+                            Capsule()
+                                .stroke(selectedTopic == topic ? topic.accent.opacity(0.2) : SimastryColor.hairline, lineWidth: 1)
+                        }
+                }
+            }
+        }
+    }
+
+    private func topicChip(_ topic: AstropediaTopic) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                selectedTopic = topic
+            }
+            recordLookup(sign: focusedSign, topic: topic)
+        } label: {
+            Label(topic.shortTitle, systemImage: topic.iconName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(selectedTopic == topic ? SimastryColor.midnight : SimastryColor.offWhite)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+        }
+        .buttonStyle(SpringPressStyle())
     }
 
     private var todayInsightSection: some View {
