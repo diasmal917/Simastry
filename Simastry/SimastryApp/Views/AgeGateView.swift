@@ -47,7 +47,7 @@ struct AgeGateView: View {
                     // Underage message
                     VStack(spacing: 16) {
                         Image(systemName: "moon.zzz.fill")
-                            .font(.system(size: 32))
+                            .font(.system(size: SimastryIconSize.xl))
                             .foregroundStyle(SimastryColor.risingViolet)
 
                         Text(localization.string("ageGate.underage"))

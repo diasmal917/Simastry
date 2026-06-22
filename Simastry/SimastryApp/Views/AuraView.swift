@@ -242,7 +242,7 @@ private struct AuraSummaryCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                 Text("Aura overview")
                     .font(SimastryFont.overline)

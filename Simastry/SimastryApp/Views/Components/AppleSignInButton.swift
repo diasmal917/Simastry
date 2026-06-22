@@ -19,7 +19,7 @@ struct AppleSignInButton: View {
         }) {
             HStack(spacing: 10) {
                 Image(systemName: "apple.logo")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: SimastryIconSize.lg, weight: .medium))
                     .foregroundStyle(.white)
 
                 Text("Continue with Apple")

@@ -59,7 +59,7 @@ struct SavedGuidesView: View {
                         }
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20))
+                            .font(.system(size: SimastryIconSize.lg))
                             .foregroundStyle(SimastryColor.gold)
                     }
                     .accessibilityLabel("Add a new guide")
@@ -124,7 +124,7 @@ struct SavedGuidesView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     Text("Save Your First Guide")
                         .font(SimastryFont.labelLarge)
                 }
@@ -153,7 +153,7 @@ struct SavedGuidesView: View {
                 if viewModel.savedGuideLimit != .max {
                     HStack(spacing: 6) {
                         Image(systemName: "bookmark.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: SimastryIconSize.sm))
                             .foregroundStyle(SimastryColor.gold)
                         Text("\(viewModel.savedGuides.count)/\(viewModel.savedGuideLimit) guides saved")
                             .font(SimastryFont.labelSmall)
@@ -177,7 +177,7 @@ struct SavedGuidesView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: category.icon)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(category.color)
                 Text(category.rawValue)
                     .font(SimastryFont.labelLarge)
@@ -221,7 +221,7 @@ struct SavedGuidesView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.deepMuted)
             }
             .padding(14)
@@ -432,7 +432,7 @@ private struct AddGuideSheet: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: category.icon)
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             Text(category.rawValue)
                                 .font(SimastryFont.labelMedium)
                         }
@@ -456,7 +456,7 @@ private struct AddGuideSheet: View {
     private var upsellBanner: some View {
         HStack(spacing: 12) {
             Image(systemName: "lock.fill")
-                .font(.system(size: 14))
+                .font(.system(size: SimastryIconSize.md))
                 .foregroundStyle(SimastryColor.gold)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -565,7 +565,7 @@ private struct GuideDetailSheet: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 18))
+                            .font(.system(size: SimastryIconSize.md))
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                     .accessibilityLabel("Guide options")
@@ -610,7 +610,7 @@ private struct GuideDetailSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: guide.category.icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(guide.category.color)
                 Text(guide.category.rawValue)
                     .font(SimastryFont.labelMedium)
@@ -661,7 +661,7 @@ private struct GuideDetailSheet: View {
             if let approachWhy = CommunicationTemplates.approachReasoning[guide.sunSign.displayName] {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: SimastryIconSize.sm))
                         .foregroundStyle(SimastryColor.gold.opacity(0.5))
                         .padding(.top, 2)
                     Text(approachWhy)
@@ -705,7 +705,7 @@ private struct GuideDetailSheet: View {
             if let reasoning = CommunicationTemplates.reasoning[guide.sunSign.displayName] {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: SimastryIconSize.sm))
                         .foregroundStyle(SimastryColor.celestialBlue.opacity(0.6))
                         .padding(.top, 2)
                     VStack(alignment: .leading, spacing: 4) {
@@ -754,7 +754,7 @@ private struct GuideDetailSheet: View {
             if let avoidWhy = CommunicationTemplates.avoidReasoning[guide.sunSign.displayName] {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: SimastryIconSize.sm))
                         .foregroundStyle(SimastryColor.sunCoral.opacity(0.5))
                         .padding(.top, 2)
                     Text(avoidWhy)
@@ -780,7 +780,7 @@ private struct GuideDetailSheet: View {
             ) {
                 HStack(spacing: 8) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     Text("Share Guide")
                         .font(SimastryFont.labelLarge)
                 }
@@ -994,7 +994,7 @@ private struct EditGuideSheet: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: category.icon)
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             Text(category.rawValue)
                                 .font(SimastryFont.labelMedium)
                         }

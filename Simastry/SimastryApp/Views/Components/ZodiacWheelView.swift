@@ -8,7 +8,7 @@ struct ZodiacWheelView: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 20))
+                .font(SimastryFont.titleMedium)
                 .foregroundStyle(AstropediaColors.gold)
                 .frame(width: 32)
 

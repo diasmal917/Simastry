@@ -80,7 +80,7 @@ struct MomentsSection: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
                 Image(systemName: "photo.on.rectangle.angled")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("MOMENTS")
@@ -110,7 +110,7 @@ struct MomentsSection: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "sparkles.rectangle.stack")
-                .font(.system(size: 26, weight: .light))
+                .font(.system(size: SimastryIconSize.xl, weight: .light))
                 .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
             Text("Share a moment — your panel always shows up for you.")
@@ -177,7 +177,7 @@ struct MomentsSection: View {
         PhotosPicker(selection: $pickerItem, matching: .images) {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .bold))
                 Text("Add a moment")
                     .font(SimastryFont.labelLarge)
             }
@@ -350,7 +350,7 @@ struct MomentDetailSheet: View {
     private func reactionRow(_ moment: Moment) -> some View {
         HStack(spacing: 7) {
             Image(systemName: "heart.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.sunCoral)
 
             Text(moment.reactionCount > 0 ? "\(moment.reactionCount) from your panel" : "Your panel is on its way")
@@ -416,7 +416,7 @@ struct MomentDetailSheet: View {
                     HapticManager.buttonPress()
                 } label: {
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: SimastryIconSize.md, weight: .bold))
                         .foregroundStyle(trimmedComment.isEmpty ? SimastryColor.mutedSilver : SimastryColor.midnight)
                         .frame(width: 34, height: 34)
                         .background(trimmedComment.isEmpty ? AnyShapeStyle(Color.white.opacity(0.08)) : AnyShapeStyle(SimastryGradient.gold), in: Circle())
@@ -503,7 +503,7 @@ struct MomentDetailSheet: View {
             .frame(width: 26, height: 26)
             .overlay {
                 Text(String((viewModel.profile?.displayName ?? "Y").prefix(1)).uppercased())
-                    .font(.system(size: 11, weight: .bold))
+                    .font(SimastryFont.microBold)
                     .foregroundStyle(SimastryColor.goldLight)
             }
             .accessibilityHidden(true)

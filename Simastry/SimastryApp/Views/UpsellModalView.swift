@@ -58,7 +58,7 @@ struct UpsellModalView: View {
     private var headerSection: some View {
         VStack(spacing: 14) {
             Image(systemName: "sparkles")
-                .font(.system(size: 32, weight: .semibold))
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [SimastryColor.goldLight, SimastryColor.gold],
@@ -141,7 +141,7 @@ struct UpsellModalView: View {
                         activeBadge
                     } else if selectedTier == "plus" {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 22))
+                            .font(.system(size: SimastryIconSize.lg))
                             .foregroundStyle(SimastryColor.gold)
                     }
                 }
@@ -208,7 +208,7 @@ struct UpsellModalView: View {
                         activeBadge
                     } else if selectedTier == "pro" {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 22))
+                            .font(.system(size: SimastryIconSize.lg))
                             .foregroundStyle(SimastryColor.gold)
                     }
                 }
@@ -309,7 +309,7 @@ struct UpsellModalView: View {
     private func featureRow(_ text: String, icon: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.goldLight)
                 .frame(width: 18)
             Text(text)

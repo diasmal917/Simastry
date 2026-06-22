@@ -50,7 +50,7 @@ struct GuidedRoomInboxRow: View {
                     HStack(spacing: 5) {
                         if room.latestMessage?.senderKind == .activity {
                             Image(systemName: "rectangle.stack.badge.play.fill")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 .foregroundStyle(SimastryColor.risingViolet)
                         }
 
@@ -154,7 +154,7 @@ struct GuidedRoomCreateView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "bubble.left.and.bubble.right.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
                 Text("GUIDED ROOM")
@@ -480,7 +480,7 @@ struct GuidedRoomChatView: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
                     .frame(width: 36, height: 36)
                     .background(.white.opacity(0.07), in: Circle())
@@ -492,7 +492,7 @@ struct GuidedRoomChatView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
                     .frame(width: 36, height: 36)
                     .background(.white.opacity(0.07), in: Circle())
@@ -515,7 +515,7 @@ struct GuidedRoomChatView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: "sparkles.rectangle.stack.fill")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
                 Text("GUIDED CONVERSATION")
@@ -582,7 +582,7 @@ struct GuidedRoomChatView: View {
                 sendReply()
             } label: {
                 Image(systemName: isSendingReply ? "ellipsis" : "arrow.up")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(canSendReply ? SimastryColor.midnight : SimastryColor.mutedSilver)
                     .frame(width: 38, height: 38)
                     .background(canSendReply ? SimastryGradient.gold : LinearGradient(colors: [.white.opacity(0.08), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
@@ -630,7 +630,7 @@ private struct GuidedRoomActivityTray: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 7) {
                 Image(systemName: "rectangle.stack.badge.play.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet)
 
                 Text("Prompt cards")
@@ -650,7 +650,7 @@ private struct GuidedRoomActivityTray: View {
                         } label: {
                             HStack(spacing: 7) {
                                 Image(systemName: kind.systemImage)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 Text(kind.title)
                                     .font(SimastryFont.captionSmall.weight(.semibold))
                                     .lineLimit(1)
@@ -809,7 +809,7 @@ private struct GuidedRoomActivityMessageCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: message.activityKind?.systemImage ?? "rectangle.stack.badge.play.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -973,7 +973,7 @@ private struct GuidedRoomProfilePickRow: View {
                         ZodiacIconView(sign: sign, size: 28, showsGlow: false)
                     } else {
                         Image(systemName: "person.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
                     }
                 }
@@ -995,7 +995,7 @@ private struct GuidedRoomProfilePickRow: View {
                 Spacer()
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                     .foregroundStyle(isSelected ? SimastryColor.gold : SimastryColor.deepMuted)
             }
             .padding(12)

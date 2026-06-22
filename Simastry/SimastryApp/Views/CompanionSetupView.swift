@@ -91,7 +91,7 @@ struct CompanionSetupView: View {
                                     .frame(width: 44, height: 44)
 
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                                     .foregroundStyle(SimastryColor.gold)
                             }
 
@@ -109,7 +109,7 @@ struct CompanionSetupView: View {
                             Spacer()
 
                             Image(systemName: "arrow.forward.circle.fill")
-                                .font(.system(size: 22))
+                                .font(.system(size: SimastryIconSize.lg))
                                 .foregroundStyle(SimastryColor.gold)
                         }
                         .padding(18)
@@ -174,7 +174,7 @@ struct CompanionSetupView: View {
                             .onSubmit {
                                 isNamingFocused = false
                             }
-                            .font(.system(size: 24, weight: .semibold))
+                            .font(SimastryFont.titleLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .tint(SimastryColor.gold)
                             .multilineTextAlignment(.center)
@@ -463,7 +463,7 @@ struct CompanionSetupView: View {
                         .foregroundStyle(SimastryColor.offWhite)
                 } else {
                     Image(systemName: SimastryIcon.astrologers)
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                         .foregroundStyle(SimastryColor.goldLight)
                 }
             }

@@ -72,7 +72,7 @@ struct CoupleReadView: View {
                 signColumn(name: nameA, sign: sunA)
 
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .bold))
                     .foregroundStyle(SimastryColor.gold)
 
                 signColumn(name: nameB, sign: sunB)
@@ -129,7 +129,7 @@ struct CoupleReadView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
                 Image(systemName: "link")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("COMMITMENT STYLES")
@@ -155,7 +155,7 @@ struct CoupleReadView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(tint)
 
                 Text(title)

@@ -51,7 +51,7 @@ struct CommunicationGuideView: View {
                         if let approachWhy = CommunicationTemplates.approachReasoning[sign.displayName] {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "lightbulb.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: SimastryIconSize.sm))
                                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                                     .padding(.top, 2)
                                 Text(approachWhy)
@@ -93,7 +93,7 @@ struct CommunicationGuideView: View {
                         if let reasoning = CommunicationTemplates.reasoning[sign.displayName] {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "lightbulb.fill")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: SimastryIconSize.sm))
                                     .foregroundStyle(SimastryColor.celestialBlue.opacity(0.6))
                                     .padding(.top, 2)
                                 VStack(alignment: .leading, spacing: 4) {
@@ -140,7 +140,7 @@ struct CommunicationGuideView: View {
                         if let avoidWhy = CommunicationTemplates.avoidReasoning[sign.displayName] {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "lightbulb.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: SimastryIconSize.sm))
                                     .foregroundStyle(SimastryColor.sunCoral.opacity(0.5))
                                     .padding(.top, 2)
                                 Text(avoidWhy)

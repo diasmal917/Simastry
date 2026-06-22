@@ -174,7 +174,7 @@ struct SignUpView: View {
                     focusedField = nil
                 }
             }
-            .font(.system(size: 16, weight: .medium))
+            .font(SimastryFont.bodyMedium)
             .foregroundStyle(.white)
             .tint(.white)
         }

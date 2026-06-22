@@ -306,7 +306,7 @@ struct MessageSearchSheet: View {
     private var searchBarCapsule: some View {
         HStack(spacing: 11) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .accessibilityHidden(true)
 
@@ -338,14 +338,14 @@ struct MessageSearchSheet: View {
                     Group {
                         if #available(iOS 26.0, *) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .bold))
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
                                 .frame(width: 28, height: 28)
                                 .glassEffect(.regular.interactive(), in: .circle)
                                 .glassEffectID("clear", in: searchBarGlass)
                         } else {
                             Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .bold))
                                 .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
                                 .frame(width: 28, height: 28)
                                 .background(SimastryColor.surfaceSunken.opacity(0.55), in: Circle())
@@ -579,7 +579,7 @@ private struct MessageGuidePreviewCard: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "message.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     Text("Chat")
                         .font(SimastryFont.labelMedium)
                 }
@@ -635,7 +635,7 @@ private struct MessageSearchGuideRow: View {
             Spacer(minLength: 8)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.deepMuted)
         }
         .padding(14)
@@ -810,7 +810,7 @@ private struct MessageSearchUserRow: View {
             Spacer(minLength: 8)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.deepMuted)
         }
         .padding(14)
@@ -833,7 +833,7 @@ private struct MessageSearchStatusCard: View {
                     .tint(SimastryColor.gold)
             } else {
                 Image(systemName: systemImage)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
             }
 

@@ -36,7 +36,7 @@ struct FeatureTipView: View {
     private var tipCard: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 36, height: 36)
                 .background(SimastryColor.gold.opacity(0.14), in: .rect(cornerRadius: 10))
@@ -184,7 +184,7 @@ private struct FeatureTipInlineView: View {
         if isVisible {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 36, height: 36)
                     .background(SimastryColor.gold.opacity(0.14), in: .rect(cornerRadius: 10))

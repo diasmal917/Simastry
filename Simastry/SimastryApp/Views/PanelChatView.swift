@@ -118,7 +118,7 @@ struct PanelChatView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
                     .frame(width: 36, height: 36)
                     .background(.white.opacity(0.07), in: Circle())
@@ -155,7 +155,7 @@ struct PanelChatView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: SimastryIcon.method)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
                 Text("YOUR ADVISORY PANEL")
@@ -208,7 +208,7 @@ struct PanelChatView: View {
     private func firstReadContextPill(_ draft: FirstReadDraft) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "text.magnifyingglass")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .padding(.top, 2)
 
@@ -271,7 +271,7 @@ struct PanelChatView: View {
                 sendReply()
             } label: {
                 Image(systemName: isSendingReply ? "ellipsis" : "arrow.up")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(canSendReply ? SimastryColor.midnight : SimastryColor.mutedSilver)
                     .frame(width: 38, height: 38)
                     .background(canSendReply ? SimastryGradient.gold : LinearGradient(colors: [.white.opacity(0.08), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())

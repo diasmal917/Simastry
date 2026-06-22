@@ -279,7 +279,7 @@ struct BirthDetailsView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: birthTimeUnknown ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: SimastryIconSize.md, weight: .medium))
                         .foregroundStyle(birthTimeUnknown ? SimastryColor.gold : SimastryColor.mutedSilver)
                     Text(localization.string("birth.unknownTime"))
                         .font(SimastryFont.labelMedium)

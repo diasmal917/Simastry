@@ -95,7 +95,7 @@ struct TeamReadView: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: includeMe ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 19, weight: .medium))
+                            .font(.system(size: SimastryIconSize.lg, weight: .medium))
                             .foregroundStyle(includeMe ? SimastryColor.gold : SimastryColor.mutedSilver)
 
                         Text("Include me")
@@ -165,7 +165,7 @@ struct TeamReadView: View {
                 Spacer()
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 19, weight: .medium))
+                    .font(.system(size: SimastryIconSize.lg, weight: .medium))
                     .foregroundStyle(isSelected ? SimastryColor.gold : SimastryColor.mutedSilver.opacity(0.6))
             }
             .padding(11)
@@ -340,7 +340,7 @@ struct TeamReadView: View {
     private func sectionLabel(_ text: String, icon: String, tint: Color) -> some View {
         HStack(spacing: 7) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(tint)
 
             Text(text)

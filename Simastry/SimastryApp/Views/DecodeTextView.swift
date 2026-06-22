@@ -173,7 +173,7 @@ struct FirstReadChoiceView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: SimastryIconSize.md, weight: .bold))
                         .foregroundStyle(option.id == .predict ? SimastryColor.gold : SimastryColor.mutedSilver)
                         .frame(width: arrowColumnWidth, height: arrowColumnWidth, alignment: .center)
                         .padding(.top, 2)
@@ -213,7 +213,7 @@ struct FirstReadChoiceView: View {
     private var privacyFooter: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: SimastryIcon.privacy)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold.opacity(0.78))
 
             Text(localization.string("firstReadChoice.privacy"))
@@ -536,7 +536,7 @@ struct FirstPredictionView: View {
     private var privacyLine: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: SimastryIcon.privacy)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold.opacity(0.78))
 
             Text(localization.string("firstPrediction.privacy"))
@@ -822,7 +822,7 @@ struct DecodeTextView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 7) {
                         Image(systemName: "arrowshape.turn.up.left.fill")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
 
                         Text("WAYS TO REPLY")
@@ -857,7 +857,7 @@ struct DecodeTextView: View {
                                 }
                             } label: {
                                 Image(systemName: copiedReplyIndex == index ? "checkmark" : "doc.on.doc")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                     .foregroundStyle(SimastryColor.gold)
                                     .padding(7)
                                     .background(SimastryColor.gold.opacity(0.12), in: Circle())
@@ -881,7 +881,7 @@ struct DecodeTextView: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(tint)
 
                 Text(title)
@@ -1107,7 +1107,7 @@ struct FirstReadView: View {
     private var privacyLine: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: SimastryIcon.privacy)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold.opacity(0.78))
 
             Text(localization.string("firstRead.privacy"))
@@ -1267,7 +1267,7 @@ struct FirstReadView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: move.type.systemImage)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(sign.color)
 
                 Text(localization.string("firstRead.bestNextMove"))
@@ -1307,7 +1307,7 @@ struct FirstReadView: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(tint)
 
                 Text(title)
@@ -1331,7 +1331,7 @@ struct FirstReadView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: "arrowshape.turn.up.left.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text(localization.string("firstRead.replyWays"))
@@ -1377,7 +1377,7 @@ struct FirstReadView: View {
                             }
                         } label: {
                             Image(systemName: copiedReplyIndex == index ? "checkmark" : "doc.on.doc")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 .foregroundStyle(SimastryColor.gold)
                                 .padding(7)
                                 .background(SimastryColor.gold.opacity(0.12), in: Circle())
@@ -1444,7 +1444,7 @@ struct FirstReadView: View {
         VStack(alignment: .leading, spacing: 11) {
             HStack(spacing: 7) {
                 Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text(localization.string("firstRead.tuneGuides"))

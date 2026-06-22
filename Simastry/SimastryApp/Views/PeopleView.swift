@@ -146,7 +146,7 @@ struct PeopleView: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "person.3.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 42, height: 42)
                     .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
@@ -166,7 +166,7 @@ struct PeopleView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold.opacity(0.7))
             }
             .padding(13)
@@ -188,7 +188,7 @@ struct PeopleView: View {
     private var peopleContextStrip: some View {
         HStack(spacing: 13) {
             Image(systemName: "lock.shield.fill")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 42, height: 42)
                 .background(SimastryColor.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
@@ -264,7 +264,7 @@ struct PeopleView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "moon.haze.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                     Text("Best next move")
                         .font(SimastryFont.overline)
@@ -311,7 +311,7 @@ struct PeopleView: View {
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
                     Image(systemName: person.relationshipType.systemImage)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold.opacity(0.82))
                 }
 
@@ -348,7 +348,7 @@ struct PeopleView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.crop.circle.badge.plus")
-                .font(.system(size: 34, weight: .semibold))
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
 
             Text(viewModel.relationshipPeople.isEmpty ? "No people yet" : "No matching people")
@@ -369,7 +369,7 @@ struct PeopleView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     Text("Add person")
                         .font(SimastryFont.labelLarge)
                 }
@@ -389,7 +389,7 @@ struct PeopleView: View {
     private func sectionTitle(_ title: String, systemImage: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
             Text(title)
                 .font(SimastryFont.overline)
@@ -427,7 +427,7 @@ struct RelationshipPersonDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: "point.bottomleft.forward.to.point.topright.scurvepath.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("WHAT'S THE SITUATION?")
@@ -520,7 +520,7 @@ struct RelationshipPersonDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
                 Image(systemName: "theatermasks.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet)
 
                 Text("SIMULATION ROOM")
@@ -588,7 +588,7 @@ struct RelationshipPersonDetailView: View {
         } label: {
             HStack(spacing: 11) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 36, height: 36)
                     .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -608,7 +608,7 @@ struct RelationshipPersonDetailView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(9)
@@ -628,7 +628,7 @@ struct RelationshipPersonDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
                 Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
 
                 Text("TUNE THE PERSONA")
@@ -786,7 +786,7 @@ struct RelationshipPersonDetailView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "heart.text.square.fill")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                         .frame(width: 40, height: 40)
                         .background(SimastryColor.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: SimastryRadius.small, style: .continuous))
@@ -806,7 +806,7 @@ struct RelationshipPersonDetailView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(14)
@@ -914,7 +914,7 @@ struct RelationshipPersonDetailView: View {
                     RelationshipAvatarView(person: currentPerson, size: 72)
                         .overlay(alignment: .bottomTrailing) {
                             Image(systemName: "camera.fill")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 .foregroundStyle(SimastryColor.midnight)
                                 .frame(width: 26, height: 26)
                                 .background(SimastryColor.gold, in: Circle())
@@ -1169,7 +1169,7 @@ struct RelationshipPersonDetailView: View {
     private func insightRow(_ title: String, _ text: String, systemImage: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: systemImage)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 30, height: 30)
                 .background(SimastryColor.gold.opacity(0.10), in: Circle())
@@ -1191,7 +1191,7 @@ struct RelationshipPersonDetailView: View {
     private func sectionTitle(_ title: String, systemImage: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
             Text(title)
                 .font(SimastryFont.overline)
@@ -1292,7 +1292,7 @@ struct AddRelationshipPersonView: View {
                 .overlay(Circle().stroke(SimastryColor.gold.opacity(0.24), lineWidth: 1))
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: "camera.fill")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.midnight)
                         .frame(width: 26, height: 26)
                         .background(SimastryColor.gold, in: Circle())

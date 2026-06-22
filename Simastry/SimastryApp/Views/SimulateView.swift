@@ -319,7 +319,7 @@ struct SimulateView: View {
             VStack(alignment: .leading, spacing: 9) {
                 HStack {
                     Image(systemName: category.systemImage)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(isSelected ? SimastryColor.midnight : category.accentColor)
                         .frame(width: 30, height: 30)
                         .background(
@@ -333,7 +333,7 @@ struct SimulateView: View {
 
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
                     }
                 }
@@ -370,7 +370,7 @@ struct SimulateView: View {
     private var modeCard: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: selectedCategory.systemImage)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                 .foregroundStyle(selectedCategory.accentColor)
                 .frame(width: 42, height: 42)
                 .background(selectedCategory.accentColor.opacity(0.14), in: .rect(cornerRadius: SimastryRadius.medium))
@@ -474,7 +474,7 @@ struct SimulateView: View {
                         .tint(SimastryColor.gold)
                 } else {
                     Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 }
 
                 Text(isRecognizingScreenshot ? "Reading…" : "Import screenshot")
@@ -534,7 +534,7 @@ struct SimulateView: View {
            let tip = AstrologyTemplates.textingStyle[sign.displayName] {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .padding(.top, 2)
 
@@ -626,7 +626,7 @@ struct SimulateView: View {
         if viewModel.bonusPredictions > 0 {
             HStack(spacing: 6) {
                 Image(systemName: "scope")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 Text("\(viewModel.bonusPredictions) bonus prediction\(viewModel.bonusPredictions == 1 ? "" : "s")")
                     .font(SimastryFont.labelSmall)
             }
@@ -662,7 +662,7 @@ struct SimulateView: View {
                         .animation(.spring(SimastrySpring.smooth), value: progressPhaseIndex)
 
                     Image(systemName: "wand.and.stars")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                         .foregroundStyle(SimastryColor.offWhite)
                         .symbolEffect(.variableColor.iterative, isActive: true)
                 }
@@ -761,7 +761,7 @@ struct SimulateView: View {
             if history.isEmpty {
                 VStack(spacing: 10) {
                     Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                         .foregroundStyle(SimastryColor.risingViolet)
                     Text("No predictions yet")
                         .font(SimastryFont.titleSmall)
@@ -780,7 +780,7 @@ struct SimulateView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 7) {
                                 Image(systemName: category.systemImage)
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                     .foregroundStyle(category.accentColor)
 
                                 Text(category.title.uppercased())
@@ -867,7 +867,7 @@ struct SimulateView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: category.systemImage)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(category.accentColor)
                         .frame(width: 38, height: 38)
                         .background(category.accentColor.opacity(0.16), in: .rect(cornerRadius: 12))
@@ -905,7 +905,7 @@ struct SimulateView: View {
                 }
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(.red.opacity(0.9))
                     .frame(width: 40, height: 40)
                     .simastryGlass(cornerRadius: SimastryRadius.medium)

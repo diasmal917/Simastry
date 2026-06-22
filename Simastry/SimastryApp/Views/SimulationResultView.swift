@@ -69,7 +69,7 @@ struct SimulationResultView: View {
                         showShareCard = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
                     }
                 }
@@ -150,7 +150,7 @@ struct SimulationResultView: View {
                         ZodiacIconView(sign: sign, size: 25, showsGlow: false)
                     } else {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(SimastryColor.offWhite)
                     }
                 }
@@ -205,7 +205,7 @@ struct SimulationResultView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "arrowshape.turn.up.left.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     Text("Suggested reply")
@@ -395,7 +395,7 @@ struct SimulationResultView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "text.bubble.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
 
                 Text("Communication tip for \(sign.displayName)")
@@ -430,7 +430,7 @@ struct SimulationResultView: View {
                         Text("Read the full \(sign.displayName) guide")
                             .font(SimastryFont.labelLarge)
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .bold))
                     }
                     .foregroundStyle(SimastryColor.celestialBlue)
                 }
@@ -477,7 +477,7 @@ struct SimulationResultView: View {
     private func resultInsightRow(title: String, body: String, systemImage: String, tint: Color) -> some View {
         HStack(alignment: .top, spacing: 11) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(tint)
                 .padding(.top, 2)
 
@@ -523,7 +523,7 @@ struct SimulationResultView: View {
                                 .tint(SimastryColor.midnight)
                         } else {
                             Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         }
 
                         Text(isRegenerating ? "Updating prediction" : "See New Response")
@@ -553,7 +553,7 @@ struct SimulationResultView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 Text("Share Result")
                     .font(SimastryFont.titleSmall)
             }
@@ -578,7 +578,7 @@ struct SimulationResultView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Image(systemName: "gauge.medium")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("\(result.confidence)% confidence - based on \(confidenceBasis)")
@@ -590,7 +590,7 @@ struct SimulationResultView: View {
             if let reasoning = confidenceReasoningText {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "info.circle")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: SimastryIconSize.sm, weight: .medium))
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .padding(.top, 1)
 

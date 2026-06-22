@@ -47,7 +47,7 @@ struct StreakCalendarView: View {
                     .frame(width: size, height: size)
 
                 Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .bold))
                     .foregroundStyle(SimastryColor.midnight)
             } else {
                 Circle()

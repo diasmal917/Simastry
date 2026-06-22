@@ -35,7 +35,7 @@ struct PersonPlaybookSection: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Image(systemName: "book.pages.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     Text("PLAYBOOK")
@@ -106,7 +106,7 @@ struct PersonPlaybookSection: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: situation.systemImage)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
 
                 Text(situation.title)
                     .font(SimastryFont.labelSmall)

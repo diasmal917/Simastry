@@ -264,7 +264,7 @@ struct HomeView: View {
         if showStreakMilestone, let message = streakManager.streakMessage {
             HStack(spacing: 10) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text(message)
@@ -407,7 +407,7 @@ struct HomeView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: "wand.and.stars")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
                     .frame(width: 32, height: 32)
                     .background(SimastryColor.celestialBlue.opacity(0.14), in: Circle())
@@ -453,7 +453,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 7) {
                 Image(systemName: decision.category.systemImage)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
 
                 Text(decision.category.title.uppercased())
@@ -476,7 +476,7 @@ struct HomeView: View {
 
             HStack(alignment: .top, spacing: 7) {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .padding(.top, 2)
 
@@ -514,7 +514,7 @@ struct HomeView: View {
                         .frame(width: 14, height: 14)
                 } else {
                     Image(systemName: category.systemImage)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .frame(width: 14, height: 14)
                 }
 
@@ -562,7 +562,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "text.magnifyingglass")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(sign.color)
                         .frame(width: 28, height: 28)
                         .background(sign.color.opacity(0.14), in: Circle())
@@ -600,7 +600,7 @@ struct HomeView: View {
                     if let move = draft.bestNextMove {
                         HStack(spacing: 7) {
                             Image(systemName: move.type.systemImage)
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 .foregroundStyle(sign.color)
 
                             Text("Best next move")
@@ -750,7 +750,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 Image(systemName: SimastryIcon.predict)
-                    .font(.system(size: 19, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet)
                     .frame(width: 44, height: 44)
                     .background(SimastryColor.risingViolet.opacity(0.16), in: RoundedRectangle(cornerRadius: SimastryRadius.medium, style: .continuous))
@@ -818,7 +818,7 @@ struct HomeView: View {
     private var simulateSourceHint: some View {
         HStack(spacing: 7) {
             Image(systemName: "info.circle.fill")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.risingViolet.opacity(0.9))
 
             Text("Reads your chart and the details you add.")
@@ -866,7 +866,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 13) {
                 HStack(spacing: 8) {
                     Image(systemName: SimastryIcon.dailyRead)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     Text("YOUR DAILY READ")
@@ -901,7 +901,7 @@ struct HomeView: View {
                 if let briefMoveLine {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: SimastryIcon.quote)
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .bold))
                             .foregroundStyle(SimastryColor.gold)
                             .padding(.top, 3)
 
@@ -925,7 +925,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 7) {
                             Image(systemName: reading.body.systemImageName)
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 .foregroundStyle(accent)
 
                             Text(reading.headline)
@@ -969,7 +969,7 @@ struct HomeView: View {
                             Spacer()
 
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                 .foregroundStyle(SimastryColor.goldLight.opacity(0.8))
                         }
                         .padding(.top, 4)
@@ -1039,7 +1039,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 11) {
                     HStack(spacing: 8) {
                         Image(systemName: status.systemImage)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
 
                         Text("THE SITUATION")
@@ -1094,7 +1094,7 @@ struct HomeView: View {
                                 viewModel.showToast("Opener copied", subtitle: "First move, ready to send", isError: false)
                             } label: {
                                 Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                     .foregroundStyle(SimastryColor.gold)
                                     .padding(8)
                                     .background(SimastryColor.gold.opacity(0.12), in: Circle())
@@ -1130,7 +1130,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "envelope.badge.clock.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.celestialBlue)
 
                     Text("SEALED DRAFTS")
@@ -1165,7 +1165,7 @@ struct HomeView: View {
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: draft.isReleased() ? "envelope.open.fill" : "envelope.fill")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                     .foregroundStyle(draft.isReleased() ? SimastryColor.gold : SimastryColor.mutedSilver)
 
                                 VStack(alignment: .leading, spacing: 1) {
@@ -1226,7 +1226,7 @@ struct HomeView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("LEARN")
@@ -1338,7 +1338,7 @@ struct HomeView: View {
             HStack {
                 HStack(spacing: 7) {
                     Image(systemName: SimastryIcon.astrologers)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.goldLight)
 
                     Text("YOUR GUIDES")
@@ -1371,7 +1371,7 @@ struct HomeView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: SimastryIcon.astrologers)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .bold))
                     .foregroundStyle(SimastryColor.midnight.opacity(0.82))
 
                 Text("View Astrologers")
@@ -1381,7 +1381,7 @@ struct HomeView: View {
                 Spacer()
 
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .bold))
                     .foregroundStyle(SimastryColor.midnight.opacity(0.8))
             }
             .padding(.horizontal, 14)
@@ -1413,7 +1413,7 @@ struct HomeView: View {
 
                 if viewModel.unreadPanelCount > 0 {
                     Text("\(viewModel.unreadPanelCount)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(SimastryFont.microBold)
                         .foregroundStyle(SimastryColor.midnight)
                         .frame(minWidth: 19)
                         .frame(height: 19)
@@ -1421,7 +1421,7 @@ struct HomeView: View {
                 }
 
                 Image(systemName: SimastryIcon.message)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight.opacity(0.92))
             }
             .padding(.horizontal, 13)
@@ -1500,7 +1500,7 @@ struct HomeView: View {
                         Spacer()
 
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.6))
                     }
 

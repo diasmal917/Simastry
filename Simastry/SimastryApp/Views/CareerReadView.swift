@@ -55,7 +55,7 @@ struct CareerReadView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "briefcase.fill")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("HOW YOU WORK")
@@ -109,7 +109,7 @@ struct CareerReadView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("STRENGTHS ON PAPER AND IN ROOMS")
@@ -166,7 +166,7 @@ struct CareerReadView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
                 Image(systemName: "person.text.rectangle.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
 
                 Text("DECODE YOUR BOSS")
@@ -269,7 +269,7 @@ struct CareerReadView: View {
     private var missingChartCard: some View {
         VStack(spacing: 12) {
             Image(systemName: "briefcase.fill")
-                .font(.system(size: 28, weight: .semibold))
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
 
             Text("Set your signs first")
@@ -291,7 +291,7 @@ struct CareerReadView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(tint)
 
                 Text(title)

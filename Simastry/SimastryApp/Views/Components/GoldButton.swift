@@ -48,7 +48,7 @@ struct SecondaryButton: View {
             action()
         }) {
             Text(title)
-                .font(.system(size: 14, weight: .medium))
+                .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
         .buttonStyle(.plain)

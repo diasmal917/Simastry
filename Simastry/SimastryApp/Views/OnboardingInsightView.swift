@@ -285,7 +285,7 @@ struct OnboardingInsightView: View {
     private func placementRow(icon: String, tint: Color, role: String, sign: ZodiacSign, line: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 36, height: 36)
                 .background(tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -324,7 +324,7 @@ struct OnboardingInsightView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 7) {
                 Image(systemName: SimastryIcon.method)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
                 Text("YOUR PANEL IS FORMING")

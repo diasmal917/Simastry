@@ -208,7 +208,7 @@ struct CompanionDetailSheet: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "heart.text.square.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
 
                         VStack(alignment: .leading, spacing: 1) {
@@ -226,7 +226,7 @@ struct CompanionDetailSheet: View {
                         Spacer()
 
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                     .padding(13)
@@ -290,7 +290,7 @@ struct CompanionDetailSheet: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                                     .foregroundStyle(SimastryColor.amber)
                                 Text("Growth Edge")
                                     .font(SimastryFont.labelLarge)
@@ -325,7 +325,7 @@ struct CompanionDetailSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(tint)
                 Text(title)
                     .font(SimastryFont.labelLarge)

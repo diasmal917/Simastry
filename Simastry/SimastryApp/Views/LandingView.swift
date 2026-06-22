@@ -255,9 +255,9 @@ private struct LandingPrimaryButton: View {
         } label: {
             HStack(spacing: 9) {
                 Text(title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(SimastryFont.titleSmall)
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
@@ -462,7 +462,7 @@ struct LandingView: View {
         VStack(spacing: compact ? 10 : 12) {
             HStack(spacing: 7) {
                 Image(systemName: slide.icon)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .bold))
                 Text(slide.eyebrow)
                     .font(SimastryFont.overline)
                     .tracking(1.6)
@@ -514,7 +514,7 @@ struct LandingView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: SimastryIcon.predict)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
                     .background(accent.opacity(0.16), in: Circle())
@@ -561,7 +561,7 @@ struct LandingView: View {
                 ForEach(Array(decisions.enumerated()), id: \.offset) { _, item in
                     VStack(alignment: .leading, spacing: 8) {
                         Image(systemName: item.2)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(accent)
                         Text(item.0)
                             .font(SimastryFont.captionSmall.weight(.semibold))
@@ -606,7 +606,7 @@ struct LandingView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: SimastryIcon.quote)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
                     .background(accent.opacity(0.16), in: Circle())
@@ -617,7 +617,7 @@ struct LandingView: View {
             }
 
             Text(localization.string("landing.visual.reply.line"))
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .font(SimastryFont.titleMedium)
                 .foregroundStyle(.white)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -986,7 +986,7 @@ struct LandingView: View {
             ForEach(localizedLandingFeatures) { feature in
                 VStack(spacing: 7) {
                     Image(systemName: feature.icon)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(feature.accent)
                         .frame(height: 20)
 
@@ -1048,7 +1048,7 @@ struct LandingView: View {
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(.white.opacity(0.62))
             Image(systemName: "chevron.compact.down")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.5))
         }
         .accessibilityHidden(true)
@@ -1114,7 +1114,7 @@ struct LandingView: View {
     private func showcaseRow(_ item: LandingShowcaseItem) -> some View {
         HStack(spacing: 14) {
             Image(systemName: item.icon)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(item.accent)
                 .frame(width: 40, height: 40)
                 .background(item.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -1147,7 +1147,7 @@ struct LandingView: View {
     private var trustBand: some View {
         VStack(spacing: 10) {
             Image(systemName: SimastryIcon.privacy)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 48, height: 48)
                 .background(SimastryColor.gold.opacity(0.10), in: Circle())

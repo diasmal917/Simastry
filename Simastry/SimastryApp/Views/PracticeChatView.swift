@@ -116,7 +116,7 @@ struct PracticeChatView: View {
     private var disclosureBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "theatermasks.fill")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
 
             Text("A rehearsal built from chart patterns — not actually \(person.displayName).")
@@ -213,7 +213,7 @@ struct PracticeChatView: View {
                 send()
             } label: {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? SimastryColor.mutedSilver : SimastryColor.midnight)
                     .frame(width: 36, height: 36)
                     .background(

@@ -330,7 +330,7 @@ struct GuideProfileView: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 6) {
                 Image(systemName: SimastryIcon.method)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
                 Text("SIMASTRY METHOD")
@@ -705,7 +705,7 @@ struct GuideCalibrationSheet: View {
                         addCustomTopic()
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: SimastryIconSize.md, weight: .bold))
                             .foregroundStyle(SimastryColor.midnight)
                             .frame(width: 34, height: 34)
                             .background(SimastryColor.gold, in: Circle())
@@ -736,7 +736,7 @@ struct GuideCalibrationSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text(title.uppercased())
@@ -1026,7 +1026,7 @@ struct GramPostDetailSheet: View {
                     addComment()
                 } label: {
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: SimastryIconSize.md, weight: .bold))
                         .foregroundStyle(trimmedComment.isEmpty ? SimastryColor.mutedSilver : SimastryColor.midnight)
                         .frame(width: 34, height: 34)
                         .background(trimmedComment.isEmpty ? Color.white.opacity(0.08) : SimastryColor.gold, in: Circle())

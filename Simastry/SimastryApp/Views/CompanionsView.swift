@@ -252,7 +252,7 @@ struct CompanionsView: View {
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 48, height: 48)
                     .background(.white.opacity(0.07), in: Circle())
@@ -391,7 +391,7 @@ struct CompanionsView: View {
                 } label: {
                     HStack(spacing: 14) {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20))
+                            .font(.system(size: SimastryIconSize.lg))
                             .foregroundStyle(SimastryColor.gold)
 
                         VStack(alignment: .leading, spacing: 3) {
@@ -579,7 +579,7 @@ struct CompanionsView: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 12) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 38, height: 38)
                     .background(tint.opacity(0.18), in: .rect(cornerRadius: 12))
@@ -677,7 +677,7 @@ struct CompanionsView: View {
     private func statPill(title: String, systemImage: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
             Text(title)
                 .font(SimastryFont.labelSmall)
                 .lineLimit(1)

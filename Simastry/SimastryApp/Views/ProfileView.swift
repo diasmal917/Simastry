@@ -260,7 +260,7 @@ struct ProfileView: View {
                 activeSheet = .settings
             } label: {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 42, height: 42)
                     .simastryGlass(cornerRadius: SimastryRadius.medium)
@@ -320,7 +320,7 @@ struct ProfileView: View {
                     .frame(width: 48, height: 48)
 
                 Image(systemName: systemImage)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold.opacity(0.4))
             }
 
@@ -391,7 +391,7 @@ struct ProfileView: View {
         VStack(spacing: 16) {
             HStack(spacing: 10) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .scaleEffect(streakManager.isMilestone && !reduceMotion ? 1.1 : 1.0)
                     .animation(
@@ -451,7 +451,7 @@ struct ProfileView: View {
 
         return HStack(spacing: 7) {
             Image(systemName: "graduationcap.fill")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
 
             Text(state.isComplete
@@ -537,7 +537,7 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(16)
@@ -576,7 +576,7 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(16)
@@ -628,7 +628,7 @@ struct ProfileView: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "person.2.wave.2.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [SimastryColor.gold, SimastryColor.goldLight],
@@ -641,7 +641,7 @@ struct ProfileView: View {
                             .foregroundStyle(SimastryColor.offWhite)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                     .padding(16)
@@ -682,7 +682,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 10) {
                         Image(systemName: "person.2.wave.2.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.md, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
                         Text("Discovery Unavailable")
                             .font(SimastryFont.labelLarge)
@@ -714,7 +714,7 @@ struct ProfileView: View {
         return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "at.circle.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                 Text("Public Identity")
                     .font(SimastryFont.titleSmall)
@@ -763,7 +763,7 @@ struct ProfileView: View {
 
             HStack(spacing: 7) {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("Outside social handles stay off your core Simastry identity.")
@@ -863,7 +863,7 @@ struct ProfileView: View {
         return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "text.bubble.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.celestialBlue)
                 Text("How to Talk to You")
                     .font(SimastryFont.titleSmall)
@@ -920,7 +920,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: SimastryIconSize.sm))
                             .foregroundStyle(SimastryColor.amber)
                         Text("What to Avoid")
                             .font(SimastryFont.overline)
@@ -1206,7 +1206,7 @@ struct ProfileView: View {
             }) {
                 HStack(spacing: 10) {
                     Image(systemName: viewModel.isDarkMode ? "moon.fill" : "sun.max.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: SimastryIconSize.md))
                         .foregroundStyle(SimastryColor.gold)
                         .contentTransition(.symbolEffect(.replace))
                     Text(viewModel.isDarkMode ? localization.string("profile.dark") : localization.string("profile.light"))
@@ -1247,7 +1247,7 @@ struct ProfileView: View {
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(.horizontal, 16)
@@ -1295,7 +1295,7 @@ struct ProfileView: View {
 
                                     if localization.currentLanguage == language {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 20))
+                                            .font(.system(size: SimastryIconSize.lg))
                                             .foregroundStyle(SimastryColor.gold)
                                     }
                                 }
@@ -1337,7 +1337,7 @@ struct ProfileView: View {
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "books.vertical.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -1352,7 +1352,7 @@ struct ProfileView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(16)
@@ -1370,7 +1370,7 @@ struct ProfileView: View {
             VStack(spacing: 20) {
                 VStack(spacing: 10) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 28, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     Text("How Simastry Works")
@@ -1387,7 +1387,7 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 10) {
                             Image(systemName: section.icon)
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                                 .foregroundStyle(SimastryColor.gold)
 
                             Text(section.title)
@@ -1429,7 +1429,7 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: "person.crop.circle.badge.checkmark")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                         .frame(width: 44, height: 44)
                         .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: SimastryRadius.medium))
@@ -1454,7 +1454,7 @@ struct ProfileView: View {
                 Link(destination: AppConfig.astrologerDirectoryURL) {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         Text("Find an Astrologer")
                             .font(SimastryFont.labelLarge)
                     }
@@ -1486,7 +1486,7 @@ struct ProfileView: View {
             if let info = viewModel.referralInfo, let code = info.referralCode, !code.isEmpty {
                 HStack(spacing: 12) {
                     Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     VStack(alignment: .leading, spacing: 3) {
@@ -1549,7 +1549,7 @@ struct ProfileView: View {
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "star.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -1564,7 +1564,7 @@ struct ProfileView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(16)
@@ -1616,7 +1616,7 @@ struct ProfileView: View {
                     Link(destination: URL(string: "mailto:\(AppConfig.astrologerContactEmail)")!) {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                             Text(AppConfig.astrologerContactEmail)
                                 .font(SimastryFont.labelLarge)
                         }
@@ -1631,7 +1631,7 @@ struct ProfileView: View {
                         Text("Learn More")
                             .font(SimastryFont.labelLarge)
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .bold))
                     }
                     .foregroundStyle(SimastryColor.gold)
                     .frame(maxWidth: .infinity)
@@ -1658,7 +1658,7 @@ struct ProfileView: View {
     private func partnerBenefitRow(icon: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold)
                 .frame(width: 20)
                 .padding(.top, 2)
@@ -1682,7 +1682,7 @@ struct ProfileView: View {
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                         .foregroundStyle(SimastryColor.celestialBlue)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -1697,7 +1697,7 @@ struct ProfileView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
                 .padding(16)

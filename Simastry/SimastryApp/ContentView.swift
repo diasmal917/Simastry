@@ -147,7 +147,7 @@ struct OnboardingLanguageMenu: View {
             }
         } label: {
             Image(systemName: "globe")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
             .foregroundStyle(SimastryColor.offWhite)
             .frame(width: 42, height: 42)
             .contentShape(Capsule())

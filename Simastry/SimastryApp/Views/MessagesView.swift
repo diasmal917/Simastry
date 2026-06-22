@@ -114,7 +114,7 @@ struct MessagesView: View {
 
     private func toolbarActionIcon(systemName: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 16, weight: .semibold))
+            .font(.system(size: SimastryIconSize.md, weight: .semibold))
             .foregroundStyle(SimastryColor.gold)
     }
 
@@ -134,7 +134,7 @@ struct MessagesView: View {
     private func connectionRetryState(_ message: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "wifi.exclamationmark")
-                .font(.system(size: 28, weight: .semibold))
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                 .foregroundStyle(SimastryColor.sunCoral)
             Text("Couldn't load connections")
                 .font(SimastryFont.bodyMedium)
@@ -299,7 +299,7 @@ struct MessagesView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: SimastryIcon.astrologers)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     Text("Open Guides")
                         .font(SimastryFont.labelLarge)
                 }
@@ -402,7 +402,7 @@ private struct PanelInboxRow: View {
 
                         if viewModel.unreadPanelCount > 0 {
                             Text("\(viewModel.unreadPanelCount)")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(SimastryFont.microBold)
                                 .foregroundStyle(SimastryColor.midnight)
                                 .frame(minWidth: 20)
                                 .frame(height: 20)
@@ -493,7 +493,7 @@ private struct MessageRow: View {
 
             if !message.isRead {
                 Text("1")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(SimastryFont.microBold)
                     .foregroundStyle(SimastryColor.midnight)
                     .frame(width: 20, height: 20)
                     .background(SimastryColor.gold, in: Circle())
@@ -869,14 +869,14 @@ private struct MessageDetailSheet: View {
         Button(action: action) {
             if #available(iOS 26.0, *) {
                 Image(systemName: systemName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 36, height: 36)
                     .glassEffect(.regular.interactive(), in: .circle)
                     .glassEffectID(systemName, in: headerGlass)
             } else {
                 Image(systemName: systemName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 36, height: 36)
                     .background(.white.opacity(0.07), in: Circle())
@@ -1059,7 +1059,7 @@ private struct MessageDetailSheet: View {
                 sendReply()
             } label: {
                 Image(systemName: isSendingReply ? "ellipsis" : "arrow.up")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: SimastryIconSize.md, weight: .bold))
                     .foregroundStyle(canSendReply ? SimastryColor.midnight : SimastryColor.mutedSilver)
                     .frame(width: 38, height: 38)
                     .background(canSendReply ? SimastryGradient.gold : LinearGradient(colors: [.white.opacity(0.08), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())

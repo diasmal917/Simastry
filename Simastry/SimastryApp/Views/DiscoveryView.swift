@@ -108,7 +108,7 @@ struct DiscoveryView: View {
 
             VStack(spacing: 14) {
                 Image(systemName: "person.2.slash.fill")
-                    .font(.system(size: 34, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("Discovery is coming soon")
@@ -135,7 +135,7 @@ struct DiscoveryView: View {
         VStack(spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: viewModel.isDiscoverable ? "eye.fill" : "eye.slash.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(viewModel.isDiscoverable ? SimastryColor.gold : SimastryColor.mutedSilver)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -174,7 +174,7 @@ struct DiscoveryView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                 Text("Your Discovery Profile")
                     .font(SimastryFont.titleSmall)
@@ -303,7 +303,7 @@ struct DiscoveryView: View {
                     )
 
                     Image(systemName: isUploadingAvatar ? "arrow.triangle.2.circlepath" : "camera.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         .foregroundStyle(SimastryColor.midnight)
                         .frame(width: 24, height: 24)
                         .background(SimastryColor.gold, in: Circle())
@@ -366,7 +366,7 @@ struct DiscoveryView: View {
     private var privacyNote: some View {
         HStack(spacing: 10) {
             Image(systemName: viewModel.isDiscoverable ? "lock.shield.fill" : "lock.open.fill")
-                .font(.system(size: 14))
+                .font(.system(size: SimastryIconSize.md))
                 .foregroundStyle(viewModel.isDiscoverable ? SimastryColor.gold : SimastryColor.celestialBlue)
             Text(viewModel.isDiscoverable
                  ? "Your display name and signs are visible to others."
@@ -479,7 +479,7 @@ struct DiscoveryView: View {
     private func retryState(message: String) -> some View {
         VStack(spacing: 14) {
             Image(systemName: "wifi.exclamationmark")
-                .font(.system(size: 30, weight: .semibold))
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                 .foregroundStyle(SimastryColor.sunCoral)
             Text("Couldn't load profiles")
                 .font(SimastryFont.bodyMedium)
@@ -538,7 +538,7 @@ struct DiscoveryView: View {
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "sparkles")
-                .font(.system(size: 32))
+                .font(.system(size: SimastryIconSize.xl))
                 .foregroundStyle(SimastryColor.mutedSilver)
             Text("No matches for this filter yet")
                 .font(SimastryFont.bodyMedium)
@@ -769,7 +769,7 @@ struct ProfileDetailSheet: View {
                         showSafetyOptions = true
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                             .foregroundStyle(SimastryColor.mutedSilver)
                     }
                     .accessibilityLabel("Profile safety actions")
@@ -846,7 +846,7 @@ struct ProfileDetailSheet: View {
             // Compatibility badge
             HStack(spacing: 6) {
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 11))
+                    .font(.system(size: SimastryIconSize.sm))
                 Text("\(compatibility)% Compatible")
                     .font(SimastryFont.labelMedium)
             }
@@ -900,7 +900,7 @@ struct ProfileDetailSheet: View {
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 2) {
                 Image(systemName: role.iconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(role.accentColor)
                 ZodiacIconView(sign: sign, size: 22, showsGlow: false)
             }
@@ -1050,7 +1050,7 @@ struct ProfileDetailSheet: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: hasSentHi ? "bubble.left.and.bubble.right.fill" : "hand.wave.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     Text(hasSentHi ? "Open Messages" : "Start Chat")
                         .font(SimastryFont.labelLarge)
                 }
@@ -1075,7 +1075,7 @@ struct ProfileDetailSheet: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: isConnected ? "person.crop.circle.badge.minus" : "person.crop.circle.badge.plus")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     Text(isConnected ? "Remove Connection" : "Add Connection")
                         .font(SimastryFont.labelLarge)
                 }
@@ -1120,7 +1120,7 @@ struct ProfileDetailSheet: View {
     private var privacyReminder: some View {
         HStack(spacing: 10) {
             Image(systemName: "lock.shield.fill")
-                .font(.system(size: 12))
+                .font(.system(size: SimastryIconSize.sm))
                 .foregroundStyle(SimastryColor.celestialBlue)
             Text("Only display name and signs are shared. No email, birth details, or location.")
                 .font(SimastryFont.captionSmall)

@@ -104,7 +104,7 @@ struct SimastrySettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 42, height: 42)
                     .simastryGlass(cornerRadius: SimastryRadius.medium)
@@ -265,7 +265,7 @@ struct SimastrySettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "wallet.pass.fill")
-                        .font(.system(size: 19, weight: .semibold))
+                        .font(.system(size: SimastryIconSize.lg, weight: .semibold))
                         .foregroundStyle(SimastryColor.gold)
                         .frame(width: 40, height: 40)
                         .background(SimastryColor.gold.opacity(0.10), in: .rect(cornerRadius: SimastryRadius.small))
@@ -496,7 +496,7 @@ struct SimastrySettingsView: View {
     ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: SimastryIconSize.md, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 30, height: 30)
                 .background(tint.opacity(0.10), in: .rect(cornerRadius: 10))
@@ -516,7 +516,7 @@ struct SimastrySettingsView: View {
 
             if showsChevron {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.deepMuted)
             }
         }

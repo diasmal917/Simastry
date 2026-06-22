@@ -47,7 +47,7 @@ struct PredictionTopUpView: View {
     private var headerSection: some View {
         VStack(spacing: 14) {
             Image(systemName: "wand.and.stars")
-                .font(.system(size: 32, weight: .semibold))
+                .font(.system(size: SimastryIconSize.xl, weight: .semibold))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [SimastryColor.risingViolet, SimastryColor.celestialBlue],
@@ -196,7 +196,7 @@ struct PredictionTopUpView: View {
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.gold)
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
             }
         }
@@ -212,7 +212,7 @@ struct PredictionTopUpView: View {
         if viewModel.bonusPredictions > 0 {
             HStack(spacing: 8) {
                 Image(systemName: "scope")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet)
 
                 Text("You have \(viewModel.bonusPredictions) bonus prediction\(viewModel.bonusPredictions == 1 ? "" : "s") remaining")

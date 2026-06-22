@@ -37,14 +37,14 @@ struct SignEntryView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text("\(role.displayName) in \(sign.displayName)")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(SimastryFont.labelMedium)
                         .foregroundStyle(role.accentColor)
                     ZodiacIconView(sign: sign, size: 16, showsGlow: false)
                         .opacity(0.7)
                 }
 
                 Text(role.subtitle)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 if showDescription {

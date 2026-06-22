@@ -26,7 +26,7 @@ struct InviteFriendsCard: View {
         VStack(alignment: .leading, spacing: 13) {
             HStack(spacing: 10) {
                 Image(systemName: "person.2.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.md, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
                     .frame(width: 38, height: 38)
                     .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -57,7 +57,7 @@ struct InviteFriendsCard: View {
                 ) {
                     HStack(spacing: 7) {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                         Text("Share invite")
                             .font(SimastryFont.labelLarge)
                     }
@@ -94,7 +94,7 @@ struct InviteFriendsCard: View {
                     .minimumScaleFactor(0.7)
 
                 Image(systemName: "doc.on.doc")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold.opacity(0.8))
             }
             .padding(.horizontal, 13)
@@ -117,7 +117,7 @@ struct InviteFriendsCard: View {
         ) {
             HStack(spacing: 9) {
                 Image(systemName: "person.2.fill")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
                 Text("Invite a friend to Simastry")
@@ -129,7 +129,7 @@ struct InviteFriendsCard: View {
                 Spacer(minLength: 4)
 
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
             }
             .padding(.horizontal, 14)

@@ -51,7 +51,7 @@ struct MethodSignalChip: View {
     var body: some View {
         HStack(spacing: 7) {
             Image(systemName: signal.systemImage)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                 .foregroundStyle(signal.tint)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -111,7 +111,7 @@ struct MethodLayerPanel: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: SimastryIconSize.sm, weight: .semibold))
                     .foregroundStyle(accent)
 
                 Text(title)
