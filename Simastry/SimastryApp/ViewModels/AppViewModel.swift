@@ -21,6 +21,7 @@ class AppViewModel {
     var userSunSign: ZodiacSign?
     var userMoonSign: ZodiacSign?
     var userRisingSign: ZodiacSign?
+    var auraSnapshot: AuraSnapshot?
 
     // MARK: - Profile Image (Local Storage)
     // Extension point: When Supabase Storage is configured, extend
@@ -212,6 +213,8 @@ class AppViewModel {
     var firstReadDraft: FirstReadDraft?
     var guideFeedbackEvents: [GuideFeedback] = []
     var referralInfo: ReferralInfo?
+    /// Last guide/panel chat safety block. Frontend can present this inline later.
+    var lastGuideSafetyMessage: String?
 
     // MARK: - Companion DM State
     /// Companion threads currently "typing" a reply (drives the typing indicator).
@@ -300,6 +303,35 @@ class AppViewModel {
         showToast("Wallet removed", subtitle: "Aura will use chart signals only.", isError: false)
     }
 
+    func reloadAuraSnapshot() {
+        auraSnapshot = auraSnapshotStore.load()
+    }
+
+    @discardableResult
+    func applyAuraSnapshot(image: UIImage, mood: AuraSnapshotMood) -> AuraSnapshot? {
+        guard let snapshot = auraSnapshotService.makeSnapshot(
+            from: image,
+            mood: mood,
+            userSunSign: userSunSign,
+            userMoonSign: userMoonSign,
+            userRisingSign: userRisingSign
+        ) else {
+            showToast("Snapshot not saved", subtitle: "Try a clearer photo.", isError: true)
+            return nil
+        }
+
+        auraSnapshotStore.save(snapshot)
+        auraSnapshot = snapshot
+        showToast("Aura Snapshot ready", subtitle: snapshot.descriptor.displayLine, isError: false)
+        return snapshot
+    }
+
+    func clearAuraSnapshot() {
+        auraSnapshotStore.clear()
+        auraSnapshot = nil
+        showToast("Aura Snapshot cleared", subtitle: "Today will use chart signals only.", isError: false)
+    }
+
     static func isSupportedPublicWalletAddress(_ address: String) -> Bool {
         let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
@@ -338,6 +370,8 @@ class AppViewModel {
     let notificationService = NotificationService()
     let predictionService = PredictionService()
     let dailyDecisionService = DailyDecisionService()
+    let auraSnapshotService = AuraSnapshotService()
+    let auraSnapshotStore = AuraSnapshotStore()
     let predictionRateLimiter = RateLimiter(config: .init(
         maxPerMinute: AppConfig.predictionRateLimit.perMinute,
         maxPerHour: AppConfig.predictionRateLimit.perHour,
@@ -367,6 +401,7 @@ class AppViewModel {
         profileDiscoveryStore = ProfileDiscoveryStore(service: supabase)
         todayStore = TodayStore()
         loadReferralInfo()
+        reloadAuraSnapshot()
         loadRelationshipPeople()
         loadFirstReadDraft()
         loadGuideFeedback()
@@ -838,10 +873,31 @@ class AppViewModel {
 
         if let userId = await supabase.currentUserId {
             do {
+                try await supabase.deleteGuideFeedback(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("guide_feedback")
+                CrashReporter.log(error, context: "deleteAccountGuideFeedback")
+            }
+
+            do {
+                try await supabase.deleteAvatarFiles(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("avatars")
+                CrashReporter.log(error, context: "deleteAccountAvatars")
+            }
+
+            do {
                 try await supabase.deleteAllCompanions(for: userId.uuidString)
             } catch {
                 remoteFailures.append("companions")
                 CrashReporter.log(error, context: "deleteAccountCompanions")
+            }
+
+            do {
+                try await supabase.deleteUserConnections(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("user_connections")
+                CrashReporter.log(error, context: "deleteAccountUserConnections")
             }
 
             do {
@@ -877,6 +933,13 @@ class AppViewModel {
             } catch {
                 remoteFailures.append("discovery_reports")
                 CrashReporter.log(error, context: "deleteAccountDiscoveryReports")
+            }
+
+            do {
+                try await supabase.deleteGuidedRoomData(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("guided_rooms")
+                CrashReporter.log(error, context: "deleteAccountGuidedRooms")
             }
         }
 
@@ -1505,7 +1568,8 @@ class AppViewModel {
             userRisingSign: userRisingSign,
             communicationTypeTitle: communicationType?.title,
             transitHeadline: transitReading?.headline,
-            transitGuidance: transitReading?.guidance
+            transitGuidance: transitReading?.guidance,
+            auraSnapshot: auraSnapshot?.descriptor
         )
         let decision = await dailyDecisionService.generateDecision(
             category: category,
@@ -2181,14 +2245,14 @@ class AppViewModel {
         return guideIceBreakers(for: message)
     }
 
-    func draftPredictFromToday(targetSign: ZodiacSign? = nil) {
-        let guide = FactoryCompanionCatalog.featured
+    func openPrivatePredictionFromToday() {
         predictionDraft = PredictionDraft(
-            targetSunSign: targetSign ?? guide.sign,
+            category: .privateQuestion,
+            targetSunSign: nil,
             targetMoonSign: nil,
             targetRisingSign: nil,
-            question: "What tone is most likely to land well today?",
-            conversationText: "I want to understand the timing before I reply."
+            question: FutureQuestionCategory.privateQuestion.defaultQuestion,
+            conversationText: nil
         )
         openPredict()
     }
@@ -2483,7 +2547,7 @@ class AppViewModel {
     }
 
     /// Sends a user message into a companion thread and schedules a sign-lens reply.
-    /// The reply is composed on device from the method layer — no remote AI.
+    /// Live LLM replies are optional; the local method-layer composer remains the fallback.
     @discardableResult
     func sendCompanionThreadMessage(
         companionId: UUID,
@@ -2491,6 +2555,10 @@ class AppViewModel {
         companionSign: String,
         content: String
     ) async -> Bool {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        guard validateGuideMessageForSend(trimmed) else { return false }
+
         guard canSendMessage() else {
             showToast(
                 "Messages used up",
@@ -2505,7 +2573,7 @@ class AppViewModel {
             companionId: companionId,
             companionName: companionName,
             companionSign: companionSign,
-            content: content,
+            content: trimmed,
             timestamp: Date(),
             isRead: true,
             source: .companion,
@@ -2514,7 +2582,7 @@ class AppViewModel {
         companionMessages.insert(outgoing, at: 0)
         saveMessages()
         // Guides share one memory — 1:1 mentions inform panel follow-ups too.
-        recordPanelMemoryIfNeeded(from: content)
+        recordPanelMemoryIfNeeded(from: trimmed)
 
         // Keep relationship metrics in sync when a companion record exists.
         if let index = companions.firstIndex(where: { $0.id == companionId }) {
@@ -2850,6 +2918,7 @@ class AppViewModel {
         panelTypingParticipantIds = []
         panelMemoryNotes = []
         guideFeedbackEvents = []
+        lastGuideSafetyMessage = nil
         moments = []
         momentTypingKeys = []
         momentsStore.deleteAll()
@@ -2857,6 +2926,7 @@ class AppViewModel {
         connectedProfiles = []
         relationshipPeople = []
         predictionDraft = nil
+        auraSnapshot = nil
         clearFirstReadOnboardingIntent()
         pendingInviteCodeForConfirmation = nil
         bonusPredictions = 0
@@ -2913,6 +2983,7 @@ class AppViewModel {
         defaults.removeObject(forKey: GuideGramStore.defaultsKey)
         todayStore.clearSavedPrompts()
         todayStore.clearDailyDecisions()
+        auraSnapshotStore.clear()
         predictionService.clearHistory()
 
         relationshipPeopleStore.deleteAll()

@@ -147,13 +147,17 @@ struct FirstReadChoiceView: View {
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: option.icon)
-                        .font(.system(size: option.id == .predict ? 21 : 18, weight: .semibold))
-                        .foregroundStyle(option.id == .predict ? SimastryColor.midnight : option.accent)
+                    SimastryConceptIconView(
+                        name: option.icon,
+                        size: option.id == .predict ? 42 : iconContainerSize,
+                        symbolSize: 18,
+                        accent: option.accent,
+                        animatedPrediction: option.id == .predict && appeared
+                    )
                         .frame(width: iconContainerSize, height: iconContainerSize)
                         .background(
                             option.id == .predict
-                                ? AnyShapeStyle(SimastryGradient.gold)
+                                ? AnyShapeStyle(option.accent.opacity(0.14))
                                 : AnyShapeStyle(option.accent.opacity(0.14)),
                             in: RoundedRectangle(cornerRadius: 15, style: .continuous)
                         )
@@ -316,6 +320,9 @@ struct FirstPredictionView: View {
     private var header: some View {
         VStack(spacing: 10) {
             SimastryWordmark(font: .system(.title, weight: .bold).italic())
+
+            PredictionOrbIcon(size: 56, animated: appeared)
+                .padding(.top, 2)
 
             Text(localization.string("firstPrediction.title"))
                 .font(SimastryFont.displayMedium)
@@ -489,7 +496,7 @@ struct FirstPredictionView: View {
             return "career"
         case .moneyDirection:
             return "money"
-        case .loveTiming, .messageOutcome:
+        case .loveTiming, .privateQuestion, .messageOutcome:
             return "love"
         }
     }

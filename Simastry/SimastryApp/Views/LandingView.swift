@@ -1,25 +1,14 @@
 import SwiftUI
 import CoreMotion
 
-private struct LandingFeature: Identifiable {
-    let id: Int
-    let icon: String
-    let title: String
-    let accent: Color
-}
-
-private let landingFeatures: [LandingFeature] = [
-    LandingFeature(id: 0, icon: SimastryIcon.lens, title: "Decode a message", accent: SimastryColor.celestialBlue),
-    LandingFeature(id: 1, icon: SimastryIcon.predict, title: "Ask the future", accent: SimastryColor.risingViolet),
-    LandingFeature(id: 2, icon: SimastryIcon.quote, title: "Know what to say", accent: SimastryColor.gold)
-]
+// MARK: - Slide model
 
 private enum LandingSlideVisualKind {
     case future
-    case daily
+    case aura
+    case astrologer
     case decode
-    case reply
-    case panel
+    case universe
 }
 
 private struct LandingSlide: Identifiable {
@@ -33,58 +22,13 @@ private struct LandingSlide: Identifiable {
     let chips: [String]
 }
 
-private let landingSlides: [LandingSlide] = [
-    LandingSlide(
-        id: 0,
-        eyebrow: "ASK THE FUTURE",
-        title: "Quick answers when you need a sign.",
-        subtitle: "Love, timing, money, career, and replies in one fast read.",
-        icon: SimastryIcon.predict,
-        accent: SimastryColor.risingViolet,
-        visualKind: .future,
-        chips: ["Marriage", "Career", "Money", "Replies"]
-    ),
-    LandingSlide(
-        id: 1,
-        eyebrow: "DAILY DECIDER",
-        title: "Let today pick the small thing.",
-        subtitle: "What to wear, eat, text, focus on, or bring into a date.",
-        icon: "wand.and.stars",
-        accent: SimastryColor.celestialBlue,
-        visualKind: .daily,
-        chips: ["Wear", "Eat", "Text vibe", "Focus"]
-    ),
-    LandingSlide(
-        id: 2,
-        eyebrow: "DECODE",
-        title: "Understand the message before you spiral.",
-        subtitle: "Paste a text and read the tone, timing, and what they may mean.",
-        icon: SimastryIcon.lens,
-        accent: SimastryColor.celestialBlue,
-        visualKind: .decode,
-        chips: ["Tone", "Meaning", "Timing", "Intent"]
-    ),
-    LandingSlide(
-        id: 3,
-        eyebrow: "KNOW WHAT TO SAY",
-        title: "Get the line that lands like you.",
-        subtitle: "Your guides turn the read into wording that feels clear, warm, and usable.",
-        icon: SimastryIcon.quote,
-        accent: SimastryColor.gold,
-        visualKind: .reply,
-        chips: ["Warmer", "Direct", "Shorter", "Practical"]
-    ),
-    LandingSlide(
-        id: 4,
-        eyebrow: "MEET YOUR PANEL",
-        title: "Twenty-four AI astrologers, one private panel.",
-        subtitle: "Each guide brings a different lens, voice, and way through the moment.",
-        icon: SimastryIcon.astrologers,
-        accent: SimastryColor.gold,
-        visualKind: .panel,
-        chips: ["Private", "Personal", "Daily", "Live"]
-    )
-]
+private struct LandingReading: Identifiable {
+    let id: Int
+    let type: String
+    let question: String
+    let answer: String
+    let window: String
+}
 
 private struct LandingCompanionWindow: Identifiable {
     let id: String
@@ -120,12 +64,12 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         name: "Nadia",
         role: "Sagittarius Guide",
         isHero: false,
-        widthRatio: 0.30,
-        heightRatio: 0.52,
-        xRatio: 0.18,
-        yRatio: 0.32,
-        rotation: -3.5,
-        zIndex: 2
+        widthRatio: 0.29,
+        heightRatio: 0.50,
+        xRatio: 0.20,
+        yRatio: 0.76,
+        rotation: 2.5,
+        zIndex: 1
     ),
     LandingCompanionWindow(
         id: "maria",
@@ -141,17 +85,17 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         zIndex: 3
     ),
     LandingCompanionWindow(
-        id: "leyla",
-        imageName: "Factory_virgo-mara_card",
-        name: "Leyla",
+        id: "jonah",
+        imageName: "Factory_virgo-jonah_card",
+        name: "Jonah",
         role: "Virgo Guide",
         isHero: false,
-        widthRatio: 0.29,
-        heightRatio: 0.50,
-        xRatio: 0.20,
-        yRatio: 0.76,
-        rotation: 2.5,
-        zIndex: 1
+        widthRatio: 0.30,
+        heightRatio: 0.52,
+        xRatio: 0.18,
+        yRatio: 0.32,
+        rotation: -3.5,
+        zIndex: 2
     ),
     LandingCompanionWindow(
         id: "elias",
@@ -168,80 +112,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
     )
 ]
 
-// Feature rows shown below the first viewport. English copy is hardcoded to
-// match the existing landing strings; nothing here is user-generated.
-private struct LandingShowcaseItem: Identifiable {
-    let id: Int
-    let icon: String
-    let accent: Color
-    let title: String
-    let subtitle: String
-}
-
-private let landingDailyFeatures: [LandingShowcaseItem] = [
-    LandingShowcaseItem(id: 0, icon: SimastryIcon.dailyRead, accent: SimastryColor.sunCoral,
-                        title: "Guidance for today",
-                        subtitle: "Open to a reading tuned to the day's sky and your chart."),
-    LandingShowcaseItem(id: 1, icon: SimastryIcon.lens, accent: SimastryColor.celestialBlue,
-                        title: "Decode any message",
-                        subtitle: "Paste a text and understand what they really meant."),
-    LandingShowcaseItem(id: 2, icon: SimastryIcon.predict, accent: SimastryColor.risingViolet,
-                        title: "Ask the future",
-                        subtitle: "Love, timing, money, career, and reply questions in one fast read."),
-    LandingShowcaseItem(id: 3, icon: SimastryIcon.quote, accent: SimastryColor.gold,
-                        title: "Know what to say",
-                        subtitle: "Get wording that still sounds like you, only clearer.")
-]
-
-private let landingWorldFeatures: [LandingShowcaseItem] = [
-    LandingShowcaseItem(id: 0, icon: SimastryIcon.astrologers, accent: SimastryColor.gold,
-                        title: "A panel of guides",
-                        subtitle: "Twenty-four AI astrologers, each with their own voice."),
-    LandingShowcaseItem(id: 1, icon: "person.2.fill", accent: SimastryColor.celestialBlue,
-                        title: "Understand your people",
-                        subtitle: "Add the people who matter and read every dynamic."),
-    LandingShowcaseItem(id: 2, icon: "bookmark.fill", accent: SimastryColor.goldLight,
-                        title: "Save what resonates",
-                        subtitle: "Keep the prompts and readings you'll want again.")
-]
-
-/// Translucent glass CTA for the landing — replaces the heavy gold fill with a
-/// material that reads as Liquid Glass on iOS 26 and a tinted ultra-thin
-/// material on iOS 18. White text keeps contrast high over both treatments.
-private struct LandingGlassCTA: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .background(SimastryColor.surface.opacity(0.16), in: .capsule)
-                .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.13)).interactive(), in: .capsule)
-                .overlay(
-                    Capsule().strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.42), SimastryColor.gold.opacity(0.22)],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 0.9
-                    )
-                )
-                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
-        } else {
-            content
-                .background(SimastryColor.gold.opacity(0.10), in: .capsule)
-                .background(.ultraThinMaterial, in: .capsule)
-                .overlay(
-                    Capsule().strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.40), SimastryColor.gold.opacity(0.20)],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 0.8
-                    )
-                )
-                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
-        }
-    }
-}
+// MARK: - CTA components
 
 private struct LandingPrimaryButton: View {
     let title: String
@@ -262,7 +133,7 @@ private struct LandingPrimaryButton: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
-            .modifier(LandingGlassCTA())
+            .landingGlassCapsule(emphasis: .cta)
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed ? 0.97 : 1)
@@ -275,25 +146,19 @@ private struct LandingPrimaryButton: View {
     }
 }
 
+// MARK: - Landing
+
 struct LandingView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared: Bool = false
-    @State private var fallingStars: [FallingStar] = []
-    @State private var shimmerStars: [ShimmerStar] = ShimmerStar.generate(count: 25)
+    @State private var shimmerStars: [ShimmerStar] = ShimmerStar.generate(count: 34)
     @State private var motionOffset: CGSize = .zero
-    @State private var starTimer: Timer?
+    @State private var readingIndex: Int = 0
+    @State private var readingTimer: Timer?
     @State private var motionManager: CMMotionManager = CMMotionManager()
-    @State private var selectedSlideID: Int = 0
-
-    private var localizedLandingFeatures: [LandingFeature] {
-        [
-            LandingFeature(id: 0, icon: SimastryIcon.lens, title: localization.string("landing.feature.decode"), accent: SimastryColor.celestialBlue),
-            LandingFeature(id: 1, icon: SimastryIcon.predict, title: localization.string("landing.feature.future"), accent: SimastryColor.risingViolet),
-            LandingFeature(id: 2, icon: SimastryIcon.quote, title: localization.string("landing.feature.say"), accent: SimastryColor.gold)
-        ]
-    }
+    @State private var selectedSlideID: Int = LandingView.initialSlideID()
 
     private var localizedLandingSlides: [LandingSlide] {
         [
@@ -302,23 +167,33 @@ struct LandingView: View {
                 eyebrow: localization.string("landing.slide.future.eyebrow"),
                 title: localization.string("landing.slide.future.title"),
                 subtitle: localization.string("landing.slide.future.subtitle"),
-                icon: SimastryIcon.predict,
+                icon: "sparkles",
                 accent: SimastryColor.risingViolet,
                 visualKind: .future,
                 chips: localization.list("landing.slide.future.chips")
             ),
             LandingSlide(
                 id: 1,
-                eyebrow: localization.string("landing.slide.daily.eyebrow"),
-                title: localization.string("landing.slide.daily.title"),
-                subtitle: localization.string("landing.slide.daily.subtitle"),
-                icon: "wand.and.stars",
+                eyebrow: localization.string("landing.slide.aura.eyebrow"),
+                title: localization.string("landing.slide.aura.title"),
+                subtitle: localization.string("landing.slide.aura.subtitle"),
+                icon: "camera.filters",
                 accent: SimastryColor.celestialBlue,
-                visualKind: .daily,
-                chips: localization.list("landing.slide.daily.chips")
+                visualKind: .aura,
+                chips: localization.list("landing.slide.aura.chips")
             ),
             LandingSlide(
                 id: 2,
+                eyebrow: localization.string("landing.slide.astrologer.eyebrow"),
+                title: localization.string("landing.slide.astrologer.title"),
+                subtitle: localization.string("landing.slide.astrologer.subtitle"),
+                icon: "bubble.left.and.bubble.right.fill",
+                accent: SimastryColor.gold,
+                visualKind: .astrologer,
+                chips: localization.list("landing.slide.astrologer.chips")
+            ),
+            LandingSlide(
+                id: 3,
                 eyebrow: localization.string("landing.slide.decode.eyebrow"),
                 title: localization.string("landing.slide.decode.title"),
                 subtitle: localization.string("landing.slide.decode.subtitle"),
@@ -328,26 +203,70 @@ struct LandingView: View {
                 chips: localization.list("landing.slide.decode.chips")
             ),
             LandingSlide(
-                id: 3,
-                eyebrow: localization.string("landing.slide.reply.eyebrow"),
-                title: localization.string("landing.slide.reply.title"),
-                subtitle: localization.string("landing.slide.reply.subtitle"),
-                icon: SimastryIcon.quote,
-                accent: SimastryColor.gold,
-                visualKind: .reply,
-                chips: localization.list("landing.slide.reply.chips")
-            ),
-            LandingSlide(
                 id: 4,
                 eyebrow: localization.string("landing.slide.panel.eyebrow"),
                 title: localization.string("landing.slide.panel.title"),
                 subtitle: localization.string("landing.slide.panel.subtitle"),
                 icon: SimastryIcon.astrologers,
                 accent: SimastryColor.gold,
-                visualKind: .panel,
+                visualKind: .universe,
                 chips: localization.list("landing.slide.panel.chips")
             )
         ]
+    }
+
+    /// Rotating teaser readings shown on the flagship slide. Starts broad
+    /// (timing / love / money) so marriage is one of several, not the face of
+    /// the app. The fourth reuses the existing, fully-localized commitment strings.
+    private var landingReadings: [LandingReading] {
+        [
+            LandingReading(id: 0,
+                           type: localization.string("landing.reading.change.type"),
+                           question: localization.string("landing.reading.change.question"),
+                           answer: localization.string("landing.reading.change.answer"),
+                           window: localization.string("landing.reading.change.window")),
+            LandingReading(id: 1,
+                           type: localization.string("landing.reading.love.type"),
+                           question: localization.string("landing.reading.love.question"),
+                           answer: localization.string("landing.reading.love.answer"),
+                           window: localization.string("landing.reading.love.window")),
+            LandingReading(id: 2,
+                           type: localization.string("landing.reading.money.type"),
+                           question: localization.string("landing.reading.money.question"),
+                           answer: localization.string("landing.reading.money.answer"),
+                           window: localization.string("landing.reading.money.window")),
+            LandingReading(id: 3,
+                           type: localization.string("landing.visual.future.type"),
+                           question: localization.string("landing.visual.future.question"),
+                           answer: localization.string("landing.visual.future.answer"),
+                           window: localization.string("landing.visual.future.window"))
+        ]
+    }
+
+    private func startReadingCycle() {
+        guard !reduceMotion else { return }
+        readingTimer?.invalidate()
+        readingTimer = Timer.scheduledTimer(withTimeInterval: 3.6, repeats: true) { _ in
+            Task { @MainActor in
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    readingIndex += 1
+                }
+            }
+        }
+    }
+
+    /// DEBUG-only: lets the screenshot-verification workflow launch directly
+    /// onto a given carousel slide (e.g. `-SimastryPreviewLandingSlide 2`).
+    /// Returns 0 in release so production onboarding is unchanged.
+    static func initialSlideID() -> Int {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-SimastryPreviewLandingSlide"),
+           i + 1 < args.count, let n = Int(args[i + 1]) {
+            return max(0, min(4, n))
+        }
+        #endif
+        return 0
     }
 
     var body: some View {
@@ -357,12 +276,20 @@ struct LandingView: View {
 
                 TabView(selection: $selectedSlideID) {
                     ForEach(localizedLandingSlides) { slide in
-                        landingSlide(slide, size: geo.size)
+                        landingSlide(slide, size: geo.size, topInset: geo.safeAreaInsets.top)
                             .tag(slide.id)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.spring(SimastrySpring.smooth), value: selectedSlideID)
+
+                // Fixed wordmark — pinned above the carousel so it stays put while
+                // the slides page beneath it (each slide reserves this same band).
+                VStack(spacing: 0) {
+                    wordmark
+                        .padding(.top, landingTopPadding(for: geo.size, topInset: geo.safeAreaInsets.top))
+                    Spacer(minLength: 0)
+                }
 
                 VStack {
                     Spacer()
@@ -374,79 +301,79 @@ struct LandingView: View {
         }
         .ignoresSafeArea()
         .onAppear {
-            startFallingStars()
             startMotionUpdates()
+            startReadingCycle()
             withAnimation(.spring(SimastrySpring.smooth).delay(0.3)) {
                 appeared = true
             }
         }
         .onDisappear {
             stopMotionUpdates()
-            starTimer?.invalidate()
-            starTimer = nil
+            readingTimer?.invalidate()
+            readingTimer = nil
         }
     }
 
-    // MARK: - Slide Deck
+    // MARK: - Background
 
     private func landingBackground(size: CGSize) -> some View {
         ZStack {
             Color.black
 
-            Image("LandingImage")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+            // The zodiac wallpaper itself, with a very slow Ken Burns drift.
+            // No clip: the view's built-in overscan absorbs both the drift pan
+            // and the parallax offset below, so no black edge is ever exposed.
+            CosmicDriftImage(animated: !reduceMotion)
                 .frame(width: size.width, height: size.height)
-                .offset(x: motionOffset.width * 0.55, y: motionOffset.height * 0.55)
-                .clipped()
-                .saturation(0.92)
-                .brightness(-0.04)
+                .offset(x: motionOffset.width * 0.40, y: motionOffset.height * 0.40)
 
+            // Faint cosmic dust drifting upward, sitting just above the wallpaper.
+            CosmicDustLayer(animated: !reduceMotion)
+                .frame(width: size.width, height: size.height)
+                .offset(x: motionOffset.width * 0.22, y: motionOffset.height * 0.22)
+
+            // Legibility veil — lighter up top so the field breathes around the
+            // wordmark, then progressively darker through the headline
+            // band and the bottom CTA so white text always keeps its ground.
             LinearGradient(
                 stops: [
-                    .init(color: .black.opacity(0.40), location: 0),
-                    .init(color: .black.opacity(0.16), location: 0.20),
-                    .init(color: .black.opacity(0.26), location: 0.52),
-                    .init(color: .black.opacity(0.82), location: 0.86),
-                    .init(color: .black.opacity(0.96), location: 1)
+                    .init(color: .black.opacity(0.34), location: 0),
+                    .init(color: .black.opacity(0.14), location: 0.16),
+                    .init(color: .black.opacity(0.42), location: 0.50),
+                    .init(color: .black.opacity(0.68), location: 0.74),
+                    .init(color: .black.opacity(0.94), location: 1)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .allowsHitTesting(false)
 
-            shimmerLayer(size: size)
-                .offset(x: motionOffset.width * 0.35, y: motionOffset.height * 0.35)
+            // Rare diagonal falling stars — above the veil so the glass cards
+            // (which sit in front of this whole background) softly showcase each
+            // streak as it drifts behind them.
+            FallingStarsLayer(animated: !reduceMotion)
+                .frame(width: size.width, height: size.height)
+                .offset(x: motionOffset.width * 0.28, y: motionOffset.height * 0.28)
 
-            fallingStarLayer(size: size)
-                .offset(x: motionOffset.width * 0.9, y: motionOffset.height * 0.9)
+            shimmerLayer(size: size)
+                .offset(x: motionOffset.width * 0.3, y: motionOffset.height * 0.3)
         }
     }
 
-    private func landingSlide(_ slide: LandingSlide, size: CGSize) -> some View {
+    // MARK: - Slide composition
+
+    private func landingSlide(_ slide: LandingSlide, size: CGSize, topInset: CGFloat) -> some View {
         let compact = size.height < 760
-        let bottomClearance = compact ? CGFloat(184) : CGFloat(204)
+        let bottomClearance = compact ? CGFloat(176) : CGFloat(198)
 
-        return VStack(spacing: compact ? 14 : 18) {
+        return VStack(spacing: compact ? 10 : 16) {
+            // Invisible placeholder reserving the band for the pinned wordmark
+            // (drawn in `body`), so slide content keeps its exact position.
             wordmark
-                .padding(.top, landingTopPadding(for: size))
+                .padding(.top, landingTopPadding(for: size, topInset: topInset))
+                .hidden()
 
-            if slide.visualKind == .panel {
-                slideCopy(slide, compact: compact)
-                    .padding(.top, compact ? 0 : 6)
-
-                companionWindowArrangement(size: size)
-                    .frame(height: compact ? 286 : min(max(size.height * 0.38, 320), 390))
-                    .padding(.horizontal, 6)
-                    .padding(.top, compact ? 2 : 8)
-            } else {
-                slideVisual(slide, size: size, compact: compact)
-                    .frame(height: compact ? 222 : min(max(size.height * 0.31, 260), 306))
-                    .padding(.horizontal, 24)
-                    .padding(.top, compact ? 0 : 8)
-
-                slideCopy(slide, compact: compact)
-            }
+            slideContent(slide, size: size, compact: compact)
 
             Spacer(minLength: bottomClearance)
         }
@@ -458,134 +385,332 @@ struct LandingView: View {
         .accessibilityLabel("\(slide.eyebrow). \(slide.title). \(slide.subtitle)")
     }
 
-    private func slideCopy(_ slide: LandingSlide, compact: Bool) -> some View {
-        VStack(spacing: compact ? 10 : 12) {
+    @ViewBuilder
+    private func slideContent(_ slide: LandingSlide, size: CGSize, compact: Bool) -> some View {
+        // Every slide is a fixed-height visual band, then the copy block — so the
+        // eyebrow / title / chips stay anchored at the same Y while you swipe.
+        switch slide.visualKind {
+        case .future:
+            // The reading card is shorter than the band; center it so the copy lines up.
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                futureVisual(accent: slide.accent, size: size)
+                Spacer(minLength: 0)
+            }
+            .frame(height: nonFutureVisualHeight(size: size, compact: compact))
+            .padding(.horizontal, 24)
+            .padding(.top, compact ? 0 : 4)
+
+        case .universe:
+            companionWindowArrangement(size: size)
+                .frame(height: nonFutureVisualHeight(size: size, compact: compact))
+                .padding(.horizontal, 6)
+                .padding(.top, compact ? 0 : 4)
+
+        default:
+            slideVisual(slide, compact: compact)
+                .frame(height: nonFutureVisualHeight(size: size, compact: compact))
+                .padding(.horizontal, 24)
+                .padding(.top, compact ? 0 : 6)
+        }
+
+        slideCopy(slide, compact: compact, tiny: size.height < 700)
+    }
+
+    private func nonFutureVisualHeight(size: CGSize, compact: Bool) -> CGFloat {
+        if size.height < 700 { return 196 }
+        if compact { return 208 }
+        return min(max(size.height * 0.30, 250), 296)
+    }
+
+    private func slideCopy(_ slide: LandingSlide, compact: Bool, tiny: Bool) -> some View {
+        VStack(spacing: compact ? 8 : 11) {
             HStack(spacing: 7) {
                 Image(systemName: slide.icon)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 12, weight: .semibold))
                 Text(slide.eyebrow)
                     .font(SimastryFont.overline)
                     .tracking(1.6)
             }
             .foregroundStyle(slide.accent)
             .padding(.horizontal, 13)
-            .padding(.vertical, 7)
-            .simastryGlassPill()
+            .padding(.vertical, compact ? 6 : 7)
+            .landingGlassCapsule()
 
             Text(slide.title)
-                .font(.system(size: compact ? 28 : 32, weight: .bold, design: .rounded))
+                .font(.system(size: compact ? 24 : 31, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
-                .minimumScaleFactor(0.78)
+                .minimumScaleFactor(0.74)
                 .fixedSize(horizontal: false, vertical: true)
                 .shadow(color: .black.opacity(0.62), radius: 8, y: 4)
 
             Text(slide.subtitle)
-                .font(SimastryFont.bodyLarge)
+                .font(compact ? SimastryFont.bodySmall : SimastryFont.bodyLarge)
                 .foregroundStyle(.white.opacity(0.82))
                 .multilineTextAlignment(.center)
-                .lineSpacing(3)
+                .lineSpacing(compact ? 2 : 3)
                 .fixedSize(horizontal: false, vertical: true)
                 .shadow(color: .black.opacity(0.55), radius: 5, y: 2)
 
-            chipRow(slide.chips, accent: slide.accent)
+            if !tiny {
+                chipRow(slide.chips, accent: slide.accent)
+            }
         }
         .padding(.horizontal, 26)
     }
 
     @ViewBuilder
-    private func slideVisual(_ slide: LandingSlide, size: CGSize, compact: Bool) -> some View {
+    private func slideVisual(_ slide: LandingSlide, compact: Bool) -> some View {
         switch slide.visualKind {
-        case .future:
-            futureAnswerVisual(accent: slide.accent)
-        case .daily:
-            dailyDeciderVisual(accent: slide.accent)
+        case .future, .universe:
+            EmptyView()
+        case .aura:
+            auraVisual(accent: slide.accent, compact: compact)
+        case .astrologer:
+            astrologerVisual(accent: slide.accent)
         case .decode:
             decodeVisual(accent: slide.accent)
-        case .reply:
-            replyVisual(accent: slide.accent)
-        case .panel:
-            companionWindowArrangement(size: size)
         }
     }
 
-    private func futureAnswerVisual(accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+    // MARK: - Slide 1 · Ask the Future
+
+    private func futureVisual(accent: Color, size: CGSize) -> some View {
+        let compact = size.height < 760
+        // Orb removed — the reading card now leads the Ask-the-Future slide.
+        return predictionReadingCard(accent: accent, compact: compact)
+    }
+
+    private func predictionReadingCard(accent: Color, compact: Bool) -> some View {
+        let reading = landingReadings[readingIndex % landingReadings.count]
+        return VStack(alignment: .leading, spacing: compact ? 9 : 12) {
+            // The reading crossfades through love / money / timing / commitment
+            // so the first thing you see feels alive and broad — not fixed on one question.
+            Group {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: compact ? 13 : 15, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: compact ? 31 : 36, height: compact ? 31 : 36)
+                        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(reading.question)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .contentTransition(.opacity)
+                        Text(reading.type)
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(.white.opacity(0.58))
+                            .contentTransition(.opacity)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                landingAnswerRow(
+                    title: localization.string("landing.visual.future.shortAnswer"),
+                    body: reading.answer
+                )
+
+                HStack(spacing: 10) {
+                    Image(systemName: SimastryIcon.timing)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(SimastryColor.goldLight)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(localization.string("landing.visual.future.windowTitle").uppercased())
+                            .font(SimastryFont.overline)
+                            .tracking(1.0)
+                            .foregroundStyle(SimastryColor.goldLight.opacity(0.9))
+                        Text(reading.window)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(.white)
+                            .contentTransition(.opacity)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, compact ? 11 : 13)
+                .padding(.vertical, compact ? 9 : 11)
+                .landingGlass(cornerRadius: 16)
+            }
+        }
+        .frame(minHeight: compact ? 150 : 168, alignment: .top)
+        .padding(compact ? 14 : 18)
+        .landingGlass(cornerRadius: compact ? 22 : 26)
+    }
+
+    // MARK: - Slide 2 · Aura Snapshot
+
+    private func auraVisual(accent: Color, compact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 10 : 13) {
             HStack(spacing: 10) {
-                Image(systemName: SimastryIcon.predict)
-                    .font(.system(size: 15, weight: .bold))
+                Image(systemName: "camera.filters")
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(accent)
-                    .frame(width: 34, height: 34)
-                    .background(accent.opacity(0.16), in: Circle())
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(localization.string("landing.visual.future.question"))
+                    Text(localization.string("landing.visual.aura.vibeTitle"))
+                        .font(SimastryFont.overline)
+                        .tracking(1.2)
+                        .foregroundStyle(accent)
+                    Text(localization.string("landing.visual.aura.vibe"))
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(.white)
-                    Text(localization.string("landing.visual.future.type"))
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(.white.opacity(0.58))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
+
+                HStack(spacing: 4) {
+                    Image(systemName: SimastryIcon.privacy)
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(localization.string("landing.visual.aura.local"))
+                        .font(SimastryFont.microSemibold)
+                }
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .landingGlassCapsule()
             }
 
-            landingAnswerRow(title: localization.string("landing.visual.future.shortAnswer"), body: localization.string("landing.visual.future.answer"))
-            landingAnswerRow(title: localization.string("landing.visual.future.windowTitle"), body: localization.string("landing.visual.future.window"))
-            landingAnswerRow(title: localization.string("landing.visual.future.nextMoveTitle"), body: localization.string("landing.visual.future.nextMove"))
+            auraPaletteBar(compact: compact)
+
+            HStack(spacing: 9) {
+                auraRitualCell(localization.string("landing.visual.daily.wear"),
+                               localization.string("landing.visual.daily.wearBody"), "tshirt.fill", SimastryColor.celestialBlue, compact: compact)
+                auraRitualCell(localization.string("landing.visual.daily.eat"),
+                               localization.string("landing.visual.daily.eatBody"), "fork.knife", SimastryColor.sunCoral, compact: compact)
+                auraRitualCell(localization.string("landing.visual.daily.focus"),
+                               localization.string("landing.visual.daily.focusBody"), "scope", SimastryColor.gold, compact: compact)
+            }
         }
-        .padding(18)
-        .heroGlass(accent, cornerRadius: 26)
+        .padding(compact ? 14 : 18)
+        .landingGlass(cornerRadius: compact ? 22 : 26)
     }
 
-    private func dailyDeciderVisual(accent: Color) -> some View {
-        let decisions = [
-            (localization.string("landing.visual.daily.wear"), localization.string("landing.visual.daily.wearBody"), "tshirt.fill"),
-            (localization.string("landing.visual.daily.eat"), localization.string("landing.visual.daily.eatBody"), "fork.knife"),
-            (localization.string("landing.visual.daily.text"), localization.string("landing.visual.daily.textBody"), "bubble.left.and.bubble.right.fill"),
-            (localization.string("landing.visual.daily.focus"), localization.string("landing.visual.daily.focusBody"), "scope")
-        ]
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text(localization.string("landing.visual.daily.title"))
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(.white)
-                Spacer()
-                Image(systemName: "wand.and.stars")
-                    .foregroundStyle(accent)
+    private func auraPaletteBar(compact: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 13, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        SimastryColor.sunCoral,
+                        SimastryColor.gold,
+                        SimastryColor.risingViolet,
+                        SimastryColor.celestialBlue
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(height: compact ? 26 : 30)
+            .overlay {
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .strokeBorder(.white.opacity(0.18), lineWidth: 0.7)
             }
+            .overlay(alignment: .leading) {
+                Text(localization.string("landing.visual.aura.palette"))
+                    .font(SimastryFont.microSemibold)
+                    .foregroundStyle(.white.opacity(0.92))
+                    .shadow(color: .black.opacity(0.5), radius: 3)
+                    .padding(.leading, 11)
+            }
+    }
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(Array(decisions.enumerated()), id: \.offset) { _, item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Image(systemName: item.2)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(accent)
-                        Text(item.0)
-                            .font(SimastryFont.captionSmall.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.70))
-                        Text(item.1)
-                            .font(SimastryFont.labelSmall)
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.78)
+    private func auraRitualCell(_ title: String, _ body: String, _ icon: String, _ accent: Color, compact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 5 : 6) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(accent)
+            Text(title)
+                .font(SimastryFont.microSemibold)
+                .foregroundStyle(.white.opacity(0.68))
+            Text(body)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.74)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: compact ? 64 : 78, alignment: .topLeading)
+        .padding(compact ? 9 : 11)
+        .landingGlass(cornerRadius: 15)
+    }
+
+    // MARK: - Slide 3 · Speak with an AI Astrologer
+
+    private func astrologerVisual(accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 11) {
+                Image("Factory_sagittarius-nadia_profile")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 46, height: 46)
+                    .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .strokeBorder(accent.opacity(0.4), lineWidth: 0.8)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
-                    .padding(12)
-                    .tintedGlass(accent, cornerRadius: 18)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Nadia")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(.white)
+                    Text(localization.string("landing.visual.astrologer.role"))
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(.white.opacity(0.6))
                 }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 4) {
+                    Image(systemName: SimastryIcon.privacy)
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(localization.string("landing.visual.astrologer.badge"))
+                        .font(SimastryFont.microSemibold)
+                }
+                .foregroundStyle(SimastryColor.goldLight)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .landingGlassCapsule()
+            }
+
+            Text(localization.string("landing.visual.future.answer"))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .landingGlass(cornerRadius: 18)
+
+            HStack(spacing: 8) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(accent)
+                Text(localization.string("landing.visual.astrologer.typing"))
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(.white.opacity(0.66))
+                Spacer(minLength: 0)
             }
         }
         .padding(18)
-        .heroGlass(accent, cornerRadius: 26)
+        .landingGlass(cornerRadius: 26)
     }
+
+    // MARK: - Slide 4 · Decode a Message
 
     private func decodeVisual(accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             landingBubble(localization.string("landing.visual.decode.bubble1"), alignment: .leading, accent: SimastryColor.offWhite.opacity(0.18))
-            landingBubble(localization.string("landing.visual.decode.bubble2"), alignment: .trailing, accent: accent.opacity(0.22))
+            landingBubble(localization.string("landing.visual.decode.bubble2"), alignment: .trailing, accent: .white.opacity(0.12))
 
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal.fill")
@@ -596,46 +721,13 @@ struct LandingView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
-            .simastryGlass(cornerRadius: 16)
+            .landingGlass(cornerRadius: 16)
         }
         .padding(18)
-        .heroGlass(accent, cornerRadius: 26)
+        .landingGlass(cornerRadius: 26)
     }
 
-    private func replyVisual(accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                Image(systemName: SimastryIcon.quote)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(accent)
-                    .frame(width: 34, height: 34)
-                    .background(accent.opacity(0.16), in: Circle())
-                Text(localization.string("landing.visual.reply.title"))
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(.white)
-                Spacer()
-            }
-
-            Text(localization.string("landing.visual.reply.line"))
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 8) {
-                ForEach(localization.list("landing.visual.reply.chips"), id: \.self) { item in
-                    Text(item)
-                        .font(SimastryFont.captionSmall.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.78))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .simastryGlassPill()
-                }
-            }
-        }
-        .padding(18)
-        .heroGlass(accent, cornerRadius: 26)
-    }
+    // MARK: - Shared visual pieces
 
     private func landingAnswerRow(title: String, body: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -647,6 +739,7 @@ struct LandingView: View {
                 .font(SimastryFont.labelLarge)
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
         }
     }
 
@@ -678,14 +771,12 @@ struct LandingView: View {
                     .minimumScaleFactor(0.78)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .background(accent.opacity(0.12), in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(accent.opacity(0.26), lineWidth: 0.65)
-                    }
+                    .landingGlassCapsule()
             }
         }
     }
+
+    // MARK: - Action bar
 
     private func landingActionBar(bottomInset: CGFloat) -> some View {
         VStack(spacing: 12) {
@@ -713,7 +804,7 @@ struct LandingView: View {
         .padding(.horizontal, 14)
         .padding(.top, 14)
         .padding(.bottom, bottomInset > 0 ? 10 : 14)
-        .simastryGlass(cornerRadius: 30)
+        .landingGlass(cornerRadius: 30)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 18)
         .animation(.spring(SimastrySpring.bouncy).delay(0.32), value: appeared)
@@ -740,114 +831,50 @@ struct LandingView: View {
         )
     }
 
-    // MARK: - Hero (first viewport)
+    private var alreadyHaveAccountButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                viewModel.currentScreen = .signIn
+            }
+        } label: {
+            Text(localization.string("landing.alreadyHaveAccount"))
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(.white.opacity(0.78))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localization.string("landing.signIn"))
+    }
 
-    private func heroSection(geo: GeometryProxy) -> some View {
-        ZStack {
-            Color.black
-
-            Image("LandingImage")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: geo.size.width, height: geo.size.height)
-                .offset(x: motionOffset.width * 0.6, y: motionOffset.height * 0.6)
-                .clipped()
-
-            // Calms the busy artwork where text must read: a light veil
-            // behind the wordmark, untouched art behind the collage, and
-            // progressively solid ground under the feature row and CTA.
-            LinearGradient(
-                stops: [
-                    .init(color: .black.opacity(0.30), location: 0),
-                    .init(color: .black.opacity(0.05), location: 0.18),
-                    .init(color: .clear, location: 0.34),
-                    .init(color: .black.opacity(0.30), location: 0.62),
-                    .init(color: .black.opacity(0.66), location: 0.78),
-                    .init(color: .black.opacity(0.94), location: 1)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .allowsHitTesting(false)
-
-            shimmerLayer(size: geo.size)
-                .offset(x: motionOffset.width * 0.4, y: motionOffset.height * 0.4)
-
-            fallingStarLayer(size: geo.size)
-                .offset(x: motionOffset.width * 1.0, y: motionOffset.height * 1.0)
-
-            VStack(spacing: 0) {
-                wordmark
-                    .padding(.top, landingTopPadding(for: geo.size))
-
-                valueStatement
-                    .padding(.top, 10)
-                    .padding(.horizontal, 32)
-
-                companionWindowArrangement(size: geo.size)
-                    .frame(height: heroWindowHeight(for: geo.size))
-                    .padding(.top, geo.size.height < 720 ? 8 : 16)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 26)
-                    .animation(.spring(SimastrySpring.bouncy).delay(0.22), value: appeared)
-
-                Spacer(minLength: 8)
-
-                featureRow
-                    .padding(.horizontal, 24)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 24)
-                    .animation(.spring(SimastrySpring.smooth).delay(0.34), value: appeared)
-
-                heroCTA
+    private func beginOnboarding() {
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            if viewModel.isAgeVerified {
+                viewModel.currentScreen = .firstReadChoice
+            } else {
+                viewModel.currentScreen = .ageGate
             }
         }
-        .clipped()
     }
 
-    private func landingTopPadding(for size: CGSize) -> CGFloat {
-        size.height < 720 ? 40 : 60
+    private func landingTopPadding(for size: CGSize, topInset: CGFloat) -> CGFloat {
+        // The carousel ignores the safe area for its full-bleed background, so
+        // honor the real top inset here to keep the wordmark/orb clear of the
+        // status bar and Dynamic Island, with a fixed minimum for older devices.
+        max(topInset + 12, size.height < 720 ? 40 : 60)
     }
 
-    private func heroWindowHeight(for size: CGSize) -> CGFloat {
-        if size.height < 700 {
-            return 220
-        }
-        return min(max(size.height * 0.36, 270), 330)
-    }
-
-    // MARK: - Wordmark & Value
+    // MARK: - Wordmark
 
     private var wordmark: some View {
         SimastryWordmark(font: .system(.largeTitle, weight: .bold).italic())
-            .shadow(color: SimastryColor.gold.opacity(0.30), radius: 18)
+            // Gold outer glow removed — keep only a soft black shadow for legibility.
             .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : -16)
             .animation(.spring(SimastrySpring.smooth).delay(0.08), value: appeared)
     }
 
-    private var valueStatement: some View {
-        VStack(spacing: 6) {
-            Text(localization.string("landing.value.title"))
-                .font(SimastryFont.titleMedium)
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
-
-            Text(localization.string("landing.value.subtitle"))
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(.white.opacity(0.82))
-                .multilineTextAlignment(.center)
-                .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : -10)
-        .animation(.spring(SimastrySpring.smooth).delay(0.15), value: appeared)
-        .accessibilityElement(children: .combine)
-    }
-
-    // MARK: - Companion Collage
+    // MARK: - Companion collage (Slide 5 · feature universe)
 
     private func companionWindowArrangement(size: CGSize) -> some View {
         GeometryReader { proxy in
@@ -866,7 +893,7 @@ struct LandingView: View {
         }
         .padding(.horizontal, 12)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Featured Simastry guides: Ada the Taurus Guide, Nadia the Sagittarius Guide, Maria the Gemini Guide, Leyla the Virgo Guide, and Elias the Scorpio Guide")
+        .accessibilityLabel("Featured Simastry guides: Ada the Taurus Guide, Jonah the Virgo Guide, Maria the Gemini Guide, Nadia the Sagittarius Guide, and Elias the Scorpio Guide")
     }
 
     private func constellationBackdrop(size: CGSize) -> some View {
@@ -979,271 +1006,6 @@ struct LandingView: View {
         )
     }
 
-    // MARK: - Feature Row
-
-    private var featureRow: some View {
-        HStack(spacing: 10) {
-            ForEach(localizedLandingFeatures) { feature in
-                VStack(spacing: 7) {
-                    Image(systemName: feature.icon)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(feature.accent)
-                        .frame(height: 20)
-
-                    Text(feature.title)
-                        .font(SimastryFont.labelSmall)
-                        .foregroundStyle(.white.opacity(0.92))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 6)
-                .background(.black.opacity(0.30), in: .rect(cornerRadius: 16))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.6)
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(localization.string("landing.feature.accessibility"))
-    }
-
-    // MARK: - Hero CTA
-
-    private var heroCTA: some View {
-        VStack(spacing: 13) {
-            methodCredentialLine
-
-            LandingPrimaryButton(title: localization.string("landing.getStarted")) {
-                beginOnboarding()
-            }
-            .accessibilityHint(localization.string("landing.accessibilityHint"))
-
-            alreadyHaveAccountButton
-
-            scrollHint
-                .padding(.top, 2)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 18)
-        .padding(.bottom, 46)
-        .background(
-            // The global scrim already grounds this region; this adds a
-            // gentle local reinforcement without a visible gradient seam.
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.35), .black.opacity(0.55)],
-                startPoint: .top, endPoint: .bottom
-            )
-        )
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
-        .animation(.spring(SimastrySpring.bouncy).delay(0.45), value: appeared)
-    }
-
-    private var scrollHint: some View {
-        VStack(spacing: 2) {
-            Text(localization.string("landing.seeInside"))
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(.white.opacity(0.62))
-            Image(systemName: "chevron.compact.down")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.5))
-        }
-        .accessibilityHidden(true)
-    }
-
-    private var alreadyHaveAccountButton: some View {
-        Button {
-            HapticManager.buttonPress()
-            withAnimation(.spring(SimastrySpring.smooth)) {
-                viewModel.currentScreen = .signIn
-            }
-        } label: {
-            Text(localization.string("landing.alreadyHaveAccount"))
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(.white.opacity(0.78))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(localization.string("landing.signIn"))
-    }
-
-    private func beginOnboarding() {
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            if viewModel.isAgeVerified {
-                viewModel.currentScreen = .firstReadChoice
-            } else {
-                viewModel.currentScreen = .ageGate
-            }
-        }
-    }
-
-    // MARK: - Feature Showcase (below the fold)
-
-    private var featureShowcase: some View {
-        VStack(spacing: 26) {
-            showcaseGroup(title: localization.string("landing.showcase.daily"), items: landingDailyFeatures)
-            showcaseGroup(title: localization.string("landing.showcase.world"), items: landingWorldFeatures)
-        }
-        .padding(.horizontal, 20)
-    }
-
-    private func showcaseGroup(title: String, items: [LandingShowcaseItem]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title.uppercased())
-                .font(SimastryFont.overline)
-                .tracking(1.2)
-                .foregroundStyle(SimastryColor.gold.opacity(0.85))
-                .padding(.leading, 4)
-
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    showcaseRow(item)
-                    if index < items.count - 1 {
-                        Divider()
-                            .overlay(Color.white.opacity(0.07))
-                            .padding(.leading, 70)
-                    }
-                }
-            }
-            .surfaceCard()
-        }
-    }
-
-    private func showcaseRow(_ item: LandingShowcaseItem) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: item.icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(item.accent)
-                .frame(width: 40, height: 40)
-                .background(item.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(item.accent.opacity(0.28), lineWidth: 0.6)
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(.white)
-                Text(item.subtitle)
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(.white.opacity(0.6))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(item.title). \(item.subtitle)")
-    }
-
-    // MARK: - Trust Band
-
-    private var trustBand: some View {
-        VStack(spacing: 10) {
-            Image(systemName: SimastryIcon.privacy)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
-                .frame(width: 48, height: 48)
-                .background(SimastryColor.gold.opacity(0.10), in: Circle())
-                .overlay(Circle().strokeBorder(SimastryColor.gold.opacity(0.25), lineWidth: 0.7))
-
-            Text(localization.string("landing.trust.title"))
-                .font(SimastryFont.titleMedium)
-                .foregroundStyle(.white)
-
-            Text(localization.string("landing.trust.subtitle"))
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(.white.opacity(0.62))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 36)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-    }
-
-    // MARK: - Bottom CTA
-
-    private var bottomCTA: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 6) {
-                Text(localization.string("landing.bottom.title"))
-                    .font(SimastryFont.titleLarge)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                Text(localization.string("landing.bottom.subtitle"))
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(.white.opacity(0.62))
-            }
-
-            LandingPrimaryButton(title: localization.string("landing.getStarted")) {
-                beginOnboarding()
-            }
-            .accessibilityHint(localization.string("landing.accessibilityHint"))
-
-            alreadyHaveAccountButton
-
-            legalFooter
-                .padding(.top, 4)
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 54)
-    }
-
-    private var legalFooter: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 4) {
-                Text(localization.string("landing.legalPrefix"))
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(.white.opacity(0.66))
-                Link(localization.string("landing.terms"), destination: AppConfig.termsOfServiceURL)
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(.white.opacity(0.82))
-                Text(localization.string("landing.and"))
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(.white.opacity(0.66))
-                Link(localization.string("landing.privacy"), destination: AppConfig.privacyPolicyURL)
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(.white.opacity(0.82))
-            }
-
-            HStack(spacing: 4) {
-                Image(systemName: SimastryIcon.privacy)
-                    .font(SimastryFont.microMedium)
-                Text(localization.string("landing.privacyBadge"))
-                    .font(SimastryFont.captionSmall)
-            }
-            .foregroundStyle(SimastryColor.mutedSilver)
-        }
-    }
-
-    private var methodCredentialLine: some View {
-        HStack(spacing: 6) {
-            Image(systemName: SimastryIcon.method)
-                .font(SimastryFont.microSemibold)
-                .foregroundStyle(SimastryColor.goldLight)
-
-            Text(localization.string("landing.methodCredential"))
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(.white.opacity(0.82))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.25), in: .capsule)
-        .overlay {
-            Capsule()
-                .strokeBorder(SimastryColor.gold.opacity(0.22), lineWidth: 0.6)
-        }
-        .accessibilityLabel(localization.string("landing.methodCredential"))
-    }
-
     // MARK: - Shimmer Stars
 
     private func shimmerLayer(size: CGSize) -> some View {
@@ -1280,90 +1042,33 @@ struct LandingView: View {
                 if elapsed >= shimmerStars[i].cycleSpeed {
                     shimmerStars[i].isBright.toggle()
                     shimmerStars[i].lastToggle = Date()
-                    let targetOpacity = shimmerStars[i].isBright
-                        ? Double.random(in: 0.6...0.95)
+                    // Opacity-only twinkle — no scale pulse, so stars never flash as sparkles.
+                    shimmerStars[i].currentOpacity = shimmerStars[i].isBright
+                        ? Double.random(in: 0.55...0.85)
                         : Double.random(in: 0.08...0.25)
-                    let targetScale = shimmerStars[i].isBright && shimmerStars[i].doesPulse ? 1.3 : 1.0
-                    shimmerStars[i].currentOpacity = targetOpacity
-                    shimmerStars[i].currentSize = shimmerStars[i].baseSize * targetScale
                 }
             }
         }
-    }
-
-    // MARK: - Falling Stars
-
-    private func fallingStarLayer(size: CGSize) -> some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, canvasSize in
-                let now = timeline.date.timeIntervalSinceReferenceDate
-                for star in fallingStars {
-                    let elapsed = now - star.startTime
-                    let progress = elapsed / star.duration
-                    guard progress >= 0, progress <= 1 else { continue }
-
-                    let x = star.startX * canvasSize.width + (star.driftX * canvasSize.width * progress)
-                    let y = -10 + (canvasSize.height + 20) * progress
-
-                    let fadeIn = min(progress / 0.1, 1.0)
-                    let fadeOut = min((1.0 - progress) / 0.15, 1.0)
-                    let opacity = star.opacity * fadeIn * fadeOut
-
-                    let rect = CGRect(x: x - star.size / 2, y: y - star.size / 2, width: star.size, height: star.size)
-                    context.opacity = opacity
-
-                    if star.size > 3.5 {
-                        let glowRect = rect.insetBy(dx: -2, dy: -2)
-                        context.opacity = opacity * 0.3
-                        context.fill(Circle().path(in: glowRect), with: .color(SimastryColor.gold))
-                        context.opacity = opacity
-                    }
-
-                    context.fill(
-                        RoundedRectangle(cornerRadius: star.size / 3).path(in: rect),
-                        with: .color(SimastryColor.gold)
-                    )
-                }
-            }
-        }
-        .allowsHitTesting(false)
-    }
-
-    private func startFallingStars() {
-        guard !reduceMotion else { return }
-        spawnStar()
-        starTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { _ in
-            Task { @MainActor in
-                spawnStar()
-                fallingStars.removeAll { Date().timeIntervalSinceReferenceDate - $0.startTime > $0.duration + 0.5 }
-            }
-        }
-    }
-
-    private func spawnStar() {
-        let star = FallingStar(
-            startX: Double.random(in: 0.3...1.1),
-            driftX: Double.random(in: -0.35 ... -0.15),
-            size: Double.random(in: 2...5.5),
-            opacity: Double.random(in: 0.4...1.0),
-            duration: Double.random(in: 3.5...6.5),
-            startTime: Date().timeIntervalSinceReferenceDate
-        )
-        fallingStars.append(star)
     }
 
     // MARK: - Motion
 
     private func startMotionUpdates() {
         guard !reduceMotion, motionManager.isDeviceMotionAvailable else { return }
-        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
+        motionManager.deviceMotionUpdateInterval = 1.0 / 20.0
         motionManager.startDeviceMotionUpdates(to: .main) { motion, _ in
             guard let motion else { return }
             let pitch = motion.attitude.pitch
             let roll = motion.attitude.roll
-            let targetX = CGFloat(roll) * 25
-            let targetY = CGFloat(pitch) * 25
-            withAnimation(.spring(Spring(response: 0.8, dampingRatio: 0.85))) {
+            // Clamp the tilt offset so the parallax stays premium and never
+            // swings far enough to feel distracting (or expose a wallpaper edge).
+            let limit: CGFloat = 16
+            let targetX = min(max(CGFloat(roll) * 16, -limit), limit)
+            let targetY = min(max(CGFloat(pitch) * 16, -limit), limit)
+            guard abs(motionOffset.width - targetX) > 1 || abs(motionOffset.height - targetY) > 1 else {
+                return
+            }
+            withAnimation(.easeOut(duration: 0.18)) {
                 motionOffset = CGSize(width: targetX, height: targetY)
             }
         }
@@ -1374,17 +1079,7 @@ struct LandingView: View {
     }
 }
 
-
 // MARK: - Models
-
-private struct FallingStar {
-    let startX: Double
-    let driftX: Double
-    let size: Double
-    let opacity: Double
-    let duration: Double
-    let startTime: Double
-}
 
 private struct ShimmerStar {
     let x: Double
@@ -1401,13 +1096,13 @@ private struct ShimmerStar {
 
     static func generate(count: Int) -> [ShimmerStar] {
         (0..<count).map { i in
-            let doesShimmer = i < 10
-            let doesPulse = doesShimmer && i < 4
-            let baseSize = Double.random(in: 1.0...3.5)
+            let doesShimmer = i < 16
+            let doesPulse = doesShimmer && i < 6
+            let baseSize = Double.random(in: 1.0...3.0)
             let staticOpacity = doesShimmer ? Double.random(in: 0.1...0.3) : Double.random(in: 0.15...0.4)
             return ShimmerStar(
                 x: Double.random(in: 0.02...0.98),
-                y: Double.random(in: 0.02...0.55),
+                y: Double.random(in: 0.02...0.96),
                 baseSize: baseSize,
                 isWarm: Double.random(in: 0...1) > 0.3,
                 doesShimmer: doesShimmer,

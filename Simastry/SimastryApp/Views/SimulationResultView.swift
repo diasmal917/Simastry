@@ -581,7 +581,7 @@ struct SimulationResultView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("\(result.confidence)% confidence - based on \(confidenceBasis)")
+                Text("\(result.confidenceSignalDisplay) — based on \(confidenceBasis)")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)

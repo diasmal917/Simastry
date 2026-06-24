@@ -268,6 +268,7 @@ extension AppViewModel {
     func sendPanelMessage(_ content: String) async -> Bool {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
+        guard validateGuideMessageForSend(trimmed) else { return false }
 
         guard canSendMessage() else {
             showToast(

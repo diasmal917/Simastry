@@ -154,14 +154,39 @@ extension AppViewModel {
         previousGuideName: String?
     ) async -> CompanionReplyResult? {
         guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply else { return nil }
+        guard let prompt = makePanelReplyPromptForLLM(entry: entry, previousGuideName: previousGuideName) else {
+            return nil
+        }
 
+        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
+            try await supabase.invokeCompanionReplyResult(
+                kind: .chat,
+                feature: .panelChat,
+                system: prompt.system,
+                user: prompt.user,
+                maxTokens: 300
+            )
+        }
+    }
+
+    func makePanelReplyPromptForLLM(
+        entry: PanelMatcher.Entry,
+        previousGuideName: String?
+    ) -> (system: String, user: String)? {
         let transcript = sortedPanelMessages.suffix(10).map { message in
-            GuideReplyService.TranscriptEntry(
-                senderName: message.senderId == PanelParticipant.localUserId
+            let isUser = message.senderId == PanelParticipant.localUserId
+            return GuideReplyService.TranscriptEntry(
+                senderName: isUser
                     ? (llmUserContext.name ?? "User")
                     : (panelGuideEntry(forParticipantId: message.senderId)?.profile.name ?? "Guide"),
-                content: message.content
+                content: message.content,
+                isUser: isUser
             )
+        }
+        let preparedTranscript = GuideReplyService.prepareRemoteTranscript(Array(transcript))
+        guard preparedTranscript.canProceed else {
+            lastGuideSafetyMessage = preparedTranscript.blockingMessage
+            return nil
         }
 
         let system = GuideReplyService.personaSystemPrompt(
@@ -174,19 +199,12 @@ extension AppViewModel {
             feedbackSummary: guideFeedbackPromptSummary(for: entry.profile.id)
         )
         let user = GuideReplyService.threadUserPrompt(
-            transcript: Array(transcript),
-            replyingAs: entry.profile.name
+            transcript: preparedTranscript.transcript,
+            replyingAs: entry.profile.name,
+            privacySummary: preparedTranscript.privacySummary
         )
 
-        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
-            try await supabase.invokeCompanionReplyResult(
-                kind: .chat,
-                feature: .panelChat,
-                system: system,
-                user: user,
-                maxTokens: 300
-            )
-        }
+        return (system, user)
     }
 
     /// LLM reply for a 1:1 companion thread, or nil (caller falls back).
@@ -196,7 +214,30 @@ extension AppViewModel {
         companionSign: String
     ) async -> String? {
         guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply else { return nil }
+        guard let prompt = makeCompanionReplyPromptForLLM(
+            companionId: companionId,
+            companionName: companionName,
+            companionSign: companionSign
+        ) else {
+            return nil
+        }
 
+        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
+            try await supabase.invokeCompanionReply(
+                kind: .chat,
+                feature: .companionChat,
+                system: prompt.system,
+                user: prompt.user,
+                maxTokens: 300
+            )
+        }
+    }
+
+    func makeCompanionReplyPromptForLLM(
+        companionId: UUID,
+        companionName: String,
+        companionSign: String
+    ) -> (system: String, user: String)? {
         let sign = ZodiacSign(rawValue: companionSign.lowercased())
             ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == companionSign.lowercased() }
         let matched = FactoryCompanionCatalog.all.first { $0.name.lowercased() == companionName.lowercased() }
@@ -205,12 +246,19 @@ extension AppViewModel {
 
         let thread = companionConversation(with: companionId).suffix(10)
         let transcript = thread.map { message in
-            GuideReplyService.TranscriptEntry(
-                senderName: message.direction == .outgoing
+            let isUser = message.direction == .outgoing
+            return GuideReplyService.TranscriptEntry(
+                senderName: isUser
                     ? (llmUserContext.name ?? "User")
                     : companionName,
-                content: message.content
+                content: message.content,
+                isUser: isUser
             )
+        }
+        let preparedTranscript = GuideReplyService.prepareRemoteTranscript(Array(transcript))
+        guard preparedTranscript.canProceed else {
+            lastGuideSafetyMessage = preparedTranscript.blockingMessage
+            return nil
         }
 
         let system = GuideReplyService.personaSystemPrompt(
@@ -224,18 +272,25 @@ extension AppViewModel {
             feedbackSummary: guideFeedbackPromptSummary(for: matched.id)
         )
         let user = GuideReplyService.threadUserPrompt(
-            transcript: Array(transcript),
-            replyingAs: companionName
+            transcript: preparedTranscript.transcript,
+            replyingAs: companionName,
+            privacySummary: preparedTranscript.privacySummary
         )
 
-        return await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout) { [supabase] in
-            try await supabase.invokeCompanionReply(
-                kind: .chat,
-                feature: .companionChat,
-                system: system,
-                user: user,
-                maxTokens: 300
-            )
+        return (system, user)
+    }
+
+    @discardableResult
+    func validateGuideMessageForSend(_ content: String) -> Bool {
+        let safety = GuideReplyService.prepareOutgoingUserMessage(content)
+        guard safety.canProceed else {
+            let message = safety.blockingMessage ?? "Please revise this before sending it to an AI guide."
+            lastGuideSafetyMessage = message
+            showToast("Couldn't send message", subtitle: message, isError: true)
+            return false
         }
+
+        lastGuideSafetyMessage = nil
+        return true
     }
 }

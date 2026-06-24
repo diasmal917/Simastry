@@ -30,8 +30,10 @@ nonisolated enum PredictionServiceError: LocalizedError, Sendable {
 }
 
 nonisolated final class PredictionService {
+    static let defaultRemotePredictionTimeout: Double = 8
+
     private let privacyService: ConversationPrivacyService
-    private let historyKey: String = "simastry_prediction_history"
+    private let historyKey: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
@@ -40,9 +42,14 @@ nonisolated final class PredictionService {
     /// app binary. Injected by AppViewModel; nil in isolation (tests).
     var replyChannel: (@Sendable (_ system: String, _ user: String) async throws -> String)?
     var isRemoteChannelAvailable: (@Sendable () -> Bool)?
+    var remotePredictionTimeout: Double = defaultRemotePredictionTimeout
 
-    init(privacyService: ConversationPrivacyService = ConversationPrivacyService()) {
+    init(
+        privacyService: ConversationPrivacyService = ConversationPrivacyService(),
+        historyKey: String = "simastry_prediction_history"
+    ) {
         self.privacyService = privacyService
+        self.historyKey = historyKey
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -100,12 +107,25 @@ nonisolated final class PredictionService {
         }
 
         let text: String
-        do {
-            text = try await replyChannel(systemPrompt, userPrompt)
-        } catch {
+        let remoteAttempt = await Self.withRemoteTimeout(seconds: remotePredictionTimeout) {
+            try await replyChannel(systemPrompt, userPrompt)
+        }
+        switch remoteAttempt {
+        case .success(let remoteText):
+            text = remoteText
+        case .failure(let error):
             if let limitError = Self.aiUsageLimitError(from: error) {
                 throw limitError
             }
+            let result = composeLocalPrediction(
+                request: request,
+                preparedConversation: preparedConversation,
+                preparedQuestion: preparedQuestion,
+                preparedHypotheticalReply: preparedHypotheticalReply
+            )
+            save(result)
+            return result
+        case nil:
             let result = composeLocalPrediction(
                 request: request,
                 preparedConversation: preparedConversation,
@@ -167,6 +187,31 @@ nonisolated final class PredictionService {
             return .aiUsageLimit(message)
         }
         return nil
+    }
+
+    private static func withRemoteTimeout<Output: Sendable>(
+        seconds: Double,
+        operation: @escaping @Sendable () async throws -> Output
+    ) async -> Result<Output, Error>? {
+        let coordinator = PredictionTimeoutCoordinator<Output>()
+        let operationTask = Task {
+            do {
+                await coordinator.complete(.success(try await operation()))
+            } catch is CancellationError {
+                return
+            } catch {
+                await coordinator.complete(.failure(error))
+            }
+        }
+        let timeoutTask = Task {
+            try? await Task.sleep(for: .seconds(seconds))
+            await coordinator.complete(nil)
+        }
+
+        let result = await coordinator.wait()
+        operationTask.cancel()
+        timeoutTask.cancel()
+        return result
     }
 
     // MARK: - Local Placement-Logic Composer
@@ -317,7 +362,7 @@ nonisolated final class PredictionService {
         if request.userRisingSign != nil { confidence += 4 }
         if request.targetSunSign != nil { confidence += 3 }
         switch request.category {
-        case .careerSuccess, .messageOutcome:
+        case .careerSuccess, .privateQuestion, .messageOutcome:
             confidence += 4
         case .moneyDirection, .familyPath:
             confidence -= 3
@@ -340,6 +385,8 @@ nonisolated final class PredictionService {
             windows = ["the next 4 to 8 weeks", "the next quarter", "the next visible work cycle"]
         case .moneyDirection:
             windows = ["the next 3 to 6 months", "after one cleaner structure is in place", "the next practical earning cycle"]
+        case .privateQuestion:
+            windows = ["the next 24 to 72 hours", "after one quiet signal repeats", "the next honest opening"]
         case .messageOutcome:
             windows = ["the next reply window"]
         }
@@ -368,6 +415,8 @@ nonisolated final class PredictionService {
             return "Yes, success is available here. The next opening looks like \(timingWindow), with \(anchorName) needing visible follow-through instead of quiet competence."
         case .moneyDirection:
             return "Wealth grows through structure, not a lucky spike. The next money opening is \(timingWindow), but it needs practical choices."
+        case .privateQuestion:
+            return "The private thing on your mind is asking for one honest move, not a dramatic reveal. The clearest opening is \(timingWindow)."
         case .messageOutcome:
             return "They are likely to answer, but the tone depends on the thread."
         }
@@ -387,6 +436,8 @@ nonisolated final class PredictionService {
             return "\(anchorLine) shows growth through visible action, useful skill, and choosing the room where your strengths can be seen."
         case .moneyDirection:
             return "\(anchorLine) points to prosperity through cleaner structure, steadier choices, and fewer energy leaks. This is not investment advice."
+        case .privateQuestion:
+            return "\(anchorLine) is highlighting what keeps repeating when you get quiet. The signal is not asking for certainty; it is asking you to name the next honest step.\(targetLine)"
         case .messageOutcome:
             return "\(anchorLine) shapes the next reply through tone, pacing, and emotional timing.\(targetLine)"
         }
@@ -409,6 +460,8 @@ nonisolated final class PredictionService {
             return "Pick the one visible move with the highest upside and put it where someone can notice."
         case .moneyDirection:
             return "Clean up one recurring leak, then choose one skill or offer that can compound."
+        case .privateQuestion:
+            return "Write the question in one sentence, then choose the smallest action you would still respect tomorrow."
         case .messageOutcome:
             return "Give the thread enough space to show you whether interest is being matched."
         }
@@ -422,6 +475,8 @@ nonisolated final class PredictionService {
             return "This is not financial, investing, tax, or legal advice."
         case .commitment:
             return "This is a timing pattern, not a guaranteed marriage date."
+        case .privateQuestion:
+            return "This is reflective guidance, not medical, legal, financial, fertility, or crisis advice."
         default:
             return nil
         }
@@ -622,6 +677,7 @@ nonisolated final class PredictionService {
         - Keep it concise and natural
         - The astrological breakdown should be specific, short, and placement-aware
         - Channel their zodiac energy - don't just describe their sign, embody their texting personality
+        \(Self.auraImageSafetyRules)
         - Return your response as valid JSON with exactly these fields:
           {"predicted_message": "the predicted text message", "direct_answer": "short answer to the user's question", "timing_window": "likely timing window if relevant", "astrological_breakdown": "2-3 sentences explaining why based on their signs", "practical_next_move": "one action the user can take", "safety_note": "short caution if needed, otherwise null", "confidence": 75, "tone": "warm"}
         - tone must be one of: playful, guarded, warm, cold, anxious, confident, flirty, distant
@@ -646,6 +702,7 @@ nonisolated final class PredictionService {
         - Do not give medical, fertility, legal, investing, tax, or financial advice.
         - If the user asks about money, discuss prosperity patterns, career behavior, and practical structure only.
         - If the user asks about children or pregnancy, avoid medical claims and keep it about family/home themes.
+        \(Self.auraImageSafetyRules)
         - Keep the answer concise, warm, practical, and a little magical.
         - Return valid JSON with exactly these fields:
           {"predicted_message": "one-line shareable answer", "direct_answer": "Short answer", "timing_window": "Most likely window", "astrological_breakdown": "Why this shows up astrologically in 2-3 sentences", "practical_next_move": "What to do next in one specific action", "safety_note": "short caution if needed, otherwise null", "confidence": 68, "tone": "warm"}
@@ -654,6 +711,11 @@ nonisolated final class PredictionService {
         - Return ONLY the JSON object, no markdown.
         """
     }
+
+    private static let auraImageSafetyRules = """
+        - If Aura Snapshot descriptors are provided, use them only as color, brightness/light, contrast, user-selected mood, and safe symbolic interpretation.
+        - Do not request, accept, or infer from raw image data, base64, EXIF, embeddings, face landmarks, face geometry, biometric traits, identity, ethnicity, age, gender, attractiveness, fertility, health, or mental-health status.
+        """
 
     private func makeUserPrompt(
         for request: PredictionRequest,
@@ -703,6 +765,10 @@ nonisolated final class PredictionService {
             sections.append(targetChart)
         }
 
+        if let auraSnapshot = request.auraSnapshot {
+            sections.append("Aura Snapshot compact descriptors:\n\(auraSnapshot.compactSummary)")
+        }
+
         if let preparedHypotheticalReply {
             sections.append("Alternative reply the user is considering sending:\n\(preparedHypotheticalReply.redactedText)\n\nUse that message as the user's next move, then predict how the other person would answer.")
         }
@@ -750,6 +816,30 @@ nonisolated final class PredictionService {
 
         guard !summaries.isEmpty else { return nil }
         return summaries.joined(separator: " ")
+    }
+}
+
+private actor PredictionTimeoutCoordinator<Output: Sendable> {
+    private var didComplete = false
+    private var storedResult: Result<Output, Error>?
+    private var continuation: CheckedContinuation<Result<Output, Error>?, Never>?
+
+    func wait() async -> Result<Output, Error>? {
+        await withCheckedContinuation { continuation in
+            if didComplete {
+                continuation.resume(returning: storedResult)
+            } else {
+                self.continuation = continuation
+            }
+        }
+    }
+
+    func complete(_ result: Result<Output, Error>?) {
+        guard !didComplete else { return }
+        didComplete = true
+        storedResult = result
+        continuation?.resume(returning: result)
+        continuation = nil
     }
 }
 

@@ -587,9 +587,13 @@ struct RelationshipPersonDetailView: View {
             action()
         } label: {
             HStack(spacing: 11) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(tint)
+                SimastryConceptIconView(
+                    name: icon,
+                    size: icon == SimastryIcon.predict ? 34 : 36,
+                    symbolSize: 14,
+                    accent: tint,
+                    animatedPrediction: icon == SimastryIcon.predict
+                )
                     .frame(width: 36, height: 36)
                     .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
 
@@ -1289,7 +1293,12 @@ struct AddRelationshipPersonView: View {
                 }
                 .frame(width: 72, height: 72)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(SimastryColor.gold.opacity(0.24), lineWidth: 1))
+                .overlay {
+                    // Ring frames a real photo only; the zodiac-glyph placeholder stays borderless.
+                    if imageData != nil {
+                        Circle().stroke(SimastryColor.gold.opacity(0.24), lineWidth: 1)
+                    }
+                }
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: "camera.fill")
                         .font(.system(size: 11, weight: .semibold))
@@ -1505,8 +1514,13 @@ struct RelationshipAvatarView: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(Circle().stroke(SimastryColor.gold.opacity(0.22), lineWidth: 1))
-        .shadow(color: person.sunSign.color.opacity(0.22), radius: size * 0.12, x: 0, y: size * 0.06)
+        .overlay {
+            // Ring frames a real photo only; the zodiac-glyph avatar stays borderless.
+            if person.imageData != nil {
+                Circle().stroke(SimastryColor.gold.opacity(0.22), lineWidth: 1)
+            }
+        }
+        .shadow(color: person.imageData != nil ? person.sunSign.color.opacity(0.22) : .clear, radius: size * 0.12, x: 0, y: size * 0.06)
         .accessibilityLabel("\(person.displayName), \(person.sunSign.displayName) Sun")
     }
 }

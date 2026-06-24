@@ -94,6 +94,68 @@ enum SimastryIcon {
     static let privacy = "lock.fill"
 }
 
+struct PredictionOrbIcon: View {
+    let size: CGFloat
+    var animated: Bool = true
+    var glow: Color = SimastryColor.risingViolet
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var breathing = false
+
+    var body: some View {
+        Image("PredictionOrb")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .scaleEffect(animated && !reduceMotion ? (breathing ? 1.035 : 0.985) : 1)
+            .rotationEffect(.degrees(animated && !reduceMotion ? (breathing ? 2.0 : -1.5) : 0))
+            .shadow(color: glow.opacity(animated ? 0.30 : 0.18), radius: size * 0.22)
+            .shadow(color: glow.opacity(animated ? 0.18 : 0.10), radius: size * 0.38)
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+            .onAppear {
+                guard animated, !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) {
+                    breathing = true
+                }
+            }
+    }
+}
+
+struct PredictionOrbLabel: View {
+    let title: String
+    var iconSize: CGFloat = 22
+    var animated: Bool = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            PredictionOrbIcon(size: iconSize, animated: animated)
+            Text(title)
+        }
+    }
+}
+
+struct SimastryConceptIconView: View {
+    let name: String
+    let size: CGFloat
+    var symbolSize: CGFloat? = nil
+    var accent: Color
+    var animatedPrediction: Bool = false
+
+    var body: some View {
+        Group {
+            if name == SimastryIcon.predict {
+                PredictionOrbIcon(size: size, animated: animatedPrediction, glow: accent)
+            } else {
+                Image(systemName: name)
+                    .font(.system(size: symbolSize ?? size * 0.42, weight: .semibold))
+                    .foregroundStyle(accent)
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 extension CelestialRole {
     var accentColor: Color {
         Color(red: accentRed, green: accentGreen, blue: accentBlue)

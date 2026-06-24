@@ -912,9 +912,6 @@ private struct GuidedRoomSenderAvatar: View {
                 }
             }
             .frame(width: size, height: size)
-            .overlay {
-                Circle().strokeBorder((sign?.color ?? SimastryColor.gold).opacity(0.55), lineWidth: 1.0)
-            }
         }
     }
 }
@@ -948,9 +945,6 @@ private struct GuidedRoomMemberAvatar: View {
                 }
             }
             .frame(width: size, height: size)
-            .overlay {
-                Circle().strokeBorder((sign?.color ?? SimastryColor.gold).opacity(0.55), lineWidth: 1.0)
-            }
         }
     }
 }
@@ -978,9 +972,6 @@ private struct GuidedRoomProfilePickRow: View {
                     }
                 }
                 .frame(width: 42, height: 42)
-                .overlay {
-                    Circle().strokeBorder((sign?.color ?? SimastryColor.gold).opacity(0.52), lineWidth: 1.0)
-                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(profile.displayName)

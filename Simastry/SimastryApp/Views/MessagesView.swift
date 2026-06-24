@@ -534,6 +534,12 @@ private struct MessageAvatarView: View {
         return FactoryCompanionCatalog.all.first { $0.sign == zodiacSign }
     }
 
+    /// Only real portraits get a framing ring; zodiac-glyph avatars stay borderless.
+    private var hasPhoto: Bool {
+        if let avatarURL, !avatarURL.isEmpty, URL(string: avatarURL) != nil { return true }
+        return factoryProfile != nil
+    }
+
     var body: some View {
         ZStack {
             if let avatarURL, let url = URL(string: avatarURL) {
@@ -570,22 +576,24 @@ private struct MessageAvatarView: View {
             }
         }
         .frame(width: size, height: size)
-        .overlay(
-            Circle()
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            SimastryColor.goldLight,
-                            SimastryColor.gold.opacity(showGlow ? 0.95 : 0.55),
-                            SimastryColor.goldDark.opacity(showGlow ? 0.9 : 0.45)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: showGlow ? 1.8 : 0.8
-                )
-        )
-        .shadow(color: showGlow ? SimastryColor.gold.opacity(0.24) : .clear, radius: 10, y: 2)
+        .overlay {
+            if hasPhoto {
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                SimastryColor.goldLight,
+                                SimastryColor.gold.opacity(showGlow ? 0.95 : 0.55),
+                                SimastryColor.goldDark.opacity(showGlow ? 0.9 : 0.45)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: showGlow ? 1.8 : 0.8
+                    )
+            }
+        }
+        .shadow(color: showGlow && hasPhoto ? SimastryColor.gold.opacity(0.24) : .clear, radius: 10, y: 2)
         .accessibilityHidden(true)
     }
 }

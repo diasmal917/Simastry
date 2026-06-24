@@ -22,6 +22,7 @@ struct SimulateView: View {
     @State private var appeared: Bool = false
     @State private var phaseTask: Task<Void, Never>?
     @State private var showTopUpSheet = false
+    @State private var showAuraSnapshotSheet = false
 
     private var suggestionChips: [String] {
         selectedCategory.suggestedQuestions
@@ -191,6 +192,14 @@ struct SimulateView: View {
                     header
                     categorySection
                     modeCard
+                    AuraSnapshotCard(
+                        snapshot: viewModel.auraSnapshot,
+                        compact: true,
+                        onOpen: { showAuraSnapshotSheet = true },
+                        onClear: { viewModel.clearAuraSnapshot() }
+                    )
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 14)
                     methodLayerCard
                     if selectedCategory.requiresConversation {
                         conversationSection
@@ -209,11 +218,14 @@ struct SimulateView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .navigationTitle("Simulate")
+        .navigationTitle("Ask the Future")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showTopUpSheet) {
             PredictionTopUpView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showAuraSnapshotSheet) {
+            AuraSnapshotSheet(viewModel: viewModel)
         }
         .sheet(item: $selectedResult) { result in
             SimulationResultView(
@@ -234,6 +246,7 @@ struct SimulateView: View {
             )
         }
         .task {
+            viewModel.reloadAuraSnapshot()
             loadHistory()
             applyPredictionDraftIfNeeded()
             if reduceMotion {
@@ -254,11 +267,17 @@ struct SimulateView: View {
 
     private var header: some View {
         VStack(spacing: 8) {
-            if let selectedSunSign {
-                ZodiacIconView(sign: selectedSunSign, size: 36, showsGlow: true)
-                    .accessibilityHidden(true)
-                    .transition(.scale.combined(with: .opacity))
+            ZStack(alignment: .bottomTrailing) {
+                PredictionOrbIcon(size: 58, animated: appeared, glow: selectedCategory.accentColor)
+
+                if let selectedSunSign {
+                    ZodiacIconView(sign: selectedSunSign, size: 26, showsGlow: true)
+                        .offset(x: 3, y: 2)
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
+            .frame(width: 62, height: 62)
+            .accessibilityHidden(true)
 
             Text("Ask the Future")
                 .font(SimastryFont.titleLarge)
@@ -435,7 +454,7 @@ struct SimulateView: View {
             HStack(spacing: 5) {
                 Image(systemName: SimastryIcon.privacy)
                     .font(SimastryFont.microMedium)
-                Text("Screenshots are read with Apple Vision on this device — the image never leaves your iPhone.")
+                Text("Screenshots are read with Apple Vision on this device — the image never leaves your iPhone. Text recognition works best in English.")
                     .font(SimastryFont.captionSmall)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -616,10 +635,7 @@ struct SimulateView: View {
                         .rotationEffect(.degrees(Double(progressPhaseIndex) * 92))
                         .animation(.spring(SimastrySpring.smooth), value: progressPhaseIndex)
 
-                    Image(systemName: "wand.and.stars")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .symbolEffect(.variableColor.iterative, isActive: true)
+                    PredictionOrbIcon(size: 44, animated: true, glow: selectedCategory.accentColor)
                 }
 
                 Text(currentPhaseText)
@@ -646,7 +662,7 @@ struct SimulateView: View {
                         await generatePrediction()
                     }
                 } label: {
-                    Text(selectedCategory.actionTitle)
+                    PredictionOrbLabel(title: selectedCategory.actionTitle, iconSize: 21)
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.mutedSilver)
                         .frame(maxWidth: .infinity)
@@ -663,8 +679,9 @@ struct SimulateView: View {
         }
     }
 
-    // Honest on purpose: readings aren't kept on any server, but a short
-    // redacted history DOES stay on this device — say both.
+    // Honest on purpose: obvious personal details are redacted before any AI
+    // generation, recent readings live only on this device, and when AI
+    // guidance is on a redacted prompt may be sent to our AI service — say all three.
     private var privacyNote: some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: "lock.fill")
@@ -672,7 +689,7 @@ struct SimulateView: View {
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .padding(.top, 2)
 
-            Text("Your conversations are never stored on our servers — readings happen in the moment. Recent readings stay only on this iPhone, and you can clear them anytime.")
+            Text("We redact obvious personal details before AI generation. Your recent readings are saved on this iPhone, and you can clear them anytime. When AI guidance is enabled, a redacted prompt may be sent to Simastry's AI service to generate your reading.")
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineSpacing(2)
@@ -844,9 +861,19 @@ struct SimulateView: View {
 
                     Spacer()
 
-                    Text("\(item.confidence)%")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(confidenceColor(item.confidence))
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("SIGNAL")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.textTertiary)
+                            .tracking(0.8)
+                        Text(item.confidenceDisplayTier)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(confidenceColor(item.confidence))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Signal strength: \(item.confidenceDisplayTier)")
                 }
                 .padding(16)
                 .simastryGlass(cornerRadius: 18)
@@ -946,7 +973,7 @@ struct SimulateView: View {
 
     private func generatePrediction() async {
         if selectedCategory.requiresTargetSign && selectedSunSign == nil {
-            viewModel.showToast("Choose their Sun sign", subtitle: "The simulation needs at least one sign.", isError: true)
+            viewModel.showToast("Choose their Sun sign", subtitle: "Ask the Future needs at least one sign to read.", isError: true)
             return
         }
 
@@ -996,7 +1023,8 @@ struct SimulateView: View {
             targetMoonSign: selectedCategory.allowsTargetSign ? selectedMoonSign : nil,
             targetRisingSign: selectedCategory.allowsTargetSign ? selectedRisingSign : nil,
             question: trimmedQuestion.isEmpty ? selectedCategory.defaultQuestion : trimmedQuestion,
-            hypotheticalReply: nil
+            hypotheticalReply: nil,
+            auraSnapshot: viewModel.auraSnapshot?.descriptor
         )
 
         isGenerating = true
@@ -1078,7 +1106,8 @@ struct SimulateView: View {
             targetMoonSign: result.targetMoonSign,
             targetRisingSign: result.targetRisingSign,
             question: result.question,
-            hypotheticalReply: alternativeReply
+            hypotheticalReply: alternativeReply,
+            auraSnapshot: viewModel.auraSnapshot?.descriptor
         )
 
         do {
@@ -1129,6 +1158,8 @@ extension FutureQuestionCategory {
             SimastryColor.risingViolet
         case .moneyDirection:
             SimastryColor.amber
+        case .privateQuestion:
+            SimastryColor.risingViolet
         case .messageOutcome:
             SimastryColor.celestialBlue
         }

@@ -142,9 +142,13 @@ struct ModeSelectionView: View {
         }) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
-                    Image(systemName: icon)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(accent)
+                    SimastryConceptIconView(
+                        name: icon,
+                        size: icon == SimastryIcon.predict ? 38 : 40,
+                        symbolSize: 17,
+                        accent: accent,
+                        animatedPrediction: icon == SimastryIcon.predict && appeared
+                    )
                         .frame(width: 40, height: 40)
                         .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 

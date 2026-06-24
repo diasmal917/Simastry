@@ -36,12 +36,14 @@ struct SimastryWordmark: View {
                 if sparkles && !reduceMotion {
                     GeometryReader { geo in
                         LinearGradient(
-                            colors: [.clear, .white.opacity(0.75), .clear],
+                            colors: [.clear, .white.opacity(0.7), .clear],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
-                        .frame(width: geo.size.width * 0.4)
-                        .offset(x: phase * geo.size.width * 1.4)
+                        .frame(width: geo.size.width * 0.42)
+                        // Shorter travel → the band stays over the letters more of
+                        // the cycle (present, not gappy) while it glides slowly.
+                        .offset(x: phase * geo.size.width * 1.0)
                         .blendMode(.screen)
                     }
                     .mask { Text("Simastry").font(font) }
@@ -50,7 +52,9 @@ struct SimastryWordmark: View {
             }
             .onAppear {
                 guard sparkles, !reduceMotion else { return }
-                withAnimation(.linear(duration: 2.4).delay(0.8).repeatForever(autoreverses: false)) {
+                // The sheen glides slowly across the letters (~5s to traverse) for
+                // an elegant, premium feel — slow MOTION, not an infrequent flash.
+                withAnimation(.linear(duration: 7.0).delay(0.6).repeatForever(autoreverses: false)) {
                     phase = 1
                 }
             }

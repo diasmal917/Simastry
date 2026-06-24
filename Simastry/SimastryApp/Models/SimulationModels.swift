@@ -33,6 +33,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
     case familyPath = "family_path"
     case careerSuccess = "career_success"
     case moneyDirection = "money_direction"
+    case privateQuestion = "private_question"
     case messageOutcome = "message_outcome"
 
     var id: String { rawValue }
@@ -44,6 +45,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
         case .familyPath: "Family path"
         case .careerSuccess: "Career success"
         case .moneyDirection: "Money direction"
+        case .privateQuestion: "Private question"
         case .messageOutcome: "Message outcome"
         }
     }
@@ -55,6 +57,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
         case .familyPath: "Family"
         case .careerSuccess: "Career"
         case .moneyDirection: "Money"
+        case .privateQuestion: "Private"
         case .messageOutcome: "Replies"
         }
     }
@@ -66,6 +69,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
         case .familyPath: "Children, home, care, and family chapters."
         case .careerSuccess: "Visibility, purpose, and success windows."
         case .moneyDirection: "Prosperity patterns without financial advice."
+        case .privateQuestion: "Sensitive questions, next moves, and what you are not saying out loud."
         case .messageOutcome: "Texts, replies, interest, and timing."
         }
     }
@@ -73,10 +77,11 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
     var defaultQuestion: String {
         switch self {
         case .loveTiming: "When will I meet someone?"
-        case .commitment: "When will I get married?"
-        case .familyPath: "Will I have kids?"
-        case .careerSuccess: "Will I be successful?"
-        case .moneyDirection: "Will I be rich?"
+        case .commitment: "What pattern is opening around commitment?"
+        case .familyPath: "What should I understand about family timing?"
+        case .careerSuccess: "What career signal should I watch next?"
+        case .moneyDirection: "What money pattern should I pay attention to?"
+        case .privateQuestion: "What should I know about the private thing on my mind?"
         case .messageOutcome: "Will they text back?"
         }
     }
@@ -86,13 +91,15 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
         case .loveTiming:
             ["When will I meet someone?", "Is love opening soon?", "What kind of person is next?", "Should I put myself out there?"]
         case .commitment:
-            ["When will I get married?", "Is this relationship serious?", "Are they long-term?", "What is blocking commitment?"]
+            ["What pattern is opening around commitment?", "Is this relationship serious?", "Are they long-term?", "What is blocking commitment?"]
         case .familyPath:
-            ["Will I have kids?", "What family chapter is ahead?", "Am I building a home soon?", "What should I prepare for?"]
+            ["What should I understand about family timing?", "What family chapter is ahead?", "Am I building a home soon?", "What should I prepare for?"]
         case .careerSuccess:
-            ["Will I be successful?", "What career window is opening?", "Should I take the risk?", "Where should I focus?"]
+            ["What career signal should I watch next?", "What career window is opening?", "Should I take the risk?", "Where should I focus?"]
         case .moneyDirection:
-            ["Will I be rich?", "How does money grow for me?", "What is my prosperity pattern?", "What should I stop leaking energy on?"]
+            ["What money pattern should I pay attention to?", "How does money grow for me?", "What is my prosperity pattern?", "What should I stop leaking energy on?"]
+        case .privateQuestion:
+            ["What happens next?", "Should I say it?", "What am I not seeing?", "What should I do next?"]
         case .messageOutcome:
             ["Will they reply?", "What are they feeling?", "Should I double text?", "Are they interested?"]
         }
@@ -105,6 +112,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
         case .familyPath: "house.and.flag.fill"
         case .careerSuccess: "chart.line.uptrend.xyaxis.circle.fill"
         case .moneyDirection: "dollarsign.circle.fill"
+        case .privateQuestion: "lock.circle.fill"
         case .messageOutcome: "message.circle.fill"
         }
     }
@@ -119,7 +127,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
 
     var allowsTargetSign: Bool {
         switch self {
-        case .loveTiming, .commitment, .familyPath, .messageOutcome:
+        case .loveTiming, .commitment, .familyPath, .privateQuestion, .messageOutcome:
             true
         case .careerSuccess, .moneyDirection:
             false
@@ -175,6 +183,7 @@ nonisolated struct PredictionRequest: Sendable {
     let targetRisingSign: ZodiacSign?
     let question: String?
     let hypotheticalReply: String?
+    let auraSnapshot: AuraSnapshotDescriptor?
 
     init(
         mode: SimulationMode,
@@ -187,7 +196,8 @@ nonisolated struct PredictionRequest: Sendable {
         targetMoonSign: ZodiacSign?,
         targetRisingSign: ZodiacSign?,
         question: String?,
-        hypotheticalReply: String?
+        hypotheticalReply: String?,
+        auraSnapshot: AuraSnapshotDescriptor? = nil
     ) {
         self.mode = mode
         self.category = category
@@ -200,6 +210,7 @@ nonisolated struct PredictionRequest: Sendable {
         self.targetRisingSign = targetRisingSign
         self.question = question
         self.hypotheticalReply = hypotheticalReply
+        self.auraSnapshot = auraSnapshot
     }
 
     var trimmedConversationText: String {
@@ -257,6 +268,31 @@ nonisolated enum PredictionOutcome: String, Codable, CaseIterable, Sendable {
     }
 }
 
+nonisolated enum PredictionConfidenceTier: String, Codable, CaseIterable, Sendable {
+    case soft
+    case moderate
+    case strong
+
+    var title: String {
+        switch self {
+        case .soft: "Soft"
+        case .moderate: "Moderate"
+        case .strong: "Strong"
+        }
+    }
+
+    static func tier(for confidence: Int) -> PredictionConfidenceTier {
+        switch confidence {
+        case ..<60:
+            return .soft
+        case 60..<76:
+            return .moderate
+        default:
+            return .strong
+        }
+    }
+}
+
 nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     let id: UUID
     let mode: SimulationMode
@@ -299,6 +335,20 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
             return directAnswer
         }
         return predictedMessage
+    }
+
+    var confidenceTier: PredictionConfidenceTier {
+        PredictionConfidenceTier.tier(for: confidence)
+    }
+
+    var confidenceDisplayTier: String {
+        confidenceTier.title
+    }
+
+    /// Safe, non-numeric confidence copy for the UI (e.g. "Signal strength: Moderate").
+    /// Keeps the numeric `confidence` internal — we never surface a false-precision percentage.
+    var confidenceSignalDisplay: String {
+        "Signal strength: \(confidenceDisplayTier)"
     }
 
     var historyTitle: String {

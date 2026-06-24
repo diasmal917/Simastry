@@ -28,6 +28,8 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
 }
 
 nonisolated final class SupabaseService {
+    static let companionReplyRequestTimeout: TimeInterval = 12
+
     private let client: SupabaseClient?
 
     private var isConfigured: Bool {
@@ -119,6 +121,7 @@ nonisolated final class SupabaseService {
             maxTokens: maxTokens
         )
         var request = URLRequest(url: url)
+        request.timeoutInterval = Self.companionReplyRequestTimeout
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(AppConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
@@ -324,6 +327,14 @@ nonisolated final class SupabaseService {
             .execute()
     }
 
+    func deleteGuideFeedback(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("guide_feedback_events")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
     func fetchCurrentSocialProfile() async throws -> SocialProfile? {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
@@ -425,11 +436,25 @@ nonisolated final class SupabaseService {
         return try bucket.getPublicURL(path: path, cacheNonce: UUID().uuidString).absoluteString
     }
 
+    func deleteAvatarFiles(for userId: String) async throws {
+        let client = try configuredClient()
+        let paths = ["jpg", "jpeg", "png", "heic", "webp"].map { "\(userId)/profile.\($0)" }
+        _ = try await client.storage.from("avatars").remove(paths: paths)
+    }
+
     func deleteSocialProfile(for userId: String) async throws {
         let client = try configuredClient()
         try await client.from("public_profiles")
             .delete()
             .eq("id", value: userId)
+            .execute()
+    }
+
+    func deleteUserConnections(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("user_connections")
+            .delete()
+            .or("owner_id.eq.\(userId),profile_id.eq.\(userId)")
             .execute()
     }
 
@@ -640,6 +665,22 @@ nonisolated final class SupabaseService {
     func reportChatThread(_ report: ChatReportData) async throws {
         let client = try configuredClient()
         try await client.from("chat_reports").insert(report).execute()
+    }
+
+    func deleteGuidedRoomData(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("chat_messages")
+            .delete()
+            .or("sender_user_id.eq.\(userId),created_by.eq.\(userId)")
+            .execute()
+        try await client.from("chat_reports")
+            .delete()
+            .eq("reporter_id", value: userId)
+            .execute()
+        try await client.from("chat_thread_members")
+            .delete()
+            .eq("human_user_id", value: userId)
+            .execute()
     }
 
     func invokeRoomGuideReply(threadId: UUID, guideProfileId: String) async throws -> ChatMessage? {

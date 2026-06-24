@@ -57,7 +57,7 @@ struct AIAstrologistsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    Text("Every guide is trained in the Simastry Method and reads through one zodiac lens. Tap a face to see their profile.")
+                    Text("Every guide is an AI trained in the Simastry Method, reading through one zodiac lens. Tap a face to see their profile.")
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)

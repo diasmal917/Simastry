@@ -40,9 +40,30 @@ nonisolated enum GuideReplyService {
         let communicationType: String?
     }
 
-    struct TranscriptEntry: Sendable {
+    struct TranscriptEntry: Equatable, Sendable {
         let senderName: String
         let content: String
+        var isUser: Bool = false
+    }
+
+    struct OutgoingMessageSafetyResult: Equatable, Sendable {
+        let redactedText: String
+        let privacySummary: String?
+        let blockingMessage: String?
+
+        var canProceed: Bool {
+            blockingMessage == nil
+        }
+    }
+
+    struct RemoteTranscriptPreparation: Equatable, Sendable {
+        let transcript: [TranscriptEntry]
+        let privacySummary: String?
+        let blockingMessage: String?
+
+        var canProceed: Bool {
+            blockingMessage == nil
+        }
     }
 
     static func personaSystemPrompt(
@@ -114,19 +135,110 @@ nonisolated enum GuideReplyService {
     static func threadUserPrompt(
         transcript: [TranscriptEntry],
         replyingAs guideName: String,
-        maxMessages: Int = 10
+        maxMessages: Int = 10,
+        privacySummary: String? = nil
     ) -> String {
         let recent = transcript.suffix(maxMessages)
         let lines = recent
             .map { "\($0.senderName): \($0.content)" }
             .joined(separator: "\n")
 
+        let privacyBlock = privacySummary.map {
+            """
+            Privacy handling:
+            \($0)
+
+            """
+        } ?? ""
+
         return """
+        \(privacyBlock)\
         Conversation so far:
         \(lines)
 
         Reply as \(guideName).
         """
+    }
+
+    static func prepareOutgoingUserMessage(
+        _ content: String,
+        privacyService: ConversationPrivacyService = ConversationPrivacyService()
+    ) -> OutgoingMessageSafetyResult {
+        let moderation = ContentModerationService.moderateGuideMessage(content)
+        let prepared = privacyService.prepare(content)
+        if !moderation.isAllowed {
+            return OutgoingMessageSafetyResult(
+                redactedText: prepared.redactedText,
+                privacySummary: prepared.privacySummary,
+                blockingMessage: moderation.reason
+            )
+        }
+        if !prepared.canProceed {
+            return OutgoingMessageSafetyResult(
+                redactedText: prepared.redactedText,
+                privacySummary: prepared.privacySummary,
+                blockingMessage: prepared.blockingMessage
+            )
+        }
+        return OutgoingMessageSafetyResult(
+            redactedText: prepared.redactedText,
+            privacySummary: prepared.privacySummary,
+            blockingMessage: nil
+        )
+    }
+
+    static func prepareRemoteTranscript(
+        _ transcript: [TranscriptEntry],
+        privacyService: ConversationPrivacyService = ConversationPrivacyService()
+    ) -> RemoteTranscriptPreparation {
+        var summaries: [String] = []
+        var sanitized: [TranscriptEntry] = []
+
+        for entry in transcript {
+            let prepared = privacyService.prepare(entry.content)
+            if let summary = prepared.privacySummary {
+                summaries.append(summary)
+            }
+
+            if entry.isUser {
+                let moderation = ContentModerationService.moderateGuideMessage(entry.content)
+                if !moderation.isAllowed {
+                    return RemoteTranscriptPreparation(
+                        transcript: sanitized,
+                        privacySummary: combinedPrivacySummary(summaries),
+                        blockingMessage: moderation.reason
+                    )
+                }
+                if !prepared.canProceed {
+                    return RemoteTranscriptPreparation(
+                        transcript: sanitized,
+                        privacySummary: combinedPrivacySummary(summaries),
+                        blockingMessage: prepared.blockingMessage
+                    )
+                }
+            }
+
+            sanitized.append(
+                TranscriptEntry(
+                    senderName: entry.senderName,
+                    content: prepared.redactedText,
+                    isUser: entry.isUser
+                )
+            )
+        }
+
+        return RemoteTranscriptPreparation(
+            transcript: sanitized,
+            privacySummary: combinedPrivacySummary(summaries),
+            blockingMessage: nil
+        )
+    }
+
+    private static func combinedPrivacySummary(_ summaries: [String]) -> String? {
+        var seen: Set<String> = []
+        let uniqueSummaries = summaries.filter { seen.insert($0).inserted }
+        guard !uniqueSummaries.isEmpty else { return nil }
+        return uniqueSummaries.joined(separator: " ")
     }
 
     /// Prompt pair for a situation playbook script (2-3 sendable lines for
@@ -184,7 +296,8 @@ nonisolated enum GuideReplyService {
         situationLine: String?,
         contextNotes: String?,
         user: UserContext,
-        transcript: [TranscriptEntry]
+        transcript: [TranscriptEntry],
+        privacySummary: String? = nil
     ) -> (system: String, user: String) {
         var systemLines: [String] = []
         systemLines.append("You are a practice simulation inside the Simastry app: a rehearsal stand-in for \(personName), a real person in the user's life. The user wants to practice a conversation before having it for real.")
@@ -224,7 +337,11 @@ nonisolated enum GuideReplyService {
         Plain text only, no emoji unless their texting style says otherwise.
         """)
 
-        let userPrompt = threadUserPrompt(transcript: transcript, replyingAs: personName)
+        let userPrompt = threadUserPrompt(
+            transcript: transcript,
+            replyingAs: personName,
+            privacySummary: privacySummary
+        )
         return (systemLines.joined(separator: "\n"), userPrompt)
     }
 

@@ -40,6 +40,8 @@
 	<true/>
 	<key>NSMotionUsageDescription</key>
 	<string>Create a subtle parallax effect that responds to how you move your device</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take an optional Aura Snapshot photo to tune today’s color palette and guidance locally.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save shareable astrology cards to your photo library</string>
 	<key>SimastryPredictionAPIBaseURL</key>

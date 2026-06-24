@@ -244,7 +244,8 @@ struct PracticeChatView: View {
         let transcript = messages.suffix(10).map { message in
             GuideReplyService.TranscriptEntry(
                 senderName: message.isUser ? "User" : person.displayName,
-                content: message.content
+                content: message.content,
+                isUser: message.isUser
             )
         }
         let threadCount = messages.count

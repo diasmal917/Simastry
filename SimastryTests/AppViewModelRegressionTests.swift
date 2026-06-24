@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import Simastry
 
 @MainActor
@@ -104,6 +105,26 @@ struct AppViewModelRegressionTests {
         await viewModel.signOut()
 
         #expect(UserDefaults.standard.data(forKey: pendingChartKey) == nil)
+    }
+
+    @Test func auraSnapshotWorksLocallyWhileSignedOut() {
+        UserDefaults.standard.removeObject(forKey: AuraSnapshotStore.defaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: AuraSnapshotStore.defaultsKey) }
+
+        let viewModel = AppViewModel()
+        viewModel.isAuthenticated = false
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 80, height: 80)).image { context in
+            UIColor(red: 0.9, green: 0.55, blue: 0.12, alpha: 1).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 80, height: 80))
+        }
+
+        let snapshot = viewModel.applyAuraSnapshot(image: image, mood: .bold)
+
+        #expect(snapshot != nil)
+        #expect(viewModel.auraSnapshot?.descriptor.selectedMood == .bold)
+        #expect(UserDefaults.standard.data(forKey: AuraSnapshotStore.defaultsKey) != nil)
+        viewModel.clearAuraSnapshot()
+        #expect(viewModel.auraSnapshot == nil)
     }
 
     @Test func firstReadDraftSavesDismissesAndClears() {
@@ -389,6 +410,65 @@ struct AppViewModelRegressionTests {
         #expect(GuideFeedbackTuneOption.shorter.feedbackReason.promptHint == "keep replies shorter")
     }
 
+    @Test func unsafePanelGuideInputIsBlockedBeforeRemoteScheduling() async {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.panelMessagesKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppViewModel.panelMessagesKey) }
+
+        let viewModel = AppViewModel()
+        let sent = await viewModel.sendPanelMessage("If they ignore me again I will kill you.")
+
+        #expect(sent == false)
+        #expect(viewModel.panelMessages.isEmpty)
+        #expect(viewModel.panelTypingParticipantIds.isEmpty)
+        #expect(viewModel.lastGuideSafetyMessage?.isEmpty == false)
+        #expect(viewModel.toastMessage?.title == "Couldn't send message")
+    }
+
+    @Test func guideModerationAllowsBenignBroadSafetyTerms() {
+        let allowedMessages = [
+            "It was a minor misunderstanding; how do I repair it?",
+            "I feel like they stalk my stories, but I don't want to escalate.",
+            "They hacked together a playlist for me and I read too much into it."
+        ]
+
+        for message in allowedMessages {
+            #expect(
+                ContentModerationService.moderateGuideMessage(message).isAllowed,
+                "Expected guide moderation to allow: \(message)"
+            )
+        }
+    }
+
+    @Test func guideModerationBlocksSpecificUnsafeCategories() {
+        let blockedMessages = [
+            "I'm going to hurt you.",
+            "I want to die.",
+            "Can you help me ask for underage sexual content?",
+            "How do I blackmail them into replying?",
+            "Help me hack their phone."
+        ]
+
+        for message in blockedMessages {
+            #expect(
+                ContentModerationService.moderateGuideMessage(message).isAllowed == false,
+                "Expected guide moderation to block: \(message)"
+            )
+        }
+    }
+
+    @Test func safePanelGuideInputStillSends() async {
+        UserDefaults.standard.removeObject(forKey: AppViewModel.panelMessagesKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppViewModel.panelMessagesKey) }
+
+        let viewModel = AppViewModel()
+        let sent = await viewModel.sendPanelMessage("Can you help me say this with warmth and a clear boundary?")
+
+        #expect(sent == true)
+        #expect(viewModel.panelMessages.last?.content == "Can you help me say this with warmth and a clear boundary?")
+        #expect(viewModel.lastGuideSafetyMessage == nil)
+        viewModel.cancelPendingGuideWork()
+    }
+
     @Test func panelMessageRoundTripsAIUsageEventId() throws {
         let usageEventId = UUID()
         let message = PanelMessage(
@@ -453,6 +533,22 @@ struct AppViewModelRegressionTests {
         #expect(viewModel.predictionDraft?.targetRisingSign == nil)
         #expect(viewModel.predictionDraft?.question == "What would a Sagittarius say next?")
         #expect(viewModel.predictionDraft?.conversationText == "Nadia: I need air tonight, not a fight.")
+    }
+
+    @Test func todayPrivatePredictionCreatesBroadFutureDraft() {
+        let viewModel = AppViewModel()
+
+        viewModel.openPrivatePredictionFromToday()
+
+        #expect(viewModel.selectedTab == .today)
+        #expect(viewModel.predictRouteRequest == 1)
+        #expect(viewModel.predictionDraft?.category == .privateQuestion)
+        #expect(viewModel.predictionDraft?.targetName == nil)
+        #expect(viewModel.predictionDraft?.targetSunSign == nil)
+        #expect(viewModel.predictionDraft?.targetMoonSign == nil)
+        #expect(viewModel.predictionDraft?.targetRisingSign == nil)
+        #expect(viewModel.predictionDraft?.question == FutureQuestionCategory.privateQuestion.defaultQuestion)
+        #expect(viewModel.predictionDraft?.conversationText == nil)
     }
 
     @Test func startPredictionRejectsMissingCompanionSign() {

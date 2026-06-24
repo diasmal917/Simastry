@@ -228,10 +228,13 @@ struct SimulationShareCardView: View {
                 .rotationEffect(.degrees(-90))
 
             VStack(spacing: 0) {
-                Text("\(result.confidence)%")
-                    .font(.system(size: isStoryFormat ? 14 : 10, weight: .semibold, design: .rounded))
+                Text(result.confidenceDisplayTier)
+                    .font(.system(size: isStoryFormat ? 11 : 8, weight: .semibold, design: .rounded))
                     .foregroundStyle(SimastryColor.gold)
-                Text("fit")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.horizontal, 2)
+                Text("signal")
                     .font(.system(size: isStoryFormat ? 7 : 5, weight: .medium))
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .textCase(.uppercase)

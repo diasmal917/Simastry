@@ -54,6 +54,16 @@ extension AppViewModel {
         threadCount: Int
     ) async -> String {
         if AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply {
+            let preparedTranscript = GuideReplyService.prepareRemoteTranscript(transcript)
+            guard preparedTranscript.canProceed else {
+                lastGuideSafetyMessage = preparedTranscript.blockingMessage
+                return Self.composePracticeReply(
+                    sign: person.sunSign,
+                    textingStyles: person.textingStyles ?? [],
+                    threadCount: threadCount
+                )
+            }
+
             let situationLine = person.situationStatus.map { "\($0.title), day \(person.situationDay())" }
             let (system, user) = GuideReplyService.practicePersonaPrompt(
                 personName: person.displayName,
@@ -72,7 +82,8 @@ extension AppViewModel {
                     rising: userRisingSign,
                     communicationType: nil
                 ),
-                transcript: transcript
+                transcript: preparedTranscript.transcript,
+                privacySummary: preparedTranscript.privacySummary
             )
             if let reply = await GuideReplyService.withTimeout(seconds: GuideReplyService.chatReplyTimeout, operation: { [supabase] in
                 try await supabase.invokeCompanionReply(

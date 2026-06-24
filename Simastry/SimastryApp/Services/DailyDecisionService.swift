@@ -52,11 +52,12 @@ nonisolated final class DailyDecisionService {
         let signOffset = context.userSunSign.flatMap { ZodiacSign.allCases.firstIndex(of: $0) } ?? 0
         let index = abs(dayOfYear + signOffset) % fallbackLines(for: category).count
         let line = fallbackLines(for: category)[index]
+        let auraNote = context.auraSnapshot.map { " Aura Snapshot: \($0.auraColor) palette, \($0.imageWarmth.rawValue) light, \($0.selectedMood.title.lowercased()) mood." } ?? ""
 
         return DailyDecision(
             category: category,
             pick: line.pick,
-            whyToday: line.whyToday,
+            whyToday: line.whyToday + auraNote,
             tinyNextMove: line.tinyNextMove,
             safetyNote: line.safetyNote,
             createdAt: date,
@@ -79,6 +80,8 @@ nonisolated final class DailyDecisionService {
         - For food: Do not give medical, diet, weight-loss, allergy, fertility, or nutrition advice.
         - For clothing: never body-shame or imply the user's body needs hiding or fixing.
         - For indecision: reduce overthinking with one tiny action.
+        - If Aura Snapshot descriptors are provided, use them only as color, light, contrast, and user-selected mood context.
+        - Do not infer identity, health, age, ethnicity, gender, attractiveness, fertility, or mental state.
         - Return valid JSON with exactly these fields:
           {"pick":"one clear recommendation","why_today":"why this fits today in 1-2 sentences","tiny_next_move":"one tiny action","safety_note":"short caution if needed, otherwise null"}
         - Return ONLY the JSON object, no markdown.
@@ -108,6 +111,10 @@ nonisolated final class DailyDecisionService {
                 .compactMap { $0 }
                 .joined(separator: " - ")
             sections.append("Today's sky:\n\(transitLine)")
+        }
+
+        if let auraSnapshot = context.auraSnapshot {
+            sections.append("Aura Snapshot compact descriptors:\n\(auraSnapshot.compactSummary)")
         }
 
         sections.append("Answer with a clear pick, one reason, and one tiny next move.")

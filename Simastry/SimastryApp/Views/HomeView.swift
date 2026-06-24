@@ -26,6 +26,7 @@ struct HomeView: View {
     @State private var showSealedDraftCompose: Bool = false
     @State private var rereadDraft: SealedDraft?
     @State private var generatingDailyDecisionCategory: DailyDecisionCategory?
+    @State private var showAuraSnapshotSheet: Bool = false
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -110,6 +111,9 @@ struct HomeView: View {
             .onChange(of: viewModel.decodeRouteRequest) {
                 presentRoutesIfRequested()
             }
+            .sheet(isPresented: $showAuraSnapshotSheet) {
+                AuraSnapshotSheet(viewModel: viewModel)
+            }
         }
     }
 
@@ -134,21 +138,32 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Spacer().frame(height: 6)
 
+                // Today feed ordering: lead with the header, then the primary
+                // Ask the Future / Decode CTA and Daily Decider, then Aura, then
+                // the guide panel, then people/social, then learn/extra content.
                 todayHeader
 
-                todayWithGuideCard
+                predictHeroCard
 
                 dailyDeciderCard
 
-                firstReadMemoryCard
-
-                continueStrip
+                AuraSnapshotCard(
+                    snapshot: viewModel.auraSnapshot,
+                    onOpen: { showAuraSnapshotSheet = true },
+                    onClear: { viewModel.clearAuraSnapshot() }
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 10)
 
                 panelCard
 
+                todayWithGuideCard
+
+                firstReadMemoryCard
+
                 situationCard
 
-                predictHeroCard
+                continueStrip
 
                 todaysReadCard
 
@@ -165,6 +180,7 @@ struct HomeView: View {
                 sealedDrafts = SealedDraftStore().load()
                 viewModel.todayStore.reloadSavedPrompts()
                 viewModel.todayStore.reloadDailyDecisions()
+                viewModel.reloadAuraSnapshot()
                 if !reduceMotion {
                     kenBurnsActive = true
                 }
@@ -252,7 +268,8 @@ struct HomeView: View {
                 moon: viewModel.userMoonSign,
                 rising: viewModel.userRisingSign
             )
-            try? await Task.sleep(for: .milliseconds(600))
+            // Today's reading is computed synchronously above, so reveal content
+            // as soon as it's ready — no artificial delay just to show shimmer.
             withAnimation(.easeOut(duration: 0.3)) {
                 isLoading = false
             }
@@ -353,46 +370,12 @@ struct HomeView: View {
             VStack(spacing: 8) {
                 Button {
                     HapticManager.buttonPress()
-                    viewModel.openPanelChatWithTip(
-                        lesson: prompt,
-                        opener: "Want to check the timing with me?",
-                        guideId: guide.id
-                    )
+                    viewModel.openPrivatePredictionFromToday()
                 } label: {
-                    Label("Ask what to say", systemImage: "message.fill")
+                    PredictionOrbLabel(title: "Ask something private", iconSize: 22)
                 }
-                .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
-
-                HStack(spacing: 8) {
-                    Button {
-                        HapticManager.buttonPress()
-                        viewModel.draftPredictFromToday(targetSign: guide.sign)
-                    } label: {
-                        Label("Check timing", systemImage: SimastryIcon.predict)
-                            .font(SimastryFont.labelLarge)
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.9)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .simastryGlassPill(interactive: true)
-                    }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel("Check timing")
-                    .accessibilityHint("Seeds Ask the Future with \(guide.name)'s \(guide.sign.displayName) lens")
-
-                    Button {
-                        HapticManager.buttonPress()
-                        viewModel.todayStore.savePrompt(SavedDailyPrompt(text: prompt, guideId: guide.id))
-                        viewModel.showToast("Saved for later", subtitle: "Find it in your saved notes.", isError: false)
-                    } label: {
-                        Image(systemName: "bookmark.fill")
-                            .frame(width: 50, height: 50)
-                            .simastryGlassPill(interactive: true)
-                    }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityLabel("Save today's \(guide.name) prompt")
-                }
+                .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
+                .accessibilityHint("Opens Ask the Future for a private question")
             }
         }
         .padding(16)
@@ -749,11 +732,9 @@ struct HomeView: View {
     private var predictHeroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
-                Image(systemName: SimastryIcon.predict)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(SimastryColor.risingViolet)
+                PredictionOrbIcon(size: 42, animated: appeared)
                     .frame(width: 44, height: 44)
-                    .background(SimastryColor.risingViolet.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(SimastryColor.risingViolet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 Spacer()
 
@@ -785,7 +766,7 @@ struct HomeView: View {
             simulateSourceHint
 
             NavigationLink(value: HomeRoute.predict) {
-                Label("Ask a question", systemImage: SimastryIcon.predict)
+                PredictionOrbLabel(title: "Ask a question", iconSize: 21)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
             .simultaneousGesture(TapGesture().onEnded {

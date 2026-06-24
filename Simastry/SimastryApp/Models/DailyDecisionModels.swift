@@ -51,6 +51,7 @@ nonisolated struct DailyDecisionContext: Equatable, Sendable {
     let communicationTypeTitle: String?
     let transitHeadline: String?
     let transitGuidance: String?
+    let auraSnapshot: AuraSnapshotDescriptor?
 
     init(
         userSunSign: ZodiacSign?,
@@ -58,7 +59,8 @@ nonisolated struct DailyDecisionContext: Equatable, Sendable {
         userRisingSign: ZodiacSign?,
         communicationTypeTitle: String? = nil,
         transitHeadline: String? = nil,
-        transitGuidance: String? = nil
+        transitGuidance: String? = nil,
+        auraSnapshot: AuraSnapshotDescriptor? = nil
     ) {
         self.userSunSign = userSunSign
         self.userMoonSign = userMoonSign
@@ -66,6 +68,7 @@ nonisolated struct DailyDecisionContext: Equatable, Sendable {
         self.communicationTypeTitle = communicationTypeTitle
         self.transitHeadline = transitHeadline
         self.transitGuidance = transitGuidance
+        self.auraSnapshot = auraSnapshot
     }
 }
 

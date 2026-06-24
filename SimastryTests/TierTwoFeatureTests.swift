@@ -99,6 +99,70 @@ struct TierTwoFeatureTests {
         #expect(TransitEngine.dailyReading(sun: nil, moon: nil, rising: nil, on: date) == nil)
     }
 
+    // MARK: - Aura Snapshot
+
+    @Test func auraSnapshotExtractsPaletteLocallyFromSyntheticImage() throws {
+        let image = solidImage(color: UIColor(red: 0.10, green: 0.18, blue: 0.90, alpha: 1))
+        let service = AuraSnapshotService()
+        let descriptor = try #require(service.descriptor(from: image, mood: .focused, date: Date(timeIntervalSince1970: 10)))
+
+        #expect(descriptor.auraColor == "blue")
+        #expect(descriptor.imageWarmth == .cool)
+        #expect(descriptor.selectedMood == .focused)
+        #expect(!descriptor.compactSummary.contains("base64"))
+        #expect(!descriptor.compactSummary.localizedCaseInsensitiveContains("embedding"))
+    }
+
+    @Test func auraSnapshotStorePersistsDescriptorsOnlyAndExpiresToday() throws {
+        let suiteName = "AuraSnapshotStoreTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let morning = Date(timeIntervalSince1970: 1_700_000_000)
+        let descriptor = AuraSnapshotDescriptor(
+            auraColor: "violet",
+            imageWarmth: .cool,
+            brightness: .balanced,
+            contrast: .crisp,
+            selectedMood: .romantic,
+            createdAt: morning
+        )
+        let snapshot = AuraSnapshot(
+            descriptor: descriptor,
+            result: AuraSnapshotResult(
+                todayVibe: "Violet and romantic.",
+                bestMove: "Keep it soft.",
+                wearEatFocus: "Wear violet.",
+                textingHint: "Send the sweet line.",
+                predictionTuningNote: "Tune toward romance."
+            )
+        )
+
+        let sameDayStore = AuraSnapshotStore(defaults: defaults, calendar: calendar, now: { morning.addingTimeInterval(60) })
+        sameDayStore.save(snapshot)
+        #expect(sameDayStore.load() == snapshot)
+
+        let raw = try #require(defaults.data(forKey: AuraSnapshotStore.defaultsKey))
+        let rawString = String(data: raw, encoding: .utf8) ?? ""
+        for banned in ["UIImage", "jpeg", "png", "base64", "EXIF", "face", "embedding", "landmark", "template"] {
+            #expect(!rawString.localizedCaseInsensitiveContains(banned))
+        }
+
+        let tomorrowStore = AuraSnapshotStore(defaults: defaults, calendar: calendar, now: { morning.addingTimeInterval(90_000) })
+        #expect(tomorrowStore.load() == nil)
+        #expect(defaults.data(forKey: AuraSnapshotStore.defaultsKey) == nil)
+    }
+
+    @Test func auraSnapshotSensitiveRequestsRedirectSafely() {
+        let redirect = AuraSnapshotService.sensitiveRedirect(for: "Can this selfie tell my age and if I look attractive?")
+
+        #expect(redirect?.contains("color") == true)
+        #expect(redirect?.contains("identity") == true)
+        #expect(AuraSnapshotService.sensitiveRedirect(for: "Tune today's colors") == nil)
+    }
+
     @Test func ocrThrowsOnBlankImage() async {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300))
         let blank = renderer.image { context in
@@ -151,6 +215,62 @@ struct TierTwoFeatureTests {
         #expect(prompt.contains("Reply as Ada"))
     }
 
+    @Test func panelGuideRemotePromptRedactsPII() throws {
+        let viewModel = AppViewModel()
+        viewModel.userSunSign = .sagittarius
+        let entry = try #require(viewModel.panelGuideEntries.first)
+        viewModel.panelMessages = [
+            PanelMessage(
+                senderId: PanelParticipant.localUserId,
+                content: "Text me at maya@example.com or 555-123-4567, and check https://example.com/@maya.",
+                isRead: true
+            )
+        ]
+
+        let prompt = try #require(viewModel.makePanelReplyPromptForLLM(entry: entry, previousGuideName: nil))
+
+        #expect(prompt.user.contains("Privacy handling:"))
+        #expect(prompt.user.contains("[email redacted]"))
+        #expect(prompt.user.contains("[phone redacted]"))
+        #expect(prompt.user.contains("[link redacted]"))
+        #expect(!prompt.user.contains("maya@example.com"))
+        #expect(!prompt.user.contains("555-123-4567"))
+        #expect(!prompt.user.contains("https://example.com"))
+    }
+
+    @Test func companionGuideRemotePromptRedactsPII() throws {
+        let viewModel = AppViewModel()
+        let guide = FactoryCompanionCatalog.featured
+        let threadId = UUID()
+        viewModel.companionMessages = [
+            CompanionMessage(
+                companionId: threadId,
+                companionName: guide.name,
+                companionSign: guide.sign.rawValue,
+                content: "Email me at private@example.com or call +1 (415) 555-0199 @privatehandle.",
+                isRead: true,
+                source: .companion,
+                direction: .outgoing
+            )
+        ]
+
+        let prompt = try #require(
+            viewModel.makeCompanionReplyPromptForLLM(
+                companionId: threadId,
+                companionName: guide.name,
+                companionSign: guide.sign.rawValue
+            )
+        )
+
+        #expect(prompt.user.contains("Privacy handling:"))
+        #expect(prompt.user.contains("[email redacted]"))
+        #expect(prompt.user.contains("[phone redacted]"))
+        #expect(prompt.user.contains("[handle redacted]"))
+        #expect(!prompt.user.contains("private@example.com"))
+        #expect(!prompt.user.contains("(415) 555-0199"))
+        #expect(!prompt.user.contains("@privatehandle"))
+    }
+
     @Test func withTimeoutReturnsValueThenNilOnSlowOperation() async {
         let fast = await GuideReplyService.withTimeout(seconds: 2) { "ok" }
         #expect(fast == "ok")
@@ -163,9 +283,9 @@ struct TierTwoFeatureTests {
     }
 
     @Test func predictionFallsBackToLocalComposerWhenUnconfigured() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+        let service = makeIsolatedPredictionService()   // no reply channel injected
+        defer { service.clearHistory() }
 
-        let service = PredictionService()   // no reply channel injected
         let request = PredictionRequest(
             mode: .whatWillTheySay,
             conversationText: "hey, are we still on for friday?",
@@ -182,10 +302,39 @@ struct TierTwoFeatureTests {
         #expect(!result.astrologicalBreakdown.isEmpty)
     }
 
-    @Test func futureQuestionCategoriesWorkWithoutConversationPaste() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+    @Test func predictionRemoteTimeoutFallsBackToLocalComposer() async throws {
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
 
-        let service = PredictionService()
+        service.isRemoteChannelAvailable = { true }
+        service.remotePredictionTimeout = 0.05
+        service.replyChannel = { _, _ in
+            try await Task.sleep(for: .seconds(5))
+            return """
+            {"predicted_message":"Late remote answer.","direct_answer":"Late.","timing_window":null,"astrological_breakdown":"Too late.","practical_next_move":null,"safety_note":null,"confidence":70,"tone":"warm"}
+            """
+        }
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            conversationText: "hey, are we still on for friday?",
+            targetSunSign: .taurus,
+            targetMoonSign: .cancer,
+            targetRisingSign: nil,
+            question: nil,
+            hypotheticalReply: nil
+        )
+
+        let result = try await service.generatePrediction(request: request, tier: "free")
+
+        #expect(result.isLocalComposition == true)
+        #expect(result.predictedMessage != "Late remote answer.")
+        #expect(!service.loadHistory().isEmpty)
+    }
+
+    @Test func futureQuestionCategoriesWorkWithoutConversationPaste() async throws {
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
+
 
         for category in FutureQuestionCategory.allCases where category != .messageOutcome {
             let request = PredictionRequest(
@@ -213,9 +362,9 @@ struct TierTwoFeatureTests {
     }
 
     @Test func firstReadTextingPromptUsesLocalFutureFallbackWithoutConversation() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
 
-        let service = PredictionService()
         let request = PredictionRequest(
             mode: .whatWillTheySay,
             category: .loveTiming,
@@ -239,10 +388,10 @@ struct TierTwoFeatureTests {
     }
 
     @Test func futureSensitiveCategoriesCarrySafetyNotes() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
 
-        let service = PredictionService()
-        let categories: [FutureQuestionCategory] = [.commitment, .familyPath, .moneyDirection]
+        let categories: [FutureQuestionCategory] = [.commitment, .familyPath, .moneyDirection, .privateQuestion]
 
         for category in categories {
             let request = PredictionRequest(
@@ -329,6 +478,44 @@ struct TierTwoFeatureTests {
         #expect(capturedPrompt.user.contains("Private message text:\nnot provided"))
     }
 
+    @Test func auraSnapshotTunesDailyDecisionPromptAndFallback() async {
+        let descriptor = AuraSnapshotDescriptor(
+            auraColor: "gold",
+            imageWarmth: .warm,
+            brightness: .luminous,
+            contrast: .balanced,
+            selectedMood: .bold,
+            createdAt: Date()
+        )
+        let context = DailyDecisionContext(
+            userSunSign: .leo,
+            userMoonSign: nil,
+            userRisingSign: nil,
+            auraSnapshot: descriptor
+        )
+        let fallback = await DailyDecisionService().generateDecision(category: .wear, context: context)
+        #expect(fallback.whyToday.contains("Aura Snapshot"))
+        #expect(fallback.whyToday.contains("gold"))
+
+        let service = DailyDecisionService()
+        service.isRemoteChannelAvailable = { true }
+        let promptCapture = PromptCapture()
+        service.replyChannel = { system, user in
+            await promptCapture.record(system: system, user: user)
+            return """
+            {"pick":"Wear gold with a clean base.","why_today":"The warm palette supports visible confidence.","tiny_next_move":"Choose the gold piece first.","safety_note":null}
+            """
+        }
+        _ = await service.generateDecision(category: .wear, context: context)
+        let capturedPrompt = await promptCapture.values()
+        #expect(capturedPrompt.user.contains("Aura Snapshot compact descriptors:"))
+        #expect(capturedPrompt.user.contains("auraColor: gold"))
+        #expect(capturedPrompt.user.contains("selectedMood: bold"))
+        for banned in ["raw image", "base64", "EXIF", "face", "embedding", "landmark", "template", "attractiveness", "ethnicity"] {
+            #expect(!capturedPrompt.user.localizedCaseInsensitiveContains(banned))
+        }
+    }
+
     @Test func dailyDecisionStoreKeepsOnePerCategoryPerDay() {
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: DailyDecisionStore.defaultsKey)
@@ -346,9 +533,9 @@ struct TierTwoFeatureTests {
     }
 
     @Test func remoteFuturePromptCarriesCategoryAndParsesStructuredAnswer() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
 
-        let service = PredictionService()
         service.isRemoteChannelAvailable = { true }
         let promptCapture = PromptCapture()
         service.replyChannel = { system, user in
@@ -385,10 +572,114 @@ struct TierTwoFeatureTests {
         #expect(result.tone == .confident)
     }
 
-    @Test func predictionFallsBackToLocalComposerWhenRemoteFails() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+    @Test func auraSnapshotTunesFuturePredictionPromptOnlyWithDescriptors() async throws {
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
 
-        let service = PredictionService()
+        service.isRemoteChannelAvailable = { true }
+        let promptCapture = PromptCapture()
+        service.replyChannel = { system, user in
+            await promptCapture.record(system: system, user: user)
+            return """
+            {"predicted_message":"The next move is clearer after one brave signal.","direct_answer":"Likely yes, but move slowly.","timing_window":"the next honest opening","astrological_breakdown":"Leo Sun likes visible courage while Libra Rising needs grace.","practical_next_move":"Send one clear sentence.","safety_note":null,"confidence":66,"tone":"warm"}
+            """
+        }
+
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            category: .privateQuestion,
+            conversationText: "",
+            userSunSign: .leo,
+            userMoonSign: nil,
+            userRisingSign: .libra,
+            targetSunSign: nil,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: "What should I do next?",
+            hypotheticalReply: nil,
+            auraSnapshot: AuraSnapshotDescriptor(
+                auraColor: "violet",
+                imageWarmth: .cool,
+                brightness: .balanced,
+                contrast: .soft,
+                selectedMood: .overthinking,
+                createdAt: Date()
+            )
+        )
+
+        let result = try await service.generatePrediction(request: request, tier: "free")
+        let capturedPrompt = await promptCapture.values()
+        #expect(capturedPrompt.user.contains("Aura Snapshot compact descriptors:"))
+        #expect(capturedPrompt.user.contains("auraColor: violet"))
+        #expect(capturedPrompt.user.contains("imageWarmth: cool"))
+        #expect(capturedPrompt.user.contains("selectedMood: overthinking"))
+        for banned in ["raw image", "base64", "EXIF", "face", "biometric", "embedding", "landmark", "template", "ethnicity", "attractiveness"] {
+            #expect(!capturedPrompt.user.localizedCaseInsensitiveContains(banned))
+        }
+        #expect(!capturedPrompt.user.localizedCaseInsensitiveContains("age:"))
+        #expect(result.practicalNextMove == "Send one clear sentence.")
+    }
+
+    @Test func messageOutcomeAuraPromptCarriesImageSafetyRestrictionsOnlyAsDescriptors() async throws {
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
+
+        service.isRemoteChannelAvailable = { true }
+        let promptCapture = PromptCapture()
+        service.replyChannel = { system, user in
+            await promptCapture.record(system: system, user: user)
+            return """
+            {"predicted_message":"I saw this and want to answer carefully.","direct_answer":"They are likely to reply thoughtfully.","timing_window":"later today","astrological_breakdown":"Taurus Sun slows the pace while Cancer Moon protects the feeling underneath.","practical_next_move":"Send one grounded follow-up only if needed.","safety_note":null,"confidence":68,"tone":"warm"}
+            """
+        }
+
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            category: .messageOutcome,
+            conversationText: "Me: Are we okay? Them: I need a little time before I answer.",
+            userSunSign: .leo,
+            userMoonSign: nil,
+            userRisingSign: nil,
+            targetSunSign: .taurus,
+            targetMoonSign: .cancer,
+            targetRisingSign: nil,
+            question: "What will they say next?",
+            hypotheticalReply: nil,
+            auraSnapshot: AuraSnapshotDescriptor(
+                auraColor: "teal",
+                imageWarmth: .cool,
+                brightness: .balanced,
+                contrast: .crisp,
+                selectedMood: .focused,
+                createdAt: Date()
+            )
+        )
+
+        _ = try await service.generatePrediction(request: request, tier: "free")
+        let capturedPrompt = await promptCapture.values()
+
+        #expect(capturedPrompt.system.contains("raw image data"))
+        #expect(capturedPrompt.system.contains("base64"))
+        #expect(capturedPrompt.system.contains("EXIF"))
+        #expect(capturedPrompt.system.contains("face landmarks"))
+        #expect(capturedPrompt.system.contains("face geometry"))
+        #expect(capturedPrompt.system.contains("biometric traits"))
+        #expect(capturedPrompt.system.contains("mental-health status"))
+        #expect(capturedPrompt.user.contains("Aura Snapshot compact descriptors:"))
+        #expect(capturedPrompt.user.contains("auraColor: teal"))
+        #expect(capturedPrompt.user.contains("brightness: balanced"))
+        #expect(capturedPrompt.user.contains("contrast: crisp"))
+        #expect(capturedPrompt.user.contains("selectedMood: focused"))
+
+        for banned in ["raw image", "base64", "EXIF", "embedding", "face", "biometric", "landmark", "geometry", "identity", "ethnicity", "age:", "gender", "attractiveness", "fertility", "health"] {
+            #expect(!capturedPrompt.user.localizedCaseInsensitiveContains(banned))
+        }
+    }
+
+    @Test func predictionFallsBackToLocalComposerWhenRemoteFails() async throws {
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
+
         service.isRemoteChannelAvailable = { true }
         service.replyChannel = { _, _ in
             throw PredictionServiceError.serverError("offline")
@@ -410,9 +701,9 @@ struct TierTwoFeatureTests {
     }
 
     @Test func predictionPropagatesRemoteLimitWithoutLocalFallback() async throws {
-        defer { UserDefaults.standard.removeObject(forKey: "simastry_prediction_history") }
+        let service = makeIsolatedPredictionService()
+        defer { service.clearHistory() }
 
-        let service = PredictionService()
         service.isRemoteChannelAvailable = { true }
         service.replyChannel = { _, _ in
             throw PredictionServiceError.aiUsageLimit("You have reached today's AI guide limit.")
@@ -436,6 +727,59 @@ struct TierTwoFeatureTests {
         } catch {
             #expect(Bool(false))
         }
+    }
+
+    @Test func confidenceDisplayTierKeepsNumericConfidenceInternal() {
+        #expect(PredictionConfidenceTier.tier(for: 45) == .soft)
+        #expect(PredictionConfidenceTier.tier(for: 66) == .moderate)
+        #expect(PredictionConfidenceTier.tier(for: 82) == .strong)
+
+        let result = PredictionResult(
+            id: UUID(),
+            mode: .whatWillTheySay,
+            question: "Will they reply?",
+            conversationText: nil,
+            targetSunSign: .taurus,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            predictedMessage: "Likely, but slowly.",
+            astrologicalBreakdown: "Taurus pacing is steady.",
+            confidence: 66,
+            tone: .warm,
+            privacySummary: nil,
+            createdAt: Date()
+        )
+
+        #expect(result.confidence == 66)
+        #expect(result.confidenceTier == .moderate)
+        #expect(result.confidenceDisplayTier == "Moderate")
+        #expect(result.confidenceSignalDisplay == "Signal strength: Moderate")
+    }
+
+    @Test func confidenceSignalDisplayReadsAsSignalStrengthNotPercent() {
+        func result(confidence: Int) -> PredictionResult {
+            PredictionResult(
+                id: UUID(),
+                mode: .whatWillTheySay,
+                question: "Will they reply?",
+                conversationText: nil,
+                targetSunSign: .taurus,
+                targetMoonSign: nil,
+                targetRisingSign: nil,
+                predictedMessage: "Likely, but slowly.",
+                astrologicalBreakdown: "Steady pacing.",
+                confidence: confidence,
+                tone: .warm,
+                privacySummary: nil,
+                createdAt: Date()
+            )
+        }
+
+        #expect(result(confidence: 45).confidenceSignalDisplay == "Signal strength: Soft")
+        #expect(result(confidence: 66).confidenceSignalDisplay == "Signal strength: Moderate")
+        #expect(result(confidence: 82).confidenceSignalDisplay == "Signal strength: Strong")
+        // The visible label never surfaces a false-precision percentage.
+        #expect(!result(confidence: 82).confidenceSignalDisplay.contains("%"))
     }
 
     @Test func companionReplyPayloadEncodesFeatureNames() throws {
@@ -465,5 +809,17 @@ struct TierTwoFeatureTests {
         let decoded = try JSONDecoder().decode(CompanionReplyResponse.self, from: data)
         #expect(decoded.text == "Use one short warm line.")
         #expect(decoded.usageEventId == usageEventId)
+    }
+
+    private func makeIsolatedPredictionService() -> PredictionService {
+        PredictionService(historyKey: "simastry_prediction_history.\(UUID().uuidString)")
+    }
+
+    private func solidImage(color: UIColor, size: CGSize = CGSize(width: 120, height: 120)) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            color.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
     }
 }
