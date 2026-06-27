@@ -915,31 +915,29 @@ struct RelationshipPersonDetailView: View {
     }
 
     var body: some View {
-        ZStack {
-            CelestialBackground()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    header
-                    howToTalkSection
-                    predictReplyButton
-                    situationSection
-                    simulationRoomSection
-                    personaContextSection
-                    PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
-                    coupleReadButton
-                    relationshipPatternSection
-                    todayReadingSection
-                    methodPanel
-                    notesSection
-                    privacySection
-                    Spacer().frame(height: SimastrySpacing.tabBarClearance)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                header
+                howToTalkSection
+                predictReplyButton
+                situationSection
+                simulationRoomSection
+                personaContextSection
+                PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
+                coupleReadButton
+                relationshipPatternSection
+                todayReadingSection
+                methodPanel
+                notesSection
+                privacySection
+                Spacer().frame(height: SimastrySpacing.tabBarClearance)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
         }
+        .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background { CelestialBackground() }
         .navigationTitle(currentPerson.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
