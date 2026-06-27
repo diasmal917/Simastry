@@ -212,6 +212,7 @@ struct HomeView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .minimizesTabBarOnScroll()   // collapses the floating Liquid Glass bar on scroll-down
         .frame(maxWidth: .infinity)
         .clipped()
         .overlay {

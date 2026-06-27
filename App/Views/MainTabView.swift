@@ -24,7 +24,11 @@ struct MainTabView: View {
             FloatingTabBar(
                 selection: $viewModel.selectedTab,
                 unreadCount: viewModel.unreadMessageCount,
-                predictFollowUp: viewModel.predictFollowUpPending
+                predictFollowUp: viewModel.predictFollowUpPending,
+                // Read the shared chrome here in MainTabView's body so the
+                // Observation dependency is registered and the safeAreaInset
+                // content re-renders when the minimize state flips.
+                isMinimized: TabBarChrome.shared.isMinimized
             )
         }
         .tint(SimastryColor.gold)
@@ -41,6 +45,9 @@ struct MainTabView: View {
         }
         .onChange(of: viewModel.selectedTab) { _, newTab in
             visitedTabs.insert(newTab)
+            // Restore the full bar whenever the user changes tabs so a tab is
+            // never first revealed with a minimized (compact-pill) nav.
+            TabBarChrome.shared.isMinimized = false
             HapticManager.tabChange()
             if newTab == .messages {
                 Task {

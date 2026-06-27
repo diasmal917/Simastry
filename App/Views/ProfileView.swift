@@ -130,6 +130,7 @@ struct ProfileView: View {
                     }
                     .padding(.horizontal, 20)
                 }
+                .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
             }
             .accessibilityHidden(activeSheet != nil)
             .navigationBarTitleDisplayMode(.inline)

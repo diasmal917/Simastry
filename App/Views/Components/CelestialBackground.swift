@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// App-wide backdrop: the pastel zodiac wallpaper (`ZodiacWallpaper`) that the
-/// landing screen introduces, now the standard across every screen so the look
-/// stays consistent from first launch through the whole app.
+/// App-wide backdrop used on every screen *past* the landing flow: a deep,
+/// matte deep-space starfield (`SpaceWallpaper`). The landing screen keeps its
+/// own pastel zodiac introduction (`ZodiacWallpaper`); from there on the app
+/// settles into this calmer, near-black cosmos so Liquid Glass surfaces read as
+/// luminous objects floating over space rather than over a busy illustration.
 ///
-/// A legibility veil sits over the art — light enough that the pastel zodiac
-/// icons still read through, dark enough that text and glass cards on top keep
-/// their contrast on content-dense screens.
+/// A light legibility veil sits over the art — the wallpaper is already
+/// near-black, so the veil only needs to deepen the lower third where dense
+/// content and the floating tab bar sit.
 struct CelestialBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -14,15 +16,17 @@ struct CelestialBackground: View {
         ZStack {
             Color.black
 
-            CosmicDriftImage(animated: !reduceMotion)
+            // The starfield drifts very slowly — and, via `LandingView`-style
+            // parallax callers, slower than the foreground — for subtle depth.
+            CosmicDriftImage(animated: !reduceMotion, imageName: "SpaceWallpaper")
                 .ignoresSafeArea()
 
             LinearGradient(
                 stops: [
-                    .init(color: .black.opacity(0.46), location: 0),
-                    .init(color: .black.opacity(0.34), location: 0.22),
-                    .init(color: .black.opacity(0.44), location: 0.6),
-                    .init(color: .black.opacity(0.58), location: 1)
+                    .init(color: .black.opacity(0.18), location: 0),
+                    .init(color: .black.opacity(0.10), location: 0.28),
+                    .init(color: .black.opacity(0.22), location: 0.66),
+                    .init(color: .black.opacity(0.40), location: 1)
                 ],
                 startPoint: .top,
                 endPoint: .bottom

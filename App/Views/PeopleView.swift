@@ -74,6 +74,7 @@ struct PeopleView: View {
                     .padding(.top, 10)
                 }
                 .scrollIndicators(.hidden)
+                .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
             }
             .navigationTitle("People")
             .navigationBarTitleDisplayMode(.large)

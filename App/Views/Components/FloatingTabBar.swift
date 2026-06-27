@@ -1,5 +1,21 @@
 import SwiftUI
 
+/// Shared chrome state for the floating navigation. A single app-wide instance
+/// (mirroring the `…Manager.shared` singletons already used across Simastry) so
+/// any scroll surface can drive the bar's minimize state without threading a
+/// binding through every screen.
+///
+/// This reproduces iOS 26's `.tabBarMinimizeBehavior(.onScrollDown)` for the
+/// custom Liquid Glass bar: the bar collapses to a compact pill while the user
+/// scrolls down into content and settles back to full size on scroll up.
+@Observable
+final class TabBarChrome {
+    static let shared = TabBarChrome()
+    /// `true` while scrolling down — the bar shrinks to a compact pill.
+    var isMinimized = false
+    private init() {}
+}
+
 /// Floating Liquid Glass navigation pill — icon-only tabs with a large selected
 /// capsule, unread/follow-up dots, and full accessibility. Replaces the system
 /// tab bar so Simastry reads as a single daily surface rather than a stack of
@@ -7,12 +23,17 @@ import SwiftUI
 ///
 /// - On iOS 26 it renders real `glassEffect` inside a `GlassEffectContainer`.
 /// - On iOS 18 it falls back to an `.ultraThinMaterial`-backed capsule.
+/// - Collapses to a compact pill on scroll-down (see `TabBarChrome`), the
+///   custom-bar equivalent of `.tabBarMinimizeBehavior(.onScrollDown)`.
 struct FloatingTabBar: View {
     @Binding var selection: AppTab
     /// Unread Talk items — drives the dot on the Talk tab.
     var unreadCount: Int
     /// A prediction is awaiting an outcome — drives the dot on the Predict tab.
     var predictFollowUp: Bool
+    /// Collapsed (compact-pill) state. Owned by `TabBarChrome.shared` and passed
+    /// in from `MainTabView`, which observes it so the bar reliably re-renders.
+    var isMinimized: Bool
 
     @Namespace private var indicator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -20,9 +41,45 @@ struct FloatingTabBar: View {
     private let height: CGFloat = 56
 
     var body: some View {
-        bar
-            .padding(.horizontal, 22)
-            .padding(.bottom, 6)
+        Group {
+            if isMinimized {
+                compactPill
+                    .transition(.scale(scale: 0.82, anchor: .bottom).combined(with: .opacity))
+            } else {
+                bar
+                    .transition(.scale(scale: 0.92, anchor: .bottom).combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.bottom, 6)
+    }
+
+    /// Minimized state: only the active tab's icon in a small Liquid Glass pill.
+    /// Tapping it (or scrolling up) restores the full bar — matching Apple's
+    /// minimized tab-bar interaction.
+    private var compactPill: some View {
+        Button {
+            expand()
+        } label: {
+            Image(systemName: selection.selectedIcon)
+                .font(.system(size: 19, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 72, height: 44)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .glassPillBackground()
+        .accessibilityLabel("Show tabs")
+        .accessibilityHint("Currently on \(selection.title)")
+    }
+
+    private func expand() {
+        if reduceMotion {
+            TabBarChrome.shared.isMinimized = false
+        } else {
+            withAnimation(.spring(SimastrySpring.snappy)) { TabBarChrome.shared.isMinimized = false }
+        }
     }
 
     private var bar: some View {
@@ -112,6 +169,54 @@ struct FloatingTabBar: View {
         default:
             ""
         }
+    }
+}
+
+// MARK: - Scroll-driven minimize
+
+/// Tracks a scroll view's vertical offset and drives `TabBarChrome.shared` so
+/// the floating bar minimizes on scroll-down and restores on scroll-up. This is
+/// the custom-bar stand-in for iOS 26's `.tabBarMinimizeBehavior(.onScrollDown)`
+/// (`onScrollGeometryChange` is iOS 18+, matching the deployment target).
+private struct TabBarMinimizeOnScroll: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lastOffset: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content.onScrollGeometryChange(for: CGFloat.self) { geo in
+            geo.contentOffset.y + geo.contentInsets.top
+        } action: { _, newOffset in
+            let delta = newOffset - lastOffset
+            if newOffset < 28 {
+                // Always reveal the full bar near the top of content.
+                set(false)
+            } else if delta > 8 {
+                set(true)
+            } else if delta < -8 {
+                set(false)
+            }
+            lastOffset = newOffset
+        }
+    }
+
+    private func set(_ minimized: Bool) {
+        guard TabBarChrome.shared.isMinimized != minimized else { return }
+        if reduceMotion {
+            TabBarChrome.shared.isMinimized = minimized
+        } else {
+            withAnimation(.spring(SimastrySpring.snappy)) {
+                TabBarChrome.shared.isMinimized = minimized
+            }
+        }
+    }
+}
+
+extension View {
+    /// Apply to a tab's primary `ScrollView` so scrolling collapses/expands the
+    /// floating Liquid Glass tab bar. Inactive tabs don't receive scroll
+    /// gestures, so only the visible surface drives the shared chrome.
+    func minimizesTabBarOnScroll() -> some View {
+        modifier(TabBarMinimizeOnScroll())
     }
 }
 

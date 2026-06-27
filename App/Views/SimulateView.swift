@@ -230,6 +230,7 @@ struct SimulateView: View {
                     .padding(.bottom, SimastrySpacing.tabBarClearance + 92)
                 }
                 .scrollIndicators(.hidden)
+                .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
                 .onChange(of: selectedCategory) { _, _ in
                     guard hasAdvancedPastCategory else { return }
                     scrollToNextPredictStep(proxy)

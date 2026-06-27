@@ -346,6 +346,7 @@ struct MessagesView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
+        .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
         .refreshable {
             await viewModel.refreshInbox(showErrors: true)
         }
