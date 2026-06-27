@@ -438,7 +438,6 @@ struct RelationshipPersonDetailView: View {
     @State private var privateLabel: String = ""
     @State private var hasSeededEditableFields: Bool = false
     @State private var showDeleteConfirmation: Bool = false
-    @State private var showHowToTalk: Bool = false
     @State private var showCoupleRead: Bool = false
     @State private var showPracticeChat: Bool = false
 
@@ -668,59 +667,115 @@ struct RelationshipPersonDetailView: View {
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.textSecondary)
                     .tracking(1.3)
-            }
 
-            personaChipRow(
-                label: "Pronouns",
-                options: ["she/her", "he/him", "they/them"],
-                selected: currentPerson.pronouns
-            ) { choice in
-                var updated = currentPerson
-                updated.pronouns = updated.pronouns == choice ? nil : choice
-                viewModel.updateRelationshipPerson(updated)
-            }
+                Spacer()
 
-            personaChipRow(
-                label: "Age",
-                options: ["teens", "20s", "30s", "40s+"],
-                selected: currentPerson.ageBand
-            ) { choice in
-                var updated = currentPerson
-                updated.ageBand = updated.ageBand == choice ? nil : choice
-                viewModel.updateRelationshipPerson(updated)
-            }
-
-            personalityTypePicker
-
-            VStack(alignment: .leading, spacing: 7) {
-                Text("How they text")
-                    .font(SimastryFont.labelSmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-
-                ForEach([["dry", "emoji-heavy", "paragraphs"], ["slow replier", "double-texter", "voice notes"]], id: \.self) { row in
-                    HStack(spacing: 8) {
-                        ForEach(row, id: \.self) { option in
-                            personaChip(option, isActive: (currentPerson.textingStyles ?? []).contains(option)) {
-                                var updated = currentPerson
-                                var styles = Set(updated.textingStyles ?? [])
-                                if styles.contains(option) { styles.remove(option) } else { styles.insert(option) }
-                                updated.textingStyles = styles.isEmpty ? nil : styles.sorted()
-                                viewModel.updateRelationshipPerson(updated)
-                            }
-                        }
+                if !isProUser {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("PRO")
+                            .font(SimastryFont.overline)
+                            .tracking(0.8)
                     }
+                    .foregroundStyle(SimastryColor.gold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(SimastryColor.gold.opacity(0.13), in: Capsule())
                 }
             }
 
-            Text("Anything else that matters — background, history, in-jokes — goes in Notes below, in your own words. The persona reads them verbatim.")
-                .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.textTertiary)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
+            if isProUser {
+                personaControls
+            } else {
+                personaUpsellTeaser
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard(cornerRadius: 20)
+    }
+
+    /// The actual persona-tuning controls — Pro only.
+    @ViewBuilder
+    private var personaControls: some View {
+        personaChipRow(
+            label: "Pronouns",
+            options: ["she/her", "he/him", "they/them"],
+            selected: currentPerson.pronouns
+        ) { choice in
+            var updated = currentPerson
+            updated.pronouns = updated.pronouns == choice ? nil : choice
+            viewModel.updateRelationshipPerson(updated)
+        }
+
+        personaChipRow(
+            label: "Age",
+            options: ["teens", "20s", "30s", "40s+"],
+            selected: currentPerson.ageBand
+        ) { choice in
+            var updated = currentPerson
+            updated.ageBand = updated.ageBand == choice ? nil : choice
+            viewModel.updateRelationshipPerson(updated)
+        }
+
+        personalityTypePicker
+
+        VStack(alignment: .leading, spacing: 7) {
+            Text("How they text")
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            ForEach([["dry", "emoji-heavy", "paragraphs"], ["slow replier", "double-texter", "voice notes"]], id: \.self) { row in
+                HStack(spacing: 8) {
+                    ForEach(row, id: \.self) { option in
+                        personaChip(option, isActive: (currentPerson.textingStyles ?? []).contains(option)) {
+                            var updated = currentPerson
+                            var styles = Set(updated.textingStyles ?? [])
+                            if styles.contains(option) { styles.remove(option) } else { styles.insert(option) }
+                            updated.textingStyles = styles.isEmpty ? nil : styles.sorted()
+                            viewModel.updateRelationshipPerson(updated)
+                        }
+                    }
+                }
+            }
+        }
+
+        Text("Anything else that matters — background, history, in-jokes — goes in Notes below, in your own words. The persona reads them verbatim.")
+            .font(SimastryFont.captionSmall)
+            .foregroundStyle(SimastryColor.textTertiary)
+            .lineSpacing(2)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Locked teaser shown to free users in place of the persona controls.
+    private var personaUpsellTeaser: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Dial in pronouns, age, personality type, and texting style so practice runs and playbooks sound like the real person.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.showUpsell = true
+            } label: {
+                Label("Unlock with Pro", systemImage: "sparkles")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(SimastryGradient.gold, in: Capsule())
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Unlock persona tuning with Simastry Pro")
+        }
+    }
+
+    private var isProUser: Bool {
+        guard viewModel.isRevenueCatAvailable else { return true }
+        return (viewModel.profile?.tier ?? "free") == "pro"
     }
 
     private var personalityTypePicker: some View {
@@ -866,15 +921,15 @@ struct RelationshipPersonDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
+                    howToTalkSection
+                    predictReplyButton
                     situationSection
                     simulationRoomSection
                     personaContextSection
-                    loopActionsRow
                     PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
                     coupleReadButton
                     relationshipPatternSection
                     todayReadingSection
-                    howToTalkSection
                     methodPanel
                     notesSection
                     privacySection
@@ -961,56 +1016,35 @@ struct RelationshipPersonDetailView: View {
         .glossyCard(cornerRadius: 22)
     }
 
-    /// Bridges this person into the core loop: model their reply in Predict,
-    /// or read sign-grounded message guidance without leaving the page.
-    private var loopActionsRow: some View {
-        HStack(spacing: 10) {
-            Button {
-                HapticManager.buttonPress()
-                viewModel.openPredict(with: PredictionDraft(
-                    targetName: currentPerson.displayName,
-                    targetSunSign: currentPerson.sunSign,
-                    targetMoonSign: currentPerson.moonSign,
-                    targetRisingSign: currentPerson.risingSign,
-                    question: "What will \(currentPerson.displayName) say next?"
-                ))
-            } label: {
-                Label("Predict their reply", systemImage: "wand.and.stars")
-                    .font(SimastryFont.labelMedium)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .foregroundStyle(SimastryColor.midnight)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(SimastryGradient.gold, in: Capsule())
-            }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityHint("Opens Predict with \(currentPerson.displayName)'s chart signals filled in")
-
-            Button {
-                HapticManager.buttonPress()
-                withAnimation(.spring(SimastrySpring.smooth)) {
-                    showHowToTalk.toggle()
-                }
-            } label: {
-                Label("How to talk", systemImage: "text.bubble")
-                    .font(SimastryFont.labelMedium)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(.white.opacity(0.06), in: Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(0.10), lineWidth: 0.7))
-            }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityHint("Shows communication guidance for a \(currentPerson.sunSign.displayName) Sun")
+    /// Bridges this person into the core loop: model their reply in Predict
+    /// with their chart signals already filled in.
+    private var predictReplyButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            viewModel.openPredict(with: PredictionDraft(
+                targetName: currentPerson.displayName,
+                targetSunSign: currentPerson.sunSign,
+                targetMoonSign: currentPerson.moonSign,
+                targetRisingSign: currentPerson.risingSign,
+                question: "What will \(currentPerson.displayName) say next?"
+            ))
+        } label: {
+            Label("Predict their reply", systemImage: "wand.and.stars")
+                .font(SimastryFont.labelLarge)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(SimastryColor.midnight)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(SimastryGradient.gold, in: Capsule())
         }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityHint("Opens Predict with \(currentPerson.displayName)'s chart signals filled in")
     }
 
     @ViewBuilder
     private var howToTalkSection: some View {
-        if showHowToTalk, let guide = CommunicationTemplates.guides[currentPerson.sunSign] {
+        if let guide = CommunicationTemplates.guides[currentPerson.sunSign] {
             VStack(alignment: .leading, spacing: 12) {
                 sectionTitle("How to talk to \(currentPerson.displayName)", systemImage: "text.bubble.fill")
 
