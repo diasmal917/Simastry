@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simastry Factory</title>
+  <link rel="stylesheet" href="/static/app-preview/styles.css">
+</head>
+<body>
+  <main class="factory-shell">
+    <header class="factory-header">
+      <div>
+        <p class="eyebrow">Simastry Factory</p>
+        <h1>Alignment Studio</h1>
+      </div>
+      <a class="tab-link" href="/app-preview" aria-current="page">App Preview</a>
+    </header>
+
+    <section class="toolbar" aria-label="Preview controls">
+      <label class="search-field">
+        <span>Search</span>
+        <input id="searchInput" type="search" placeholder="Ada, Elias, Taurus">
+      </label>
+      <label class="select-field">
+        <span>View</span>
+        <select id="viewSelect">
+          <option value="all">All images</option>
+          <option value="profile">Profile only</option>
+          <option value="card">Card only</option>
+          <option value="astrogram">Astrogram only</option>
+        </select>
+      </label>
+      <button class="primary-button" id="pushButton" type="button">Push to iOS App</button>
+      <button class="ghost-button" id="reloadButton" type="button">Reload</button>
+      <div class="status-pill" id="saveStatus">Ready</div>
+
+      <div class="preflight-card" id="preflightCard" aria-live="polite">
+        <div class="preflight-header">
+          <strong>Push target</strong>
+          <button class="ghost-button compact-button" id="preflightRefreshButton" type="button">Refresh</button>
+        </div>
+        <div id="preflightBody">Checking target...</div>
+      </div>
+
+      <div class="push-report" id="pushReport" hidden></div>
+    </section>
+
+    <section class="preview-layout">
+      <aside class="cast-panel">
+        <div class="panel-heading">
+          <h2>24 Cast</h2>
+          <span id="castCount">0</span>
+        </div>
+        <div class="cast-list" id="castList"></div>
+      </aside>
+
+      <section class="stage-panel">
+        <div class="selected-header">
+          <div>
+            <p class="eyebrow" id="selectedSign">Character</p>
+            <h2 id="selectedName">Loading</h2>
+          </div>
+          <span id="selectedMeta">Latest iOS base</span>
+        </div>
+
+        <div class="app-previews">
+          <article class="phone-card compact-card">
+            <div class="mini-row">
+              <button class="image-button" data-preview-slot="profile_avatar" type="button" aria-label="Edit profile avatar">
+                <div class="crop-frame avatar-frame" id="profilePreview"></div>
+              </button>
+              <div>
+                <span class="small-label">Profile avatar</span>
+                <strong id="profileName">-</strong>
+                <p id="profileLine">Tap a picture below to adjust it.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="phone-card">
+            <div class="card-preview-row">
+              <button class="image-button" data-preview-slot="card_portrait" type="button" aria-label="Edit card portrait">
+                <div class="crop-frame card-frame" id="cardPreview"></div>
+              </button>
+              <div>
+                <span class="small-label">Card portrait</span>
+                <strong id="cardName">-</strong>
+                <p>Used in home, guide cards, and larger companion moments.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="phone-card">
+            <div class="panel-heading">
+              <h3>Astrogram</h3>
+              <span id="astrogramCount">0 / 10</span>
+            </div>
+            <div class="astrogram-grid" id="astrogramGrid"></div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="editor-panel">
+        <div class="panel-heading">
+          <h2>Crop</h2>
+          <span id="selectedSlot">None</span>
+        </div>
+        <div class="editor-preview" id="editorPreview"></div>
+
+        <div class="control-stack">
+          <label>
+            <span>Horizontal focus</span>
+            <input id="xControl" type="range" min="0" max="100" value="50">
+          </label>
+          <label>
+            <span>Vertical focus</span>
+            <input id="yControl" type="range" min="0" max="100" value="38">
+          </label>
+          <label>
+            <span>Zoom</span>
+            <input id="zoomControl" type="range" min="1" max="2.5" value="1" step="0.01">
+          </label>
+        </div>
+
+        <div class="preset-row">
+          <button type="button" data-preset="head">Face higher</button>
+          <button type="button" data-preset="lower">Face lower</button>
+          <button type="button" data-preset="center">Center</button>
+          <button type="button" data-preset="close">Closer</button>
+        </div>
+
+        <div class="action-row">
+          <button class="primary-button" id="saveButton" type="button">Save Crop</button>
+          <button class="ghost-button" id="resetButton" type="button">Reset</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/static/app-preview/app.js"></script>
+</body>
+</html>

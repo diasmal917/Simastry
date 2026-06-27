@@ -1,0 +1,887 @@
+{
+  "Factory_aquarius-imani_post5": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-imani_post8": {
+    "x": 50.0,
+    "y": 29.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-yarrow_post1": {
+    "x": 50.0,
+    "y": 23.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-yarrow_post2": {
+    "x": 50.0,
+    "y": 26.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-yarrow_post3": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-yarrow_post7": {
+    "x": 50.0,
+    "y": 25.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-yarrow_post9": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_aquarius-yarrow_profile": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post1": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post2": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post3": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post4": {
+    "x": 50.0,
+    "y": 21.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post5": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post6": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post7": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post8": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_post9": {
+    "x": 50.0,
+    "y": 23.0,
+    "zoom": 1
+  },
+  "Factory_aries-amara_profile": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post1": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post2": {
+    "x": 50.0,
+    "y": 20.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post5": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post6": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post7": {
+    "x": 50.0,
+    "y": 20.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post8": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_aries-cassian_post9": {
+    "x": 50.0,
+    "y": 12.0,
+    "zoom": 1
+  },
+  "Factory_cancer-mila_post1": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_cancer-mila_post2": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_cancer-mila_post3": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_cancer-mila_post6": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_cancer-mila_post7": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_cancer-mila_post9": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_post2": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_post3": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_post5": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_post6": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_post7": {
+    "x": 50.0,
+    "y": 22.0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_post8": {
+    "x": 50.0,
+    "y": 26.0,
+    "zoom": 1
+  },
+  "Factory_cancer-noel_profile": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post1": {
+    "x": 21.0,
+    "y": 1.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post10": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post2": {
+    "x": 50.0,
+    "y": 3.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post3": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post4": {
+    "x": 50.0,
+    "y": 10.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post5": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post6": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post7": {
+    "x": 50.0,
+    "y": 8.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_post9": {
+    "x": 50.0,
+    "y": 1.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-naomi_profile": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_capricorn-silas_card": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_capricorn-silas_post3": {
+    "x": 50.0,
+    "y": 6.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-silas_post6": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_capricorn-silas_profile": {
+    "x": 50.0,
+    "y": 50.0,
+    "zoom": 1.0
+  },
+  "Factory_gemini-arden_post2": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_gemini-arden_post3": {
+    "x": 50.0,
+    "y": 7.0,
+    "zoom": 1
+  },
+  "Factory_gemini-arden_post4": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_gemini-arden_post6": {
+    "x": 50.0,
+    "y": 21.0,
+    "zoom": 1
+  },
+  "Factory_gemini-arden_post7": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_gemini-arden_post8": {
+    "x": 50.0,
+    "y": 10.0,
+    "zoom": 1
+  },
+  "Factory_gemini-arden_post9": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_gemini-rina_post1": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_gemini-rina_post10": {
+    "x": 50.0,
+    "y": 3.0,
+    "zoom": 1
+  },
+  "Factory_gemini-rina_post9": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post1": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post3": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post4": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post5": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post6": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post7": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_post8": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_leo-dante_profile": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_leo-leona_post1": {
+    "x": 50.0,
+    "y": 23.0,
+    "zoom": 1
+  },
+  "Factory_leo-leona_post2": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_leo-leona_post3": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_leo-leona_post4": {
+    "x": 50.0,
+    "y": 18.0,
+    "zoom": 1
+  },
+  "Factory_leo-leona_post5": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_leo-leona_post6": {
+    "x": 50.0,
+    "y": 20.0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post1": {
+    "x": 50.0,
+    "y": 8.0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post2": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post3": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post4": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post5": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post6": {
+    "x": 50.0,
+    "y": 6.0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post7": {
+    "x": 50.0,
+    "y": 7.0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_post8": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_libra-isolde_profile": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post2": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post3": {
+    "x": 50.0,
+    "y": 1.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post4": {
+    "x": 50.0,
+    "y": 17.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post5": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post6": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post7": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post8": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_post9": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_libra-mateo_profile": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_pisces-liora_post3": {
+    "x": 50.0,
+    "y": 21.0,
+    "zoom": 1
+  },
+  "Factory_pisces-liora_post4": {
+    "x": 50.0,
+    "y": 26.0,
+    "zoom": 1
+  },
+  "Factory_pisces-liora_post5": {
+    "x": 50.0,
+    "y": 24.0,
+    "zoom": 1
+  },
+  "Factory_pisces-liora_profile": {
+    "x": 50.0,
+    "y": 29.0,
+    "zoom": 2.04
+  },
+  "Factory_pisces-zev_card": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post1": {
+    "x": 50.0,
+    "y": 10.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post10": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post2": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post3": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post5": {
+    "x": 50.0,
+    "y": 2.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post6": {
+    "x": 50.0,
+    "y": 7.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post7": {
+    "x": 50.0,
+    "y": 9.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post8": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_post9": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_pisces-zev_profile": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post1": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post10": {
+    "x": 50.0,
+    "y": 12.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post2": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post3": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post5": {
+    "x": 50.0,
+    "y": 23.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post6": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post7": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post8": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_post9": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-nadia_profile": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post1": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post2": {
+    "x": 50.0,
+    "y": 3.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post3": {
+    "x": 50.0,
+    "y": 12.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post4": {
+    "x": 50.0,
+    "y": 6.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post6": {
+    "x": 50.0,
+    "y": 7.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post7": {
+    "x": 50.0,
+    "y": 19.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_post9": {
+    "x": 50.0,
+    "y": 24.0,
+    "zoom": 1
+  },
+  "Factory_sagittarius-rafi_profile": {
+    "x": 50.0,
+    "y": 2.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post1": {
+    "x": 50.0,
+    "y": 12.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post2": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post3": {
+    "x": 50.0,
+    "y": 25.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post5": {
+    "x": 50.0,
+    "y": 2.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post6": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post7": {
+    "x": 50.0,
+    "y": 10.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-elias_post8": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_card": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post1": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post2": {
+    "x": 50.0,
+    "y": 8.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post3": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post4": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post5": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post6": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post7": {
+    "x": 50.0,
+    "y": 3.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post8": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_post9": {
+    "x": 50.0,
+    "y": 10.0,
+    "zoom": 1
+  },
+  "Factory_scorpio-vera_profile": {
+    "x": 50.0,
+    "y": 8.0,
+    "zoom": 1
+  },
+  "Factory_taurus-ada_post10": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_taurus-ada_post7": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_taurus-ada_post9": {
+    "x": 50.0,
+    "y": 13.0,
+    "zoom": 1
+  },
+  "Factory_taurus-ada_profile": {
+    "x": 100,
+    "y": 18.0,
+    "zoom": 1.03
+  },
+  "Factory_taurus-theo_post10": {
+    "x": 50.0,
+    "y": 11.0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post3": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post4": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post5": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post6": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post7": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post8": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_post9": {
+    "x": 50.0,
+    "y": 10.0,
+    "zoom": 1
+  },
+  "Factory_taurus-theo_profile": {
+    "x": 50.0,
+    "y": 34.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_card": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post1": {
+    "x": 50.0,
+    "y": 15.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post2": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post3": {
+    "x": 50.0,
+    "y": 21.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post4": {
+    "x": 50.0,
+    "y": 5.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post5": {
+    "x": 50.0,
+    "y": 12.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post6": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post7": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post8": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_post9": {
+    "x": 50.0,
+    "y": 4.0,
+    "zoom": 1
+  },
+  "Factory_virgo-jonah_profile": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post1": {
+    "x": 50.0,
+    "y": 25.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post10": {
+    "x": 50.0,
+    "y": 8.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post4": {
+    "x": 50.0,
+    "y": 6.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post5": {
+    "x": 50.0,
+    "y": 14.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post7": {
+    "x": 50.0,
+    "y": 16.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post8": {
+    "x": 50.0,
+    "y": 7.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_post9": {
+    "x": 50.0,
+    "y": 24.0,
+    "zoom": 1
+  },
+  "Factory_virgo-mara_profile": {
+    "x": 79.0,
+    "y": 5.0,
+    "zoom": 1
+  }
+}

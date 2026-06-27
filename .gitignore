@@ -1,3 +1,46 @@
-node_modules
+# React Native / Expo artifacts (should not exist in Swift projects)
+node_modules/
+.expo/
+.bundle/
+android/
+ios/
+babel.config.js
+metro.config.js
+package.json
+package-lock.json
+tsconfig.json
+app.json
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Factory local preview/backups
+Factory/workspace/*contact-sheet*.jpg
+Factory/workspace/archived-originals/
+Factory/workspace/app-preview-exports/
+Factory/workspace/ios-companion-exports/*/previous-ios-assets/
+
 .env
+.env.*
+supabase/.temp/
+core
+node_modules
 .expo
