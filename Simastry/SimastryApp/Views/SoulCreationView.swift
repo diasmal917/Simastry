@@ -238,7 +238,6 @@ struct SoulCreationView: View {
 
             try? await Task.sleep(for: .seconds(2))
             await viewModel.createCompanion()
-            viewModel.homeSetupPhase = .complete
         }
     }
 }

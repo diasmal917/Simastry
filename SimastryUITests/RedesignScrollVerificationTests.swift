@@ -7,7 +7,11 @@ final class RedesignScrollVerificationTests: XCTestCase {
     @MainActor
     func testScrollHomeForVisualVerification() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launchArguments = [
+            "-SimastryPreviewSeeded",
+            "-SimastryUITestPasteWallet",
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ]
         app.launch()
         sleep(3)
 
@@ -24,6 +28,193 @@ final class RedesignScrollVerificationTests: XCTestCase {
         app.swipeUp()
         sleep(2)
         attachShot(app, name: "home-4-bottom")
+    }
+
+    @MainActor
+    func testTodayShowsNadiaGuidePanelAtTop() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["YOUR GUIDES"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Nadia"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["View Astrologers. Opens the complete guides directory."].waitForExistence(timeout: 4))
+    }
+
+    @MainActor
+    func testPeopleAddPersonSheetPresentsFromEmptyState() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "peopleEmpty"]
+        app.launchEnvironment["SIMASTRY_UI_PREFILL_ADD_PERSON_NAME"] = "Alex"
+        app.launch()
+
+        let addPerson = app.buttons["people.empty.addPersonButton"].firstMatch
+        XCTAssertTrue(addPerson.waitForExistence(timeout: 4))
+        addPerson.tap()
+
+        assertAddPersonSheetPresented(in: app)
+    }
+
+    @MainActor
+    func testPeopleToolbarAddPersonSheetPresents() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "peopleEmpty"]
+        app.launch()
+
+        let addPerson = app.buttons["people.toolbar.addPersonButton"].firstMatch
+        XCTAssertTrue(addPerson.waitForExistence(timeout: 4))
+        addPerson.tap()
+
+        assertAddPersonSheetPresented(in: app)
+    }
+
+    @MainActor
+    func testAddPersonControlsSelectSignsAndSave() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "peopleEmpty"]
+        app.launch()
+
+        let addPerson = app.buttons["people.toolbar.addPersonButton"].firstMatch
+        XCTAssertTrue(addPerson.waitForExistence(timeout: 4))
+        addPerson.tap()
+        assertAddPersonSheetPresented(in: app)
+
+        let nameField = app.textFields["people.addPerson.nameField"].firstMatch
+        XCTAssertTrue(nameField.waitForExistence(timeout: 4))
+        XCTAssertEqual(nameField.value as? String, "Alex")
+
+        let partner = app.buttons["people.addPerson.option.relationship.partner"].firstMatch
+        XCTAssertTrue(partner.waitForExistence(timeout: 4))
+        partner.tap()
+        assertControlSelected("people.addPerson.option.relationship.partner", in: app)
+
+        let aries = app.descendants(matching: .any)["people.addPerson.option.sun.aries"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(aries, in: app, maxScrolls: 8))
+        aries.tap()
+        assertControlSelected("people.addPerson.option.sun.aries", in: app)
+
+        let cancer = app.descendants(matching: .any)["people.addPerson.option.moon.cancer"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(cancer, in: app, maxScrolls: 8))
+        cancer.tap()
+        assertControlSelected("people.addPerson.option.moon.cancer", in: app)
+
+        let enfpOption = app.descendants(matching: .any)["people.addPerson.option.personality.enfp"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(enfpOption, in: app, maxScrolls: 8))
+        enfpOption.tap()
+        let personalityMenu = app.buttons["people.addPerson.personalityMenu"].firstMatch
+        XCTAssertTrue(personalityMenu.waitForExistence(timeout: 2))
+        XCTAssertTrue(personalityMenu.label.contains("ENFP"), "Expected personality menu to summarize ENFP after selection, got \(personalityMenu.label)")
+
+        let save = app.buttons["people.addPerson.saveButton"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 4))
+        XCTAssertTrue(save.isEnabled)
+        save.tap()
+
+        XCTAssertTrue(app.staticTexts["Alex"].waitForExistence(timeout: 4))
+    }
+
+    @MainActor
+    func testAuraWalletSettingsButtonsSaveToggleAndRemove() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-SimastryPreviewSeeded",
+            "-SimastryUITestPasteWallet",
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ]
+        app.launch()
+
+        let meTab = app.tabBars.buttons["Me"]
+        XCTAssertTrue(meTab.waitForExistence(timeout: 4))
+        meTab.tap()
+
+        let settings = app.buttons["profile.settingsButton"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 4))
+        settings.tap()
+
+        let paste = app.buttons["settings.auraWallet.pasteButton"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(paste, in: app, maxScrolls: 6))
+        paste.tap()
+
+        let save = app.buttons["settings.auraWallet.saveButton"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(save, in: app, maxScrolls: 2))
+        XCTAssertTrue(save.isEnabled)
+        save.tap()
+
+        let savedWallet = app.staticTexts["Saved wallet"].firstMatch
+        XCTAssertTrue(scrollUntilVisible(savedWallet, in: app, maxScrolls: 6))
+
+        let reflect = app.descendants(matching: .any)["settings.auraWallet.reflectToggle"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(reflect, in: app, maxScrolls: 4))
+        reflect.tap()
+
+        let remove = app.buttons["settings.auraWallet.removeButton"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(remove, in: app, maxScrolls: 4))
+        remove.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    }
+
+    @MainActor
+    func testTodayDoesNotShiftSidewaysAfterHorizontalDrag() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launch()
+
+        let marker = app.staticTexts["YOUR GUIDES"].firstMatch
+        XCTAssertTrue(marker.waitForExistence(timeout: 4))
+        let before = marker.frame
+
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.82, dy: 0.42))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.18, dy: 0.42))
+        start.press(forDuration: 0.05, thenDragTo: end)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+
+        XCTAssertTrue(marker.exists)
+        XCTAssertLessThan(abs(marker.frame.minX - before.minX), 12)
+        XCTAssertGreaterThanOrEqual(marker.frame.minX, -1)
+    }
+
+    @MainActor
+    func testMeTabOpensProfileWithoutCrash() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded"]
+        app.launch()
+
+        let meTab = app.tabBars.buttons["Me"]
+        XCTAssertTrue(meTab.waitForExistence(timeout: 4))
+        meTab.tap()
+
+        XCTAssertTrue(app.staticTexts["About You"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Aura"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["Share your Simastry card"].waitForExistence(timeout: 4))
+        XCTAssertFalse(app.staticTexts["Dark appearance"].exists)
+        XCTAssertFalse(app.staticTexts["Light appearance"].exists)
+    }
+
+    @MainActor
+    func testMeTabOpensWithPartialProfileWithoutCrash() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "profilePartial"]
+        app.launch()
+
+        let meTab = app.tabBars.buttons["Me"]
+        XCTAssertTrue(meTab.waitForExistence(timeout: 4))
+        meTab.tap()
+
+        XCTAssertTrue(app.staticTexts["Your Stars Await"].waitForExistence(timeout: 4))
+    }
+
+    @MainActor
+    func testPredictCategoryTapRevealsNextAction() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SimastryPreviewSeeded", "-SimastryPreviewScreen", "predict"]
+        app.launch()
+
+        let love = app.buttons["Ask about Love timing"].firstMatch
+        XCTAssertTrue(love.waitForExistence(timeout: 4))
+        love.tap()
+
+        let stickyAction = app.buttons["predict.stickyAction"].firstMatch
+        XCTAssertTrue(stickyAction.waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Ask the future"].waitForExistence(timeout: 4))
     }
 
     @MainActor
@@ -317,10 +508,14 @@ final class RedesignScrollVerificationTests: XCTestCase {
         app.swipeDown()
         sleep(1)
         let message = app.buttons["Message Theo"].firstMatch
-        if message.waitForExistence(timeout: 3) {
-            message.tap()
-            sleep(3)
-        }
+        XCTAssertTrue(message.waitForExistence(timeout: 3))
+        message.tap()
+        sleep(3)
+
+        let tuneFeedback = app.buttons["messages.guideFeedback.tune"].firstMatch
+        XCTAssertTrue(tuneFeedback.waitForExistence(timeout: 4))
+        tuneFeedback.tap()
+        XCTAssertTrue(app.buttons["messages.guideFeedback.shorter"].firstMatch.waitForExistence(timeout: 2))
         attachShot(app, name: "guide-dm-thread")
     }
 
@@ -379,6 +574,8 @@ final class RedesignScrollVerificationTests: XCTestCase {
         app.launch()
         sleep(4)
 
+        XCTAssertTrue(app.staticTexts["Simastry.com"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["How to Talk to a Sagittarius with Libra Rising and Cancer Moon"].waitForExistence(timeout: 4))
         attachShot(app, name: "share-1-story")
 
         let postSegment = app.buttons["Post"]
@@ -387,6 +584,107 @@ final class RedesignScrollVerificationTests: XCTestCase {
             sleep(1)
         }
         attachShot(app, name: "share-2-post")
+    }
+
+    @MainActor
+    private func assertAddPersonSheetPresented(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let sheet = app.otherElements["people.addPersonSheet"]
+        let navigationBar = app.navigationBars["New person"]
+        let didPresent = sheet.waitForExistence(timeout: 4) || navigationBar.waitForExistence(timeout: 1)
+        XCTAssertTrue(didPresent, "Expected the New person sheet to present.", file: file, line: line)
+    }
+
+    @MainActor
+    private func assertControlSelected(
+        _ identifier: String,
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let element = app.descendants(matching: .any)[identifier].firstMatch
+        XCTAssertTrue(element.waitForExistence(timeout: 2), "Expected \(identifier) before checking selected state.", file: file, line: line)
+        let value = element.value as? String ?? ""
+        XCTAssertEqual(value, "selected", "Expected \(identifier) to be selected, got \(value)", file: file, line: line)
+    }
+
+    @MainActor
+    private func dismissKeyboardIfPresent(in app: XCUIApplication) {
+        if app.keyboards.buttons["Done"].waitForExistence(timeout: 1) {
+            app.keyboards.buttons["Done"].tap()
+        } else if app.keyboards.buttons["Next"].waitForExistence(timeout: 1) {
+            app.keyboards.buttons["Next"].tap()
+            if app.keyboards.buttons["Done"].waitForExistence(timeout: 1) {
+                app.keyboards.buttons["Done"].tap()
+            }
+        } else if app.keyboards.buttons["Return"].waitForExistence(timeout: 1) {
+            app.keyboards.buttons["Return"].tap()
+        }
+    }
+
+    @MainActor
+    private func firstExistingElement(_ elements: [XCUIElement], timeout: TimeInterval) -> XCUIElement? {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let element = elements.first(where: { $0.exists }) {
+                return element
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return elements.first(where: { $0.exists })
+    }
+
+    @MainActor
+    private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, maxScrolls: Int) -> Bool {
+        if element.waitForExistence(timeout: 1), isComfortablyHittable(element, in: app) {
+            return true
+        }
+        for _ in 0..<maxScrolls {
+            smallSwipeUp(in: app)
+            if element.waitForExistence(timeout: 1), isComfortablyHittable(element, in: app) {
+                return true
+            }
+        }
+        return element.exists && element.isHittable
+    }
+
+    @MainActor
+    private func scrollUntilVisible(_ element: XCUIElement, in app: XCUIApplication, maxScrolls: Int) -> Bool {
+        if element.waitForExistence(timeout: 1), isComfortablyVisible(element, in: app) {
+            return true
+        }
+        for _ in 0..<maxScrolls {
+            smallSwipeUp(in: app)
+            if element.waitForExistence(timeout: 1), isComfortablyVisible(element, in: app) {
+                return true
+            }
+        }
+        return element.exists
+    }
+
+    @MainActor
+    private func isComfortablyHittable(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        guard element.exists, element.isHittable else { return false }
+        return isComfortablyVisible(element, in: app)
+    }
+
+    @MainActor
+    private func isComfortablyVisible(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        guard element.exists else { return false }
+        let frame = element.frame
+        let topInset: CGFloat = 96
+        let bottomInset: CGFloat = 124
+        return frame.minY >= topInset && frame.maxY <= app.frame.maxY - bottomInset
+    }
+
+    @MainActor
+    private func smallSwipeUp(in app: XCUIApplication) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.48))
+        start.press(forDuration: 0.01, thenDragTo: end)
     }
 
     @MainActor

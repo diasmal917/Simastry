@@ -676,8 +676,10 @@ private struct MessageDetailSheet: View {
 
                             ForEach(displayMessages) { threadMessage in
                                 DMMessageBubble(
+                                    viewModel: viewModel,
                                     message: threadMessage,
                                     isFromCurrentUser: threadMessage.direction == .outgoing,
+                                    guideId: guideProfile?.id,
                                     companionAvatar: MessageAvatarView(
                                         message: message,
                                         size: 28,
@@ -985,7 +987,7 @@ private struct MessageDetailSheet: View {
         if message.source == .discovery {
             return "\(message.companionSign) lens • private chat"
         }
-        return "\(message.companionSign) Guide • Simastry Method"
+        return "\(message.companionSign) guide"
     }
 
     /// Bond level with this guide — companion threads only.
@@ -1142,9 +1144,73 @@ private struct MessageSuggestionStrip: View {
 }
 
 private struct DMMessageBubble: View {
+    @Bindable var viewModel: AppViewModel
     let message: CompanionMessage
     let isFromCurrentUser: Bool
+    let guideId: String?
     let companionAvatar: MessageAvatarView
+    @State private var submittedFeedbackTitle: String?
+    @State private var showTuneOptions: Bool = false
+
+    private var usesCompactWidth: Bool {
+        isFromCurrentUser && message.content.count <= 16 && !message.content.contains("\n")
+    }
+
+    private var maxBubbleWidth: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        return isFromCurrentUser
+            ? min(186, screenWidth * 0.54)
+            : min(276, screenWidth * 0.74)
+    }
+
+    private var shouldShowGuideFeedback: Bool {
+        !isFromCurrentUser
+            && message.source == .companion
+            && guideId != nil
+            && !isLowValueGuideReply
+    }
+
+    private var isLowValueGuideReply: Bool {
+        let normalized = message.content
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".!? "))
+        let wordCount = normalized.split(whereSeparator: { $0.isWhitespace }).count
+        guard wordCount <= 7 else { return false }
+        let suppressed = [
+            "hi",
+            "hi what's going on",
+            "hey",
+            "hey i'm here what's up",
+            "hey tell me what happened",
+            "hey what are we reading",
+            "what's going on",
+            "tell me what happened"
+        ]
+        return suppressed.contains(normalized)
+    }
+
+    private var savedFeedbackTitle: String? {
+        if let submittedFeedbackTitle {
+            return submittedFeedbackTitle
+        }
+
+        guard let guideId,
+              let event = viewModel.guideFeedbackEvents.last(where: {
+                  $0.matches(readId: message.id, guideId: guideId, surface: .guideCard)
+              }) else {
+            return nil
+        }
+
+        if event.helpfulness == .helpful {
+            return "Helpful"
+        }
+        if let reason = event.reasons.first,
+           let option = GuideFeedbackTuneOption.allCases.first(where: { $0.feedbackReason == reason }) {
+            return option.title
+        }
+        return event.reasons.first?.title ?? event.helpfulness.title
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -1154,63 +1220,7 @@ private struct DMMessageBubble: View {
                 companionAvatar
             }
 
-            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 5) {
-                if !isFromCurrentUser {
-                    Text(message.companionName)
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.gold)
-                        .lineLimit(1)
-                }
-
-                Text(message.content)
-                    .font(SimastryFont.bodyMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 4) {
-                    Text(message.timestamp.relativeDescription)
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.offWhite.opacity(isFromCurrentUser ? 0.70 : 0.46))
-
-                    if isFromCurrentUser {
-                        Image(systemName: "checkmark")
-                            .font(SimastryFont.microBold)
-                            .foregroundStyle(SimastryColor.offWhite.opacity(0.62))
-                    }
-                }
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 10)
-            .frame(maxWidth: 276, alignment: isFromCurrentUser ? .trailing : .leading)
-            .background {
-                if isFromCurrentUser {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    SimastryColor.celestialBlue.opacity(0.96),
-                                    Color(red: 56/255, green: 110/255, blue: 205/255)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                } else {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [SimastryColor.surfaceElevated, SimastryColor.surface],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 19, style: .continuous)
-                                .stroke(.white.opacity(0.09), lineWidth: 0.7)
-                        }
-                }
-            }
+            bubbleContent
 
             if !isFromCurrentUser {
                 Spacer(minLength: 54)
@@ -1219,6 +1229,210 @@ private struct DMMessageBubble: View {
         .frame(maxWidth: .infinity, alignment: isFromCurrentUser ? .trailing : .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(isFromCurrentUser ? "You" : message.companionName): \(message.content)")
+    }
+
+    @ViewBuilder
+    private var bubbleContent: some View {
+        let content = VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: isFromCurrentUser ? 4 : 5) {
+            if !isFromCurrentUser {
+                Text(message.companionName)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.gold)
+                    .lineLimit(1)
+            }
+
+            Text(message.content)
+                .font(isFromCurrentUser ? SimastryFont.bodySmall : SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineSpacing(isFromCurrentUser ? 2 : 3)
+                .multilineTextAlignment(isFromCurrentUser ? .trailing : .leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 4) {
+                Text(message.timestamp.relativeDescription)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(isFromCurrentUser ? 0.70 : 0.46))
+
+                if isFromCurrentUser {
+                    Image(systemName: "checkmark")
+                        .font(SimastryFont.microBold)
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.62))
+                }
+            }
+
+        }
+
+        if usesCompactWidth {
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 7) {
+                content
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(backgroundShape)
+
+                if shouldShowGuideFeedback {
+                    guideFeedbackRow
+                }
+            }
+        } else {
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 7) {
+                content
+                    .padding(.horizontal, isFromCurrentUser ? 10 : 13)
+                    .padding(.vertical, isFromCurrentUser ? 7 : 10)
+                    .frame(maxWidth: maxBubbleWidth, alignment: isFromCurrentUser ? .trailing : .leading)
+                    .background(backgroundShape)
+
+                if shouldShowGuideFeedback {
+                    guideFeedbackRow
+                        .frame(maxWidth: maxBubbleWidth, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var backgroundShape: some View {
+        if isFromCurrentUser {
+            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            SimastryColor.celestialBlue.opacity(0.96),
+                            Color(red: 56/255, green: 110/255, blue: 205/255)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        } else {
+            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [SimastryColor.surfaceElevated, SimastryColor.surface],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        .stroke(.white.opacity(0.09), lineWidth: 0.7)
+                }
+        }
+    }
+
+    private var guideFeedbackRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let savedFeedbackTitle {
+                Text("\(savedFeedbackTitle) saved")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.48))
+                    .accessibilityIdentifier("messages.guideFeedback.saved")
+            } else {
+                HStack(spacing: 6) {
+                    guideFeedbackButton(
+                        "Helpful",
+                        systemImage: "hand.thumbsup.fill",
+                        identifier: "messages.guideFeedback.helpful"
+                    ) {
+                        submitGuideFeedback(
+                            helpfulness: .helpful,
+                            reasons: [],
+                            savedTitle: "Helpful"
+                        )
+                    }
+
+                    guideFeedbackButton(
+                        "Too vague",
+                        systemImage: "questionmark.bubble.fill",
+                        identifier: "messages.guideFeedback.tooVague"
+                    ) {
+                        submitGuideFeedback(
+                            helpfulness: .partlyHelpful,
+                            reasons: [.tooVague],
+                            savedTitle: "Too vague"
+                        )
+                    }
+
+                    guideFeedbackButton(
+                        "Tune",
+                        systemImage: "slider.horizontal.3",
+                        identifier: "messages.guideFeedback.tune"
+                    ) {
+                        HapticManager.buttonPress()
+                        withAnimation(.spring(SimastrySpring.snappy)) {
+                            showTuneOptions.toggle()
+                        }
+                    }
+                }
+
+                if showTuneOptions {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 92), spacing: 6)],
+                        alignment: .leading,
+                        spacing: 6
+                    ) {
+                        ForEach(GuideFeedbackTuneOption.allCases) { option in
+                            guideFeedbackButton(
+                                option.title,
+                                systemImage: option.systemImage,
+                                identifier: "messages.guideFeedback.\(option.rawValue)"
+                            ) {
+                                submitGuideFeedback(
+                                    helpfulness: .partlyHelpful,
+                                    reasons: [option.feedbackReason],
+                                    savedTitle: option.title
+                                )
+                            }
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+        .padding(.top, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("messages.guideFeedback.row")
+    }
+
+    private func guideFeedbackButton(
+        _ title: String,
+        systemImage: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(SimastryFont.captionSmall.weight(.semibold))
+                .foregroundStyle(SimastryColor.offWhite.opacity(0.68))
+                .lineLimit(1)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(SimastryColor.surfaceElevated.opacity(0.96), in: Capsule())
+                .overlay {
+                    Capsule().stroke(.white.opacity(0.07), lineWidth: 0.7)
+                }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func submitGuideFeedback(
+        helpfulness: HelpfulnessRating,
+        reasons: [GuideFeedbackReason],
+        savedTitle: String
+    ) {
+        guard let guideId else { return }
+        HapticManager.buttonPress()
+        viewModel.recordGuideFeedback(
+            readId: message.id,
+            guideId: guideId,
+            surface: .guideCard,
+            helpfulness: helpfulness,
+            reasons: reasons
+        )
+        withAnimation(.spring(SimastrySpring.snappy)) {
+            submittedFeedbackTitle = savedTitle
+            showTuneOptions = false
+        }
     }
 }
 

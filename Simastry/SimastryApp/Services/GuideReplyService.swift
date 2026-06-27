@@ -28,6 +28,8 @@ nonisolated enum GuideReplyService {
     /// Chat surfaces hold a typing indicator while the LLM races the
     /// template fallback — keep that race short so chats never feel stuck.
     static let chatReplyTimeout: Double = 2.5
+    static let chatReplyMaxTokens: Int = 140
+    static let panelReplyMaxTokens: Int = 160
     /// Deliberate flows (Predict, Playbooks) show their own progress UI and
     /// can afford a fuller generation window.
     static let deliberateReplyTimeout: Double = 8
@@ -66,6 +68,17 @@ nonisolated enum GuideReplyService {
         }
     }
 
+    enum ChatIntent: String, Equatable, Sendable {
+        case greeting
+        case readMe
+        case chartToday
+        case comeAcross
+        case notSeeing
+        case chartGeneral
+        case shortCheckIn
+        case other
+    }
+
     static func personaSystemPrompt(
         profile: FactoryCompanionProfile,
         role: CelestialRole?,
@@ -80,7 +93,7 @@ nonisolated enum GuideReplyService {
         var lines: [String] = []
 
         lines.append("You are \(profile.name), a fictional AI astrologer guide inside the Simastry app.")
-        lines.append("Your lens: \(profile.sign.displayName) — Simastry Method specialization: \(profile.sign.methodLine).")
+        lines.append("Your private lens: \(profile.sign.displayName) — \(profile.sign.methodLine). Do not say 'Simastry Method' in chat replies.")
         lines.append("Your persona: \(profile.headline) \(profile.personalityBio)")
 
         if let role {
@@ -122,14 +135,137 @@ nonisolated enum GuideReplyService {
         lines.append(SimastryVoice.promptBlock)
 
         lines.append("""
-        Rules: reply in 1-3 short sentences in a warm text-message register, in character. \
-        Read the conversation through your sign lens and the user's chart. Be specific to what they wrote. \
+        Rules: reply like a real text from a sharp friend: 1-2 short sentences, usually under 28 words total. \
+        If the latest user message is just a greeting, answer tiny and ask what is up. \
+        If they ask about their signs, chart, today, how they come across, "read me", or what they are not seeing, briefly say you are looking at their chart, name the relevant Sun/Moon/Rising you have, and answer the exact question before giving advice. \
+        For chart questions, use this flow: "let me look..." then placements, then one direct read, then one practical move. \
+        Do not dodge a direct chart question with generic texting coaching. \
+        No lecture voice, no slogan, no "for a second", no "let's separate", no "one beat", no method language. \
+        Read the conversation through your sign lens and the user's chart, but keep the astrology mostly invisible unless they ask. \
         Never claim to be human or professionally certified; you are an in-app AI guide. \
         No medical, legal, or financial advice. If the user mentions self-harm or abuse, gently suggest real-world support. \
         Plain text only — no markdown, no emoji unless the user uses them first.
         """)
 
         return lines.joined(separator: "\n")
+    }
+
+    static func humanChatFallback(
+        latestUserText: String,
+        sign: ZodiacSign,
+        threadCount: Int,
+        mode: GuideChatMode,
+        user: UserContext? = nil,
+        allowChartFallback: Bool = true
+    ) -> String? {
+        let normalized = latestUserText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".!? "))
+        guard !normalized.isEmpty else { return nil }
+
+        let intent = chatIntent(for: normalized)
+        let greetingWords: Set<String> = ["hey", "hi", "hello", "yo", "sup", "hiya", "heyy"]
+        let words = normalized.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        if intent == .greeting || (words.count <= 3 && words.contains(where: greetingWords.contains)) {
+            let replies = [
+                "hey. i'm here. what's up?",
+                "hey - tell me what happened.",
+                "hi. what's going on?",
+                "hey. what are we reading?"
+            ]
+            return replies[threadCount % replies.count]
+        }
+
+        if normalized.count <= 24 {
+            switch mode {
+            case .mentor:
+                return "got it. what outcome do you want here?"
+            case .teacher:
+                return "i'm here. say the part you're not saying yet."
+            case .checkIn:
+                return "i'm here. what are you feeling right now?"
+            case .bestFriend:
+                let replies = [
+                    "i'm here. give me the messy version.",
+                    "okay. what happened right before this?",
+                    "tell me the part that feels weird."
+                ]
+                return replies[(threadCount + sign.rawValue.count) % replies.count]
+            }
+        }
+
+        if allowChartFallback,
+           let user,
+           [.chartToday, .comeAcross, .notSeeing, .readMe, .chartGeneral].contains(intent) {
+            return chartQuestionFallback(user: user, intent: intent)
+        }
+
+        return nil
+    }
+
+    static func chatIntent(for text: String) -> ChatIntent {
+        let normalized = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".!? "))
+        guard !normalized.isEmpty else { return .other }
+
+        let words = normalized.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        let greetingWords: Set<String> = ["hey", "hi", "hello", "yo", "sup", "hiya", "heyy"]
+        if words.count <= 3, words.contains(where: greetingWords.contains) {
+            return .greeting
+        }
+        if normalized.contains("what am i not seeing") || normalized.contains("not seeing") {
+            return .notSeeing
+        }
+        if normalized.contains("read me") {
+            return .readMe
+        }
+        if (normalized.contains("chart") || normalized.contains("sign")) && normalized.contains("today") {
+            return .chartToday
+        }
+        if normalized.contains("come across") || normalized.contains("come off") {
+            return .comeAcross
+        }
+        if isChartQuestion(normalized) {
+            return .chartGeneral
+        }
+        if normalized.count <= 24 {
+            return .shortCheckIn
+        }
+        return .other
+    }
+
+    private static func isChartQuestion(_ normalized: String) -> Bool {
+        let chartWords = ["sign", "signs", "chart", "birth chart", "placement", "placements", "aura"]
+        return chartWords.contains { normalized.contains($0) }
+    }
+
+    private static func chartQuestionFallback(user: UserContext, intent: ChatIntent) -> String? {
+        let placements = [
+            user.sun.map { "Sun in \($0.displayName)" },
+            user.moon.map { "Moon in \($0.displayName)" },
+            user.rising.map { "Rising in \($0.displayName)" }
+        ].compactMap { $0 }
+        guard !placements.isEmpty else {
+            return "let me look at what you've added so far. i need your signs before i can read this cleanly."
+        }
+
+        let chartLine = placements.joined(separator: ", ")
+        let typeLine = user.communicationType.map { " Your \($0) pattern" } ?? " That mix"
+        switch intent {
+        case .chartToday:
+            return "let me look at your chart. i see \(chartLine).\(typeLine) says today goes better when you lead with the honest first sentence, then soften the delivery. one clear text, no pile-on."
+        case .comeAcross:
+            return "let me look at your signs. i see \(chartLine).\(typeLine) can come across warm and easy to trust, but also a little indirect when you are trying to keep the peace. say the real point earlier."
+        case .notSeeing, .readMe:
+            return "let me look at your chart. i see \(chartLine). what you may be missing: you are trying to make the tone perfect before the truth is clear. name the truth first, then make it kind."
+        case .chartGeneral:
+            return "let me look at your chart. i see \(chartLine).\(typeLine) reads best when you are direct, warm, and brief. the move is not more explaining; it is one sentence that is actually yours."
+        default:
+            return "let me look at your chart. i see \(chartLine). answer me with the real question underneath this, and i'll read that directly."
+        }
     }
 
     static func threadUserPrompt(

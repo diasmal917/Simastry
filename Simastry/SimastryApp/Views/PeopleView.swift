@@ -2,12 +2,18 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
+nonisolated private enum PeopleSheet: String, Identifiable {
+    case addPerson
+    case teamRead
+
+    var id: String { rawValue }
+}
+
 struct PeopleView: View {
     @Bindable var viewModel: AppViewModel
     @State private var searchText: String = ""
     @State private var selectedType: RelationshipType?
-    @State private var isAddingPerson: Bool = false
-    @State private var showTeamRead: Bool = false
+    @State private var activeSheet: PeopleSheet?
     @State private var navigationPath = NavigationPath()
     @State private var handledTeamReadRouteRequest: Int = 0
 
@@ -91,18 +97,21 @@ struct PeopleView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isAddingPerson = true
+                        presentAddPerson()
                     } label: {
                         Label("Add person", systemImage: "plus")
                     }
                     .tint(SimastryColor.gold)
+                    .accessibilityIdentifier("people.toolbar.addPersonButton")
                 }
             }
-            .sheet(isPresented: $isAddingPerson) {
-                AddRelationshipPersonView(viewModel: viewModel)
-            }
-            .sheet(isPresented: $showTeamRead) {
-                TeamReadView(viewModel: viewModel)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .addPerson:
+                    AddRelationshipPersonView(viewModel: viewModel)
+                case .teamRead:
+                    TeamReadView(viewModel: viewModel)
+                }
             }
             .navigationDestination(for: RelationshipPerson.self) { person in
                 RelationshipPersonDetailView(viewModel: viewModel, person: person)
@@ -110,7 +119,9 @@ struct PeopleView: View {
             .onAppear {
                 viewModel.loadRelationshipPeople()
                 #if DEBUG
-                if viewModel.isDebugPreviewStateActive && viewModel.relationshipPeople.isEmpty {
+                if viewModel.isDebugPreviewStateActive,
+                   !viewModel.keepsDebugRelationshipPeopleEmpty,
+                   viewModel.relationshipPeople.isEmpty {
                     viewModel.relationshipPeople = RelationshipPeopleStore.previewPeople()
                 }
                 #endif
@@ -134,7 +145,7 @@ struct PeopleView: View {
         }
         if viewModel.teamReadRouteRequest > handledTeamReadRouteRequest {
             handledTeamReadRouteRequest = viewModel.teamReadRouteRequest
-            showTeamRead = true
+            activeSheet = .teamRead
         }
     }
 
@@ -142,7 +153,7 @@ struct PeopleView: View {
     private var teamReadEntryCard: some View {
         Button {
             HapticManager.buttonPress()
-            showTeamRead = true
+            activeSheet = .teamRead
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "person.3.fill")
@@ -346,27 +357,26 @@ struct PeopleView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.crop.circle.badge.plus")
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
+        Button {
+            presentAddPerson()
+        } label: {
+            VStack(spacing: 16) {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
 
-            Text(viewModel.relationshipPeople.isEmpty ? "No people yet" : "No matching people")
-                .font(SimastryFont.titleMedium)
-                .foregroundStyle(SimastryColor.offWhite)
+                Text(viewModel.relationshipPeople.isEmpty ? "No people yet" : "No matching people")
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
 
-            Text(viewModel.relationshipPeople.isEmpty
-                 ? "Add someone important manually. Simastry never needs your contacts."
-                 : "Try a different name, sign, or relationship type.")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(viewModel.relationshipPeople.isEmpty
+                     ? "Add someone important manually. Simastry never needs your contacts."
+                     : "Try a different name, sign, or relationship type.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Button {
-                HapticManager.buttonPress()
-                isAddingPerson = true
-            } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 15, weight: .semibold))
@@ -378,12 +388,18 @@ struct PeopleView: View {
                 .padding(.vertical, 13)
                 .goldGlassPill(interactive: true)
             }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Add person")
+            .frame(maxWidth: .infinity)
+            .padding(24)
+            .glossyCard(cornerRadius: 22)
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .glossyCard(cornerRadius: 22)
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Add person")
+        .accessibilityIdentifier("people.empty.addPersonButton")
+    }
+
+    private func presentAddPerson() {
+        HapticManager.buttonPress()
+        activeSheet = .addPerson
     }
 
     private func sectionTitle(_ title: String, systemImage: String) -> some View {
@@ -1206,42 +1222,84 @@ struct RelationshipPersonDetailView: View {
     }
 }
 
+private enum AddPersonSelectionSheet: String, Identifiable, Hashable {
+    case relationship
+    case personality
+    case sun
+    case moon
+    case rising
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .relationship: "Relationship"
+        case .personality: "Personality"
+        case .sun: "Sun sign"
+        case .moon: "Moon sign"
+        case .rising: "Rising sign"
+        }
+    }
+}
+
+private enum AddPersonFocusedField: Hashable {
+    case name
+    case privateLabel
+}
+
 struct AddRelationshipPersonView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: AppViewModel
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectionPath = NavigationPath()
     @State private var imageData: Data?
-    @State private var name: String = ""
+    @State private var name: String = Self.prefilledNameForUITest()
     @State private var privateLabel: String = ""
     @State private var relationshipType: RelationshipType = .friend
     @State private var sunSign: ZodiacSign = .libra
     @State private var moonSign: ZodiacSign?
     @State private var risingSign: ZodiacSign?
     @State private var personalityType: MBTIPersonalityType?
+    @State private var isPersonalityExpanded: Bool = true
     @State private var hasBirthDate: Bool = false
     @State private var birthDate: Date = .now
     @State private var notes: String = ""
+    @FocusState private var focusedField: AddPersonFocusedField?
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var debugStateSummary: String {
+        [
+            "name:\(name.trimmingCharacters(in: .whitespacesAndNewlines))",
+            "relationship:\(relationshipType.rawValue)",
+            "sun:\(sunSign.rawValue)",
+            "moon:\(moonSign?.rawValue ?? "unknown")",
+            "rising:\(risingSign?.rawValue ?? "unknown")",
+            "personality:\(personalityType?.rawValue ?? "unknown")"
+        ].joined(separator: "|")
+    }
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $selectionPath) {
             ZStack {
                 CelestialBackground()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(spacing: 22) {
                         header
                         identitySection
-                        personalitySection
                         signsSection
                         birthSection
                         notesSection
+                        personalitySection
+                        Spacer().frame(height: 18)
                     }
-                    .padding(20)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
                 }
+                .tint(SimastryColor.gold)
             }
             .navigationTitle("New person")
             .navigationBarTitleDisplayMode(.inline)
@@ -1250,6 +1308,7 @@ struct AddRelationshipPersonView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                         .tint(SimastryColor.gold)
+                        .accessibilityIdentifier("people.addPerson.cancelButton")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
@@ -1257,7 +1316,11 @@ struct AddRelationshipPersonView: View {
                     }
                     .disabled(!canSave)
                     .tint(SimastryColor.gold)
+                    .accessibilityIdentifier("people.addPerson.saveButton")
                 }
+            }
+            .navigationDestination(for: AddPersonSelectionSheet.self) { sheet in
+                selectionScreen(sheet)
             }
             .onChange(of: selectedPhotoItem) { _, newItem in
                 guard let newItem else { return }
@@ -1276,6 +1339,25 @@ struct AddRelationshipPersonView: View {
                 }
             }
         }
+        .accessibilityIdentifier("people.addPersonSheet")
+        .accessibilityValue(debugStateSummary)
+    }
+
+    private static func prefilledNameForUITest() -> String {
+        if let environmentName = ProcessInfo.processInfo.environment["SIMASTRY_UI_PREFILL_ADD_PERSON_NAME"],
+           !environmentName.isEmpty {
+            return environmentName
+        }
+
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let marker = arguments.firstIndex(of: "-SimastryUITestPrefillAddPersonName"),
+              arguments.indices.contains(marker + 1) else {
+            if arguments.contains("-SimastryPreviewScreen"), arguments.contains("peopleEmpty") {
+                return "Alex"
+            }
+            return ""
+        }
+        return arguments[marker + 1]
     }
 
     private var header: some View {
@@ -1309,6 +1391,7 @@ struct AddRelationshipPersonView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("people.addPerson.photoPicker")
 
             VStack(alignment: .leading, spacing: 5) {
                 Text("Private relationship context")
@@ -1336,18 +1419,30 @@ struct AddRelationshipPersonView: View {
             VStack(spacing: 12) {
                 TextField("Name or nickname", text: $name)
                     .textContentType(.name)
-                TextField("Private label, optional", text: $privateLabel)
-
-                Picker("Relationship", selection: $relationshipType) {
-                    ForEach(RelationshipType.allCases) { type in
-                        Label(type.rawValue, systemImage: type.systemImage)
-                            .tag(type)
+                    .focused($focusedField, equals: .name)
+                    .submitLabel(.next)
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 46)
+                    .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .onSubmit {
+                        focusedField = .privateLabel
                     }
-                }
+                    .accessibilityIdentifier("people.addPerson.nameField")
+                TextField("Private label, optional", text: $privateLabel)
+                    .focused($focusedField, equals: .privateLabel)
+                    .submitLabel(.done)
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 46)
+                    .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .onSubmit {
+                        focusedField = nil
+                    }
+                    .accessibilityIdentifier("people.addPerson.privateLabelField")
+
+                relationshipChoiceGrid
             }
             .font(SimastryFont.bodyMedium)
             .foregroundStyle(SimastryColor.offWhite)
-            .textFieldStyle(.roundedBorder)
             .padding(18)
             .glossyCard(cornerRadius: 20)
         }
@@ -1362,9 +1457,15 @@ struct AddRelationshipPersonView: View {
                 .textCase(.uppercase)
 
             VStack(spacing: 12) {
-                signPicker("Sun", selection: Binding(get: { Optional(sunSign) }, set: { if let sign = $0 { sunSign = sign } }))
-                signPicker("Moon", selection: $moonSign)
-                signPicker("Rising", selection: $risingSign)
+                signChoiceGrid(title: "Sun", selected: sunSign, allowsUnknown: false) { sign in
+                    if let sign { sunSign = sign }
+                }
+                signChoiceGrid(title: "Moon", selected: moonSign, allowsUnknown: true) { sign in
+                    moonSign = sign
+                }
+                signChoiceGrid(title: "Rising", selected: risingSign, allowsUnknown: true) { sign in
+                    risingSign = sign
+                }
             }
             .padding(18)
             .glossyCard(cornerRadius: 20)
@@ -1380,14 +1481,27 @@ struct AddRelationshipPersonView: View {
                 .textCase(.uppercase)
 
             VStack(alignment: .leading, spacing: 10) {
-                Picker("Personality type", selection: $personalityType) {
-                    Text("Unknown").tag(MBTIPersonalityType?.none)
-                    ForEach(MBTIPersonalityType.allCases) { type in
-                        Text(type.rawValue).tag(Optional(type))
+                Button {
+                    HapticManager.buttonPress()
+                    withAnimation(.spring(SimastrySpring.snappy)) {
+                        isPersonalityExpanded.toggle()
                     }
+                } label: {
+                    selectionRowLabel(
+                        title: "Personality type",
+                        value: personalityType?.rawValue ?? "Unknown",
+                        systemImage: "person.text.rectangle.fill"
+                    )
                 }
-                .pickerStyle(.menu)
-                .tint(SimastryColor.gold)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("people.addPerson.personalityMenu")
+                .accessibilityLabel("Personality type, \(personalityType?.rawValue ?? "Unknown")")
+                .accessibilityAddTraits(.isButton)
+
+                if isPersonalityExpanded {
+                    personalityDropdownOptions
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
 
                 Text("This is only used as optional context in practice and playbook prompts.")
                     .font(SimastryFont.captionSmall)
@@ -1399,6 +1513,285 @@ struct AddRelationshipPersonView: View {
             .padding(18)
             .glossyCard(cornerRadius: 20)
         }
+    }
+
+    private var personalityDropdownOptions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            personalityOptionButton(title: "Unknown", isSelected: personalityType == nil, identifier: optionIdentifier(group: "personality", value: "unknown")) {
+                personalityType = nil
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(MBTIPersonalityType.allCases) { type in
+                    personalityOptionButton(
+                        title: type.rawValue,
+                        isSelected: personalityType == type,
+                        identifier: optionIdentifier(group: "personality", value: type.rawValue)
+                    ) {
+                        personalityType = type
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityIdentifier("people.addPerson.personalityOptions")
+    }
+
+    private func personalityOptionButton(
+        title: String,
+        isSelected: Bool,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+            withAnimation(.spring(SimastrySpring.snappy)) {
+                isPersonalityExpanded = false
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                Text(title)
+                    .font(SimastryFont.captionSmall.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.86))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityIdentifier(identifier)
+        .accessibilityValue(isSelected ? "selected" : "not selected")
+    }
+
+    private var relationshipChoiceGrid: some View {
+        choiceGroup(title: "Relationship", identifier: "people.addPerson.relationshipRow") {
+            ForEach(RelationshipType.allCases) { type in
+                choiceChip(
+                    title: type.rawValue,
+                    systemImage: type.systemImage,
+                    isSelected: relationshipType == type,
+                    identifier: optionIdentifier(group: "relationship", value: type.rawValue)
+                ) {
+                    relationshipType = type
+                }
+            }
+        }
+    }
+
+    private var personalityChoiceGrid: some View {
+        choiceGroup(title: "Personality type", identifier: "people.addPerson.personalityRow") {
+            choiceChip(
+                title: "Unknown",
+                systemImage: "questionmark.circle.fill",
+                isSelected: personalityType == nil,
+                identifier: optionIdentifier(group: "personality", value: "unknown")
+            ) {
+                personalityType = nil
+            }
+            ForEach(MBTIPersonalityType.allCases) { type in
+                choiceChip(
+                    title: type.rawValue,
+                    systemImage: "person.text.rectangle.fill",
+                    isSelected: personalityType == type,
+                    identifier: optionIdentifier(group: "personality", value: type.rawValue)
+                ) {
+                    personalityType = type
+                }
+            }
+        }
+    }
+
+    private func signChoiceGrid(
+        title: String,
+        selected: ZodiacSign?,
+        allowsUnknown: Bool,
+        onSelect: @escaping (ZodiacSign?) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .textCase(.uppercase)
+                    .tracking(0.7)
+
+                if allowsUnknown {
+                    Text("Unknown ok")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(SimastryColor.deepMuted)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.white.opacity(0.055), in: Capsule())
+                }
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 48), spacing: 12)], alignment: .leading, spacing: 12) {
+                if allowsUnknown {
+                    unknownSignButton(
+                        title: title,
+                        isSelected: selected == nil,
+                        identifier: optionIdentifier(group: title.lowercased(), value: "unknown")
+                    ) {
+                        onSelect(nil)
+                    }
+                }
+
+                ForEach(ZodiacSign.allCases) { sign in
+                    zodiacSignButton(
+                        sign: sign,
+                        title: title,
+                        isSelected: selected == sign,
+                        identifier: optionIdentifier(group: title.lowercased(), value: sign.rawValue)
+                    ) {
+                        onSelect(sign)
+                    }
+                }
+            }
+        }
+        .accessibilityIdentifier("people.addPerson.sign.\(title.lowercased())")
+    }
+
+    private func zodiacSignButton(
+        sign: ZodiacSign,
+        title: String,
+        isSelected: Bool,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.zodiacSelection()
+            action()
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                ZodiacIconView(sign: sign, size: 34, showsGlow: isSelected)
+                    .frame(width: 48, height: 48)
+                    .accessibilityHidden(true)
+                    .background {
+                        if isSelected {
+                            Circle()
+                                .fill(sign.color.opacity(0.18))
+                                .shadow(color: sign.color.opacity(0.34), radius: 10)
+                        }
+                    }
+                    .opacity(isSelected ? 1.0 : 0.68)
+                    .scaleEffect(isSelected ? 1.08 : 1.0)
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .background(SimastryColor.midnight, in: Circle())
+                        .offset(x: 3, y: -3)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(width: 52, height: 52)
+            .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityLabel("\(title) \(sign.displayName)")
+        .accessibilityIdentifier(identifier)
+        .accessibilityValue(isSelected ? "selected" : "not selected")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func unknownSignButton(
+        title: String,
+        isSelected: Bool,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                    .frame(width: 48, height: 48)
+                    .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Circle())
+                    .opacity(isSelected ? 1.0 : 0.72)
+                    .accessibilityHidden(true)
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .background(SimastryColor.midnight, in: Circle())
+                        .offset(x: 3, y: -3)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(width: 52, height: 52)
+            .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityLabel("\(title) unknown")
+        .accessibilityIdentifier(identifier)
+        .accessibilityValue(isSelected ? "selected" : "not selected")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func choiceGroup<Content: View>(
+        title: String,
+        identifier: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .textCase(.uppercase)
+                .tracking(0.7)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
+                content()
+            }
+        }
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func choiceChip(
+        title: String,
+        systemImage: String,
+        isSelected: Bool,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            Label(title, systemImage: systemImage)
+                .font(SimastryFont.captionSmall.weight(.semibold))
+                .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.82))
+                .lineLimit(1)
+                .minimumScaleFactor(0.74)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Capsule())
+                .overlay {
+                    Capsule().stroke(isSelected ? SimastryColor.gold : .white.opacity(0.08), lineWidth: 0.8)
+                }
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityIdentifier(identifier)
+        .accessibilityValue(isSelected ? "selected" : "not selected")
     }
 
     private var birthSection: some View {
@@ -1442,17 +1835,271 @@ struct AddRelationshipPersonView: View {
         }
     }
 
-    private func signPicker(_ title: String, selection: Binding<ZodiacSign?>) -> some View {
-        Picker(title, selection: selection) {
-            if title != "Sun" {
-                Text("Unknown").tag(ZodiacSign?.none)
+    private func selectionRow(
+        title: String,
+        value: String,
+        systemImage: String,
+        identifier: String,
+        destination: AddPersonSelectionSheet
+    ) -> some View {
+        Menu {
+            selectionMenuOptions(for: destination)
+        } label: {
+            selectionRowLabel(title: title, value: value, systemImage: systemImage)
+        }
+        .accessibilityLabel("\(title), \(value)")
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func selectionRowLabel(title: String, value: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 28, height: 28)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .textCase(.uppercase)
+                    .tracking(0.7)
+                Text(value)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+        }
+        .padding(14)
+        .background(SimastryColor.surface.opacity(0.68), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(SimastryColor.gold.opacity(0.18), lineWidth: 0.7)
+        )
+        .contentShape(.rect)
+    }
+
+    @ViewBuilder
+    private func selectionMenuOptions(for destination: AddPersonSelectionSheet) -> some View {
+        switch destination {
+        case .relationship:
+            ForEach(RelationshipType.allCases) { type in
+                Button(type.rawValue) {
+                    HapticManager.buttonPress()
+                    relationshipType = type
+                }
+            }
+        case .personality:
+            Button("Unknown") {
+                HapticManager.buttonPress()
+                personalityType = nil
+            }
+            ForEach(MBTIPersonalityType.allCases) { type in
+                Button(type.rawValue) {
+                    HapticManager.buttonPress()
+                    personalityType = type
+                }
+            }
+        case .sun:
+            ForEach(ZodiacSign.allCases) { sign in
+                Button(sign.displayName) {
+                    HapticManager.buttonPress()
+                    sunSign = sign
+                }
+            }
+        case .moon:
+            Button("Unknown") {
+                HapticManager.buttonPress()
+                moonSign = nil
             }
             ForEach(ZodiacSign.allCases) { sign in
-                Text(sign.displayName).tag(Optional(sign))
+                Button(sign.displayName) {
+                    HapticManager.buttonPress()
+                    moonSign = sign
+                }
+            }
+        case .rising:
+            Button("Unknown") {
+                HapticManager.buttonPress()
+                risingSign = nil
+            }
+            ForEach(ZodiacSign.allCases) { sign in
+                Button(sign.displayName) {
+                    HapticManager.buttonPress()
+                    risingSign = sign
+                }
             }
         }
-        .pickerStyle(.menu)
-        .tint(SimastryColor.gold)
+    }
+
+    private func selectionScreen(_ sheet: AddPersonSelectionSheet) -> some View {
+        ZStack {
+            CelestialBackground()
+
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    switch sheet {
+                    case .relationship:
+                        ForEach(RelationshipType.allCases) { type in
+                            selectionOption(
+                                title: type.rawValue,
+                                systemImage: type.systemImage,
+                                isSelected: relationshipType == type,
+                                identifier: optionIdentifier(group: "relationship", value: type.rawValue)
+                            ) {
+                                relationshipType = type
+                                closeSelection()
+                            }
+                        }
+                    case .personality:
+                        selectionOption(
+                            title: "Unknown",
+                            systemImage: "questionmark.circle.fill",
+                            isSelected: personalityType == nil,
+                            identifier: optionIdentifier(group: "personality", value: "unknown")
+                        ) {
+                            personalityType = nil
+                            closeSelection()
+                        }
+                        ForEach(MBTIPersonalityType.allCases) { type in
+                            selectionOption(
+                                title: type.rawValue,
+                                systemImage: "person.text.rectangle.fill",
+                                isSelected: personalityType == type,
+                                identifier: optionIdentifier(group: "personality", value: type.rawValue)
+                            ) {
+                                personalityType = type
+                                closeSelection()
+                            }
+                        }
+                    case .sun, .moon, .rising:
+                        if sheet != .sun {
+                            selectionOption(
+                                title: "Unknown",
+                                systemImage: "questionmark.circle.fill",
+                                isSelected: selectedSign(for: sheet) == nil,
+                                identifier: optionIdentifier(group: sheet.rawValue, value: "unknown")
+                            ) {
+                                setSign(nil, for: sheet)
+                                closeSelection()
+                            }
+                        }
+                        ForEach(ZodiacSign.allCases) { sign in
+                            selectionOption(
+                                title: sign.displayName,
+                                systemImage: "sparkles",
+                                isSelected: selectedSign(for: sheet) == sign,
+                                identifier: optionIdentifier(group: sheet.rawValue, value: sign.rawValue)
+                            ) {
+                                setSign(sign, for: sheet)
+                                closeSelection()
+                            }
+                        }
+                    }
+                }
+                .padding(20)
+            }
+        }
+        .navigationTitle(sheet.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") {
+                    closeSelection()
+                }
+                .tint(SimastryColor.gold)
+            }
+        }
+        .accessibilityIdentifier("people.addPerson.selection.\(sheet.rawValue)")
+    }
+
+    private func selectionOption(
+        title: String,
+        systemImage: String,
+        isSelected: Bool,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.gold)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        isSelected ? SimastryColor.gold : SimastryColor.gold.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+
+                Text(title)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                }
+            }
+            .padding(15)
+            .glossyCard(cornerRadius: 18)
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func closeSelection() {
+        if !selectionPath.isEmpty {
+            selectionPath.removeLast()
+        }
+    }
+
+    private func selectedSign(for sheet: AddPersonSelectionSheet) -> ZodiacSign? {
+        switch sheet {
+        case .sun:
+            sunSign
+        case .moon:
+            moonSign
+        case .rising:
+            risingSign
+        case .relationship, .personality:
+            nil
+        }
+    }
+
+    private func setSign(_ sign: ZodiacSign?, for sheet: AddPersonSelectionSheet) {
+        switch sheet {
+        case .sun:
+            if let sign {
+                sunSign = sign
+            }
+        case .moon:
+            moonSign = sign
+        case .rising:
+            risingSign = sign
+        case .relationship, .personality:
+            break
+        }
+    }
+
+    private func optionIdentifier(group: String, value: String) -> String {
+        let safeValue = value
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "-", with: "_")
+        return "people.addPerson.option.\(group).\(safeValue)"
     }
 
     private func savePerson() {

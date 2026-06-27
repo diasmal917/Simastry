@@ -123,6 +123,105 @@ struct SimastryAppTests {
         #expect(DeepLink.from(url: URL(string: "simastry://messages")!) == .messages)
         #expect(DeepLink.from(url: URL(string: "simastry://person/\(personId.uuidString)")!) == .person(id: personId))
         #expect(DeepLink.from(url: URL(string: "simastry://guide/nadia")!) == .guideProfile(id: "nadia"))
+        #expect(DeepLink.from(url: URL(string: "https://simastry.com/share/guide/sagittarius")!) == .guide(sign: "sagittarius"))
+        #expect(DeepLink.from(url: URL(string: "https://www.simastry.com/messages")!) == .messages)
+        #expect(DeepLink.from(url: URL(string: "https://simastry.vercel.app/share/guide/sagittarius")!) == .guide(sign: "sagittarius"))
+        #expect(DeepLink.guide(sign: "sagittarius").universalLinkURL.host == "simastry.com")
+    }
+
+    @Test func appTabUsesContiguousValuesAndAcceptsLegacyMeIndex() {
+        #expect(AppTab.today.rawValue == 0)
+        #expect(AppTab.people.rawValue == 1)
+        #expect(AppTab.messages.rawValue == 2)
+        #expect(AppTab.me.rawValue == 3)
+
+        #expect(AppTab(normalizing: 0) == .today)
+        #expect(AppTab(normalizing: 1) == .people)
+        #expect(AppTab(normalizing: 2) == .messages)
+        #expect(AppTab(normalizing: 3) == .me)
+        #expect(AppTab(normalizing: 5) == .me)
+        #expect(AppTab(normalizing: 4) == .today)
+    }
+
+    @Test func guideHumanChatFallbackKeepsGreetingShort() {
+        let reply = GuideReplyService.humanChatFallback(
+            latestUserText: "Hey.",
+            sign: .gemini,
+            threadCount: 1,
+            mode: .bestFriend
+        )
+
+        #expect(reply != nil)
+        #expect((reply ?? "").split(separator: " ").count <= 8)
+        #expect((reply ?? "").lowercased().contains("hey") || (reply ?? "").lowercased().contains("hi"))
+    }
+
+    @Test func guideHumanChatFallbackAnswersChartQuestionsWithPlacements() {
+        let reply = GuideReplyService.humanChatFallback(
+            latestUserText: "How do my signs shape the way I come across?",
+            sign: .aries,
+            threadCount: 3,
+            mode: .bestFriend,
+            user: GuideReplyService.UserContext(
+                name: "Maya",
+                sun: .sagittarius,
+                moon: .cancer,
+                rising: .libra,
+                communicationType: "Soft Explorer"
+            )
+        )
+
+        #expect(reply?.lowercased().contains("let me look") == true)
+        #expect(reply?.contains("Sun in Sagittarius") == true)
+        #expect(reply?.contains("Moon in Cancer") == true)
+        #expect(reply?.contains("Rising in Libra") == true)
+    }
+
+    @Test func guideIntentClassifierRecognizesDirectChartQuestions() {
+        #expect(GuideReplyService.chatIntent(for: "Hi") == .greeting)
+        #expect(GuideReplyService.chatIntent(for: "What does my chart say about today?") == .chartToday)
+        #expect(GuideReplyService.chatIntent(for: "How do my signs shape the way I come across?") == .comeAcross)
+        #expect(GuideReplyService.chatIntent(for: "Read me — what am I not seeing?") == .notSeeing)
+    }
+
+    @Test func guideHumanChatFallbackCanDeferChartQuestionsToLLM() {
+        let reply = GuideReplyService.humanChatFallback(
+            latestUserText: "What does my chart say about today?",
+            sign: .aries,
+            threadCount: 2,
+            mode: .bestFriend,
+            user: GuideReplyService.UserContext(
+                name: "Maya",
+                sun: .sagittarius,
+                moon: .cancer,
+                rising: .libra,
+                communicationType: "Soft Explorer"
+            ),
+            allowChartFallback: false
+        )
+
+        #expect(reply == nil)
+    }
+
+    @Test func guideChatPromptRejectsMethodLanguageAndLectures() {
+        let prompt = GuideReplyService.personaSystemPrompt(
+            profile: FactoryCompanionCatalog.featured,
+            role: nil,
+            user: GuideReplyService.UserContext(
+                name: "Maya",
+                sun: .sagittarius,
+                moon: .cancer,
+                rising: .libra,
+                communicationType: "Soft Explorer"
+            ),
+            isPanel: false
+        )
+
+        #expect(prompt.contains("reply like a real text"))
+        #expect(prompt.contains("If the latest user message is just a greeting"))
+        #expect(prompt.contains("If they ask about their signs"))
+        #expect(prompt.contains("answer the exact question"))
+        #expect(prompt.contains("Do not say 'Simastry Method'"))
     }
 
     @Test func outgoingDiscoveryMessageUsesCounterpartSnapshotAndStaysRead() {

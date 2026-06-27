@@ -627,6 +627,61 @@ struct AppViewModelRegressionTests {
         #expect(viewModel.toastMessage?.title == "Local data cleared")
     }
 
+    @Test func auraWalletValidationAcceptsOnlySupportedPublicAddresses() {
+        #expect(AppViewModel.isSupportedPublicWalletAddress("0x1234567890abcdef1234567890abcdef12345678"))
+        #expect(AppViewModel.isSupportedPublicWalletAddress("11111111111111111111111111111111"))
+        #expect(!AppViewModel.isSupportedPublicWalletAddress("0x123"))
+        #expect(!AppViewModel.isSupportedPublicWalletAddress("not a wallet"))
+        #expect(!AppViewModel.isSupportedPublicWalletAddress(""))
+    }
+
+    @Test func auraWalletSaveAndRemoveUpdatesReadableState() {
+        let viewModel = AppViewModel()
+        defer { viewModel.clearAuraWalletContext() }
+
+        viewModel.saveAuraWalletPublicAddress("  0x1234567890abcdef1234567890abcdef12345678  ")
+
+        #expect(viewModel.hasAuraWalletContext)
+        #expect(viewModel.auraWalletPublicAddress == "0x1234567890abcdef1234567890abcdef12345678")
+        #expect(viewModel.auraWalletShortAddress == "0x1234...5678")
+        #expect(viewModel.auraWalletLastCheckedAt != nil)
+        #expect(viewModel.toastMessage?.title == "Wallet saved")
+
+        viewModel.clearAuraWalletContext()
+
+        #expect(!viewModel.hasAuraWalletContext)
+        #expect(viewModel.auraWalletPublicAddress.isEmpty)
+        #expect(viewModel.auraWalletLastCheckedAt == nil)
+        #expect(viewModel.toastMessage?.title == "Wallet removed")
+    }
+
+    @Test func invalidAuraWalletDoesNotOverwriteSavedWallet() {
+        let viewModel = AppViewModel()
+        defer { viewModel.clearAuraWalletContext() }
+
+        viewModel.saveAuraWalletPublicAddress("0x1234567890abcdef1234567890abcdef12345678")
+        viewModel.saveAuraWalletPublicAddress("not a wallet")
+
+        #expect(viewModel.hasAuraWalletContext)
+        #expect(viewModel.auraWalletPublicAddress == "0x1234567890abcdef1234567890abcdef12345678")
+        #expect(viewModel.toastMessage?.title == "Wallet not saved")
+    }
+
+    @Test func auraWalletReflectPreferencePersists() {
+        let viewModel = AppViewModel()
+        defer {
+            viewModel.clearAuraWalletContext()
+            viewModel.useAuraWalletForAura = true
+        }
+
+        viewModel.saveAuraWalletPublicAddress("0x1234567890abcdef1234567890abcdef12345678")
+        viewModel.useAuraWalletForAura = false
+
+        let reloaded = AppViewModel()
+        #expect(reloaded.auraWalletPublicAddress == "0x1234567890abcdef1234567890abcdef12345678")
+        #expect(reloaded.useAuraWalletForAura == false)
+    }
+
     @Test func dailyPromptStoreKeepsNewestUniquePrompts() throws {
         let suiteName = "DailyPromptStoreTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))

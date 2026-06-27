@@ -12,6 +12,7 @@ nonisolated private enum ProfileSheet: Identifiable {
     case terms
     case methodology
     case astrologerPartner
+    case profileDetails
     case aura
     case careerRead
     case settings
@@ -36,6 +37,8 @@ nonisolated private enum ProfileSheet: Identifiable {
             "methodology"
         case .astrologerPartner:
             "astrologerPartner"
+        case .profileDetails:
+            "profileDetails"
         case .aura:
             "aura"
         case .careerRead:
@@ -79,54 +82,49 @@ struct ProfileView: View {
                     VStack(spacing: 28) {
                         Spacer().frame(height: 8)
 
-                        userHeader
+                        profileRenderSection("header") {
+                            userHeader
+                        }
 
-                        if viewModel.hasCompletedSigns {
-                            if let sun = viewModel.userSunSign,
-                               let moon = viewModel.userMoonSign,
-                               let rising = viewModel.userRisingSign {
-                                aboutYouSection(sun: sun, moon: moon, rising: rising)
+                        profileRenderSection("about-you") {
+                            if viewModel.hasCompletedSigns {
+                                if let sun = viewModel.userSunSign,
+                                   let moon = viewModel.userMoonSign,
+                                   let rising = viewModel.userRisingSign {
+                                    aboutYouSection(sun: sun, moon: moon, rising: rising)
+                                } else {
+                                    placeholderSignCards
+                                    auraButtonSection
+                                }
+                            } else {
+                                placeholderSignCards
+                                auraButtonSection
                             }
-                        } else {
-                            placeholderSignCards
-                            auraButtonSection
                         }
 
-                        if viewModel.hasCompletedSigns {
-                            if let companion = viewModel.companions.first {
-                                companionSection(companion)
+                        profileRenderSection("companion") {
+                            if viewModel.hasCompletedSigns {
+                                if let companion = viewModel.companions.first {
+                                    companionSafeSection(companion)
+                                }
+                            } else {
+                                placeholderCompanionSection
                             }
-                        } else {
-                            placeholderCompanionSection
                         }
 
-                        MomentsSection(viewModel: viewModel)
-
-                        subscriptionSection
-
-                        themeToggle
-
-                        languageSelector
-
-                        aboutOurApproachSection
-
-                        astrologerSection
-
-                        InviteFriendsCard(viewModel: viewModel)
-
-                        referralCodeSection
-
-                        forAstrologersSection
-
-                        dataExportSection
-
-                        if viewModel.hasCompletedSigns {
-                            streakSection
+                        profileRenderSection("tools") {
+                            profileHubSection
                         }
 
-                        footerSection
+                        profileRenderSection("language") {
+                            languageSelector
+                        }
 
-                        deleteAccountSection
+                        profileRenderSection("footer") {
+                            footerSection
+
+                            deleteAccountSection
+                        }
 
                         Spacer().frame(height: SimastrySpacing.tabBarClearance)
                     }
@@ -169,6 +167,8 @@ struct ProfileView: View {
                     methodologySheet
                 case .astrologerPartner:
                     astrologerPartnerSheet
+                case .profileDetails:
+                    profileDetailsSheet
                 case .aura:
                     AuraView(viewModel: viewModel)
                 case .careerRead:
@@ -178,6 +178,7 @@ struct ProfileView: View {
                 }
             }
             .onAppear {
+                CrashReporter.log("ProfileView appeared")
                 if reduceMotion {
                     appeared = true
                 } else {
@@ -197,6 +198,16 @@ struct ProfileView: View {
                 presentProfileRoutesIfRequested()
             }
         }
+    }
+
+    private func profileRenderSection<Content: View>(
+        _ name: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .onAppear {
+                CrashReporter.log("ProfileView section appeared: \(name)")
+            }
     }
 
     /// Catch sheet requests fired before this view mounted (deep links,
@@ -222,6 +233,10 @@ struct ProfileView: View {
             moon: viewModel.userMoonSign,
             rising: viewModel.userRisingSign
         )
+    }
+
+    private var astrologerContactURL: URL {
+        URL(string: "mailto:\(AppConfig.astrologerContactEmail)") ?? AppConfig.websiteURL
     }
 
     private var userHeader: some View {
@@ -267,6 +282,7 @@ struct ProfileView: View {
             }
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel("Open settings")
+            .accessibilityIdentifier("profile.settingsButton")
         }
         .padding(20)
         .simastryGlass(cornerRadius: 20)
@@ -616,6 +632,325 @@ struct ProfileView: View {
             return "\(profile.title) · chart-signal energy"
         }
         return "Visualize your Sun, Moon, and Rising once your signs are set."
+    }
+
+    private func aboutYouSafeSection(sun: ZodiacSign, moon: ZodiacSign, rising: ZodiacSign) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("About You")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    if let communicationType {
+                        Text(communicationType.title)
+                            .font(SimastryFont.labelSmall)
+                            .foregroundStyle(communicationType.accent)
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    HapticManager.buttonPress()
+                    activeSheet = .profileDetails
+                } label: {
+                    Text("Details")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.gold)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(SimastryColor.gold.opacity(0.11), in: Capsule())
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityLabel("Open profile details")
+            }
+
+            HStack(spacing: 10) {
+                compactSignTile(role: .sun, sign: sun)
+                compactSignTile(role: .moon, sign: moon)
+                compactSignTile(role: .rising, sign: rising)
+            }
+
+            HStack(spacing: 10) {
+                safeProfileAction(
+                    title: "Aura",
+                    subtitle: "Your chart energy",
+                    systemImage: "sparkles",
+                    accent: sun.color
+                ) {
+                    activeSheet = .aura
+                }
+
+                safeProfileAction(
+                    title: "Share",
+                    subtitle: "Your card",
+                    systemImage: "square.and.arrow.up",
+                    accent: SimastryColor.gold
+                ) {
+                    activeSheet = .share(.cosmicDNA)
+                }
+            }
+        }
+        .padding(18)
+        .glossyCard(cornerRadius: 22)
+        .accessibilityIdentifier("profile.aboutYouCompact")
+    }
+
+    private func companionSafeSection(_ companion: CompanionData) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Your Guide")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            Button {
+                HapticManager.buttonPress()
+                activeSheet = .companion(companion)
+            } label: {
+                HStack(spacing: 13) {
+                    profileSymbolTile(
+                        systemName: "sparkle.magnifyingglass",
+                        accent: ZodiacSign(rawValue: companion.sunSign.lowercased())?.color ?? SimastryColor.gold,
+                        size: 44
+                    )
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(companion.name.isEmpty ? "Guide" : companion.name)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                        Text("\(companion.sunSign.capitalized) guide")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                .padding(15)
+                .glossyCard(cornerRadius: 18)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Open your guide")
+        }
+    }
+
+    private func safeProfileAction(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        accent: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 34, height: 34)
+                    .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text(subtitle)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.7)
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(title == "Share" ? "Share your Simastry card" : (title == "Aura" ? "Open your Aura page" : title))
+    }
+
+    private func aboutYouCompactSection(sun: ZodiacSign, moon: ZodiacSign, rising: ZodiacSign) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("About You")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Spacer()
+                Button {
+                    HapticManager.buttonPress()
+                    activeSheet = .profileDetails
+                } label: {
+                    Text("Details")
+                        .font(SimastryFont.labelSmall)
+                        .foregroundStyle(SimastryColor.gold)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 10) {
+                compactSignTile(role: .sun, sign: sun)
+                compactSignTile(role: .moon, sign: moon)
+                compactSignTile(role: .rising, sign: rising)
+            }
+
+            if let communicationType {
+                Text(communicationType.title)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 7)
+                    .background(communicationType.accent.opacity(0.14), in: Capsule())
+            }
+        }
+        .padding(18)
+        .glossyCard(cornerRadius: 22)
+        .accessibilityIdentifier("profile.aboutYouCompact")
+    }
+
+    private func compactSignTile(role: CelestialRole, sign: ZodiacSign) -> some View {
+        VStack(spacing: 7) {
+            ZodiacIconView(sign: sign, size: 30, showsGlow: false)
+            Text(role.displayName)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+            Text(sign.displayName)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(sign.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+    }
+
+    private var profileHubSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Profile tools")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            profileHubButton(
+                title: "Profile details",
+                subtitle: "Moments, invites, public identity, and data.",
+                systemImage: "person.text.rectangle.fill"
+            ) {
+                activeSheet = .profileDetails
+            }
+
+            profileHubButton(
+                title: "Settings",
+                subtitle: "Account, privacy, and local app controls.",
+                systemImage: "gearshape.fill"
+            ) {
+                activeSheet = .settings
+            }
+
+            profileHubButton(
+                title: "How Simastry works",
+                subtitle: "Methodology, AI disclosure, and privacy.",
+                systemImage: "books.vertical.fill"
+            ) {
+                activeSheet = .methodology
+            }
+
+            profileHubButton(
+                title: "Work with an astrologer",
+                subtitle: "Find a human reader for deeper chart work.",
+                systemImage: "person.crop.circle.badge.checkmark"
+            ) {
+                openURL(AppConfig.astrologerDirectoryURL)
+            }
+        }
+    }
+
+    private func profileHubButton(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(width: 38, height: 38)
+                    .background(SimastryColor.gold.opacity(0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text(subtitle)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .padding(15)
+            .glossyCard(cornerRadius: 18)
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+    }
+
+    private var profileDetailsSheet: some View {
+        NavigationStack {
+            ZStack {
+                CelestialBackground()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        MomentsSection(viewModel: viewModel)
+                        subscriptionSection
+                        aboutOurApproachSection
+                        astrologerSection
+                        InviteFriendsCard(viewModel: viewModel)
+                        referralCodeSection
+                        forAstrologersSection
+                        dataExportSection
+
+                        if viewModel.hasCompletedSigns {
+                            streakSection
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 20)
+                }
+            }
+            .navigationTitle("Profile details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        activeSheet = nil
+                    }
+                    .tint(SimastryColor.gold)
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Discovery Section
@@ -1613,7 +1948,7 @@ struct ProfileView: View {
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Link(destination: URL(string: "mailto:\(AppConfig.astrologerContactEmail)")!) {
+                    Link(destination: astrologerContactURL) {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope.fill")
                                 .font(.system(size: 13, weight: .semibold))

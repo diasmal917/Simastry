@@ -183,33 +183,35 @@ extension View {
                 .background(SimastryColor.surfaceSunken.opacity(0.30), in: .rect(cornerRadius: cornerRadius))
                 .background(SimastryColor.surface.opacity(0.18), in: .rect(cornerRadius: cornerRadius))
                 .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.085)), in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.22), .white.opacity(0.075), .white.opacity(0.035)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.75
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.75
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.24), radius: 18, y: 10)
         } else {
             self
                 .background(SimastryColor.surface.opacity(0.72), in: .rect(cornerRadius: cornerRadius))
                 .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius)
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.18), .white.opacity(0.06), .white.opacity(0.035)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.65
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.65
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
         }
     }
@@ -220,32 +222,34 @@ extension View {
             self
                 .background(SimastryColor.surfaceSunken.opacity(0.20), in: .rect(cornerRadius: cornerRadius))
                 .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.045)), in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.16), .white.opacity(0.055), .white.opacity(0.025)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.6
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.6
+	                        )
+	                        .allowsHitTesting(false)
+	                )
         } else {
             self
                 .background(SimastryColor.surface.opacity(0.46), in: .rect(cornerRadius: cornerRadius))
                 .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius)
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.12), .white.opacity(0.04)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.5
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.5
+	                        )
+	                        .allowsHitTesting(false)
+	                )
         }
     }
 
@@ -259,33 +263,35 @@ extension View {
                 .background(SimastryColor.surfaceSunken.opacity(0.28), in: Capsule())
                 .background(SimastryColor.surface.opacity(0.16), in: Capsule())
                 .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.075)).interactive(interactive), in: .capsule)
-                .overlay(
-                    Capsule()
-                        .stroke(
+	                .overlay(
+	                    Capsule()
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.20), .white.opacity(0.07), .white.opacity(0.035)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.7
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.7
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.20), radius: 12, y: 6)
         } else {
             self
                 .background(SimastryColor.surface.opacity(0.68), in: .capsule)
                 .background(.ultraThinMaterial, in: .capsule)
-                .overlay(
-                    Capsule()
-                        .stroke(
+	                .overlay(
+	                    Capsule()
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.16), .white.opacity(0.055)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.6
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.6
+	                        )
+	                        .allowsHitTesting(false)
+	                )
         }
     }
 
@@ -299,9 +305,9 @@ extension View {
                 .background(SimastryColor.surfaceSunken.opacity(0.34), in: Capsule())
                 .background(SimastryColor.gold.opacity(0.055), in: Capsule())
                 .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.16)).interactive(interactive), in: .capsule)
-                .overlay(
-                    Capsule()
-                        .stroke(
+	                .overlay(
+	                    Capsule()
+	                        .stroke(
                             LinearGradient(
                                 colors: [
                                     .white.opacity(0.24),
@@ -310,10 +316,11 @@ extension View {
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.85
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.85
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.26), radius: 16, y: 8)
                 .shadow(color: SimastryColor.gold.opacity(0.12), radius: 18, y: 8)
         } else {
@@ -321,9 +328,9 @@ extension View {
                 .background(SimastryColor.surface.opacity(0.76), in: Capsule())
                 .background(SimastryColor.gold.opacity(0.065), in: Capsule())
                 .background(.ultraThinMaterial, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(
+	                .overlay(
+	                    Capsule()
+	                        .stroke(
                             LinearGradient(
                                 colors: [
                                     .white.opacity(0.16),
@@ -332,10 +339,11 @@ extension View {
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.7
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.7
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.22), radius: 14, y: 8)
         }
     }
@@ -349,9 +357,9 @@ extension View {
                 .background(SimastryColor.surfaceSunken.opacity(0.34), in: .rect(cornerRadius: cornerRadius))
                 .background(SimastryColor.gold.opacity(0.055), in: .rect(cornerRadius: cornerRadius))
                 .glassEffect(.regular.tint(SimastryColor.gold.opacity(0.14)).interactive(interactive), in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                        .stroke(
                             LinearGradient(
                                 colors: [
                                     .white.opacity(0.22),
@@ -360,10 +368,11 @@ extension View {
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.85
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.85
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.26), radius: 18, y: 10)
                 .shadow(color: SimastryColor.gold.opacity(0.10), radius: 18, y: 8)
         } else {
@@ -371,9 +380,9 @@ extension View {
                 .background(SimastryColor.surface.opacity(0.78), in: .rect(cornerRadius: cornerRadius))
                 .background(SimastryColor.gold.opacity(0.055), in: .rect(cornerRadius: cornerRadius))
                 .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius)
+	                        .stroke(
                             LinearGradient(
                                 colors: [
                                     .white.opacity(0.14),
@@ -382,10 +391,11 @@ extension View {
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.65
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.65
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
         }
     }
@@ -397,34 +407,36 @@ extension View {
                 .background(SimastryColor.surfaceSunken.opacity(0.30), in: .rect(cornerRadius: cornerRadius))
                 .background(color.opacity(0.055), in: .rect(cornerRadius: cornerRadius))
                 .glassEffect(.regular.tint(color.opacity(0.12)), in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.18), color.opacity(0.24), .white.opacity(0.045)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.7
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.7
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
         } else {
             self
                 .background(SimastryColor.surface.opacity(0.78), in: .rect(cornerRadius: cornerRadius))
                 .background(color.opacity(0.045), in: .rect(cornerRadius: cornerRadius))
                 .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius)
+	                        .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.12), color.opacity(0.20), .white.opacity(0.04)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.6
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.6
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: .black.opacity(0.20), radius: 14, y: 8)
         }
     }
@@ -441,9 +453,9 @@ extension View {
                 ),
                 in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(
+	            .overlay(
+	                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                    .stroke(
                         LinearGradient(
                             colors: [
                                 (accent ?? .white).opacity(accent == nil ? 0.14 : 0.30),
@@ -451,10 +463,11 @@ extension View {
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 0.8
-                    )
-            )
+	                        ),
+	                        lineWidth: 0.8
+	                    )
+	                    .allowsHitTesting(false)
+	            )
             .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
     }
 
@@ -474,17 +487,18 @@ extension View {
                 )
                 .background(SimastryColor.surfaceElevated.opacity(0.24), in: .rect(cornerRadius: cornerRadius))
                 .glassEffect(.regular.tint(accent.opacity(0.18)), in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                        .stroke(
                             LinearGradient(
                                 colors: [accent.opacity(0.45), .white.opacity(0.07)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.9
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.9
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: accent.opacity(0.18), radius: 22, y: 10)
         } else {
             self
@@ -498,17 +512,18 @@ extension View {
                 )
                 .background(SimastryColor.surfaceElevated.opacity(0.92), in: .rect(cornerRadius: cornerRadius))
                 .background(.ultraThinMaterial, in: .rect(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(
+	                .overlay(
+	                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+	                        .stroke(
                             LinearGradient(
                                 colors: [accent.opacity(0.40), .white.opacity(0.06)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.8
-                        )
-                )
+	                            ),
+	                            lineWidth: 0.8
+	                        )
+	                        .allowsHitTesting(false)
+	                )
                 .shadow(color: accent.opacity(0.16), radius: 22, y: 10)
         }
     }
@@ -519,21 +534,23 @@ extension View {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(SimastryColor.surface.opacity(0.74))
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.white.opacity(0.035))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(
+	            .overlay(
+	                RoundedRectangle(cornerRadius: cornerRadius)
+	                    .fill(Color.white.opacity(0.035))
+	                    .allowsHitTesting(false)
+	            )
+	            .overlay(
+	                RoundedRectangle(cornerRadius: cornerRadius)
+	                    .stroke(
                         LinearGradient(
                             colors: [.white.opacity(0.12), .white.opacity(0.04), .white.opacity(0.08)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 0.5
-                    )
-            )
+	                        ),
+	                        lineWidth: 0.5
+	                    )
+	                    .allowsHitTesting(false)
+	            )
             .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
     }
 }

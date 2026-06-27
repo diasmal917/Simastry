@@ -134,14 +134,16 @@ struct HomeView: View {
     }
 
     private var homeContent: some View {
-        ScrollView {
+        ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 14) {
                 Spacer().frame(height: 6)
 
                 // Today feed ordering: lead with the header, then the primary
-                // Ask the Future / Decode CTA and Daily Decider, then Aura, then
-                // the guide panel, then people/social, then learn/extra content.
+                // guide panel, then Ask the Future / Decode CTA and Daily
+                // Decider, then Aura, people/social, then learn/extra content.
                 todayHeader
+
+                panelCard
 
                 predictHeroCard
 
@@ -154,8 +156,6 @@ struct HomeView: View {
                 )
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 10)
-
-                panelCard
 
                 todayWithGuideCard
 
@@ -174,6 +174,7 @@ struct HomeView: View {
                 Spacer().frame(height: SimastrySpacing.tabBarClearance)
             }
             .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .onAppear {
                 streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
@@ -209,9 +210,11 @@ struct HomeView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity)
+        .clipped()
         .overlay {
             if isLoading {
-                ScrollView {
+                ScrollView(.vertical) {
                     VStack(spacing: 20) {
                         Spacer().frame(height: 16)
 
@@ -256,9 +259,12 @@ struct HomeView: View {
                         }
                     }
                     .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity)
                     .skeletonShimmer()
                 }
                 .scrollIndicators(.hidden)
+                .frame(maxWidth: .infinity)
+                .clipped()
                 .transition(.opacity)
             }
         }

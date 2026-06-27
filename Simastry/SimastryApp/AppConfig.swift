@@ -14,20 +14,22 @@ nonisolated enum AppConfig {
     static let astrologyTradition = "Western Tropical Synastry"
 
     static let deepLinkScheme = "simastry"
-    static let universalLinkHost = "simastry.vercel.app"
-    static let websiteURL = URL(string: "https://simastry.vercel.app")!
+    static let universalLinkHost = "simastry.com"
+    static let legacyUniversalLinkHosts = ["simastry.vercel.app", "simastry.app"]
+    static let websiteDisplayName = "Simastry.com"
+    static let websiteURL = URL(string: "https://simastry.com")!
     static let appStoreURL = websiteURL
 
     static let socialDiscoveryEnabled = true
     static let llmChatEnabled = true
     static let roomGuideReplyEnabled = false
 
-    static let privacyPolicyURL = URL(string: "https://simastry.vercel.app/privacy")!
-    static let termsOfServiceURL = URL(string: "https://simastry.vercel.app/terms")!
+    static let privacyPolicyURL = URL(string: "https://simastry.com/privacy")!
+    static let termsOfServiceURL = URL(string: "https://simastry.com/terms")!
     static let eulaURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 
-    static let astrologerDirectoryURL = URL(string: "https://simastry.vercel.app/astrologers")!
-    static let astrologerPartnerURL = URL(string: "https://simastry.vercel.app/partners")!
+    static let astrologerDirectoryURL = URL(string: "https://simastry.com/astrologers")!
+    static let astrologerPartnerURL = URL(string: "https://simastry.com/partners")!
     static let astrologerContactEmail = "astrologers@simastry.com"
 
     static let allValues: [String: String] = [

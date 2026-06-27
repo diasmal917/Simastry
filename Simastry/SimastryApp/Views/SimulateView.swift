@@ -23,6 +23,7 @@ struct SimulateView: View {
     @State private var phaseTask: Task<Void, Never>?
     @State private var showTopUpSheet = false
     @State private var showAuraSnapshotSheet = false
+    @State private var hasAdvancedPastCategory: Bool = false
 
     private var suggestionChips: [String] {
         selectedCategory.suggestedQuestions
@@ -55,6 +56,34 @@ struct SimulateView: View {
                 && selectedSunSign != nil
         }
         return true
+    }
+
+    private var nextPredictActionTitle: String {
+        if !hasAdvancedPastCategory {
+            return "Continue"
+        }
+        if selectedCategory.requiresTargetSign && selectedSunSign == nil {
+            return "Add their Sun"
+        }
+        if selectedCategory.requiresConversation,
+           conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Paste conversation"
+        }
+        return selectedCategory.actionTitle
+    }
+
+    private var nextPredictActionSubtitle: String {
+        if !hasAdvancedPastCategory {
+            return "Step 2 of 3"
+        }
+        if selectedCategory.requiresTargetSign && selectedSunSign == nil {
+            return "Required for reply predictions"
+        }
+        if selectedCategory.requiresConversation,
+           conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Add the thread before asking"
+        }
+        return "Ready for step 3"
     }
 
     private var currentPhaseText: String {
@@ -187,36 +216,28 @@ struct SimulateView: View {
         ZStack {
             CelestialBackground()
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    header
-                    categorySection
-                    modeCard
-                    AuraSnapshotCard(
-                        snapshot: viewModel.auraSnapshot,
-                        compact: true,
-                        onOpen: { showAuraSnapshotSheet = true },
-                        onClear: { viewModel.clearAuraSnapshot() }
-                    )
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 14)
-                    methodLayerCard
-                    if selectedCategory.requiresConversation {
-                        conversationSection
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 24) {
+                        header
+                            .id("predict.header")
+                        predictStepRail
+                        guidedPredictionFlow
+                        historySection
                     }
-                    if selectedCategory.allowsTargetSign {
-                        signSection
-                    }
-                    textingStyleTip
-                    questionSection
-                    actionSection
-                    historySection
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, SimastrySpacing.tabBarClearance + 92)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, SimastrySpacing.tabBarClearance)
+                .scrollIndicators(.hidden)
+                .onChange(of: selectedCategory) { _, _ in
+                    guard hasAdvancedPastCategory else { return }
+                    scrollToNextPredictStep(proxy)
+                }
             }
-            .scrollIndicators(.hidden)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            predictBottomAction
         }
         .navigationTitle("Ask the Future")
         .navigationBarTitleDisplayMode(.inline)
@@ -294,6 +315,48 @@ struct SimulateView: View {
         .offset(y: appeared ? 0 : 10)
     }
 
+    private var predictStepRail: some View {
+        HStack(spacing: 8) {
+            predictStepPill(number: 1, title: "Choose", isActive: true, isDone: hasAdvancedPastCategory)
+            predictStepConnector(isDone: hasAdvancedPastCategory)
+            predictStepPill(number: 2, title: "Details", isActive: hasAdvancedPastCategory && !canGenerate, isDone: canGenerate)
+            predictStepConnector(isDone: canGenerate)
+            predictStepPill(number: 3, title: "Answer", isActive: canGenerate, isDone: false)
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.045), in: Capsule())
+        .overlay {
+            Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.7)
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
+        .accessibilityIdentifier("predict.stepFlow")
+    }
+
+    private func predictStepPill(number: Int, title: String, isActive: Bool, isDone: Bool) -> some View {
+        HStack(spacing: 6) {
+            Text("\(number)")
+                .font(SimastryFont.microBold)
+                .foregroundStyle(isActive || isDone ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                .frame(width: 18, height: 18)
+                .background(isActive || isDone ? SimastryColor.gold : Color.white.opacity(0.08), in: Circle())
+
+            Text(title)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(isActive || isDone ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func predictStepConnector(isDone: Bool) -> some View {
+        Capsule()
+            .fill(isDone ? SimastryColor.gold.opacity(0.55) : Color.white.opacity(0.12))
+            .frame(width: 16, height: 2)
+            .accessibilityHidden(true)
+    }
+
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionLabel("Choose a question type")
@@ -315,6 +378,7 @@ struct SimulateView: View {
             HapticManager.buttonPress()
             withAnimation(.spring(SimastrySpring.snappy)) {
                 selectedCategory = category
+                hasAdvancedPastCategory = true
                 if questionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     || !category.suggestedQuestions.contains(questionText) {
                     questionText = category.defaultQuestion
@@ -371,6 +435,215 @@ struct SimulateView: View {
         .accessibilityLabel("Ask about \(category.title)")
     }
 
+    private var guidedPredictionFlow: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            guidedQuestionBlock(
+                number: 1,
+                title: "What are we reading?",
+                subtitle: "Pick the shape of the question first."
+            ) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    ForEach(FutureQuestionCategory.allCases) { category in
+                        categoryCard(category)
+                    }
+                }
+            }
+            .id("predict.category")
+
+            guidedQuestionBlock(
+                number: 2,
+                title: "What do you want to know?",
+                subtitle: selectedCategory.defaultQuestion
+            ) {
+                questionInputContent
+            }
+            .id("predict.question")
+
+            if selectedCategory.allowsTargetSign {
+                guidedQuestionBlock(
+                    number: 3,
+                    title: selectedCategory.requiresTargetSign ? "Who is this about?" : "Any other person involved?",
+                    subtitle: selectedCategory.requiresTargetSign ? "Add their Sun sign. Moon and Rising make it sharper." : "Optional, but it gives the reading a person to hold onto."
+                ) {
+                    signSelectionContent
+                }
+                .id("predict.signs")
+            }
+
+            if selectedCategory.requiresConversation {
+                guidedQuestionBlock(
+                    number: 4,
+                    title: "What happened in the thread?",
+                    subtitle: "Paste the conversation or import a screenshot."
+                ) {
+                    conversationInputContent
+                }
+                .id("predict.conversation")
+            }
+
+            guidedQuestionBlock(
+                number: selectedCategory.requiresConversation ? 5 : (selectedCategory.allowsTargetSign ? 4 : 3),
+                title: "Ready for the crystal ball?",
+                subtitle: "Simastry turns the chart signals into an answer, a likely window, and one next move."
+            ) {
+                actionSection
+            }
+            .id("predict.action")
+
+            DisclosureGroup {
+                VStack(spacing: 16) {
+                    AuraSnapshotCard(
+                        snapshot: viewModel.auraSnapshot,
+                        compact: true,
+                        onOpen: { showAuraSnapshotSheet = true },
+                        onClear: { viewModel.clearAuraSnapshot() }
+                    )
+                    methodLayerCard
+                }
+                .padding(.top, 10)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "scope")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                    Text("Signals used")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                }
+            }
+            .tint(SimastryColor.gold)
+            .padding(16)
+            .simastryGlass(cornerRadius: 18)
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+    }
+
+    private func guidedQuestionBlock<Content: View>(
+        number: Int,
+        title: String,
+        subtitle: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Text("\(number)")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(width: 28, height: 28)
+                    .background(SimastryColor.gold, in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text(subtitle)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            content()
+        }
+        .padding(16)
+        .simastryGlass(cornerRadius: 22)
+    }
+
+    private var predictBottomAction: some View {
+        VStack(spacing: 0) {
+            Divider()
+                .overlay(Color.white.opacity(0.08))
+
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectedCategory.shortTitle)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(selectedCategory.accentColor)
+                        .lineLimit(1)
+                    Text(nextPredictActionSubtitle)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 10)
+
+                Button {
+                    advancePredictionFlow()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(nextPredictActionTitle)
+                            .font(SimastryFont.labelLarge)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                        Image(systemName: canGenerate ? "sparkles" : "arrow.down")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.offWhite)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .background(
+                        canGenerate
+                            ? AnyShapeStyle(SimastryGradient.gold)
+                            : AnyShapeStyle(Color.white.opacity(0.08)),
+                        in: Capsule()
+                    )
+                    .overlay {
+                        Capsule().stroke(canGenerate ? SimastryColor.goldLight.opacity(0.32) : Color.white.opacity(0.12), lineWidth: 0.7)
+                    }
+                }
+                .buttonStyle(SpringPressStyle())
+                .accessibilityIdentifier("predict.stickyAction")
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 10)
+            .background(.ultraThinMaterial)
+        }
+    }
+
+    private func advancePredictionFlow() {
+        HapticManager.buttonPress()
+        withAnimation(.spring(SimastrySpring.snappy)) {
+            hasAdvancedPastCategory = true
+        }
+
+        if canGenerate {
+            Task { await generatePrediction() }
+            return
+        }
+
+        if selectedCategory.requiresTargetSign && selectedSunSign == nil {
+            viewModel.showToast("Add their Sun", subtitle: "That is the one required sign for reply predictions.", isError: false)
+            return
+        }
+
+        if selectedCategory.requiresConversation,
+           conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            viewModel.showToast("Paste the conversation", subtitle: "Add the thread, then ask for the read.", isError: false)
+            return
+        }
+    }
+
+    private func scrollToNextPredictStep(_ proxy: ScrollViewProxy) {
+        let target: String
+        if selectedCategory.requiresTargetSign && selectedSunSign == nil {
+            target = "predict.signs"
+        } else if selectedCategory.requiresConversation,
+                  conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            target = "predict.conversation"
+        } else {
+            target = "predict.question"
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                proxy.scrollTo(target, anchor: .top)
+            }
+        }
+    }
+
     private var modeCard: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: selectedCategory.systemImage)
@@ -419,6 +692,90 @@ struct SimulateView: View {
         )
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 16)
+    }
+
+    private var conversationInputContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Spacer()
+                importScreenshotButton
+            }
+
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $conversationText)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 128, maxHeight: 220)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .padding(12)
+                    .background(.clear)
+
+                if conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Paste the actual messages here.")
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 20)
+                        .allowsHitTesting(false)
+                }
+            }
+            .surfaceCard(cornerRadius: 18, accent: SimastryColor.risingViolet.opacity(0.6))
+            .accessibilityLabel("Paste your conversation")
+
+            HStack(spacing: 5) {
+                Image(systemName: SimastryIcon.privacy)
+                    .font(SimastryFont.microMedium)
+                Text("Screenshots are read on this iPhone before any AI generation.")
+                    .font(SimastryFont.captionSmall)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(SimastryColor.deepMuted)
+        }
+        .onChange(of: screenshotPickerItem) {
+            guard let item = screenshotPickerItem else { return }
+            screenshotPickerItem = nil
+            importScreenshot(item)
+        }
+    }
+
+    private var signSelectionContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            signPickerRow(title: "Sun", selection: $selectedSunSign, required: selectedCategory.requiresTargetSign)
+            signPickerRow(title: "Moon", selection: $selectedMoonSign, required: false)
+            signPickerRow(title: "Rising", selection: $selectedRisingSign, required: false)
+            textingStyleTip
+        }
+    }
+
+    private var questionInputContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TextField(selectedCategory.defaultQuestion, text: $questionText)
+                .textInputAutocapitalization(.sentences)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .foregroundStyle(SimastryColor.offWhite)
+                .surfaceCard(cornerRadius: 18, accent: selectedCategory.accentColor.opacity(0.6))
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(suggestionChips, id: \.self) { chip in
+                        Button {
+                            HapticManager.buttonPress()
+                            questionText = chip
+                        } label: {
+                            Text(chip)
+                                .font(SimastryFont.labelMedium)
+                                .foregroundStyle(questionText == chip ? SimastryColor.midnight : SimastryColor.offWhite)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(questionText == chip ? SimastryColor.gold : .white.opacity(0.06), in: .capsule)
+                        }
+                        .buttonStyle(SpringPressStyle())
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            .contentMargins(.horizontal, 0)
+        }
     }
 
     private var conversationSection: some View {
@@ -615,47 +972,97 @@ struct SimulateView: View {
     @ViewBuilder
     private var actionSection: some View {
         if isGenerating {
-            VStack(spacing: 14) {
+            VStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .stroke(SimastryColor.mutedSilver.opacity(0.16), lineWidth: 10)
-                        .frame(width: 82, height: 82)
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    selectedCategory.accentColor.opacity(0.24),
+                                    SimastryColor.midnight.opacity(0.05)
+                                ],
+                                center: .center,
+                                startRadius: 8,
+                                endRadius: 72
+                            )
+                        )
+                        .frame(width: 142, height: 142)
 
                     Circle()
-                        .trim(from: 0.08, to: 0.76)
+                        .stroke(SimastryColor.mutedSilver.opacity(0.16), lineWidth: 12)
+                        .frame(width: 112, height: 112)
+
+                    Circle()
+                        .trim(from: 0.04, to: 0.72)
                         .stroke(
                             LinearGradient(
-                                colors: [SimastryColor.risingViolet, SimastryColor.celestialBlue],
+                                colors: [selectedCategory.accentColor, SimastryColor.celestialBlue, SimastryColor.gold],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                            style: StrokeStyle(lineWidth: 12, lineCap: .round)
                         )
-                        .frame(width: 82, height: 82)
-                        .rotationEffect(.degrees(Double(progressPhaseIndex) * 92))
-                        .animation(.spring(SimastrySpring.smooth), value: progressPhaseIndex)
+                        .frame(width: 112, height: 112)
+                        .rotationEffect(.degrees(Double(progressPhaseIndex) * 110))
+                        .animation(reduceMotion ? nil : .spring(SimastrySpring.smooth), value: progressPhaseIndex)
 
-                    PredictionOrbIcon(size: 44, animated: true, glow: selectedCategory.accentColor)
+                    PredictionOrbIcon(size: 78, animated: !reduceMotion, glow: selectedCategory.accentColor)
                 }
+                .accessibilityHidden(true)
 
-                Text(currentPhaseText)
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.offWhite)
+                VStack(spacing: 6) {
+                    Text("Crystal ball is reading")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+
+                    Text(currentPhaseText)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.88))
 
                     Text(selectedCategory == .messageOutcome ? "Reading the thread through placement logic." : "Reading timing through chart patterns.")
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-            .surfaceCard(cornerRadius: 22, accent: selectedCategory.accentColor.opacity(0.7))
+            .padding(.vertical, 28)
+            .padding(.horizontal, 16)
+            .background(
+                LinearGradient(
+                    colors: [selectedCategory.accentColor.opacity(0.16), Color.white.opacity(0.04)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(selectedCategory.accentColor.opacity(0.16), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(selectedCategory.accentColor.opacity(0.20), lineWidth: 1)
             }
         } else {
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 bonusPredictionBadge
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: selectedCategory.systemImage)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(selectedCategory.accentColor)
+                        Text(selectedCategory.title)
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Spacer()
+                    }
+
+                    Text(canGenerate ? "You have enough context to ask." : nextPredictActionSubtitle)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14)
+                .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 Button {
                     Task {
@@ -802,16 +1209,12 @@ struct SimulateView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 12) {
                     ForEach(ZodiacSign.allCases) { sign in
-                        VStack(spacing: 6) {
-                            ZodiacBadgeView(sign: sign, isSelected: selection.wrappedValue == sign, size: 44) {
-                                selection.wrappedValue = sign
-                            }
-                            .accessibilityLabel("Choose \(sign.displayName) as \(title) sign")
-                            Text(sign.displayName)
-                                .font(SimastryFont.labelSmall)
-                                .foregroundStyle(selection.wrappedValue == sign ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                        ZodiacBadgeView(sign: sign, isSelected: selection.wrappedValue == sign, size: 48) {
+                            selection.wrappedValue = sign
                         }
-                        .frame(width: 56)
+                        .frame(width: 56, height: 56)
+                        .accessibilityLabel("Choose \(sign.displayName) as \(title) sign")
+                        .accessibilityIdentifier("predict.sign.\(title.lowercased()).\(sign.rawValue)")
                     }
                 }
             }

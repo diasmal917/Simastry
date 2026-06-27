@@ -129,9 +129,10 @@ struct ShareableCardView: View {
 
                 Spacer(minLength: 8)
 
-                if let sun = viewModel.userSunSign,
-                   let moon = viewModel.userMoonSign,
-                   let rising = viewModel.userRisingSign {
+                if let sun = viewModel.userSunSign {
+                    let moon = viewModel.userMoonSign
+                    let rising = viewModel.userRisingSign
+
                     VStack(spacing: isStoryFormat ? 16 : 9) {
                         shareIdentityRow(sun: sun, moon: moon, rising: rising)
 
@@ -143,7 +144,7 @@ struct ShareableCardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        howToTalkBlock(sun: sun)
+                        howToTalkBlock(sun: sun, moon: moon, rising: rising)
                     }
                     .padding(.horizontal, 16)
                 }
@@ -155,7 +156,7 @@ struct ShareableCardView: View {
                         .padding(.bottom, 4)
                 }
 
-                Text(AppConfig.universalLinkHost)
+                Text(AppConfig.websiteDisplayName)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 18 : 10)
@@ -163,33 +164,39 @@ struct ShareableCardView: View {
         }
     }
 
-    private func shareIdentityRow(sun: ZodiacSign, moon: ZodiacSign, rising: ZodiacSign) -> some View {
+    private func shareIdentityRow(sun: ZodiacSign, moon: ZodiacSign?, rising: ZodiacSign?) -> some View {
         HStack(spacing: isStoryFormat ? 8 : 7) {
-            ProfileImageView(
-                image: viewModel.profileImage,
-                size: isStoryFormat ? 52 : 42,
-                sunSign: sun
-            )
-            .help("Source: your Simastry profile photo.")
-
-            ShareGlyphTrio(
-                sun: sun,
-                moon: moon,
-                rising: rising,
+            ShareGlyphCircle(
+                sign: sun,
                 circleSize: isStoryFormat ? 52 : 43,
-                iconSize: isStoryFormat ? 48 : 39,
-                spacing: isStoryFormat ? 8 : 7
+                iconSize: isStoryFormat ? 48 : 39
             )
+
+            if let moon {
+                ShareGlyphCircle(
+                    sign: moon,
+                    circleSize: isStoryFormat ? 52 : 43,
+                    iconSize: isStoryFormat ? 48 : 39
+                )
+            }
+
+            if let rising {
+                ShareGlyphCircle(
+                    sign: rising,
+                    circleSize: isStoryFormat ? 52 : 43,
+                    iconSize: isStoryFormat ? 48 : 39
+                )
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Profile photo with Sun \(sun.displayName), Moon \(moon.displayName), and Rising \(rising.displayName)")
+        .accessibilityLabel(shareIdentityAccessibilityLabel(sun: sun, moon: moon, rising: rising))
     }
 
-    private func howToTalkBlock(sun: ZodiacSign) -> some View {
+    private func howToTalkBlock(sun: ZodiacSign, moon: ZodiacSign?, rising: ZodiacSign?) -> some View {
         let copy = CommunicationTemplates.shareCardCopy[sun]
 
         return VStack(spacing: isStoryFormat ? 9 : 7) {
-            Text("How to Talk to a \(sun.displayName)")
+            Text(shareHowToTalkTitle(sun: sun, moon: moon, rising: rising))
                 .font(isStoryFormat ? SimastryFont.titleSmall : SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.offWhite)
                 .multilineTextAlignment(.center)
@@ -220,6 +227,43 @@ struct ShareableCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(.white.opacity(0.06), in: .rect(cornerRadius: 12))
+    }
+
+    private func shareHowToTalkTitle(sun: ZodiacSign, moon: ZodiacSign?, rising: ZodiacSign?) -> String {
+        var title = "How to Talk to \(article(for: sun)) \(sun.displayName)"
+        var placements: [String] = []
+
+        if let rising {
+            placements.append("\(rising.displayName) Rising")
+        }
+        if let moon {
+            placements.append("\(moon.displayName) Moon")
+        }
+        if !placements.isEmpty {
+            title += " with \(placements.joined(separator: " and "))"
+        }
+
+        return title
+    }
+
+    private func article(for sign: ZodiacSign) -> String {
+        switch sign {
+        case .aries, .aquarius:
+            return "an"
+        default:
+            return "a"
+        }
+    }
+
+    private func shareIdentityAccessibilityLabel(sun: ZodiacSign, moon: ZodiacSign?, rising: ZodiacSign?) -> String {
+        var parts = ["Sun \(sun.displayName)"]
+        if let moon {
+            parts.append("Moon \(moon.displayName)")
+        }
+        if let rising {
+            parts.append("Rising \(rising.displayName)")
+        }
+        return parts.joined(separator: ", ")
     }
 
     private var compatibilityCard: some View {
@@ -265,7 +309,7 @@ struct ShareableCardView: View {
 
                 Spacer()
 
-                Text(AppConfig.universalLinkHost)
+                Text(AppConfig.websiteDisplayName)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)
@@ -302,7 +346,7 @@ struct ShareableCardView: View {
 
                 Spacer()
 
-                Text(AppConfig.universalLinkHost)
+                Text(AppConfig.websiteDisplayName)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.5))
                     .padding(.bottom, isStoryFormat ? 20 : 12)

@@ -13,6 +13,7 @@ class AppViewModel {
     var isAuthenticated: Bool = false
     #if DEBUG
     var isDebugPreviewStateActive: Bool = false
+    var keepsDebugRelationshipPeopleEmpty: Bool = false
     #endif
     var profile: UserProfile?
     var companions: [CompanionData] = []
@@ -186,10 +187,6 @@ class AppViewModel {
     }
     var showUpsell: Bool = false
     var selectedTab: AppTab = .today
-    var selectedTabIndex: Int {
-        get { selectedTab.rawValue }
-        set { selectedTab = AppTab(normalizing: newValue) }
-    }
     var aiAstrologistsRouteRequest: Int = 0
     var predictRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the Aura sheet.
@@ -511,6 +508,12 @@ class AppViewModel {
     }
 
     func loadRelationshipPeople() {
+        #if DEBUG
+        if keepsDebugRelationshipPeopleEmpty {
+            relationshipPeople = []
+            return
+        }
+        #endif
         relationshipPeople = relationshipPeopleStore.loadPeople()
     }
 
@@ -705,6 +708,11 @@ class AppViewModel {
     }
 
     private func saveRelationshipPeople() {
+        #if DEBUG
+        if isDebugPreviewStateActive {
+            return
+        }
+        #endif
         relationshipPeopleStore.savePeople(relationshipPeople)
     }
 
@@ -1280,9 +1288,7 @@ class AppViewModel {
             companions.append(companion)
             showToast("Couldn't remove companion", subtitle: "Try again in a moment", isError: true)
         }
-        if companions.isEmpty {
-            homeSetupPhase = .modeSelection
-        }
+        syncHomeSetupPhase()
         await setupNotifications()
         updateWidgetData()
     }
@@ -2620,11 +2626,21 @@ class AppViewModel {
         }
 
         await consumeMessage()
-        scheduleCompanionReply(companionId: companionId, companionName: companionName, companionSign: companionSign)
+        scheduleCompanionReply(
+            companionId: companionId,
+            companionName: companionName,
+            companionSign: companionSign,
+            latestUserText: trimmed
+        )
         return true
     }
 
-    private func scheduleCompanionReply(companionId: UUID, companionName: String, companionSign: String) {
+    private func scheduleCompanionReply(
+        companionId: UUID,
+        companionName: String,
+        companionSign: String,
+        latestUserText: String
+    ) {
         guard !typingCompanionIds.contains(companionId) else { return }
         typingCompanionIds.insert(companionId)
 
@@ -2653,7 +2669,9 @@ class AppViewModel {
                 content: llmContent ?? self.composeCompanionReply(
                     signName: companionSign,
                     threadCount: threadCount,
-                    mode: self.guideChatMode(for: companionId)
+                    mode: self.guideChatMode(for: companionId),
+                    latestUserText: latestUserText,
+                    user: self.llmUserContext
                 ),
                 timestamp: Date(),
                 isRead: self.openCompanionThreadId == companionId,
@@ -2669,10 +2687,26 @@ class AppViewModel {
     /// plus one guidance beat, rotated by thread length so it doesn't repeat.
     /// The active chat mode picks the guidance register; check-in skips the
     /// opener entirely — reflective replies shouldn't start with banter.
-    private func composeCompanionReply(signName: String, threadCount: Int, mode: GuideChatMode = .bestFriend) -> String {
+    private func composeCompanionReply(
+        signName: String,
+        threadCount: Int,
+        mode: GuideChatMode = .bestFriend,
+        latestUserText: String = "",
+        user: GuideReplyService.UserContext? = nil
+    ) -> String {
         let sign = ZodiacSign(rawValue: signName.lowercased())
             ?? ZodiacSign.allCases.first { $0.displayName.lowercased() == signName.lowercased() }
             ?? .sagittarius
+
+        if let compactReply = GuideReplyService.humanChatFallback(
+            latestUserText: latestUserText,
+            sign: sign,
+            threadCount: threadCount,
+            mode: mode,
+            user: user
+        ) {
+            return compactReply
+        }
 
         let element = sign.element.rawValue
         let openers = mode == .checkIn ? [] : (AstrologyTemplates.companionReplyOpeners[element] ?? [])
@@ -3049,7 +3083,9 @@ class AppViewModel {
     }
 
     private func syncHomeSetupPhase() {
-        if hasCompletedSigns && hasCompanion {
+        // The completed Today feed, including Nadia's guide panel, only needs
+        // the user's chart. A saved companion is no longer required to enter it.
+        if hasCompletedSigns {
             homeSetupPhase = .complete
         } else {
             homeSetupPhase = .modeSelection
@@ -3249,11 +3285,13 @@ extension AppViewModel {
 
         isAuthenticated = true
         isDebugPreviewStateActive = true
+        keepsDebugRelationshipPeopleEmpty = false
         isAgeVerified = true
         hasAcceptedThirdPartyConsent = true
         currentScreen = .home
         homeSetupPhase = .complete
         clearFirstReadDraft()
+        clearGuideFeedback()
 
         profile = UserProfile(
             id: userId,
@@ -3348,6 +3386,13 @@ extension AppViewModel {
 
         UserDefaults.standard.set("MAYA2626", forKey: Self.personalInviteCodeKey)
 
+        if let previewWalletAddress = debugPreviewValue(after: "-SimastryPreviewWallet", from: arguments),
+           Self.isSupportedPublicWalletAddress(previewWalletAddress) {
+            auraWalletPublicAddress = previewWalletAddress
+            auraWalletLastCheckedAt = now
+            useAuraWalletForAura = true
+        }
+
         switch debugPreviewScreen(from: arguments) {
         case "onboardingInsight":
             homeSetupPhase = .onboardingInsight
@@ -3383,6 +3428,16 @@ extension AppViewModel {
             selectedTab = .me
         case "invite":
             selectedTab = .me
+        case "profilePartial":
+            profile = UserProfile.createDefault(id: userId)
+            userSunSign = nil
+            userMoonSign = nil
+            userRisingSign = nil
+            companions = []
+            companionMessages = []
+            relationshipPeople = []
+            homeSetupPhase = .modeSelection
+            selectedTab = .today
         case "aura":
             selectedTab = .me
             Task { @MainActor in
@@ -3438,6 +3493,10 @@ extension AppViewModel {
                 try? await Task.sleep(for: .seconds(1))
                 self.teamReadRouteRequest += 1
             }
+        case "peopleEmpty":
+            relationshipPeople = []
+            keepsDebugRelationshipPeopleEmpty = true
+            selectedTab = .people
         case "recap":
             seedDebugPanelMessages(now: now)
             relationshipPeople = RelationshipPeopleStore.previewPeople()
@@ -3696,6 +3755,14 @@ extension AppViewModel {
         }
 
         return min(max(tab, 0), 5)
+    }
+
+    private func debugPreviewValue(after flag: String, from arguments: [String]) -> String? {
+        guard let flagIndex = arguments.firstIndex(of: flag),
+              arguments.indices.contains(arguments.index(after: flagIndex)) else {
+            return nil
+        }
+        return arguments[arguments.index(after: flagIndex)]
     }
 }
 #endif

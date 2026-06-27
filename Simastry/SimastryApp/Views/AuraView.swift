@@ -741,7 +741,7 @@ private struct AuraShareCard: View {
                 metric("Lit bars", "\(summary.litBars)")
             }
 
-            Text(AppConfig.universalLinkHost)
+            Text(AppConfig.websiteDisplayName)
                 .font(SimastryFont.captionSmall)
                 .foregroundStyle(SimastryColor.gold.opacity(0.5))
                 .frame(maxWidth: .infinity)

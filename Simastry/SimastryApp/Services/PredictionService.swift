@@ -539,7 +539,9 @@ nonisolated final class PredictionService {
         tone: SimulationTone?
     ) {
         // Try JSON parsing first (if Claude returns structured JSON)
-        if let jsonData = text.data(using: .utf8),
+        let sanitizedText = Self.extractJSONObject(from: text) ?? text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let jsonData = sanitizedText.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
             let directAnswer = cleanParsedText(json["direct_answer"] as? String)
             let message = cleanParsedText(json["predicted_message"] as? String) ?? directAnswer ?? ""
@@ -559,12 +561,12 @@ nonisolated final class PredictionService {
         var confidence = 75
         var tone: SimulationTone? = nil
 
-        let sections = text.components(separatedBy: "\n\n")
+        let sections = sanitizedText.components(separatedBy: "\n\n")
         if sections.count >= 2 {
             message = sections[0].trimmingCharacters(in: .whitespacesAndNewlines)
             breakdown = sections[1...].joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
-            message = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            message = sanitizedText.trimmingCharacters(in: .whitespacesAndNewlines)
             breakdown = "Based on the astrological compatibility between these signs."
         }
 
@@ -575,7 +577,7 @@ nonisolated final class PredictionService {
         }
 
         // Detect tone
-        let lowerText = text.lowercased()
+        let lowerText = sanitizedText.lowercased()
         if lowerText.contains("playful") || lowerText.contains("flirty") { tone = .playful }
         else if lowerText.contains("guarded") || lowerText.contains("defensive") { tone = .guarded }
         else if lowerText.contains("warm") || lowerText.contains("friendly") { tone = .warm }
@@ -588,10 +590,31 @@ nonisolated final class PredictionService {
 
     private func cleanParsedText(_ raw: String?) -> String? {
         guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !trimmed.isEmpty else {
+              !trimmed.isEmpty,
+              !Self.looksLikeCodeOrJSON(trimmed) else {
             return nil
         }
         return trimmed
+    }
+
+    private static func extractJSONObject(from text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let start = trimmed.firstIndex(of: "{"),
+              let end = trimmed.lastIndex(of: "}"),
+              start <= end else {
+            return nil
+        }
+        return String(trimmed[start...end])
+    }
+
+    private static func looksLikeCodeOrJSON(_ value: String) -> Bool {
+        let lower = value.lowercased()
+        return lower.contains("```")
+            || lower.hasPrefix("{")
+            || lower.hasPrefix("[")
+            || lower.contains("\"predicted_message\"")
+            || lower.contains("\"direct_answer\"")
+            || lower.contains("astrological_breakdown")
     }
 
     func loadHistory() -> [PredictionResult] {

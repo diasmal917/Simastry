@@ -50,7 +50,7 @@ struct ContentView: View {
                 .zIndex(5)
             }
         }
-        .preferredColorScheme(viewModel.isDarkMode ? .dark : .light)
+        .preferredColorScheme(.dark)
         .task {
             #if DEBUG
             if viewModel.applyDebugPreviewStateIfRequested() {

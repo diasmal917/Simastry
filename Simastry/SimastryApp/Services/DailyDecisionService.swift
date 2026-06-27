@@ -136,7 +136,7 @@ nonisolated final class DailyDecisionService {
     }
 
     private func parse(_ text: String) -> ParsedDecision? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = Self.extractJSONObject(from: text) ?? text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
         if let data = trimmed.data(using: .utf8),
@@ -144,12 +144,7 @@ nonisolated final class DailyDecisionService {
             return clean(parsed)
         }
 
-        return ParsedDecision(
-            pick: trimmed,
-            whyToday: "This is the cleanest low-friction move for today.",
-            tinyNextMove: "Choose it now, then stop reopening the decision.",
-            safetyNote: nil
-        )
+        return nil
     }
 
     private func clean(_ parsed: ParsedDecision) -> ParsedDecision? {
@@ -168,10 +163,31 @@ nonisolated final class DailyDecisionService {
 
     private func clean(_ value: String?) -> String? {
         guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !trimmed.isEmpty else {
+              !trimmed.isEmpty,
+              !Self.looksLikeCodeOrJSON(trimmed) else {
             return nil
         }
         return trimmed
+    }
+
+    private static func extractJSONObject(from text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let start = trimmed.firstIndex(of: "{"),
+              let end = trimmed.lastIndex(of: "}"),
+              start <= end else {
+            return nil
+        }
+        return String(trimmed[start...end])
+    }
+
+    private static func looksLikeCodeOrJSON(_ value: String) -> Bool {
+        let lower = value.lowercased()
+        return lower.contains("```")
+            || lower.hasPrefix("{")
+            || lower.hasPrefix("[")
+            || lower.contains("\"pick\"")
+            || lower.contains("why_today")
+            || lower.contains("tiny_next_move")
     }
 
     private static func fallbackLines(

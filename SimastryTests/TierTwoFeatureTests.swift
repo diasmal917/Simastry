@@ -478,6 +478,69 @@ struct TierTwoFeatureTests {
         #expect(capturedPrompt.user.contains("Private message text:\nnot provided"))
     }
 
+    @Test func dailyDecisionParsesFencedJsonWithoutShowingCode() async {
+        let service = DailyDecisionService()
+        service.isRemoteChannelAvailable = { true }
+        service.replyChannel = { _, _ in
+            """
+            ```json
+            {
+              "pick": "Wear the clean black sweater.",
+              "why_today": "It keeps the signal simple and lets your Libra rising do the polishing.",
+              "tiny_next_move": "Put it on before reopening the closet.",
+              "safety_note": null
+            }
+            ```
+            """
+        }
+
+        let decision = await service.generateDecision(
+            category: .wear,
+            context: DailyDecisionContext(
+                userSunSign: .sagittarius,
+                userMoonSign: .cancer,
+                userRisingSign: .libra
+            )
+        )
+
+        #expect(!decision.isFallback)
+        #expect(decision.pick == "Wear the clean black sweater.")
+        #expect(!decision.pick.contains("```"))
+        #expect(!decision.pick.contains("\"pick\""))
+    }
+
+    @Test func predictionParsesFencedJsonWithoutShowingCode() async throws {
+        let service = makeIsolatedPredictionService()
+        service.isRemoteChannelAvailable = { true }
+        service.replyChannel = { _, _ in
+            """
+            Here you go:
+            ```json
+            {"predicted_message":"Yes, but choose the visible lane.","direct_answer":"Yes, success is likely if you choose the visible lane.","timing_window":"the next quarter","astrological_breakdown":"Leo Sun wants visibility while Taurus Moon needs repeatable structure.","practical_next_move":"Put one useful result in front of a decision maker this week.","safety_note":null,"confidence":69,"tone":"confident"}
+            ```
+            """
+        }
+
+        let request = PredictionRequest(
+            mode: .whatWillTheySay,
+            category: .careerSuccess,
+            conversationText: "",
+            userSunSign: .leo,
+            userMoonSign: .taurus,
+            userRisingSign: nil,
+            targetSunSign: nil,
+            targetMoonSign: nil,
+            targetRisingSign: nil,
+            question: "Will I be successful?",
+            hypotheticalReply: nil
+        )
+
+        let result = try await service.generatePrediction(request: request, tier: "free")
+        #expect(result.directAnswer == "Yes, success is likely if you choose the visible lane.")
+        #expect(result.predictedMessage == "Yes, but choose the visible lane.")
+        #expect(!result.predictedMessage.contains("```"))
+    }
+
     @Test func auraSnapshotTunesDailyDecisionPromptAndFallback() async {
         let descriptor = AuraSnapshotDescriptor(
             auraColor: "gold",

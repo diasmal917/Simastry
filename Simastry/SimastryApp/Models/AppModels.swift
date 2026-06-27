@@ -1,11 +1,11 @@
 import Foundation
 import SwiftUI
 
-nonisolated enum AppTab: Int, CaseIterable, Codable, Identifiable, Sendable {
+nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sendable {
     case today = 0
     case people = 1
     case messages = 2
-    case me = 5
+    case me = 3
 
     var id: Int { rawValue }
 
@@ -15,7 +15,7 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Identifiable, Sendable {
             self = .people
         case Self.messages.rawValue:
             self = .messages
-        case Self.me.rawValue:
+        case Self.me.rawValue, 5:
             self = .me
         default:
             self = .today
@@ -548,7 +548,7 @@ nonisolated enum DeepLink: Equatable, Sendable {
 
     /// Attempts to parse a `DeepLink` from either a custom-scheme URL
     /// (`simastry://compatibility/aries/leo`) or a universal link
-    /// (`https://simastry.vercel.app/share/compatibility/aries/leo`).
+    /// (`https://simastry.com/share/compatibility/aries/leo`).
     static func from(url: URL) -> DeepLink? {
         let pathComponents: [String]
 
@@ -558,13 +558,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             let trailing = url.pathComponents.filter { $0 != "/" }
             pathComponents = [host] + trailing
         } else if let host = url.host,
-                  [
-                    AppConfig.universalLinkHost,
-                    "www.\(AppConfig.universalLinkHost)",
-                    "simastry.app",
-                    "www.simastry.app"
-                  ].contains(host) {
-            // https://simastry.vercel.app/share/compatibility/aries/leo
+                  Self.acceptedUniversalLinkHosts.contains(host.lowercased()) {
+            // https://simastry.com/share/compatibility/aries/leo
             var raw = url.pathComponents.filter { $0 != "/" }
             // Strip the leading "share" segment used in universal links
             if raw.first == "share" { raw.removeFirst() }
@@ -614,6 +609,15 @@ nonisolated enum DeepLink: Equatable, Sendable {
         default:
             return nil
         }
+    }
+
+    private static var acceptedUniversalLinkHosts: Set<String> {
+        var hosts = Set([AppConfig.universalLinkHost, "www.\(AppConfig.universalLinkHost)"])
+        AppConfig.legacyUniversalLinkHosts.forEach { host in
+            hosts.insert(host)
+            hosts.insert("www.\(host)")
+        }
+        return hosts
     }
 
     /// Builds the custom-scheme URL for this deep link.

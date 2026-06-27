@@ -134,7 +134,7 @@ extension AppViewModel {
             }
     }
 
-    private var llmUserContext: GuideReplyService.UserContext {
+    var llmUserContext: GuideReplyService.UserContext {
         GuideReplyService.UserContext(
             name: (profile?.displayName ?? "").components(separatedBy: " ").first,
             sun: userSunSign,
@@ -164,7 +164,7 @@ extension AppViewModel {
                 feature: .panelChat,
                 system: prompt.system,
                 user: prompt.user,
-                maxTokens: 300
+                maxTokens: GuideReplyService.panelReplyMaxTokens
             )
         }
     }
@@ -214,6 +214,19 @@ extension AppViewModel {
         companionSign: String
     ) async -> String? {
         guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply else { return nil }
+        if let latest = companionConversation(with: companionId).last(where: { $0.direction == .outgoing }),
+           let sign = ZodiacSign(rawValue: companionSign.lowercased())
+            ?? ZodiacSign.allCases.first(where: { $0.displayName.lowercased() == companionSign.lowercased() }),
+           let fallback = GuideReplyService.humanChatFallback(
+                latestUserText: latest.content,
+                sign: sign,
+                threadCount: companionConversation(with: companionId).count,
+                mode: guideChatMode(for: companionId),
+                user: llmUserContext,
+                allowChartFallback: false
+           ) {
+            return fallback
+        }
         guard let prompt = makeCompanionReplyPromptForLLM(
             companionId: companionId,
             companionName: companionName,
@@ -228,7 +241,7 @@ extension AppViewModel {
                 feature: .companionChat,
                 system: prompt.system,
                 user: prompt.user,
-                maxTokens: 300
+                maxTokens: GuideReplyService.chatReplyMaxTokens
             )
         }
     }

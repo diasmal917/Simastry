@@ -8,12 +8,14 @@ struct SimastrySettingsView: View {
     @Environment(\.openURL) private var openURL
 
     @State private var walletAddressInput: String = ""
+    @State private var savedWalletAddress: String = ""
     @State private var showingPhantomInfo = false
     @State private var showingReadOnlyInfo = false
     @State private var showingClearDataConfirmation = false
     @State private var showingDeleteAccountConfirmation = false
     @State private var showingExportShare = false
     @State private var exportFileURL: URL?
+    @State private var lastWalletSaveActionAt: Date?
 
     private var trimmedWalletInput: String {
         walletAddressInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -21,6 +23,24 @@ struct SimastrySettingsView: View {
 
     private var walletInputIsValid: Bool {
         AppViewModel.isSupportedPublicWalletAddress(trimmedWalletInput)
+    }
+
+    private var visibleSavedWalletAddress: String {
+        let persisted = viewModel.auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !persisted.isEmpty {
+            return persisted
+        }
+        return savedWalletAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasVisibleAuraWalletContext: Bool {
+        !visibleSavedWalletAddress.isEmpty
+    }
+
+    private var visibleWalletShortAddress: String {
+        let trimmed = visibleSavedWalletAddress
+        guard trimmed.count > 12 else { return trimmed }
+        return "\(trimmed.prefix(6))...\(trimmed.suffix(4))"
     }
 
     var body: some View {
@@ -32,9 +52,9 @@ struct SimastrySettingsView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         header
                         accountSection
+                        auraWalletSection
                         notificationsSection
                         appearanceSection
-                        auraWalletSection
                         privacySection
                         aboutSection
                     }
@@ -55,6 +75,12 @@ struct SimastrySettingsView: View {
         }
         .onAppear {
             walletAddressInput = viewModel.auraWalletPublicAddress
+            savedWalletAddress = viewModel.auraWalletPublicAddress
+            #if DEBUG
+            if walletAddressInput.isEmpty, let testPasteboardValue = Self.uiTestPasteboardValue {
+                walletAddressInput = testPasteboardValue
+            }
+            #endif
         }
         .alert("Read-only Aura wallet", isPresented: $showingReadOnlyInfo) {
             Button("OK") {}
@@ -200,21 +226,6 @@ struct SimastrySettingsView: View {
     private var appearanceSection: some View {
         settingsSection("App") {
             Toggle(isOn: Binding(
-                get: { viewModel.isDarkMode },
-                set: { isDark in
-                    HapticManager.themeToggle()
-                    viewModel.isDarkMode = isDark
-                }
-            )) {
-                Label(viewModel.isDarkMode ? "Dark appearance" : "Light appearance", systemImage: viewModel.isDarkMode ? "moon.fill" : "sun.max.fill")
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
-            }
-            .tint(SimastryColor.gold)
-            .padding(14)
-            .simastryGlass(cornerRadius: 16)
-
-            Toggle(isOn: Binding(
                 get: { viewModel.conversationSuggestionsEnabled },
                 set: { isEnabled in
                     HapticManager.buttonPress()
@@ -282,6 +293,12 @@ struct SimastrySettingsView: View {
                 }
 
                 Button {
+                    HapticManager.buttonPress()
+                    viewModel.showToast(
+                        "Use manual wallet",
+                        subtitle: "Paste a public address below for the read-only Aura flow.",
+                        isError: false
+                    )
                     showingPhantomInfo = true
                 } label: {
                     settingRow(
@@ -293,6 +310,7 @@ struct SimastrySettingsView: View {
                     )
                 }
                 .buttonStyle(SpringPressStyle())
+                .accessibilityIdentifier("settings.auraWallet.connectPhantomButton")
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Public wallet address")
@@ -301,18 +319,20 @@ struct SimastrySettingsView: View {
                         .tracking(1)
                         .textCase(.uppercase)
 
-                    TextField("Paste Solana or 0x address", text: $walletAddressInput, axis: .vertical)
+                    TextField("Paste Solana or 0x address", text: $walletAddressInput)
                         .font(.system(.footnote, design: .monospaced))
                         .foregroundStyle(SimastryColor.offWhite)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .lineLimit(2...4)
+                        .keyboardType(.asciiCapable)
+                        .lineLimit(1)
                         .padding(12)
                         .background(Color.white.opacity(0.05), in: .rect(cornerRadius: 14))
                         .overlay {
                             RoundedRectangle(cornerRadius: 14)
                                 .stroke(walletBorderColor, lineWidth: 0.8)
                         }
+                        .accessibilityIdentifier("settings.auraWallet.addressField")
 
                     if !trimmedWalletInput.isEmpty {
                         Text(walletInputIsValid ? "Address format looks valid." : "Paste a public Solana address or 0x EVM address.")
@@ -323,31 +343,36 @@ struct SimastrySettingsView: View {
 
                 HStack(spacing: 10) {
                     Button {
-                        walletAddressInput = UIPasteboard.general.string ?? ""
+                        pasteWalletAddressFromClipboard()
                     } label: {
-                        Label("Paste", systemImage: "doc.on.clipboard")
-                            .frame(maxWidth: .infinity)
+                        walletActionLabel("Paste", systemImage: "doc.on.clipboard", isPrimary: false)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(SimastryColor.mutedSilver)
+                    .buttonStyle(.plain)
+                    .contentShape(.rect)
+                    .accessibilityIdentifier("settings.auraWallet.pasteButton")
 
                     Button {
-                        viewModel.saveAuraWalletPublicAddress(walletAddressInput)
+                        saveWalletAddressFromInput()
                     } label: {
-                        Label(viewModel.hasAuraWalletContext ? "Update" : "Save", systemImage: "checkmark")
-                            .frame(maxWidth: .infinity)
+                        walletActionLabel(hasVisibleAuraWalletContext ? "Update" : "Save", systemImage: "checkmark", isPrimary: true)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(SimastryColor.gold)
-                    .disabled(!walletInputIsValid)
+                    .buttonStyle(.plain)
+                    .contentShape(.rect)
+                    .highPriorityGesture(
+                        TapGesture().onEnded {
+                            saveWalletAddressFromInput()
+                        }
+                    )
+                    .opacity(walletInputIsValid ? 1 : 0.42)
+                    .accessibilityIdentifier("settings.auraWallet.saveButton")
                 }
 
-                if viewModel.hasAuraWalletContext {
+                if hasVisibleAuraWalletContext {
                     VStack(alignment: .leading, spacing: 10) {
                         settingRow(
                             icon: "checkmark.seal.fill",
                             title: "Saved wallet",
-                            detail: viewModel.auraWalletShortAddress,
+                            detail: visibleWalletShortAddress,
                             tint: SimastryColor.gold
                         )
 
@@ -355,14 +380,22 @@ struct SimastrySettingsView: View {
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .tint(SimastryColor.gold)
+                            .accessibilityIdentifier("settings.auraWallet.reflectToggle")
 
-                        Button(role: .destructive) {
+                        Button {
                             walletAddressInput = ""
+                            savedWalletAddress = ""
                             viewModel.clearAuraWalletContext()
                         } label: {
                             Label("Remove wallet", systemImage: "xmark.circle")
+                                .font(SimastryFont.labelLarge.weight(.semibold))
+                                .foregroundStyle(.red.opacity(0.92))
+                                .frame(maxWidth: .infinity, minHeight: 42)
+                                .background(.red.opacity(0.10), in: Capsule())
+                                .contentShape(.rect)
                         }
-                        .font(SimastryFont.labelLarge)
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("settings.auraWallet.removeButton")
                     }
                     .padding(14)
                     .simastryGlass(cornerRadius: 16)
@@ -376,6 +409,7 @@ struct SimastrySettingsView: View {
                         .foregroundStyle(SimastryColor.gold)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.auraWallet.readOnlyInfoButton")
             }
             .padding(16)
             .glossyCard(cornerRadius: 20)
@@ -472,6 +506,70 @@ struct SimastrySettingsView: View {
         return walletInputIsValid ? SimastryColor.gold.opacity(0.55) : SimastryColor.amber.opacity(0.7)
     }
 
+    private func walletActionLabel(_ title: String, systemImage: String, isPrimary: Bool) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(SimastryFont.labelLarge.weight(.semibold))
+            .foregroundStyle(isPrimary ? SimastryColor.midnight : SimastryColor.offWhite)
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(
+                isPrimary ? SimastryColor.gold : SimastryColor.deepMuted.opacity(0.50),
+                in: Capsule()
+            )
+            .contentShape(.rect)
+    }
+
+    private func pasteWalletAddressFromClipboard() {
+        let pasted: String
+        #if DEBUG
+        if let testPasteboardValue = Self.uiTestPasteboardValue {
+            pasted = testPasteboardValue
+        } else {
+            pasted = UIPasteboard.general.string ?? ""
+        }
+        #else
+        pasted = UIPasteboard.general.string ?? ""
+        #endif
+
+        walletAddressInput = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !walletAddressInput.isEmpty else {
+            viewModel.showToast("Clipboard empty", subtitle: "Copy a public wallet address, then paste again.", isError: true)
+            return
+        }
+        guard walletInputIsValid else {
+            viewModel.showToast("Wallet not ready", subtitle: "Paste a Solana or EVM public wallet address.", isError: true)
+            return
+        }
+        saveWalletAddressFromInput()
+    }
+
+    private func saveWalletAddressFromInput() {
+        let now = Date()
+        if let lastWalletSaveActionAt,
+           now.timeIntervalSince(lastWalletSaveActionAt) < 0.25 {
+            return
+        }
+        lastWalletSaveActionAt = now
+        viewModel.saveAuraWalletPublicAddress(walletAddressInput)
+        if walletInputIsValid {
+            savedWalletAddress = trimmedWalletInput
+            walletAddressInput = trimmedWalletInput
+        }
+    }
+
+    #if DEBUG
+    private static var uiTestPasteboardValue: String? {
+        if let value = ProcessInfo.processInfo.environment["SIMASTRY_UI_PASTEBOARD_TEXT"], !value.isEmpty {
+            return value
+        }
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let marker = arguments.firstIndex(of: "-SimastryUITestPasteWallet"),
+              arguments.indices.contains(marker + 1) else {
+            return nil
+        }
+        return arguments[marker + 1]
+    }
+    #endif
+
     private func settingsSection<Content: View>(
         _ title: String,
         @ViewBuilder content: () -> Content
@@ -522,6 +620,7 @@ struct SimastrySettingsView: View {
         }
         .padding(14)
         .simastryGlass(cornerRadius: 16)
+        .contentShape(.rect)
     }
 }
 
