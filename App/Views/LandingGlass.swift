@@ -32,17 +32,8 @@ struct LandingGlass<S: Shape & InsettableShape>: ViewModifier {
     let shape: S
     var emphasis: LandingGlassEmphasis = .card
 
-    /// Clear-to-smoky neutral tint that lifts contrast over the bright wallpaper
-    /// without adding any hue.
-    private var smokyTint: LinearGradient {
-        LinearGradient(
-            colors: [.black.opacity(emphasis.tintTop), .black.opacity(emphasis.tintBottom)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    /// Thin translucent border with a soft white edge highlight catching the top-left.
+    /// Edge highlight matching the app-wide `simastryGlass` hairline so landing
+    /// cards read as the same material as every other screen.
     private var edgeHighlight: LinearGradient {
         LinearGradient(
             colors: [
@@ -75,14 +66,15 @@ struct LandingGlass<S: Shape & InsettableShape>: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
-                .background(smokyTint, in: shape)
-                .glassEffect(.regular.interactive(emphasis.isInteractive), in: shape)
+                .background(SimastryColor.surfaceSunken.opacity(0.30), in: shape)
+                .background(SimastryColor.surface.opacity(0.18), in: shape)
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.085)).interactive(emphasis.isInteractive), in: shape)
                 .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
                 .overlay(innerHighlight)
                 .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
         } else {
             content
-                .background(smokyTint, in: shape)
+                .background(SimastryColor.surface.opacity(0.72), in: shape)
                 .background(.ultraThinMaterial, in: shape)
                 .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
                 .overlay(innerHighlight)
