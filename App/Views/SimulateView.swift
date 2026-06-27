@@ -213,29 +213,26 @@ struct SimulateView: View {
     // existing stack (Home routes, directory), and a nested stack makes the
     // value-based push silently fail.
     var body: some View {
-        ZStack {
-            CelestialBackground()
-
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 24) {
-                        header
-                            .id("predict.header")
-                        predictStepRail
-                        guidedPredictionFlow
-                        historySection
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, SimastrySpacing.tabBarClearance)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 24) {
+                    header
+                        .id("predict.header")
+                    predictStepRail
+                    guidedPredictionFlow
+                    historySection
                 }
-                .scrollIndicators(.hidden)
-                .onChange(of: selectedCategory) { _, _ in
-                    guard hasAdvancedPastCategory else { return }
-                    scrollToNextPredictStep(proxy)
-                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, SimastrySpacing.tabBarClearance)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: selectedCategory) { _, _ in
+                guard hasAdvancedPastCategory else { return }
+                scrollToNextPredictStep(proxy)
             }
         }
+        .background { CelestialBackground() }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             predictBottomAction
         }

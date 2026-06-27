@@ -1686,17 +1686,11 @@ struct AddRelationshipPersonView: View {
             action()
         } label: {
             ZStack(alignment: .topTrailing) {
-                ZodiacIconView(sign: sign, size: 34, showsGlow: isSelected)
+                // Just the icon, no disc/ring behind it — selection is opacity + scale.
+                ZodiacIconView(sign: sign, size: 46, showsGlow: isSelected)
                     .frame(width: 48, height: 48)
                     .accessibilityHidden(true)
-                    .background {
-                        if isSelected {
-                            Circle()
-                                .fill(sign.color.opacity(0.18))
-                                .shadow(color: sign.color.opacity(0.34), radius: 10)
-                        }
-                    }
-                    .opacity(isSelected ? 1.0 : 0.68)
+                    .opacity(isSelected ? 1.0 : 0.6)
                     .scaleEffect(isSelected ? 1.08 : 1.0)
 
                 if isSelected {

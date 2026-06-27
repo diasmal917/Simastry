@@ -48,10 +48,7 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ZStack {
-                CelestialBackground()
-
-                Group {
+            Group {
                     switch viewModel.homeSetupPhase {
                     case .modeSelection:
                         ModeSelectionView(viewModel: viewModel)
@@ -68,7 +65,8 @@ struct HomeView: View {
                     }
                 }
                 .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { CelestialBackground() }
             .overlay(alignment: .top) {
                 streakMilestoneToast
             }

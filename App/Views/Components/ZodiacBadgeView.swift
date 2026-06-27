@@ -18,41 +18,14 @@ struct ZodiacBadgeView: View {
             HapticManager.zodiacSelection()
             onTap()
         }) {
-            ZStack {
-                badgeBackground
-
-                ZodiacIconView(sign: sign, size: size * 0.72, showsGlow: isSelected)
-            }
-            .opacity(isSelected ? 1.0 : 0.55)
-            .scaleEffect(isSelected ? 1.1 : 1.0)
-            .animation(.spring(SimastrySpring.bouncy), value: isSelected)
+            // Just the zodiac icon — no outer disc/ring behind it. Selection is
+            // shown by full opacity, a gentle scale-up, and the icon's own glow.
+            ZodiacIconView(sign: sign, size: size, showsGlow: isSelected)
+                .opacity(isSelected ? 1.0 : 0.5)
+                .scaleEffect(isSelected ? 1.12 : 1.0)
+                .animation(.spring(SimastrySpring.bouncy), value: isSelected)
         }
         .buttonStyle(.plain)
-    }
-
-    // Selection reads as a liquid-glass pane in the sign's color rather
-    // than an outline — no stroke in either state.
-    @ViewBuilder
-    private var badgeBackground: some View {
-        if isSelected {
-            if #available(iOS 26.0, *) {
-                Circle()
-                    .fill(sign.color.opacity(0.18))
-                    .frame(width: size, height: size)
-                    .glassEffect(.regular.tint(sign.color.opacity(0.30)), in: .circle)
-                    .shadow(color: sign.color.opacity(0.35), radius: size * 0.16)
-            } else {
-                Circle()
-                    .fill(sign.color.opacity(0.26))
-                    .frame(width: size, height: size)
-                    .background(.ultraThinMaterial, in: .circle)
-                    .shadow(color: sign.color.opacity(0.35), radius: size * 0.16)
-            }
-        } else {
-            Circle()
-                .fill(sign.color.opacity(0.2))
-                .frame(width: size, height: size)
-        }
     }
 }
 
