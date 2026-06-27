@@ -9,6 +9,7 @@ struct MessagesView: View {
     @State private var showPanelChat: Bool = false
     @State private var showCreateRoom: Bool = false
     @State private var showMessageSearch: Bool = false
+    @State private var showDecode: Bool = false
     @State private var handledPanelRouteRequest: Int = 0
 
     var body: some View {
@@ -19,11 +20,13 @@ struct MessagesView: View {
                 if selectedMessage == nil {
                     if !hasInboxContent {
                         VStack(spacing: 0) {
+                            talkActions
+                                .padding(.bottom, 6)
+
                             PanelInboxRow(viewModel: viewModel) {
                                 openPanelChat()
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, 8)
 
                             Spacer()
                             if viewModel.profileDiscoveryStore.connectionState == .loading {
@@ -41,7 +44,7 @@ struct MessagesView: View {
                 }
             }
             .accessibilityHidden(selectedMessage != nil)
-            .navigationTitle("Messages")
+            .navigationTitle("Talk")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
@@ -102,6 +105,17 @@ struct MessagesView: View {
             .sheet(isPresented: $showMessageSearch) {
                 MessageSearchSheet(viewModel: viewModel)
             }
+            .fullScreenCover(isPresented: $showDecode) {
+                NavigationStack {
+                    DecodeTextView(viewModel: viewModel)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Close") { showDecode = false }
+                                    .tint(SimastryColor.gold)
+                            }
+                        }
+                }
+            }
             .fullScreenCover(item: $selectedRoom) { room in
                 GuidedRoomChatView(viewModel: viewModel, room: room)
             }
@@ -160,6 +174,81 @@ struct MessagesView: View {
         showPanelChat = true
     }
 
+    /// The Talk command surface — the four communication jobs that sit above the
+    /// inbox. Each routes into an existing flow so nothing is duplicated.
+    private var talkActions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openPredict(with: PredictionDraft(category: .messageOutcome, targetSunSign: nil))
+            } label: {
+                Label("What should I say?", systemImage: "text.bubble.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
+            .accessibilityHint("Draft a reply and get tone guidance")
+
+            HStack(spacing: 10) {
+                talkSecondaryAction(
+                    title: "Read a message",
+                    systemImage: "doc.text.magnifyingglass",
+                    hint: "Decode what a text really means"
+                ) {
+                    showDecode = true
+                }
+
+                talkSecondaryAction(
+                    title: "Talk to a sign",
+                    systemImage: "person.2.fill",
+                    hint: "Open your saved people for approach tips"
+                ) {
+                    viewModel.selectedTab = .people
+                }
+
+                talkSecondaryAction(
+                    title: "Ask my guides",
+                    systemImage: "sparkles",
+                    hint: "Open your panel of chart guides"
+                ) {
+                    openPanelChat()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    private func talkSecondaryAction(
+        title: String,
+        systemImage: String,
+        hint: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            VStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                Text(title)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 70)
+            .padding(.horizontal, 6)
+            .simastryGlassLight(cornerRadius: 16)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityHint(hint)
+    }
+
     private func presentPanelIfRequested() {
         guard viewModel.panelChatRouteRequest > handledPanelRouteRequest else { return }
         handledPanelRouteRequest = viewModel.panelChatRouteRequest
@@ -180,6 +269,11 @@ struct MessagesView: View {
 
     private var messageList: some View {
         List {
+            talkActions
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+
             PanelInboxRow(viewModel: viewModel) {
                 openPanelChat()
             }

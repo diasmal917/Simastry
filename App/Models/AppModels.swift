@@ -2,12 +2,53 @@ import Foundation
 import SwiftUI
 
 nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sendable {
+    // Raw values are persisted across launches — never reassign existing ones.
+    // `messages` stays the internal name for the user-facing "Talk" surface.
     case today = 0
     case people = 1
     case messages = 2
     case me = 3
+    case predict = 4
 
     var id: Int { rawValue }
+
+    /// Left-to-right order shown in the floating nav. Intentionally differs from
+    /// the raw-value order so Predict can sit first-class beside Today without
+    /// breaking persisted selections from older builds.
+    static let visualOrder: [AppTab] = [.today, .predict, .messages, .people, .me]
+
+    /// User-facing tab name (accessibility + any visible label).
+    var title: String {
+        switch self {
+        case .today: "Today"
+        case .predict: "Predict"
+        case .messages: "Talk"
+        case .people: "People"
+        case .me: "Me"
+        }
+    }
+
+    /// SF Symbol for the unselected state.
+    var icon: String {
+        switch self {
+        case .today: "sun.max"
+        case .predict: "sparkles"
+        case .messages: "bubble.left.and.bubble.right"
+        case .people: "person.2"
+        case .me: "person.crop.circle"
+        }
+    }
+
+    /// SF Symbol for the selected state (filled variants read as "active").
+    var selectedIcon: String {
+        switch self {
+        case .today: "sun.max.fill"
+        case .predict: "sparkles"
+        case .messages: "bubble.left.and.bubble.right.fill"
+        case .people: "person.2.fill"
+        case .me: "person.crop.circle.fill"
+        }
+    }
 
     init(normalizing rawValue: Int) {
         switch rawValue {
@@ -15,6 +56,8 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
             self = .people
         case Self.messages.rawValue:
             self = .messages
+        case Self.predict.rawValue:
+            self = .predict
         case Self.me.rawValue, 5:
             self = .me
         default:

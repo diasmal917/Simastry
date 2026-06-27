@@ -187,6 +187,13 @@ class AppViewModel {
     }
     var showUpsell: Bool = false
     var selectedTab: AppTab = .today
+    /// A prediction is awaiting its real-world outcome — drives the Predict tab
+    /// follow-up dot until the user logs Landed / Unclear / Wrong / Not yet.
+    var predictFollowUpPending: Bool = UserDefaults.standard.bool(forKey: "simastry_predict_followup_pending") {
+        didSet {
+            UserDefaults.standard.set(predictFollowUpPending, forKey: "simastry_predict_followup_pending")
+        }
+    }
     var aiAstrologistsRouteRequest: Int = 0
     var predictRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the Aura sheet.
@@ -502,9 +509,10 @@ class AppViewModel {
         if let draft {
             predictionDraft = draft
         }
-        selectedTab = .today
         homeSetupPhase = .complete
-        predictRouteRequest += 1
+        // Predict is now a first-class tab; SimulateView consumes the draft on
+        // appear / change, so we just select the tab.
+        selectedTab = .predict
     }
 
     func loadRelationshipPeople() {

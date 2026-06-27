@@ -3,67 +3,67 @@ import SwiftUI
 struct MainTabView: View {
     @Bindable var viewModel: AppViewModel
 
-    var body: some View {
-        tabContainer
-            .tint(SimastryColor.gold)
-            .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
-                Button("Not now", role: .cancel) {
-                    viewModel.cancelPendingInviteCode()
-                }
-                Button("Apply") {
-                    viewModel.confirmPendingInviteCode()
-                }
-            } message: {
-                Text("This saves the invite code on this device. Credits require server verification and are not granted locally.")
-            }
-            .onChange(of: viewModel.selectedTab) { _, newTab in
-                HapticManager.tabChange()
-                if newTab == .messages {
-                    Task {
-                        await viewModel.refreshInbox(showErrors: false)
-                        await viewModel.fetchConnectedProfiles()
-                    }
-                }
-            }
-    }
+    /// Tabs are built lazily on first visit, then kept alive so each surface
+    /// preserves its scroll position and in-flight state across tab switches —
+    /// the behaviour the system `TabView` gave us before the custom nav.
+    @State private var visitedTabs: Set<AppTab> = [.today]
 
-    /// On iOS 26 the system tab bar renders its own Liquid Glass — forcing a
-    /// material would paint over it, so only the older OSes get the manual
-    /// translucent treatment.
-    @ViewBuilder
-    private var tabContainer: some View {
-        if #available(iOS 26.0, *) {
-            tabView
-                .tabBarMinimizeBehavior(.onScrollDown)
-        } else {
-            tabView
-                .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-                .toolbarBackground(.visible, for: .tabBar)
-                .toolbarColorScheme(.dark, for: .tabBar)
+    var body: some View {
+        ZStack {
+            ForEach(AppTab.visualOrder) { tab in
+                if visitedTabs.contains(tab) {
+                    content(for: tab)
+                        .opacity(viewModel.selectedTab == tab ? 1 : 0)
+                        .allowsHitTesting(viewModel.selectedTab == tab)
+                        .accessibilityHidden(viewModel.selectedTab != tab)
+                        .zIndex(viewModel.selectedTab == tab ? 1 : 0)
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            FloatingTabBar(
+                selection: $viewModel.selectedTab,
+                unreadCount: viewModel.unreadMessageCount,
+                predictFollowUp: viewModel.predictFollowUpPending
+            )
+        }
+        .tint(SimastryColor.gold)
+        .onAppear { visitedTabs.insert(viewModel.selectedTab) }
+        .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
+            Button("Not now", role: .cancel) {
+                viewModel.cancelPendingInviteCode()
+            }
+            Button("Apply") {
+                viewModel.confirmPendingInviteCode()
+            }
+        } message: {
+            Text("This saves the invite code on this device. Credits require server verification and are not granted locally.")
+        }
+        .onChange(of: viewModel.selectedTab) { _, newTab in
+            visitedTabs.insert(newTab)
+            HapticManager.tabChange()
+            if newTab == .messages {
+                Task {
+                    await viewModel.refreshInbox(showErrors: false)
+                    await viewModel.fetchConnectedProfiles()
+                }
+            }
         }
     }
 
-    private var tabView: some View {
-        TabView(selection: $viewModel.selectedTab) {
-            Tab("Today", systemImage: "sun.max.fill", value: AppTab.today) {
-                HomeView(viewModel: viewModel)
-            }
-
-            Tab(value: AppTab.messages) {
-                MessagesView(viewModel: viewModel)
-            } label: {
-                Label("Messages", systemImage: "message.fill")
-                    .environment(\.symbolVariants, .fill)
-            }
-            .badge(viewModel.unreadMessageCount)
-
-            Tab("People", systemImage: "person.2.fill", value: AppTab.people) {
-                PeopleView(viewModel: viewModel)
-            }
-
-            Tab("Me", systemImage: "person.crop.circle.fill", value: AppTab.me) {
-                ProfileView(viewModel: viewModel)
-            }
+    @ViewBuilder
+    private func content(for tab: AppTab) -> some View {
+        switch tab {
+        case .today:
+            HomeView(viewModel: viewModel)
+        case .predict:
+            PredictTabView(viewModel: viewModel)
+        case .messages:
+            MessagesView(viewModel: viewModel)
+        case .people:
+            PeopleView(viewModel: viewModel)
+        case .me:
+            ProfileView(viewModel: viewModel)
         }
     }
 
@@ -76,5 +76,18 @@ struct MainTabView: View {
                 }
             }
         )
+    }
+}
+
+/// First-class Predict surface. `SimulateView` already owns the full guided
+/// flow (question type, details, orb generation, result, outcome rating), so
+/// the tab just hosts it in its own navigation context.
+struct PredictTabView: View {
+    @Bindable var viewModel: AppViewModel
+
+    var body: some View {
+        NavigationStack {
+            SimulateView(viewModel: viewModel)
+        }
     }
 }

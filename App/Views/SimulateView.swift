@@ -262,6 +262,7 @@ struct SimulateView: View {
                 onSetOutcome: { outcome in
                     viewModel.predictionService.setOutcome(outcome, for: result.id)
                     viewModel.notificationService.cancelPredictionOutcomeFollowUp()
+                    viewModel.predictFollowUpPending = false
                     loadHistory()
                 }
             )
@@ -1448,6 +1449,7 @@ struct SimulateView: View {
             ReviewPromptService.shared.recordPositiveAction()
             loadHistory()
             selectedResult = result
+            viewModel.predictFollowUpPending = true
             if viewModel.privateNotificationsEnabled {
                 viewModel.notificationService.schedulePredictionOutcomeFollowUp()
             }

@@ -138,16 +138,24 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Spacer().frame(height: 6)
 
-                // Today feed ordering: lead with the header, then the primary
-                // guide panel, then Ask the Future / Decode CTA and Daily
-                // Decider, then Aura, people/social, then learn/extra content.
+                // Today as a daily command center: lead with the header and the
+                // Ask the Future hero (the #1 daily job), then today's timing and
+                // quick decisions, the active loop, and only then the guide panel
+                // and longer-tail learn/extra content. Guides support the flows;
+                // they are no longer the first hero on the screen.
                 todayHeader
-
-                panelCard
 
                 predictHeroCard
 
+                todaysReadCard
+
                 dailyDeciderCard
+
+                situationCard
+
+                continueStrip
+
+                todayWithGuideCard
 
                 AuraSnapshotCard(
                     snapshot: viewModel.auraSnapshot,
@@ -157,15 +165,9 @@ struct HomeView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 10)
 
-                todayWithGuideCard
+                panelCard
 
                 firstReadMemoryCard
-
-                situationCard
-
-                continueStrip
-
-                todaysReadCard
 
                 learnCard
 
@@ -771,14 +773,14 @@ struct HomeView: View {
 
             simulateSourceHint
 
-            NavigationLink(value: HomeRoute.predict) {
+            Button {
+                HapticManager.buttonPress()
+                viewModel.selectedTab = .predict
+            } label: {
                 PredictionOrbLabel(title: "Ask a question", iconSize: 21)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
-            .simultaneousGesture(TapGesture().onEnded {
-                HapticManager.buttonPress()
-            })
-            .accessibilityHint("Opens Ask the Future")
+            .accessibilityHint("Opens the Predict tab")
 
             NavigationLink(value: HomeRoute.decode) {
                 Text("Decode one text instead \u{2192}")
