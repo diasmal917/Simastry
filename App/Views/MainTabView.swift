@@ -33,7 +33,7 @@ struct MainTabView: View {
             }
         }
         .tint(SimastryColor.gold)
-        .modifier(TabBarMinimizeOnScrollDown())   // iOS 26 Liquid Glass minimize behavior
+        .modifier(KeepTabBarExpanded())   // bar always stays full — no collapse-to-one-icon
         .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
             Button("Not now", role: .cancel) {
                 viewModel.cancelPendingInviteCode()
@@ -67,12 +67,13 @@ struct MainTabView: View {
     }
 }
 
-/// Applies the official iOS 26 `.tabBarMinimizeBehavior(.onScrollDown)` where
-/// available; on iOS 18 the standard tab bar is used unchanged.
-private struct TabBarMinimizeOnScrollDown: ViewModifier {
+/// Keeps the native Liquid Glass tab bar fully expanded at all times — it never
+/// collapses to a single-icon pill on scroll. Uses the official iOS 26
+/// `.tabBarMinimizeBehavior(.never)`; the iOS 18 bar already stays full.
+private struct KeepTabBarExpanded: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.tabBarMinimizeBehavior(.onScrollDown)
+            content.tabBarMinimizeBehavior(.never)
         } else {
             content
         }

@@ -2,6 +2,13 @@ import SwiftUI
 import Foundation
 import PhotosUI
 
+/// Who an "Ask the Future" reading is about. Defaults to `.you` — the reading
+/// is about the user unless they explicitly choose someone else.
+private enum PredictSubject: String, Hashable {
+    case you
+    case someoneElse
+}
+
 struct SimulateView: View {
     @Bindable var viewModel: AppViewModel
 
@@ -24,6 +31,17 @@ struct SimulateView: View {
     @State private var showTopUpSheet = false
     @State private var showAuraSnapshotSheet = false
     @State private var hasAdvancedPastCategory: Bool = false
+
+    // Section 3 "Who is this about?" — the reading is about *you* by default.
+    @State private var aboutSubject: PredictSubject = .you
+    @State private var usingNewPerson: Bool = false
+    @State private var selectedPersonId: UUID?
+
+    /// Reply-style questions are inherently about the other person, so the
+    /// subject is forced to "someone else" regardless of the toggle.
+    private var effectiveSubject: PredictSubject {
+        selectedCategory.requiresTargetSign ? .someoneElse : aboutSubject
+    }
 
     private var suggestionChips: [String] {
         selectedCategory.suggestedQuestions
@@ -268,6 +286,7 @@ struct SimulateView: View {
         }
         .task {
             viewModel.reloadAuraSnapshot()
+            viewModel.loadRelationshipPeople()
             loadHistory()
             applyPredictionDraftIfNeeded()
             if reduceMotion {
@@ -739,11 +758,186 @@ struct SimulateView: View {
 
     private var signSelectionContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            signPickerRow(title: "Sun", selection: $selectedSunSign, required: selectedCategory.requiresTargetSign)
-            signPickerRow(title: "Moon", selection: $selectedMoonSign, required: false)
-            signPickerRow(title: "Rising", selection: $selectedRisingSign, required: false)
+            // For reply-style questions the subject is always the other person,
+            // so we skip the Me/Someone-else toggle and go straight to picking.
+            if !selectedCategory.requiresTargetSign {
+                subjectPicker
+            }
+
+            if effectiveSubject == .you {
+                youChartSummary
+            } else {
+                someoneElseSelector
+            }
+
             textingStyleTip
         }
+        .onChange(of: selectedCategory) { _, newCategory in
+            // Reset cleanly when the question type changes.
+            selectedPersonId = nil
+            usingNewPerson = false
+            clearTargetSigns()
+            aboutSubject = newCategory.requiresTargetSign ? .someoneElse : .you
+        }
+    }
+
+    /// Me / Someone else segmented control.
+    private var subjectPicker: some View {
+        Picker("Who is this about?", selection: $aboutSubject) {
+            Text("Me").tag(PredictSubject.you)
+            Text("Someone else").tag(PredictSubject.someoneElse)
+        }
+        .pickerStyle(.segmented)
+        .onChange(of: aboutSubject) { _, newValue in
+            HapticManager.buttonPress()
+            if newValue == .you {
+                // Reading our own chart — no target signs to carry over.
+                selectedPersonId = nil
+                usingNewPerson = false
+                clearTargetSigns()
+            }
+        }
+    }
+
+    /// Confirmation card shown when the reading is about the user themselves.
+    @ViewBuilder
+    private var youChartSummary: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(SimastryColor.gold)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Reading your own chart")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                if let sun = viewModel.userSunSign {
+                    Text(userChartLine(sun: sun))
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                } else {
+                    Text("Add your signs in the Me tab to sharpen this.")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .simastryGlassLight(cornerRadius: 16)
+    }
+
+    private func userChartLine(sun: ZodiacSign) -> String {
+        var parts = ["☉ \(sun.displayName)"]
+        if let moon = viewModel.userMoonSign { parts.append("☽ \(moon.displayName)") }
+        if let rising = viewModel.userRisingSign { parts.append("↑ \(rising.displayName)") }
+        return parts.joined(separator: "   ")
+    }
+
+    /// Picker for an existing person, or "Someone new" → manual sign entry.
+    private var someoneElseSelector: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !viewModel.relationshipPeople.isEmpty {
+                Text("Pick from your people")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+
+                ScrollView(.horizontal) {
+                    HStack(spacing: 10) {
+                        ForEach(viewModel.relationshipPeople) { person in
+                            personChip(person)
+                        }
+                        newPersonChip
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .contentMargins(.horizontal, 0)
+            }
+
+            if usingNewPerson || viewModel.relationshipPeople.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    signPickerRow(title: "Sun", selection: $selectedSunSign, required: selectedCategory.requiresTargetSign)
+                    signPickerRow(title: "Moon", selection: $selectedMoonSign, required: false)
+                    signPickerRow(title: "Rising", selection: $selectedRisingSign, required: false)
+                }
+            }
+        }
+    }
+
+    private func personChip(_ person: RelationshipPerson) -> some View {
+        let isSelected = selectedPersonId == person.id && !usingNewPerson
+        return Button {
+            HapticManager.buttonPress()
+            selectedPersonId = person.id
+            usingNewPerson = false
+            selectedSunSign = person.sunSign
+            selectedMoonSign = person.moonSign
+            selectedRisingSign = person.risingSign
+        } label: {
+            VStack(spacing: 6) {
+                ZodiacIconView(sign: person.sunSign, size: 34)
+                Text(person.displayName)
+                    .font(SimastryFont.microMedium)
+                    .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                    .lineLimit(1)
+            }
+            .frame(width: 66)
+            .padding(.vertical, 10)
+            .background(
+                isSelected ? SimastryColor.gold.opacity(0.14) : Color.white.opacity(0.04),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(isSelected ? SimastryColor.gold.opacity(0.5) : .clear, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Read about \(person.displayName)")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private var newPersonChip: some View {
+        let isSelected = usingNewPerson
+        return Button {
+            HapticManager.buttonPress()
+            usingNewPerson = true
+            selectedPersonId = nil
+            clearTargetSigns()
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: "plus")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(width: 34, height: 34)
+                Text("Someone new")
+                    .font(SimastryFont.microMedium)
+                    .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                    .lineLimit(1)
+            }
+            .frame(width: 66)
+            .padding(.vertical, 10)
+            .background(
+                isSelected ? SimastryColor.gold.opacity(0.14) : Color.white.opacity(0.04),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(isSelected ? SimastryColor.gold.opacity(0.5) : .clear, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add a new person")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private func clearTargetSigns() {
+        selectedSunSign = nil
+        selectedMoonSign = nil
+        selectedRisingSign = nil
     }
 
     private var questionInputContent: some View {
@@ -1339,6 +1533,13 @@ struct SimulateView: View {
         selectedSunSign = draft.targetSunSign
         selectedMoonSign = draft.targetMoonSign
         selectedRisingSign = draft.targetRisingSign
+        // A draft carrying a target sign is about someone else; surface the
+        // manual sign entry so the restored signs are visible/editable.
+        if draft.targetSunSign != nil {
+            aboutSubject = .someoneElse
+            usingNewPerson = true
+            selectedPersonId = nil
+        }
         if let draftConversation = draft.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines),
            !draftConversation.isEmpty {
             conversationText = draftConversation
