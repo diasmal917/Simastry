@@ -14,9 +14,7 @@ struct MessagesView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
+            Group {
                 if selectedMessage == nil {
                     if !hasInboxContent {
                         VStack(spacing: 0) {
@@ -43,9 +41,11 @@ struct MessagesView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { CelestialBackground() }
             .accessibilityHidden(selectedMessage != nil)
             .navigationTitle("Talk")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -346,7 +346,6 @@ struct MessagesView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
-        .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
         .refreshable {
             await viewModel.refreshInbox(showErrors: true)
         }

@@ -11,7 +11,10 @@ struct SimastrySpacing {
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
 
-    static let tabBarClearance: CGFloat = 72
+    /// Extra breathing room above the floating Liquid Glass tab bar. The native
+    /// iOS 26 `TabView` already insets scroll content for the bar, so this is a
+    /// small cushion rather than the full bar height.
+    static let tabBarClearance: CGFloat = 12
 }
 
 struct SimastrySpring {

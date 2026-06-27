@@ -75,16 +75,9 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
+            ScrollView {
                     VStack(spacing: 28) {
                         Spacer().frame(height: 8)
-
-                        profileRenderSection("header") {
-                            userHeader
-                        }
 
                         profileRenderSection("about-you") {
                             if viewModel.hasCompletedSigns {
@@ -129,11 +122,24 @@ struct ProfileView: View {
                         Spacer().frame(height: SimastrySpacing.tabBarClearance)
                     }
                     .padding(.horizontal, 20)
-                }
-                .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
             }
+            .background { CelestialBackground() }
             .accessibilityHidden(activeSheet != nil)
+            .navigationTitle("Me")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        HapticManager.buttonPress()
+                        activeSheet = .settings
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                    }
+                    .tint(SimastryColor.gold)
+                    .accessibilityLabel("Open settings")
+                    .accessibilityIdentifier("profile.settingsButton")
+                }
+            }
             .confirmationDialog("Sign Out", isPresented: $showSignOutConfirmation, titleVisibility: .visible) {
                 Button("Sign Out", role: .destructive) {
                     Task { await viewModel.signOut() }
@@ -238,57 +244,6 @@ struct ProfileView: View {
 
     private var astrologerContactURL: URL {
         URL(string: "mailto:\(AppConfig.astrologerContactEmail)") ?? AppConfig.websiteURL
-    }
-
-    private var userHeader: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                SimastryWordmark(font: .system(.footnote, weight: .bold).italic(), sparkles: false)
-
-                Text(viewModel.hasCompletedSigns ? "About You" : "Your Stars Await")
-                    .font(SimastryFont.titleLarge)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                if let communicationType {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                            .font(SimastryFont.microSemibold)
-                            .foregroundStyle(communicationType.accent)
-                        Text(communicationType.title)
-                            .font(SimastryFont.labelSmall)
-                            .foregroundStyle(SimastryColor.offWhite.opacity(0.92))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(communicationType.accent.opacity(0.14), in: Capsule())
-                    .overlay(Capsule().stroke(communicationType.accent.opacity(0.22), lineWidth: 0.6))
-                    .padding(.top, 2)
-                    .accessibilityLabel("Communication type: \(communicationType.title)")
-                }
-            }
-
-            Spacer()
-
-            Button {
-                HapticManager.buttonPress()
-                activeSheet = .settings
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .frame(width: 42, height: 42)
-                    .simastryGlass(cornerRadius: 14)
-            }
-            .buttonStyle(SpringPressStyle())
-            .accessibilityLabel("Open settings")
-            .accessibilityIdentifier("profile.settingsButton")
-        }
-        .padding(20)
-        .simastryGlass(cornerRadius: 20)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 10)
     }
 
     // MARK: - Placeholder Sign Cards
@@ -490,14 +445,15 @@ struct ProfileView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
 
-            auraButtonSection
-
             signEntry(role: .sun, sign: sun, delay: 0)
             signEntry(role: .moon, sign: moon, delay: 0.15)
             signEntry(role: .rising, sign: rising, delay: 0.3)
 
             // Communication signals section
             conversationGuideSection(sun: sun)
+
+            // Aura sits below the chart and communication guide now, not at the top.
+            auraButtonSection
 
             careerReadButtonSection
 

@@ -3,36 +3,37 @@ import SwiftUI
 struct MainTabView: View {
     @Bindable var viewModel: AppViewModel
 
-    /// Tabs are built lazily on first visit, then kept alive so each surface
-    /// preserves its scroll position and in-flight state across tab switches —
-    /// the behaviour the system `TabView` gave us before the custom nav.
-    @State private var visitedTabs: Set<AppTab> = [.today]
-
     var body: some View {
-        ZStack {
-            ForEach(AppTab.visualOrder) { tab in
-                if visitedTabs.contains(tab) {
-                    content(for: tab)
-                        .opacity(viewModel.selectedTab == tab ? 1 : 0)
-                        .allowsHitTesting(viewModel.selectedTab == tab)
-                        .accessibilityHidden(viewModel.selectedTab != tab)
-                        .zIndex(viewModel.selectedTab == tab ? 1 : 0)
-                }
+        // Native iOS 26 Liquid Glass tab bar. Using the system `TabView` means
+        // the bar is real Liquid Glass, the selected tab sits in the system's
+        // soft capsule, and `.tabBarMinimizeBehavior(.onScrollDown)` gives the
+        // Instagram-style "settle on scroll-up, minimize on scroll-down" motion
+        // — all maintained by the OS. `Tab(_:systemImage:value:)` is iOS 18+.
+        TabView(selection: $viewModel.selectedTab) {
+            Tab("Today", systemImage: "sun.max.fill", value: AppTab.today) {
+                HomeView(viewModel: viewModel)
+            }
+
+            Tab("Predict", systemImage: "sparkles", value: AppTab.predict) {
+                PredictTabView(viewModel: viewModel)
+            }
+            .badge(viewModel.predictFollowUpPending ? Text("!") : nil)
+
+            Tab("Talk", systemImage: "bubble.left.and.bubble.right.fill", value: AppTab.messages) {
+                MessagesView(viewModel: viewModel)
+            }
+            .badge(viewModel.unreadMessageCount)
+
+            Tab("People", systemImage: "person.2.fill", value: AppTab.people) {
+                PeopleView(viewModel: viewModel)
+            }
+
+            Tab("Me", systemImage: "person.crop.circle.fill", value: AppTab.me) {
+                ProfileView(viewModel: viewModel)
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            FloatingTabBar(
-                selection: $viewModel.selectedTab,
-                unreadCount: viewModel.unreadMessageCount,
-                predictFollowUp: viewModel.predictFollowUpPending,
-                // Read the shared chrome here in MainTabView's body so the
-                // Observation dependency is registered and the safeAreaInset
-                // content re-renders when the minimize state flips.
-                isMinimized: TabBarChrome.shared.isMinimized
-            )
-        }
         .tint(SimastryColor.gold)
-        .onAppear { visitedTabs.insert(viewModel.selectedTab) }
+        .modifier(TabBarMinimizeOnScrollDown())   // iOS 26 Liquid Glass minimize behavior
         .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
             Button("Not now", role: .cancel) {
                 viewModel.cancelPendingInviteCode()
@@ -44,10 +45,6 @@ struct MainTabView: View {
             Text("This saves the invite code on this device. Credits require server verification and are not granted locally.")
         }
         .onChange(of: viewModel.selectedTab) { _, newTab in
-            visitedTabs.insert(newTab)
-            // Restore the full bar whenever the user changes tabs so a tab is
-            // never first revealed with a minimized (compact-pill) nav.
-            TabBarChrome.shared.isMinimized = false
             HapticManager.tabChange()
             if newTab == .messages {
                 Task {
@@ -55,22 +52,6 @@ struct MainTabView: View {
                     await viewModel.fetchConnectedProfiles()
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func content(for tab: AppTab) -> some View {
-        switch tab {
-        case .today:
-            HomeView(viewModel: viewModel)
-        case .predict:
-            PredictTabView(viewModel: viewModel)
-        case .messages:
-            MessagesView(viewModel: viewModel)
-        case .people:
-            PeopleView(viewModel: viewModel)
-        case .me:
-            ProfileView(viewModel: viewModel)
         }
     }
 
@@ -83,6 +64,18 @@ struct MainTabView: View {
                 }
             }
         )
+    }
+}
+
+/// Applies the official iOS 26 `.tabBarMinimizeBehavior(.onScrollDown)` where
+/// available; on iOS 18 the standard tab bar is used unchanged.
+private struct TabBarMinimizeOnScrollDown: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            content
+        }
     }
 }
 

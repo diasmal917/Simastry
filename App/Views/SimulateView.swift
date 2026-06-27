@@ -227,10 +227,9 @@ struct SimulateView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, SimastrySpacing.tabBarClearance + 92)
+                    .padding(.bottom, SimastrySpacing.tabBarClearance)
                 }
                 .scrollIndicators(.hidden)
-                .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
                 .onChange(of: selectedCategory) { _, _ in
                     guard hasAdvancedPastCategory else { return }
                     scrollToNextPredictStep(proxy)
@@ -240,7 +239,9 @@ struct SimulateView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             predictBottomAction
         }
-        .navigationTitle("Ask the Future")
+        // The centered orb hero below already titles this screen, so the nav bar
+        // stays untitled to avoid showing "Ask the Future" twice.
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showTopUpSheet) {

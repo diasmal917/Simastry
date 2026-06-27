@@ -9,6 +9,19 @@ nonisolated private enum PeopleSheet: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// Renders a `.searchable` field as a top-right toolbar button that expands on
+/// tap (official iOS 26 `.searchToolbarBehavior(.minimize)`); on iOS 18 the
+/// standard search bar is used unchanged.
+private struct MinimizedSearchToolbar: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.searchToolbarBehavior(.minimize)
+        } else {
+            content
+        }
+    }
+}
+
 struct PeopleView: View {
     @Bindable var viewModel: AppViewModel
     @State private var searchText: String = ""
@@ -43,11 +56,8 @@ struct PeopleView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 18) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 18) {
                         peopleContextStrip
 
                         if viewModel.relationshipPeople.count >= 2 {
@@ -72,14 +82,16 @@ struct PeopleView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
-                }
-                .scrollIndicators(.hidden)
-                .minimizesTabBarOnScroll()   // collapse the floating glass bar on scroll-down
             }
+            .scrollIndicators(.hidden)
+            .background { CelestialBackground() }
             .navigationTitle("People")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            // Native search. On iOS 26 `.searchToolbarBehavior(.minimize)` renders
+            // it as a top-right button that expands on tap; iOS 18 shows a bar.
             .searchable(text: $searchText, prompt: "Search people or signs")
+            .modifier(MinimizedSearchToolbar())
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {

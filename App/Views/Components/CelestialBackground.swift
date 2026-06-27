@@ -16,9 +16,10 @@ struct CelestialBackground: View {
         ZStack {
             Color.black
 
-            // The starfield drifts very slowly — and, via `LandingView`-style
-            // parallax callers, slower than the foreground — for subtle depth.
-            CosmicDriftImage(animated: !reduceMotion, imageName: "SpaceWallpaper")
+            // Held perfectly still in-app (no Ken Burns zoom) so the starfield
+            // reads as a calm, fixed cosmos rather than drifting under content.
+            // The landing screen keeps its own slow drift.
+            CosmicDriftImage(animated: false, imageName: "SpaceWallpaper")
                 .ignoresSafeArea()
 
             LinearGradient(
