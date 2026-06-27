@@ -3,8 +3,11 @@
     "Debug": "debug",
     "Release": "release"
   },
-  "name": "Project",
+  "name": "Simastry",
   "options": {
+    "deploymentTarget": {
+      "iOS": "18.0"
+    },
     "groupSortPosition": "bottom",
     "transitivelyLinkDependencies": false
   },
@@ -12,21 +15,17 @@
     "CODE_SIGN_IDENTITY": "-"
   },
   "targets": {
-    "New Project": {
-      "deploymentTarget": "26.0",
+    "Simastry": {
       "info": {
-        "path": "App\/Info.plist",
+        "path": "App/Info.plist",
         "properties": {
-          "CFBundleDisplayName": "New Project",
+          "CFBundleDisplayName": "Simastry",
           "CFBundleShortVersionString": "1.0",
           "CFBundleVersion": "1",
           "ITSAppUsesNonExemptEncryption": false,
           "UILaunchScreen": {},
           "UISupportedInterfaceOrientations": [
-            "UIInterfaceOrientationPortrait",
-            "UIInterfaceOrientationPortraitUpsideDown",
-            "UIInterfaceOrientationLandscapeLeft",
-            "UIInterfaceOrientationLandscapeRight"
+            "UIInterfaceOrientationPortrait"
           ]
         }
       },
