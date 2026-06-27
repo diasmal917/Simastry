@@ -318,21 +318,45 @@ struct LandingView: View {
 
     private func landingBackground(size: CGSize) -> some View {
         ZStack {
-            // Shared app celestial base — the exact midnight gradient + starfield
-            // used on every screen, so stepping past the landing no longer
-            // changes the background. The landing keeps a little extra motion
-            // (drifting dust + rare falling stars) for a premium first moment.
-            CelestialBackground()
+            Color.black
 
+            // The pastel zodiac wallpaper, with a very slow Ken Burns drift.
+            // No clip: the view's built-in overscan absorbs both the drift pan
+            // and the parallax offset below, so no black edge is ever exposed.
+            CosmicDriftImage(animated: !reduceMotion)
+                .frame(width: size.width, height: size.height)
+                .offset(x: motionOffset.width * 0.40, y: motionOffset.height * 0.40)
+
+            // Faint cosmic dust drifting upward, sitting just above the wallpaper.
             CosmicDustLayer(animated: !reduceMotion)
                 .frame(width: size.width, height: size.height)
                 .offset(x: motionOffset.width * 0.22, y: motionOffset.height * 0.22)
-                .allowsHitTesting(false)
 
+            // Legibility veil — lighter up top so the field breathes around the
+            // wordmark, then progressively darker through the headline
+            // band and the bottom CTA so white text always keeps its ground.
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.34), location: 0),
+                    .init(color: .black.opacity(0.14), location: 0.16),
+                    .init(color: .black.opacity(0.42), location: 0.50),
+                    .init(color: .black.opacity(0.68), location: 0.74),
+                    .init(color: .black.opacity(0.94), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            // Rare diagonal falling stars — above the veil so the glass cards
+            // (which sit in front of this whole background) softly showcase each
+            // streak as it drifts behind them.
             FallingStarsLayer(animated: !reduceMotion)
                 .frame(width: size.width, height: size.height)
                 .offset(x: motionOffset.width * 0.28, y: motionOffset.height * 0.28)
-                .allowsHitTesting(false)
+
+            shimmerLayer(size: size)
+                .offset(x: motionOffset.width * 0.3, y: motionOffset.height * 0.3)
         }
     }
 
