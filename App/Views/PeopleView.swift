@@ -1141,7 +1141,7 @@ struct RelationshipPersonDetailView: View {
             title: "Why this reading",
             summary: reading.methodSummary,
             signals: methodSignals,
-            footer: "Private notes and message context stay on device in this prototype.",
+            footer: "Private notes and message context stay on this device unless you choose to share them.",
             accent: SimastryColor.gold
         )
     }
@@ -1431,7 +1431,7 @@ struct AddRelationshipPersonView: View {
                 .frame(width: 72, height: 72)
                 .clipShape(Circle())
                 .overlay {
-                    // Ring frames a real photo only; the zodiac-glyph placeholder stays borderless.
+                    // Ring frames a real photo only; the zodiac-glyph fallback stays borderless.
                     if imageData != nil {
                         Circle().stroke(SimastryColor.gold.opacity(0.24), lineWidth: 1)
                     }

@@ -11,7 +11,8 @@ struct AuraView: View {
         ChartAura.makeAll(
             sun: viewModel.userSunSign,
             moon: viewModel.userMoonSign,
-            rising: viewModel.userRisingSign
+            rising: viewModel.userRisingSign,
+            walletCounts: viewModel.useAuraWalletForAura ? viewModel.auraWalletZodiacCounts : [:]
         )
     }
 
@@ -172,7 +173,10 @@ struct AuraView: View {
 
     private var auraMethodSummary: String {
         if viewModel.hasAuraWalletContext && viewModel.useAuraWalletForAura {
-            return "This uses your saved Sun, Moon, and Rising as chart signals. Once the lookup provider is connected, your aura can also reflect the Zodiacs you hold — a display of your collection, never a key to app features."
+            if viewModel.auraWalletTotalZodiacs > 0 {
+                return "This blends your saved Sun, Moon, and Rising with the Zodiac holdings you pasted. Each held sign boosts its matching aura bar by count; holdings are display context only and never unlock app features."
+            }
+            return "This uses your saved Sun, Moon, and Rising as chart signals. Your read-only wallet is saved, and pasted Zodiac counts can tune the matching aura bars when available."
         }
         return "This uses your saved Sun, Moon, and Rising as chart signals, then maps those placements to sign, element, and modality strengths."
     }
@@ -197,8 +201,10 @@ struct AuraView: View {
         }
         if viewModel.hasAuraWalletContext && viewModel.useAuraWalletForAura {
             signals.append(MethodSignal(
-                label: "Aura wallet",
-                detail: "Read-only \(viewModel.auraWalletShortAddress)",
+                label: "Wallet Zodiacs",
+                detail: viewModel.auraWalletTotalZodiacs > 0
+                    ? viewModel.auraWalletSummaryLine
+                    : "Read-only \(viewModel.auraWalletDisplayLabel)",
                 systemImage: "wallet.pass.fill",
                 tint: SimastryColor.gold
             ))
@@ -253,21 +259,25 @@ private struct AuraSummaryCard: View {
                 AuraStatTile(
                     title: "Dominant Aura",
                     value: summary.dominantSign?.displayName ?? "—",
-                    sign: summary.dominantSign
+                    sign: summary.dominantSign,
+                    info: "The strongest sign signal after blending chart placements and any pasted wallet Zodiac counts."
                 )
                 AuraStatTile(
                     title: "Strongest Elements",
                     value: summary.strongestElements.isEmpty
                         ? "—"
-                        : summary.strongestElements.map(\.displayName).joined(separator: " + ")
+                        : summary.strongestElements.map(\.displayName).joined(separator: " + "),
+                    info: "The elements with the most combined sign strength. Fire moves, Earth steadies, Air connects, and Water feels."
                 )
                 AuraStatTile(
-                    title: "Chart Signals",
-                    value: "\(summary.chartSignalCount) of 3"
+                    title: "Active Signals",
+                    value: "\(summary.activeSignalCount) of 4",
+                    info: "Sun, Moon, Rising, and Wallet Zodiacs can each light the Aura. Missing or unused signals stay out of the score."
                 )
                 AuraStatTile(
                     title: "Lit Bars",
-                    value: "\(summary.litBars)"
+                    value: "\(summary.litBars)",
+                    info: "Bars count as lit once a sign reaches Clear aura or stronger."
                 )
             }
         }
@@ -280,22 +290,49 @@ private struct AuraStatTile: View {
     var title: String
     var value: String
     var sign: ZodiacSign?
+    var info: String
+    @State private var showingInfo = false
 
-    init(title: String, value: String, sign: ZodiacSign? = nil) {
+    init(title: String, value: String, sign: ZodiacSign? = nil, info: String) {
         self.title = title
         self.value = value
         self.sign = sign
+        self.info = info
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title)
-                .font(SimastryFont.overline)
-                .foregroundStyle(SimastryColor.deepMuted)
-                .tracking(0.8)
-                .textCase(.uppercase)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+            HStack(spacing: 5) {
+                Text(title)
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .tracking(0.8)
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Spacer(minLength: 4)
+
+                Button {
+                    showingInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold.opacity(0.88))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("About \(title)")
+                .popover(isPresented: $showingInfo) {
+                    Text(info)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .lineSpacing(3)
+                        .padding(16)
+                        .frame(width: 252)
+                        .presentationBackground(SimastryColor.surface)
+                        .presentationCompactAdaptation(.popover)
+                }
+            }
 
             HStack(spacing: 7) {
                 if let sign {
@@ -314,6 +351,7 @@ private struct AuraStatTile: View {
         .tintedGlass((sign?.color ?? SimastryColor.gold).opacity(0.08), cornerRadius: 16)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title): \(value)")
+        .accessibilityHint(info)
     }
 }
 
@@ -373,7 +411,14 @@ private struct AuraRow: View {
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("\(aura.level.rawValue) in your chart right now.")
+            if !aura.sourceLine.isEmpty {
+                Text(aura.sourceLine)
+                    .font(SimastryFont.captionSmall.weight(.semibold))
+                    .foregroundStyle(aura.sign.color)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text("\(aura.level.rawValue) in your aura right now.")
                 .font(SimastryFont.captionSmall.weight(.semibold))
                 .foregroundStyle(aura.strength > 0 ? aura.sign.color : SimastryColor.deepMuted)
         }
@@ -581,7 +626,7 @@ private struct AuraMilestoneDot: View {
 
                 Text(reached
                     ? "Reached — \(word) is lit in your aura."
-                    : "This lights once your Sun, Moon, Rising, element, or modality gives this sign enough signal.")
+                    : "This lights once your Sun, Moon, Rising, element, modality, or wallet holdings give this sign enough signal.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.offWhite)
                     .fixedSize(horizontal: false, vertical: true)
@@ -734,7 +779,7 @@ private struct AuraShareCard: View {
             HStack(alignment: .top) {
                 metric("Dominant", summary.dominantSign?.displayName ?? "—")
                 Spacer()
-                metric("Signals", "\(summary.chartSignalCount) of 3")
+                metric("Signals", "\(summary.activeSignalCount) of 4")
                 Spacer()
                 metric("Lit bars", "\(summary.litBars)")
             }
@@ -829,13 +874,27 @@ private struct ChartAura: Identifiable {
     var level: ChartAuraLevel { ChartAuraScale.level(for: strength) }
     var progress: Double { ChartAuraScale.progress(for: strength) }
     var traits: [AuraTrait] { sign.auraTraits }
+    var sourceLine: String {
+        let names = sources
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.displayName)
+        guard !names.isEmpty else { return "" }
+        return "Lit by \(names.joined(separator: ", "))."
+    }
 
     func reached(_ milestone: ChartAuraMilestone) -> Bool {
         strength >= milestone.strength
     }
 
-    static func makeAll(sun: ZodiacSign?, moon: ZodiacSign?, rising: ZodiacSign?) -> [ChartAura] {
-        ZodiacSign.allCases.map { sign in
+    static func makeAll(
+        sun: ZodiacSign?,
+        moon: ZodiacSign?,
+        rising: ZodiacSign?,
+        walletCounts: [ZodiacSign: Int] = [:]
+    ) -> [ChartAura] {
+        let maxWalletCount = max(walletCounts.values.max() ?? 0, 1)
+
+        return ZodiacSign.allCases.map { sign in
             var score = 0
             var sources: Set<ChartAuraSource> = []
 
@@ -869,6 +928,13 @@ private struct ChartAura: Identifiable {
                 }
             }
 
+            if let walletCount = walletCounts[sign], walletCount > 0 {
+                let normalized = Double(walletCount) / Double(maxWalletCount)
+                let countScore = min(60, 18 + walletCount * 8 + Int((normalized * 18).rounded()))
+                score += countScore
+                sources.insert(.wallet)
+            }
+
             return ChartAura(sign: sign, strength: min(score, 100), sources: sources)
         }
     }
@@ -878,6 +944,25 @@ private enum ChartAuraSource: Hashable {
     case sun
     case moon
     case rising
+    case wallet
+
+    var displayName: String {
+        switch self {
+        case .sun: "Sun"
+        case .moon: "Moon"
+        case .rising: "Rising"
+        case .wallet: "Wallet Zodiacs"
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .sun: 0
+        case .moon: 1
+        case .rising: 2
+        case .wallet: 3
+        }
+    }
 }
 
 private enum ChartAuraLevel: String {
@@ -927,7 +1012,7 @@ private enum ChartAuraScale {
 private struct ChartAuraSummary {
     var dominantSign: ZodiacSign?
     var strongestElements: [ZodiacElement]
-    var chartSignalCount: Int
+    var activeSignalCount: Int
     var litBars: Int
 
     static func make(from auras: [ChartAura]) -> ChartAuraSummary {
@@ -951,7 +1036,7 @@ private struct ChartAuraSummary {
         return ChartAuraSummary(
             dominantSign: dominantSign,
             strongestElements: ordered,
-            chartSignalCount: sourceCount.count,
+            activeSignalCount: sourceCount.count,
             litBars: auras.filter { $0.strength >= ChartAuraScale.milestones.first?.strength ?? 34 }.count
         )
     }

@@ -8,8 +8,7 @@ struct SimastrySettingsView: View {
     @Environment(\.openURL) private var openURL
 
     @State private var walletAddressInput: String = ""
-    @State private var savedWalletAddress: String = ""
-    @State private var showingPhantomInfo = false
+    @State private var savedAuraWalletInputLabel: String = ""
     @State private var showingReadOnlyInfo = false
     @State private var showingClearDataConfirmation = false
     @State private var showingDeleteAccountConfirmation = false
@@ -22,25 +21,15 @@ struct SimastrySettingsView: View {
     }
 
     private var walletInputIsValid: Bool {
-        AppViewModel.isSupportedPublicWalletAddress(trimmedWalletInput)
+        AppViewModel.canParseAuraWalletInput(trimmedWalletInput)
     }
 
-    private var visibleSavedWalletAddress: String {
-        let persisted = viewModel.auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !persisted.isEmpty {
-            return persisted
-        }
-        return savedWalletAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+    private var walletInputSummary: String {
+        AppViewModel.auraWalletInputSummary(trimmedWalletInput)
     }
 
     private var hasVisibleAuraWalletContext: Bool {
-        !visibleSavedWalletAddress.isEmpty
-    }
-
-    private var visibleWalletShortAddress: String {
-        let trimmed = visibleSavedWalletAddress
-        guard trimmed.count > 12 else { return trimmed }
-        return "\(trimmed.prefix(6))...\(trimmed.suffix(4))"
+        viewModel.hasAuraWalletContext || !savedAuraWalletInputLabel.isEmpty
     }
 
     var body: some View {
@@ -72,8 +61,8 @@ struct SimastrySettingsView: View {
             }
         }
         .onAppear {
-            walletAddressInput = viewModel.auraWalletPublicAddress
-            savedWalletAddress = viewModel.auraWalletPublicAddress
+            walletAddressInput = viewModel.auraWalletTotalZodiacs > 0 ? "" : viewModel.auraWalletPublicAddress
+            savedAuraWalletInputLabel = viewModel.auraWalletDisplayLabel
             #if DEBUG
             if walletAddressInput.isEmpty, let testPasteboardValue = Self.uiTestPasteboardValue {
                 walletAddressInput = testPasteboardValue
@@ -83,12 +72,7 @@ struct SimastrySettingsView: View {
         .alert("Read-only Aura wallet", isPresented: $showingReadOnlyInfo) {
             Button("OK") {}
         } message: {
-            Text("Simastry uses only the public wallet address to read which Zodiacs you hold, so your Aura can reflect them. Holdings never unlock app features, and Simastry cannot move funds, request signatures, request approvals, or make transactions.")
-        }
-        .alert("Phantom wallet", isPresented: $showingPhantomInfo) {
-            Button("OK") {}
-        } message: {
-            Text("Production Phantom support should use the official Phantom SDK or deeplink flow to request only the public address. This prototype keeps the safe path available now: paste a public wallet address for read-only display context.")
+            Text("Simastry only stores a public address and per-sign Zodiac counts parsed from what you paste. Holdings tune Aura bars for display only; they never unlock app features, and Simastry cannot sign, approve, move funds, or make transactions.")
         }
         .confirmationDialog("Clear local Simastry data from this device?", isPresented: $showingClearDataConfirmation, titleVisibility: .visible) {
             Button("Clear Local Data", role: .destructive) {
@@ -262,47 +246,27 @@ struct SimastrySettingsView: View {
                         Text("Read-only wallet for Aura")
                             .font(SimastryFont.titleSmall)
                             .foregroundStyle(SimastryColor.offWhite)
-                        Text("Lets your Aura reflect the Zodiacs you hold. Display only — holdings never unlock app features, and Simastry cannot sign, approve, or move anything.")
+                        Text("Paste a public address or a Zodiac holdings list. Simastry reads sign counts locally and uses them only to tune your Aura bars.")
                             .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                Button {
-                    HapticManager.buttonPress()
-                    viewModel.showToast(
-                        "Use manual wallet",
-                        subtitle: "Paste a public address below for the read-only Aura flow.",
-                        isError: false
-                    )
-                    showingPhantomInfo = true
-                } label: {
-                    settingRow(
-                        icon: "p.circle.fill",
-                        title: "Connect Phantom",
-                        detail: "SDK-ready read-only public address flow",
-                        tint: SimastryColor.risingViolet,
-                        showsChevron: true
-                    )
-                }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityIdentifier("settings.auraWallet.connectPhantomButton")
-
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Public wallet address")
+                    Text("Wallet or Zodiac holdings")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.deepMuted)
                         .tracking(1)
                         .textCase(.uppercase)
 
-                    TextField("Paste Solana or 0x address", text: $walletAddressInput)
+                    TextField("Paste address or Aries x3, Taurus x1", text: $walletAddressInput, axis: .vertical)
                         .font(.system(.footnote, design: .monospaced))
                         .foregroundStyle(SimastryColor.offWhite)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.asciiCapable)
-                        .lineLimit(1)
+                        .lineLimit(1...4)
                         .padding(12)
                         .background(Color.white.opacity(0.05), in: .rect(cornerRadius: 14))
                         .overlay {
@@ -312,7 +276,7 @@ struct SimastrySettingsView: View {
                         .accessibilityIdentifier("settings.auraWallet.addressField")
 
                     if !trimmedWalletInput.isEmpty {
-                        Text(walletInputIsValid ? "Address format looks valid." : "Paste a public Solana address or 0x EVM address.")
+                        Text(walletInputIsValid ? (walletInputSummary.isEmpty ? "Address format looks valid." : walletInputSummary) : "Paste a public wallet address or Zodiac counts like Aries x3.")
                             .font(SimastryFont.captionSmall)
                             .foregroundStyle(walletInputIsValid ? SimastryColor.gold : SimastryColor.amber)
                     }
@@ -348,10 +312,17 @@ struct SimastrySettingsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         settingRow(
                             icon: "checkmark.seal.fill",
-                            title: "Saved wallet",
-                            detail: visibleWalletShortAddress,
+                            title: "Saved Aura input",
+                            detail: viewModel.auraWalletDisplayLabel,
                             tint: SimastryColor.gold
                         )
+
+                        if viewModel.auraWalletTotalZodiacs > 0 {
+                            Text(viewModel.auraWalletSummaryLine)
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
 
                         Toggle("Reflect this wallet in Aura", isOn: $viewModel.useAuraWalletForAura)
                             .font(SimastryFont.labelLarge)
@@ -361,7 +332,7 @@ struct SimastrySettingsView: View {
 
                         Button {
                             walletAddressInput = ""
-                            savedWalletAddress = ""
+                            savedAuraWalletInputLabel = ""
                             viewModel.clearAuraWalletContext()
                         } label: {
                             Label("Remove wallet", systemImage: "xmark.circle")
@@ -509,11 +480,11 @@ struct SimastrySettingsView: View {
 
         walletAddressInput = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !walletAddressInput.isEmpty else {
-            viewModel.showToast("Clipboard empty", subtitle: "Copy a public wallet address, then paste again.", isError: true)
+            viewModel.showToast("Clipboard empty", subtitle: "Copy a public wallet address or Zodiac holdings, then paste again.", isError: true)
             return
         }
         guard walletInputIsValid else {
-            viewModel.showToast("Wallet not ready", subtitle: "Paste a Solana or EVM public wallet address.", isError: true)
+            viewModel.showToast("Aura input not ready", subtitle: "Paste a public wallet address or Zodiac counts like Aries x3.", isError: true)
             return
         }
         saveWalletAddressFromInput()
@@ -526,10 +497,12 @@ struct SimastrySettingsView: View {
             return
         }
         lastWalletSaveActionAt = now
-        viewModel.saveAuraWalletPublicAddress(walletAddressInput)
+        viewModel.saveAuraWalletInput(walletAddressInput)
         if walletInputIsValid {
-            savedWalletAddress = trimmedWalletInput
-            walletAddressInput = trimmedWalletInput
+            savedAuraWalletInputLabel = viewModel.auraWalletDisplayLabel
+            walletAddressInput = viewModel.auraWalletTotalZodiacs > 0
+                ? ""
+                : viewModel.auraWalletPublicAddress
         }
     }
 

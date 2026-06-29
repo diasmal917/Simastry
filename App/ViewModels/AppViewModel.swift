@@ -40,6 +40,7 @@ class AppViewModel {
     private let isDiscoverableKey = "isDiscoverable"
     private let thirdPartyConsentKey = "thirdPartyDataConsent"
     private let auraWalletPublicAddressKey = "simastry_aura_wallet_public_address"
+    private let auraWalletHoldingsKey = "simastry_aura_wallet_holdings"
     private let auraWalletUseInAuraKey = "simastry_aura_wallet_use_in_aura"
     private let auraWalletLastCheckedAtKey = "simastry_aura_wallet_last_checked_at"
     private let privateNotificationsEnabledKey = "simastry_private_notifications_enabled"
@@ -149,6 +150,12 @@ class AppViewModel {
     var auraWalletPublicAddress: String = UserDefaults.standard.string(forKey: "simastry_aura_wallet_public_address") ?? "" {
         didSet {
             UserDefaults.standard.set(auraWalletPublicAddress, forKey: auraWalletPublicAddressKey)
+        }
+    }
+
+    var auraWalletHoldings: AuraWalletHoldings? = AppViewModel.loadAuraWalletHoldings() {
+        didSet {
+            Self.saveAuraWalletHoldings(auraWalletHoldings)
         }
     }
 
@@ -301,19 +308,32 @@ class AppViewModel {
         )
     }
 
-    func saveAuraWalletPublicAddress(_ address: String) {
-        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard Self.isSupportedPublicWalletAddress(trimmed) else {
-            showToast("Wallet not saved", subtitle: "Paste a Solana or EVM public wallet address.", isError: true)
+    func saveAuraWalletInput(_ input: String) {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let parsed = AuraWalletHoldings.parse(from: trimmed) else {
+            showToast("Aura input not saved", subtitle: "Paste a public wallet address or Zodiac holdings like Aries x3.", isError: true)
             return
         }
-        auraWalletPublicAddress = trimmed
+
+        auraWalletPublicAddress = parsed.publicAddress
+        auraWalletHoldings = parsed
         auraWalletLastCheckedAt = Date()
-        showToast("Wallet saved", subtitle: "Your Aura can reflect this wallet's Zodiacs.", isError: false)
+        useAuraWalletForAura = true
+
+        if parsed.hasZodiacCounts {
+            showToast("Zodiacs added to Aura", subtitle: parsed.summaryLine, isError: false)
+        } else {
+            showToast("Wallet saved", subtitle: "Paste Zodiac counts when available to tune the Aura bars.", isError: false)
+        }
+    }
+
+    func saveAuraWalletPublicAddress(_ address: String) {
+        saveAuraWalletInput(address)
     }
 
     func clearAuraWalletContext() {
         auraWalletPublicAddress = ""
+        auraWalletHoldings = nil
         auraWalletLastCheckedAt = nil
         showToast("Wallet removed", subtitle: "Aura will use chart signals only.", isError: false)
     }
@@ -348,18 +368,33 @@ class AppViewModel {
     }
 
     static func isSupportedPublicWalletAddress(_ address: String) -> Bool {
-        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
+        AuraWalletHoldings.isSupportedPublicWalletAddress(address)
+    }
 
-        let hexCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
-        if trimmed.hasPrefix("0x"), trimmed.count == 42 {
-            let hexPart = String(trimmed.dropFirst(2))
-            return hexPart.unicodeScalars.allSatisfy { hexCharacters.contains($0) }
+    static func canParseAuraWalletInput(_ input: String) -> Bool {
+        AuraWalletHoldings.canParse(input)
+    }
+
+    static func auraWalletInputSummary(_ input: String) -> String {
+        AuraWalletHoldings.parse(from: input)?.summaryLine ?? ""
+    }
+
+    private static func loadAuraWalletHoldings() -> AuraWalletHoldings? {
+        guard let data = UserDefaults.standard.data(forKey: "simastry_aura_wallet_holdings") else {
+            return nil
         }
+        return try? JSONDecoder().decode(AuraWalletHoldings.self, from: data)
+    }
 
-        let base58Characters = CharacterSet(charactersIn: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
-        return (32...60).contains(trimmed.count)
-            && trimmed.unicodeScalars.allSatisfy { base58Characters.contains($0) }
+    private static func saveAuraWalletHoldings(_ holdings: AuraWalletHoldings?) {
+        let key = "simastry_aura_wallet_holdings"
+        guard let holdings else {
+            UserDefaults.standard.removeObject(forKey: key)
+            return
+        }
+        if let data = try? JSONEncoder().encode(holdings) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
     }
 
     // MARK: - Safety Gates
@@ -407,12 +442,27 @@ class AppViewModel {
 
     var hasAuraWalletContext: Bool {
         !auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || (auraWalletHoldings?.hasZodiacCounts ?? false)
     }
 
     var auraWalletShortAddress: String {
-        let trimmed = auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 12 else { return trimmed }
-        return "\(trimmed.prefix(6))...\(trimmed.suffix(4))"
+        AuraWalletHoldings.shortAddress(auraWalletPublicAddress)
+    }
+
+    var auraWalletDisplayLabel: String {
+        auraWalletHoldings?.displayLabel ?? auraWalletShortAddress
+    }
+
+    var auraWalletZodiacCounts: [ZodiacSign: Int] {
+        auraWalletHoldings?.zodiacCounts ?? [:]
+    }
+
+    var auraWalletTotalZodiacs: Int {
+        auraWalletHoldings?.totalZodiacs ?? 0
+    }
+
+    var auraWalletSummaryLine: String {
+        auraWalletHoldings?.summaryLine ?? ""
     }
 
     init() {
@@ -3105,6 +3155,7 @@ class AppViewModel {
         profileImage = nil
         profileImageURL = nil
         auraWalletPublicAddress = ""
+        auraWalletHoldings = nil
         auraWalletLastCheckedAt = nil
         useAuraWalletForAura = true
         privateNotificationsEnabled = true
@@ -3138,6 +3189,7 @@ class AppViewModel {
         defaults.removeObject(forKey: profileImageURLKey)
         defaults.removeObject(forKey: lastDiscoveryMessageTimestampKey)
         defaults.removeObject(forKey: auraWalletPublicAddressKey)
+        defaults.removeObject(forKey: auraWalletHoldingsKey)
         defaults.removeObject(forKey: auraWalletUseInAuraKey)
         defaults.removeObject(forKey: auraWalletLastCheckedAtKey)
         defaults.removeObject(forKey: privateNotificationsEnabledKey)
@@ -3368,9 +3420,11 @@ class AppViewModel {
         ]
 
         exportData["auraWalletContext"] = [
-            "hasPublicWallet": hasAuraWalletContext,
+            "hasPublicWallet": !auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             "publicAddress": auraWalletPublicAddress,
-            "provider": hasAuraWalletContext ? "Manual public wallet" : "",
+            "zodiacCount": auraWalletTotalZodiacs,
+            "zodiacCountsBySign": auraWalletHoldings?.zodiacCountsByRawValue ?? [:],
+            "provider": hasAuraWalletContext ? "Manual Aura wallet input" : "",
             "readOnlyPurpose": "Aura calculation",
             "lastCheckedAt": auraWalletLastCheckedAt.map { ISO8601DateFormatter().string(from: $0) } ?? ""
         ]
@@ -3539,9 +3593,10 @@ extension AppViewModel {
 
         UserDefaults.standard.set("MAYA2626", forKey: Self.personalInviteCodeKey)
 
-        if let previewWalletAddress = debugPreviewValue(after: "-SimastryPreviewWallet", from: arguments),
-           Self.isSupportedPublicWalletAddress(previewWalletAddress) {
-            auraWalletPublicAddress = previewWalletAddress
+        if let previewWalletInput = debugPreviewValue(after: "-SimastryPreviewWallet", from: arguments),
+           let parsedWallet = AuraWalletHoldings.parse(from: previewWalletInput) {
+            auraWalletPublicAddress = parsedWallet.publicAddress
+            auraWalletHoldings = parsedWallet
             auraWalletLastCheckedAt = now
             useAuraWalletForAura = true
         }
