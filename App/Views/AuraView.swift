@@ -152,7 +152,7 @@ struct AuraView: View {
     }
 
     private var infoPopover: some View {
-        Text("Your aura is a visual summary of your chart signals. Sun shows core drive, Moon shows emotional reaction, and Rising shows first response. Simastry translates those signals into communication energy.")
+        Text("Your aura is a visual summary of chart and wallet signals. Sun shows core drive, Moon shows emotional reaction, Rising shows first response, and official Zodiacs can boost matching bars when you connect a read-only public wallet.")
             .font(SimastryFont.bodySmall)
             .foregroundStyle(SimastryColor.offWhite)
             .lineSpacing(3)
@@ -174,9 +174,9 @@ struct AuraView: View {
     private var auraMethodSummary: String {
         if viewModel.hasAuraWalletContext && viewModel.useAuraWalletForAura {
             if viewModel.auraWalletTotalZodiacs > 0 {
-                return "This blends your saved Sun, Moon, and Rising with the Zodiac holdings you pasted. Each held sign boosts its matching aura bar by count; holdings are display context only and never unlock app features."
+                return "This blends your saved Sun, Moon, and Rising with official or pasted Zodiac holdings. Each held sign boosts its matching aura bar by count; holdings are display context only and never unlock app features."
             }
-            return "This uses your saved Sun, Moon, and Rising as chart signals. Your read-only wallet is saved, and pasted Zodiac counts can tune the matching aura bars when available."
+            return "This uses your saved Sun, Moon, and Rising as chart signals. Your read-only wallet is saved; Simastry checks official Zodiacs when possible, and pasted counts can tune bars as a fallback."
         }
         return "This uses your saved Sun, Moon, and Rising as chart signals, then maps those placements to sign, element, and modality strengths."
     }
@@ -260,7 +260,7 @@ private struct AuraSummaryCard: View {
                     title: "Dominant Aura",
                     value: summary.dominantSign?.displayName ?? "—",
                     sign: summary.dominantSign,
-                    info: "The strongest sign signal after blending chart placements and any pasted wallet Zodiac counts."
+                    info: "The strongest sign signal after blending chart placements and any official or pasted wallet Zodiac counts."
                 )
                 AuraStatTile(
                     title: "Strongest Elements",

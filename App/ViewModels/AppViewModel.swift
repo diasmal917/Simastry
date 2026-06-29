@@ -180,6 +180,7 @@ class AppViewModel {
             }
         }
     }
+    var isAuraWalletRefreshing: Bool = false
 
     var privateNotificationsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_private_notifications_enabled") == nil
         ? true
@@ -323,7 +324,7 @@ class AppViewModel {
         if parsed.hasZodiacCounts {
             showToast("Zodiacs added to Aura", subtitle: parsed.summaryLine, isError: false)
         } else {
-            showToast("Wallet saved", subtitle: "Paste Zodiac counts when available to tune the Aura bars.", isError: false)
+            showToast("Wallet saved", subtitle: "Looking for official Zodiacs now.", isError: false)
         }
     }
 
@@ -331,10 +332,38 @@ class AppViewModel {
         saveAuraWalletInput(address)
     }
 
+    func refreshAuraWalletHoldingsFromAddress() async {
+        let address = auraWalletPublicAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !address.isEmpty else { return }
+
+        isAuraWalletRefreshing = true
+        defer { isAuraWalletRefreshing = false }
+
+        do {
+            let officialHoldings = try await ZodiacsWalletService.shared.fetchHoldings(for: address)
+            auraWalletHoldings = officialHoldings
+            auraWalletLastCheckedAt = Date()
+            useAuraWalletForAura = true
+
+            if officialHoldings.hasZodiacCounts {
+                showToast("Zodiacs found", subtitle: officialHoldings.summaryLine, isError: false)
+            } else {
+                showToast("No Zodiacs found", subtitle: "This address has no official Zodiacs on supported chains yet.", isError: false)
+            }
+        } catch {
+            if auraWalletTotalZodiacs > 0 {
+                showToast("Using pasted counts", subtitle: "Live wallet lookup is unavailable right now.", isError: false)
+            } else {
+                showToast("Wallet lookup unavailable", subtitle: "Paste Zodiac counts like Aries x3 if you want to tune Aura now.", isError: true)
+            }
+        }
+    }
+
     func clearAuraWalletContext() {
         auraWalletPublicAddress = ""
         auraWalletHoldings = nil
         auraWalletLastCheckedAt = nil
+        isAuraWalletRefreshing = false
         showToast("Wallet removed", subtitle: "Aura will use chart signals only.", isError: false)
     }
 

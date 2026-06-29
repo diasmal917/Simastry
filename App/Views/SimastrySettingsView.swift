@@ -72,7 +72,7 @@ struct SimastrySettingsView: View {
         .alert("Read-only Aura wallet", isPresented: $showingReadOnlyInfo) {
             Button("OK") {}
         } message: {
-            Text("Simastry only stores a public address and per-sign Zodiac counts parsed from what you paste. Holdings tune Aura bars for display only; they never unlock app features, and Simastry cannot sign, approve, move funds, or make transactions.")
+            Text("Simastry only stores a public address and per-sign Zodiac counts. It reads official Zodiacs from public Solana/Base data when available, and can also use pasted counts. Holdings tune Aura bars for display only; Simastry cannot sign, approve, move funds, or make transactions.")
         }
         .confirmationDialog("Clear local Simastry data from this device?", isPresented: $showingClearDataConfirmation, titleVisibility: .visible) {
             Button("Clear Local Data", role: .destructive) {
@@ -246,7 +246,7 @@ struct SimastrySettingsView: View {
                         Text("Read-only wallet for Aura")
                             .font(SimastryFont.titleSmall)
                             .foregroundStyle(SimastryColor.offWhite)
-                        Text("Paste a public address or a Zodiac holdings list. Simastry reads sign counts locally and uses them only to tune your Aura bars.")
+                        Text("Paste a Solana or Base public address. Simastry reads official Zodiacs read-only and uses the counts only to tune your Aura bars.")
                             .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .fixedSize(horizontal: false, vertical: true)
@@ -276,7 +276,7 @@ struct SimastrySettingsView: View {
                         .accessibilityIdentifier("settings.auraWallet.addressField")
 
                     if !trimmedWalletInput.isEmpty {
-                        Text(walletInputIsValid ? (walletInputSummary.isEmpty ? "Address format looks valid." : walletInputSummary) : "Paste a public wallet address or Zodiac counts like Aries x3.")
+                        Text(walletInputIsValid ? (walletInputSummary.isEmpty ? "Address format looks valid. Simastry will check official Zodiacs." : walletInputSummary) : "Paste a public Solana/Base address or Zodiac counts like Aries x3.")
                             .font(SimastryFont.captionSmall)
                             .foregroundStyle(walletInputIsValid ? SimastryColor.gold : SimastryColor.amber)
                     }
@@ -295,7 +295,7 @@ struct SimastrySettingsView: View {
                     Button {
                         saveWalletAddressFromInput()
                     } label: {
-                        walletActionLabel(hasVisibleAuraWalletContext ? "Update" : "Save", systemImage: "checkmark", isPrimary: true)
+                        walletActionLabel(viewModel.isAuraWalletRefreshing ? "Checking" : (hasVisibleAuraWalletContext ? "Update" : "Save"), systemImage: viewModel.isAuraWalletRefreshing ? "arrow.clockwise" : "checkmark", isPrimary: true)
                     }
                     .buttonStyle(.plain)
                     .contentShape(.rect)
@@ -305,6 +305,7 @@ struct SimastrySettingsView: View {
                         }
                     )
                     .opacity(walletInputIsValid ? 1 : 0.42)
+                    .disabled(!walletInputIsValid || viewModel.isAuraWalletRefreshing)
                     .accessibilityIdentifier("settings.auraWallet.saveButton")
                 }
 
@@ -319,6 +320,16 @@ struct SimastrySettingsView: View {
 
                         if viewModel.auraWalletTotalZodiacs > 0 {
                             Text(viewModel.auraWalletSummaryLine)
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if viewModel.isAuraWalletRefreshing {
+                            Text("Checking official Zodiacs on supported chains...")
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if !viewModel.auraWalletPublicAddress.isEmpty {
+                            Text("No Zodiac count has been found yet. You can update again or paste counts manually.")
                                 .font(SimastryFont.captionSmall)
                                 .foregroundStyle(SimastryColor.mutedSilver)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -500,9 +511,20 @@ struct SimastrySettingsView: View {
         viewModel.saveAuraWalletInput(walletAddressInput)
         if walletInputIsValid {
             savedAuraWalletInputLabel = viewModel.auraWalletDisplayLabel
-            walletAddressInput = viewModel.auraWalletTotalZodiacs > 0
-                ? ""
-                : viewModel.auraWalletPublicAddress
+            let shouldLookupAddress = !viewModel.auraWalletPublicAddress.isEmpty
+            if shouldLookupAddress {
+                Task {
+                    await viewModel.refreshAuraWalletHoldingsFromAddress()
+                    savedAuraWalletInputLabel = viewModel.auraWalletDisplayLabel
+                    walletAddressInput = viewModel.auraWalletTotalZodiacs > 0
+                        ? ""
+                        : viewModel.auraWalletPublicAddress
+                }
+            } else {
+                walletAddressInput = viewModel.auraWalletTotalZodiacs > 0
+                    ? ""
+                    : viewModel.auraWalletPublicAddress
+            }
         }
     }
 
