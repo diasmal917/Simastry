@@ -46,30 +46,30 @@ private struct LandingCompanionWindow: Identifiable {
 
 private let landingCompanionWindows: [LandingCompanionWindow] = [
     LandingCompanionWindow(
-        id: "leyla",
-        imageName: "Factory_virgo-mara_card",
-        name: "Leyla",
-        role: "Western Astrologer",
-        isHero: true,
-        widthRatio: 0.44,
-        heightRatio: 0.92,
-        xRatio: 0.50,
-        yRatio: 0.50,
-        rotation: 0,
-        zIndex: 5
-    ),
-    LandingCompanionWindow(
         id: "nadia",
         imageName: "Factory_sagittarius-nadia_profile",
         name: "Nadia",
         role: "Evolutionary Astrologer",
+        isHero: true,
+        widthRatio: 0.49,
+        heightRatio: 0.74,
+        xRatio: 0.50,
+        yRatio: 0.50,
+        rotation: 0,
+        zIndex: 3
+    ),
+    LandingCompanionWindow(
+        id: "leyla",
+        imageName: "Factory_virgo-mara_profile",
+        name: "Leyla",
+        role: "Western Astrologer",
         isHero: false,
-        widthRatio: 0.29,
-        heightRatio: 0.50,
-        xRatio: 0.20,
-        yRatio: 0.76,
-        rotation: 2.5,
-        zIndex: 1
+        widthRatio: 0.34,
+        heightRatio: 0.47,
+        xRatio: 0.18,
+        yRatio: 0.75,
+        rotation: 1.2,
+        zIndex: 4
     ),
     LandingCompanionWindow(
         id: "naomi",
@@ -77,25 +77,25 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         name: "Naomi",
         role: "Chinese Astrologer",
         isHero: false,
-        widthRatio: 0.29,
-        heightRatio: 0.51,
+        widthRatio: 0.31,
+        heightRatio: 0.47,
         xRatio: 0.82,
-        yRatio: 0.33,
-        rotation: 3.5,
-        zIndex: 3
+        yRatio: 0.32,
+        rotation: 1.2,
+        zIndex: 4
     ),
     LandingCompanionWindow(
         id: "mateo",
-        imageName: "Factory_libra-mateo_card",
+        imageName: "Factory_libra-mateo_profile",
         name: "Mateo",
         role: "Vedic Astrologer",
         isHero: false,
-        widthRatio: 0.30,
-        heightRatio: 0.52,
+        widthRatio: 0.31,
+        heightRatio: 0.47,
         xRatio: 0.18,
-        yRatio: 0.32,
-        rotation: -3.5,
-        zIndex: 2
+        yRatio: 0.31,
+        rotation: -1.2,
+        zIndex: 4
     ),
     LandingCompanionWindow(
         id: "soren",
@@ -103,12 +103,12 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         name: "Soren",
         role: "Ancient Astrologer",
         isHero: false,
-        widthRatio: 0.30,
-        heightRatio: 0.51,
-        xRatio: 0.81,
-        yRatio: 0.77,
-        rotation: -2.5,
-        zIndex: 1
+        widthRatio: 0.31,
+        heightRatio: 0.47,
+        xRatio: 0.82,
+        yRatio: 0.76,
+        rotation: -1.2,
+        zIndex: 4
     )
 ]
 
@@ -164,6 +164,16 @@ struct LandingView: View {
         [
             LandingSlide(
                 id: 0,
+                eyebrow: localization.string("landing.slide.panel.eyebrow"),
+                title: localization.string("landing.slide.panel.title"),
+                subtitle: localization.string("landing.slide.panel.subtitle"),
+                icon: SimastryIcon.astrologers,
+                accent: SimastryColor.gold,
+                visualKind: .universe,
+                chips: localization.list("landing.slide.panel.chips")
+            ),
+            LandingSlide(
+                id: 1,
                 eyebrow: localization.string("landing.slide.future.eyebrow"),
                 title: localization.string("landing.slide.future.title"),
                 subtitle: localization.string("landing.slide.future.subtitle"),
@@ -173,7 +183,7 @@ struct LandingView: View {
                 chips: localization.list("landing.slide.future.chips")
             ),
             LandingSlide(
-                id: 1,
+                id: 2,
                 eyebrow: localization.string("landing.slide.aura.eyebrow"),
                 title: localization.string("landing.slide.aura.title"),
                 subtitle: localization.string("landing.slide.aura.subtitle"),
@@ -183,7 +193,7 @@ struct LandingView: View {
                 chips: localization.list("landing.slide.aura.chips")
             ),
             LandingSlide(
-                id: 2,
+                id: 3,
                 eyebrow: localization.string("landing.slide.astrologer.eyebrow"),
                 title: localization.string("landing.slide.astrologer.title"),
                 subtitle: localization.string("landing.slide.astrologer.subtitle"),
@@ -193,7 +203,7 @@ struct LandingView: View {
                 chips: localization.list("landing.slide.astrologer.chips")
             ),
             LandingSlide(
-                id: 3,
+                id: 4,
                 eyebrow: localization.string("landing.slide.decode.eyebrow"),
                 title: localization.string("landing.slide.decode.title"),
                 subtitle: localization.string("landing.slide.decode.subtitle"),
@@ -201,16 +211,6 @@ struct LandingView: View {
                 accent: SimastryColor.celestialBlue,
                 visualKind: .decode,
                 chips: localization.list("landing.slide.decode.chips")
-            ),
-            LandingSlide(
-                id: 4,
-                eyebrow: localization.string("landing.slide.panel.eyebrow"),
-                title: localization.string("landing.slide.panel.title"),
-                subtitle: localization.string("landing.slide.panel.subtitle"),
-                icon: SimastryIcon.astrologers,
-                accent: SimastryColor.gold,
-                visualKind: .universe,
-                chips: localization.list("landing.slide.panel.chips")
             )
         ]
     }
@@ -937,7 +937,7 @@ struct LandingView: View {
             .clipped()
             .frame(width: width, height: height)
             .overlay(alignment: .bottom) {
-                paneScrim(window, width: width, radius: radius)
+                paneScrim(window, radius: radius)
             }
             .clipShape(.rect(cornerRadius: radius))
             .overlay {
@@ -964,9 +964,7 @@ struct LandingView: View {
     }
 
     @ViewBuilder
-    private func paneScrim(_ window: LandingCompanionWindow, width: CGFloat, radius: CGFloat) -> some View {
-        // Right-side panes sit partly behind the hero pane, so their labels
-        // hug the visible (outer) edge instead of the occluded one.
+    private func paneScrim(_ window: LandingCompanionWindow, radius: CGFloat) -> some View {
         let labelsTrailing = !window.isHero && window.xRatio > 0.5
         let alignment: HorizontalAlignment = labelsTrailing ? .trailing : .leading
 
@@ -987,11 +985,12 @@ struct LandingView: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
 
-            Text(window.isHero ? window.role : window.role.replacingOccurrences(of: " Guide", with: ""))
+            Text(window.role)
                 .font(window.isHero ? SimastryFont.labelSmall : SimastryFont.captionSmall)
                 .foregroundStyle(.white.opacity(0.78))
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .minimumScaleFactor(0.58)
+                .allowsTightening(true)
         }
         .frame(maxWidth: .infinity, alignment: labelsTrailing ? .trailing : .leading)
         .padding(.horizontal, window.isHero ? 14 : 10)
