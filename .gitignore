@@ -1,0 +1,7 @@
+/build/
+/Simastry.xcodeproj/
+/App/Info.plist
+.DS_Store
+
+/reports/specialist-evals/*.json
+/reports/specialist-evals/*.md
