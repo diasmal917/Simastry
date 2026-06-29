@@ -66,6 +66,17 @@ class AppViewModel {
     }
 
     var companionMessages: [CompanionMessage] = []
+    var specialistMessages: [SpecialistMessage] = []
+    var specialistConsultationResponses: [SpecialistConsultationResponse] = []
+    var typingSpecialistIds: Set<String> = []
+    var runningEveryoneConsultationIds: Set<UUID> = []
+    var runningEveryoneResponseKeys: Set<String> = []
+    var pendingExpertAstrologerQuestion: String?
+    var pendingExpertAstrologerAutoRunEveryone: Bool = false
+    var pendingExpertAstrologerSpecialistId: String?
+    #if DEBUG
+    var consumedExpertAstrologerPreviewFailures: Set<String> = []
+    #endif
     var discoveryMessages: [CompanionMessage] = []
     var chatThreadSummaries: [ChatThreadSummary] = []
     var chatMessagesByThreadId: [UUID: [ChatMessage]] = [:]
@@ -385,6 +396,9 @@ class AppViewModel {
     static let firstReadOnboardingIntentDefaultsKey = "simastry_first_read_onboarding_intent"
     private let referralInfoKey = "simastry_referral_info"
     private let companionMessagesKey = "simastry_companion_messages"
+    static let specialistMessagesKey = "simastry_expert_astrologer_messages"
+    static let specialistConsultationResponsesKey = "simastry_expert_astrologer_consultation_responses"
+    static let specialistConversationIdsKey = "simastry_expert_astrologer_conversation_ids"
     private let lastMessageGenerationKey = "simastry_last_message_generation"
     private let lastDiscoveryMessageTimestampKey = "simastry_last_discovery_message_timestamp"
     private let firstReadDraftStore = FirstReadDraftStore()
@@ -409,6 +423,7 @@ class AppViewModel {
         loadRelationshipPeople()
         loadFirstReadDraft()
         loadGuideFeedback()
+        loadExpertAstrologerState()
         loadPanelMessages()
         loadPanelMemoryNotes()
         loadMoments()
@@ -499,7 +514,11 @@ class AppViewModel {
         companions.first
     }
 
-    func openAIAstrologists() {
+    func openAIAstrologists(question: String? = nil, autoRunEveryone: Bool = false, specialistId: String? = nil) {
+        let trimmedQuestion = question?.trimmingCharacters(in: .whitespacesAndNewlines)
+        pendingExpertAstrologerQuestion = (trimmedQuestion?.isEmpty ?? true) ? nil : trimmedQuestion
+        pendingExpertAstrologerAutoRunEveryone = pendingExpertAstrologerQuestion != nil && autoRunEveryone
+        pendingExpertAstrologerSpecialistId = specialistId
         selectedTab = .today
         homeSetupPhase = .complete
         aiAstrologistsRouteRequest += 1
@@ -896,6 +915,13 @@ class AppViewModel {
             }
 
             do {
+                try await supabase.deleteExpertAstrologerData(for: userId.uuidString)
+            } catch {
+                remoteFailures.append("expert_astrologers")
+                CrashReporter.log(error, context: "deleteAccountExpertAstrologers")
+            }
+
+            do {
                 try await supabase.deleteAvatarFiles(for: userId.uuidString)
             } catch {
                 remoteFailures.append("avatars")
@@ -1074,7 +1100,14 @@ class AppViewModel {
             openPanelChat()
         case "simulate":
             openPredict()
-        case "guides", "astropedia":
+        case "guides":
+            if AppConfig.expertAstrologersEnabled {
+                openAIAstrologists()
+            } else {
+                guideFocusSign = nil
+                selectedTab = .today
+            }
+        case "astropedia":
             guideFocusSign = nil
             selectedTab = .today
         case "profile":
@@ -1107,10 +1140,21 @@ class AppViewModel {
             selectedTab = .people
 
         case .guide:
+            if AppConfig.expertAstrologersEnabled {
+                openAIAstrologists()
+                return
+            }
             guideFocusSign = nil
             selectedTab = .today
 
         case .guideProfile(let id):
+            if AppConfig.expertAstrologersEnabled {
+                let mappedSpecialistId = ExpertAstrologerRegistry
+                    .specialist(forLegacyCharacterId: id)?
+                    .id
+                openAIAstrologists(specialistId: mappedSpecialistId)
+                return
+            }
             selectedTab = .today
             aiAstrologistsRouteRequest += 1
             if let guide = FactoryCompanionCatalog.all.first(where: { $0.id == id }) {
@@ -1147,8 +1191,8 @@ class AppViewModel {
             navigateToDeepLink(.predict)
         case "messages":
             navigateToDeepLink(.messages)
-        case "nadia":
-            navigateToDeepLink(.guideProfile(id: FactoryCompanionCatalog.featured.id))
+        case "expertAstrologers", "nadia":
+            openAIAstrologists()
         default:
             break
         }
@@ -1174,6 +1218,7 @@ class AppViewModel {
         await loadProfile()
         await loadSocialProfile()
         await loadCompanions()
+        await refreshExpertAstrologerStateFromRemote()
         await checkSubscriptionStatus()
         syncHomeSetupPhase()
         await setupNotifications()
@@ -1190,6 +1235,12 @@ class AppViewModel {
     // MARK: - Widget Data
 
     func updateWidgetData() {
+        guard !AppConfig.expertAstrologersEnabled else {
+            SharedDefaults.clearAll()
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+
         guard let topCompanion = companions.first else {
             // No companions — clear widget data so it shows empty state
             SharedDefaults.clearAll()
@@ -1504,12 +1555,16 @@ class AppViewModel {
         await notificationService.trackEngagement()
         notificationService.clearScheduledNotifications()
 
-        if let companion = companions.first {
+        if AppConfig.expertAstrologersEnabled {
+            notificationService.cancelLegacyGuideAndCompanionNotifications()
+        } else if let companion = companions.first {
             notificationService.scheduleEveningCheckIn(companionName: companion.name)
             notificationService.scheduleInactiveReEngagement(companionName: companion.name, userSign: profile?.sunSign ?? "")
         }
 
-        notificationService.scheduleSimulationReminder(companionName: primaryCompanion?.name ?? "")
+        if !AppConfig.expertAstrologersEnabled {
+            notificationService.scheduleSimulationReminder(companionName: primaryCompanion?.name ?? "")
+        }
 
         if let rising = profile?.risingSign, let tier = profile?.tier {
             // Tomorrow morning's notification carries tomorrow's computed sky.
@@ -1527,10 +1582,12 @@ class AppViewModel {
             )
         }
 
-        schedulePanelStarterNotification()
+        if !AppConfig.expertAstrologersEnabled {
+            schedulePanelStarterNotification()
+            notificationService.scheduleGuideTipNudges()
+        }
         scheduleDailyBriefNotification()
         notificationService.scheduleDailyDecider()
-        notificationService.scheduleGuideTipNudges()
     }
 
     /// Daily nudge that a guide opened the panel's conversation starter.
@@ -1600,6 +1657,7 @@ class AppViewModel {
             await saveUserSigns()
         }
         await loadCompanions()
+        await refreshExpertAstrologerStateFromRemote()
         await checkSubscriptionStatus()
         loadSavedGuides()
         loadProfileImage()
@@ -1678,6 +1736,12 @@ class AppViewModel {
     }
 
     func createCompanion() async {
+        guard !AppConfig.expertAstrologersEnabled else {
+            homeSetupPhase = .complete
+            openAIAstrologists()
+            return
+        }
+
         guard let sun = companionSunSign, let moon = companionMoonSign,
               let rising = companionRisingSign, !companionName.isEmpty else { return }
         guard canAddCompanion() else {
@@ -1894,6 +1958,14 @@ class AppViewModel {
             createdAt: Date()
         )
 
+        #if DEBUG
+        if isDebugPreviewStateActive {
+            appendLocalDiscoveryMessage(remoteMessage, viewerId: currentProfile.id)
+            showToast("Intro ready", subtitle: "Debug preview kept this discovery chat local.", isError: false)
+            return true
+        }
+        #endif
+
         do {
             try await supabase.sendDiscoveryMessage(remoteMessage)
             appendLocalDiscoveryMessage(remoteMessage, viewerId: currentProfile.id)
@@ -1902,7 +1974,11 @@ class AppViewModel {
             return true
         } catch {
             CrashReporter.log(error, context: "sendDiscoveryMessage")
-            showToast("Couldn't send intro", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't send intro",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
             return false
         }
     }
@@ -1968,7 +2044,11 @@ class AppViewModel {
             return true
         } catch {
             CrashReporter.log(error, context: "sendDiscoveryReply")
-            showToast("Couldn't send reply", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't send reply",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
             return false
         }
     }
@@ -1982,7 +2062,11 @@ class AppViewModel {
             showToast("Profile hidden", subtitle: "\(socialProfile.displayName) won't appear in discovery anymore.", isError: false)
         } catch {
             CrashReporter.log(error, context: "blockDiscoveryProfile")
-            showToast("Couldn't block profile", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't block profile",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
         }
     }
 
@@ -2013,7 +2097,11 @@ class AppViewModel {
             showToast("Report submitted", subtitle: "Thanks for helping keep discovery safe.", isError: false)
         } catch {
             CrashReporter.log(error, context: "reportDiscoveryProfile")
-            showToast("Couldn't send report", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't send report",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
         }
     }
 
@@ -2054,9 +2142,11 @@ class AppViewModel {
         loadMessages()
         await loadDiscoveryInboxMessages(showErrors: showErrors)
         await refreshGuidedRooms(showErrors: showErrors)
-        generateCompanionMessages()
-        postPanelDailyStarterIfNeeded()
-        postPanelWeeklyRecapIfNeeded()
+        if !AppConfig.expertAstrologersEnabled {
+            generateCompanionMessages()
+            postPanelDailyStarterIfNeeded()
+            postPanelWeeklyRecapIfNeeded()
+        }
     }
 
     private func loadDiscoveryInboxMessages(showErrors: Bool) async {
@@ -2151,7 +2241,11 @@ class AppViewModel {
         } catch {
             if let onFailureRestoreVisibility {
                 self.isDiscoverable = onFailureRestoreVisibility
-                showToast("Couldn't update discovery", subtitle: "Try again in a moment.", isError: true)
+                showToast(
+                    "Couldn't update discovery",
+                    subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                    isError: true
+                )
             }
             CrashReporter.log(error, context: "persistSocialProfile")
         }
@@ -2225,7 +2319,11 @@ class AppViewModel {
             showToast("Added \(profile.displayName)", subtitle: "Their profile is saved in Messages and discovery.", isError: false)
         } catch {
             CrashReporter.log(error, context: "addUserConnection")
-            showToast("Couldn't add profile", subtitle: "They may no longer be discoverable.", isError: true)
+            showToast(
+                "Couldn't add profile",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "They may no longer be discoverable."),
+                isError: true
+            )
         }
     }
 
@@ -2236,7 +2334,11 @@ class AppViewModel {
             showToast("Removed \(profile.displayName)", subtitle: "You can add them again from discovery.", isError: false)
         } catch {
             CrashReporter.log(error, context: "removeUserConnection")
-            showToast("Couldn't remove profile", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't remove profile",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
         }
     }
 
@@ -2386,6 +2488,14 @@ class AppViewModel {
     }
 
     func addCompanionFromDiscovery(_ socialProfile: SocialProfile) async {
+        guard !AppConfig.expertAstrologersEnabled else {
+            openAIAstrologists(
+                question: "What should I understand about my compatibility with \(socialProfile.displayName)?",
+                autoRunEveryone: true
+            )
+            return
+        }
+
         guard canAddCompanion() else {
             showToast("Companion limit reached", subtitle: "Upgrade your plan to add more companions", isError: true)
             showUpsell = true
@@ -2497,17 +2607,27 @@ class AppViewModel {
     // MARK: - Companion Messages (Inbox)
 
     var unreadMessageCount: Int {
-        (companionMessages + discoveryMessages)
+        let legacyUnread = AppConfig.expertAstrologersEnabled
+            ? 0
+            : companionMessages.filter { !$0.isRead && $0.direction == .incoming }.count
+                + unreadPanelCount
+
+        return discoveryMessages
             .filter { !$0.isRead && $0.direction == .incoming }
             .count
-            + unreadPanelCount
+            + legacyUnread
     }
 
     var inboxMessages: [CompanionMessage] {
-        let companionThreads = Dictionary(grouping: companionMessages, by: \.companionId)
-            .compactMap { _, messages in
-                messages.max { $0.timestamp < $1.timestamp }
-            }
+        let companionThreads: [CompanionMessage]
+        if AppConfig.expertAstrologersEnabled {
+            companionThreads = []
+        } else {
+            companionThreads = Dictionary(grouping: companionMessages, by: \.companionId)
+                .compactMap { _, messages in
+                    messages.max { $0.timestamp < $1.timestamp }
+                }
+        }
 
         let discoveryThreads = Dictionary(grouping: discoveryMessages, by: \.companionId)
             .compactMap { _, messages in
@@ -2955,6 +3075,7 @@ class AppViewModel {
 
         savedGuides = []
         companionMessages = []
+        clearExpertAstrologerState()
         discoveryMessages = []
         panelMessages = []
         panelTypingParticipantIds = []
@@ -3088,6 +3209,22 @@ class AppViewModel {
             return "Choose a stronger password and try again."
         }
         return "Try again in a moment, or use Apple or Google instead."
+    }
+
+    func socialActionErrorSubtitle(for error: Error, fallback: String) -> String {
+        if let supabaseError = error as? SupabaseServiceError {
+            switch supabaseError {
+            case .missingSession:
+                return "Sign in again, then try once more."
+            case .profileMismatch:
+                return "This device is holding a different profile than the signed-in account."
+            case .notConfigured:
+                return "Social discovery is not configured for this build."
+            default:
+                break
+            }
+        }
+        return fallback
     }
 
     private func syncHomeSetupPhase() {
@@ -3300,6 +3437,7 @@ extension AppViewModel {
         homeSetupPhase = .complete
         clearFirstReadDraft()
         clearGuideFeedback()
+        clearExpertAstrologerState()
 
         profile = UserProfile(
             id: userId,
@@ -3320,62 +3458,69 @@ extension AppViewModel {
         userMoonSign = .cancer
         userRisingSign = .libra
 
-        let companion = CompanionData(
-            id: companionId,
-            userId: userId,
-            name: "Nadia",
-            mode: CompanionMode.soulmate.rawValue,
-            sunSign: ZodiacSign.sagittarius.rawValue,
-            moonSign: ZodiacSign.cancer.rawValue,
-            risingSign: ZodiacSign.libra.rawValue,
-            appearanceStyle: AppearanceStyle.warm.rawValue,
-            conversationCount: 42,
-            firstConversationAt: now.addingTimeInterval(-9 * 24 * 60 * 60),
-            compatibilityScore: 91,
-            companionMemory: "Nadia helps Maya separate direct Sagittarius timing from Cancer Moon sensitivity before replying.",
-            relationshipLevel: RelationshipLevel.familiar.rawValue,
-            createdAt: now.addingTimeInterval(-12 * 24 * 60 * 60)
-        )
-        companions = [companion]
-
-        companionMessages = [
-            CompanionMessage(
-                companionId: companionId,
-                companionName: "Nadia",
-                companionSign: ZodiacSign.sagittarius.displayName,
-                content: "I am reading this through Sagittarius directness, but your Cancer Moon may be making the silence feel more personal than it is. Separate the tone from the fear before you answer.",
-                timestamp: now.addingTimeInterval(-18 * 60),
-                isRead: false
-            ),
-            CompanionMessage(
-                companionId: companionId,
-                companionName: "Nadia",
-                companionSign: ZodiacSign.sagittarius.displayName,
-                content: "The clean reply is short, honest, and not over-explained. Give them room to meet you.",
-                timestamp: now.addingTimeInterval(-2 * 60 * 60),
-                isRead: true
+        if AppConfig.expertAstrologersEnabled {
+            companions = []
+            companionMessages = []
+            savedGuides = []
+            seedDebugExpertAstrologerState(now: now)
+        } else {
+            let companion = CompanionData(
+                id: companionId,
+                userId: userId,
+                name: "Nadia",
+                mode: CompanionMode.soulmate.rawValue,
+                sunSign: ZodiacSign.sagittarius.rawValue,
+                moonSign: ZodiacSign.cancer.rawValue,
+                risingSign: ZodiacSign.libra.rawValue,
+                appearanceStyle: AppearanceStyle.warm.rawValue,
+                conversationCount: 42,
+                firstConversationAt: now.addingTimeInterval(-9 * 24 * 60 * 60),
+                compatibilityScore: 91,
+                companionMemory: "Nadia helps Maya separate direct Sagittarius timing from Cancer Moon sensitivity before replying.",
+                relationshipLevel: RelationshipLevel.familiar.rawValue,
+                createdAt: now.addingTimeInterval(-12 * 24 * 60 * 60)
             )
-        ]
+            companions = [companion]
+
+            companionMessages = [
+                CompanionMessage(
+                    companionId: companionId,
+                    companionName: "Nadia",
+                    companionSign: ZodiacSign.sagittarius.displayName,
+                    content: "I am reading this through Sagittarius directness, but your Cancer Moon may be making the silence feel more personal than it is. Separate the tone from the fear before you answer.",
+                    timestamp: now.addingTimeInterval(-18 * 60),
+                    isRead: false
+                ),
+                CompanionMessage(
+                    companionId: companionId,
+                    companionName: "Nadia",
+                    companionSign: ZodiacSign.sagittarius.displayName,
+                    content: "The clean reply is short, honest, and not over-explained. Give them room to meet you.",
+                    timestamp: now.addingTimeInterval(-2 * 60 * 60),
+                    isRead: true
+                )
+            ]
+
+            savedGuides = [
+                SavedGuide(
+                    name: "Nadia",
+                    sunSign: .sagittarius,
+                    category: .romantic,
+                    createdAt: now.addingTimeInterval(-5 * 24 * 60 * 60),
+                    notes: "Use directness, space, and timing. Avoid emotional cornering."
+                ),
+                SavedGuide(
+                    name: "Work Libra",
+                    sunSign: .libra,
+                    category: .work,
+                    createdAt: now.addingTimeInterval(-3 * 24 * 60 * 60),
+                    notes: "Name both sides, then ask for a clear decision."
+                )
+            ]
+        }
         discoveryMessages = []
         relationshipPeople = RelationshipPeopleStore.previewPeople()
         seedDebugSocialProfiles(now: now)
-
-        savedGuides = [
-            SavedGuide(
-                name: "Nadia",
-                sunSign: .sagittarius,
-                category: .romantic,
-                createdAt: now.addingTimeInterval(-5 * 24 * 60 * 60),
-                notes: "Use directness, space, and timing. Avoid emotional cornering."
-            ),
-            SavedGuide(
-                name: "Work Libra",
-                sunSign: .libra,
-                category: .work,
-                createdAt: now.addingTimeInterval(-3 * 24 * 60 * 60),
-                notes: "Name both sides, then ask for a clear decision."
-            )
-        ]
 
         // People power the Situation card on Today and the People tab —
         // seed them for every preview so those surfaces always render.
@@ -3422,15 +3567,25 @@ extension AppViewModel {
         case "firstReadHome":
             seedDebugFirstReadDraft(now: now)
         case "panelChat":
-            seedDebugPanelMessages(now: now)
-            selectedTab = .messages
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(1))
-                self.panelChatRouteRequest += 1
+            if AppConfig.expertAstrologersEnabled {
+                selectedTab = .messages
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1))
+                    self.openAIAstrologists(question: "What should I reply back?", autoRunEveryone: true)
+                }
+            } else {
+                seedDebugPanelMessages(now: now)
+                selectedTab = .messages
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1))
+                    self.panelChatRouteRequest += 1
+                }
             }
         case "panelInbox":
-            seedDebugPanelMessages(now: now)
             selectedTab = .messages
+            if !AppConfig.expertAstrologersEnabled {
+                seedDebugPanelMessages(now: now)
+            }
         case "moments":
             seedDebugMoments(now: now)
             selectedTab = .me
@@ -3506,35 +3661,79 @@ extension AppViewModel {
             keepsDebugRelationshipPeopleEmpty = true
             selectedTab = .people
         case "recap":
-            seedDebugPanelMessages(now: now)
             relationshipPeople = RelationshipPeopleStore.previewPeople()
-            let recapStats = WeeklyRecapStats(
-                predictionsMade: 4,
-                predictionsRated: 3,
-                predictionsLanded: 2,
-                panelMessagesSent: 6,
-                momentsPosted: 2,
-                streak: 5,
-                topGuideName: "Nadia"
-            )
-            panelMessages.append(
-                PanelMessage(
-                    senderId: "sagittarius-nadia",
-                    content: WeeklyRecapComposer.recapMessage(stats: recapStats, guideName: "Nadia", userFirstName: "Maya"),
-                    timestamp: now.addingTimeInterval(-5 * 60),
-                    isRead: false
+            if AppConfig.expertAstrologersEnabled {
+                selectedTab = .messages
+            } else {
+                seedDebugPanelMessages(now: now)
+                let recapStats = WeeklyRecapStats(
+                    predictionsMade: 4,
+                    predictionsRated: 3,
+                    predictionsLanded: 2,
+                    panelMessagesSent: 6,
+                    momentsPosted: 2,
+                    streak: 5,
+                    topGuideName: "Nadia"
                 )
-            )
-            selectedTab = .messages
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(1))
-                self.panelChatRouteRequest += 1
+                panelMessages.append(
+                    PanelMessage(
+                        senderId: "sagittarius-nadia",
+                        content: WeeklyRecapComposer.recapMessage(stats: recapStats, guideName: "Nadia", userFirstName: "Maya"),
+                        timestamp: now.addingTimeInterval(-5 * 60),
+                        isRead: false
+                    )
+                )
+                selectedTab = .messages
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1))
+                    self.panelChatRouteRequest += 1
+                }
             }
         default:
             break
         }
 
         return true
+    }
+
+    private func seedDebugExpertAstrologerState(now: Date) {
+        let specialistId = "nadia-evolutionary"
+        let conversationId = specialistConversationId(for: specialistId)
+        specialistMessages = [
+            SpecialistMessage(
+                conversationId: conversationId,
+                specialistId: specialistId,
+                role: .user,
+                content: "Why do I keep overthinking their replies?",
+                timestamp: now.addingTimeInterval(-34 * 60),
+                mode: .individual,
+                profileContextSummary: "Maya · Sagittarius Sun · Cancer Moon · Libra Rising"
+            ),
+            SpecialistMessage(
+                conversationId: conversationId,
+                specialistId: specialistId,
+                role: .specialist,
+                content: "I would read this as a growth pattern around emotional safety and timing. Before you reply, separate what the message actually says from the story your nervous system starts writing around it.",
+                timestamp: now.addingTimeInterval(-28 * 60),
+                mode: .individual,
+                profileContextSummary: "Maya · Sagittarius Sun · Cancer Moon · Libra Rising"
+            )
+        ]
+
+        let multiConsultationId = UUID(uuidString: "24000000-0000-0000-0000-000000000001") ?? UUID()
+        let question = "What should I reply back?"
+        specialistConsultationResponses = ExpertAstrologerRegistry.specialists.enumerated().map { index, specialist in
+            SpecialistConsultationResponse(
+                multiConsultationId: multiConsultationId,
+                specialistId: specialist.id,
+                userQuestion: question,
+                specialistResponse: "\(specialist.characterName) would answer from the \(specialist.publicTitle.lowercased()) lens, staying inside \(specialist.tradition) and asking for missing chart data only when it matters.",
+                timestamp: now.addingTimeInterval(Double(index - 5) * 60),
+                mode: .everyone,
+                profileContextSummary: "Maya · Sagittarius Sun · Cancer Moon · Libra Rising"
+            )
+        }
+        saveExpertAstrologerState()
     }
 
     /// Deterministic panel thread for screenshots: the Maya chart's guides

@@ -76,6 +76,8 @@
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
         "CURRENT_PROJECT_VERSION": "1",
+        "CODE_SIGN_STYLE": "Automatic",
+        "DEVELOPMENT_TEAM": "A6PP462J72",
         "MARKETING_VERSION": "1.0",
         "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819",
         "PRODUCT_NAME": "$(TARGET_NAME)",
@@ -88,6 +90,26 @@
         }
       ],
       "type": "application"
+    },
+    "SimastryUITests": {
+      "dependencies": [
+        {
+          "target": "Simastry"
+        }
+      ],
+      "platform": "iOS",
+      "settings": {
+        "GENERATE_INFOPLIST_FILE": "YES",
+        "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819.uitests",
+        "SWIFT_VERSION": "5.0",
+        "TEST_TARGET_NAME": "Simastry"
+      },
+      "sources": [
+        {
+          "path": "UITests"
+        }
+      ],
+      "type": "bundle.ui-testing"
     }
   }
 }

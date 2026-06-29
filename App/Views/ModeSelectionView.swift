@@ -15,13 +15,11 @@ struct ModeSelectionView: View {
 
                     OnboardingProgressView(
                         eyebrow: "Begin",
-                        title: "Choose your first guide",
-                        subtitle: viewModel.hasCompletedSigns
-                            ? "Your chart signals are ready. Pick the voice that should translate them into message guidance."
-                            : "Start with the kind of guidance you want. We'll calculate your communication type next.",
+                        title: AppConfig.expertAstrologersEnabled ? "Choose your path" : "Choose your first guide",
+                        subtitle: onboardingSubtitle,
                         step: 1,
                         totalSteps: 3,
-                        labels: ["Path", "Signs", "Guide"]
+                        labels: AppConfig.expertAstrologersEnabled ? ["Path", "Chart", "Experts"] : ["Path", "Signs", "Guide"]
                     )
                     .padding(.horizontal, 20)
                     .opacity(appeared ? 1 : 0)
@@ -88,7 +86,9 @@ struct ModeSelectionView: View {
                     .foregroundStyle(SimastryColor.gold)
             }
 
-            Text("Choose a path, calculate your big three, and turn Sun, Moon, and Rising into a communication type.")
+            Text(AppConfig.expertAstrologersEnabled
+                ? "Choose a path, calculate your chart signals, and bring your question to five expert AI astrologers."
+                : "Choose a path, calculate your big three, and turn Sun, Moon, and Rising into a communication type.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineSpacing(2)
@@ -96,8 +96,8 @@ struct ModeSelectionView: View {
 
             HStack(spacing: 8) {
                 pill("Pick a path")
-                pill("Calculate signs")
-                pill("Meet your guide")
+                pill(AppConfig.expertAstrologersEnabled ? "Calculate chart" : "Calculate signs")
+                pill(AppConfig.expertAstrologersEnabled ? "Meet experts" : "Meet your guide")
             }
         }
         .padding(18)
@@ -124,21 +124,22 @@ struct ModeSelectionView: View {
         return tier == "pro"
     }
 
+    private var onboardingSubtitle: String {
+        if AppConfig.expertAstrologersEnabled {
+            return viewModel.hasCompletedSigns
+                ? "Your chart signals are ready. Start with expert astrologers, reply guidance, or a future read."
+                : "Start with what you need today. We'll calculate your chart signals next, then introduce the expert astrologers."
+        }
+        return viewModel.hasCompletedSigns
+            ? "Your chart signals are ready. Pick the voice that should translate them into message guidance."
+            : "Start with the kind of guidance you want. We'll calculate your communication type next."
+    }
+
     @ViewBuilder
     private func modeCard(mode: CompanionMode, icon: String, accent: Color, badge: String?, delay: Double) -> some View {
         Button(action: {
             HapticManager.buttonPress()
-            if mode == .simulateAnyone && !isProUser {
-                viewModel.showToast("Pro feature", subtitle: "Simulate Anyone requires Simastry Pro", isError: true)
-                viewModel.showUpsell = true
-                return
-            }
-            viewModel.selectedMode = mode
-            if viewModel.hasCompletedSigns {
-                viewModel.homeSetupPhase = .companionSetup
-            } else {
-                viewModel.homeSetupPhase = .signSelection
-            }
+            handleModeSelection(mode)
         }) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
@@ -165,11 +166,11 @@ struct ModeSelectionView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(mode.displayName)
+                    Text(modeTitle(mode))
                         .font(SimastryFont.titleSmall)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text(mode.subtitle)
+                    Text(modeSubtitle(mode))
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .lineSpacing(2)
@@ -192,14 +193,78 @@ struct ModeSelectionView: View {
         .animation(reduceMotion ? .default : .spring(SimastrySpring.bouncy).delay(delay), value: appeared)
     }
 
-    private func modeSupportText(_ mode: CompanionMode) -> String {
+    private func handleModeSelection(_ mode: CompanionMode) {
+        if mode == .simulateAnyone && !isProUser {
+            viewModel.showToast("Pro feature", subtitle: "Predict The Future requires Simastry Pro", isError: true)
+            viewModel.showUpsell = true
+            return
+        }
+
+        viewModel.selectedMode = mode
+        guard AppConfig.expertAstrologersEnabled else {
+            viewModel.homeSetupPhase = viewModel.hasCompletedSigns ? .companionSetup : .signSelection
+            return
+        }
+
+        guard viewModel.hasCompletedSigns else {
+            viewModel.homeSetupPhase = .signSelection
+            return
+        }
+
+        viewModel.homeSetupPhase = .complete
         switch mode {
         case .simulateAnyone:
-            "Practice a conversation, rehearse an outcome, or explore a dynamic before it happens."
+            viewModel.openPredict()
         case .soulmate:
-            "A charismatic guide lens for love, texting, timing, and emotional guidance."
+            viewModel.openAIAstrologists()
         case .bestie:
-            "A playful, supportive guide with easy warmth and great banter."
+            viewModel.openAIAstrologists(question: "What should I reply back?", autoRunEveryone: false)
+        }
+    }
+
+    private func modeTitle(_ mode: CompanionMode) -> String {
+        guard AppConfig.expertAstrologersEnabled else { return mode.displayName }
+        switch mode {
+        case .simulateAnyone:
+            return "Predict The Future"
+        case .soulmate:
+            return "Ask Expert Astrologers"
+        case .bestie:
+            return "Reply Guidance"
+        }
+    }
+
+    private func modeSubtitle(_ mode: CompanionMode) -> String {
+        guard AppConfig.expertAstrologersEnabled else { return mode.subtitle }
+        switch mode {
+        case .simulateAnyone:
+            return "Explore timing and outcomes"
+        case .soulmate:
+            return "Consult five astrology traditions"
+        case .bestie:
+            return "Get help with what to say next"
+        }
+    }
+
+    private func modeSupportText(_ mode: CompanionMode) -> String {
+        if AppConfig.expertAstrologersEnabled {
+            switch mode {
+            case .simulateAnyone:
+                return "Use this when you want a quick read on timing, direction, or what may unfold."
+            case .soulmate:
+                return "Ask once, then choose Leyla, Mateo, Naomi, Elias, Nadia, or Everyone mode."
+            case .bestie:
+                return "Bring a real message into the expert flow and shape a reply with astrological context."
+            }
+        }
+
+        switch mode {
+        case .simulateAnyone:
+            return "Practice a conversation, rehearse an outcome, or explore a dynamic before it happens."
+        case .soulmate:
+            return "A charismatic guide lens for love, texting, timing, and emotional guidance."
+        case .bestie:
+            return "A playful, supportive guide with easy warmth and great banter."
         }
     }
 }

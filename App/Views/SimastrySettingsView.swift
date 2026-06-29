@@ -45,25 +45,23 @@ struct SimastrySettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        header
-                        accountSection
-                        auraWalletSection
-                        notificationsSection
-                        appearanceSection
-                        privacySection
-                        aboutSection
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
-                    .padding(.bottom, 36)
+            // Celestial backdrop comes from `.presentationBackground` so the
+            // scroll content insets below the nav bar instead of running up under
+            // it (a full-bleed ZStack layer here clipped the first section).
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    accountSection
+                    auraWalletSection
+                    notificationsSection
+                    appearanceSection
+                    privacySection
+                    aboutSection
                 }
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 36)
             }
+            .scrollIndicators(.hidden)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -124,27 +122,6 @@ struct SimastrySettingsView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .frame(width: 42, height: 42)
-                    .simastryGlass(cornerRadius: 14)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Settings")
-                        .font(SimastryFont.titleLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
-                    Text("Privacy, Aura, notifications, and app preferences.")
-                        .font(SimastryFont.caption)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                }
-            }
-        }
     }
 
     private var accountSection: some View {

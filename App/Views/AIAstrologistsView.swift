@@ -10,36 +10,25 @@ struct AIAstrologistsView: View {
 
     @State private var pushedProfileId: String?
     @State private var handledInitialPush: Bool = false
+    @State private var calibratedGuideIds: Set<String> = []
 
     init(viewModel: AppViewModel, initialProfileId: String? = nil) {
         self.viewModel = viewModel
         self.initialProfileId = initialProfileId
     }
 
-    private var profiles: [FactoryCompanionProfile] {
-        FactoryCompanionCatalog.all
-    }
+    private static let profiles = FactoryCompanionCatalog.all
 
     private var panelShelf: [FactoryCompanionProfile] {
         viewModel.panelGuideEntries.map(\.profile)
     }
 
-    /// Guides whose lens matches the user's chart — same sign or same
-    /// element as any placement — excluding the panel (its own shelf).
-    private var matchesShelf: [FactoryCompanionProfile] {
-        let panelIds = Set(panelShelf.map(\.id))
-        let userSigns = [viewModel.userSunSign, viewModel.userMoonSign, viewModel.userRisingSign].compactMap { $0 }
-        guard !userSigns.isEmpty else { return [] }
-        let userElements = Set(userSigns.map(\.element))
-
-        return profiles.filter { profile in
-            !panelIds.contains(profile.id)
-                && (userSigns.contains(profile.sign) || userElements.contains(profile.sign.element))
-        }
-    }
-
-    private func elementShelf(_ element: ZodiacElement) -> [FactoryCompanionProfile] {
-        profiles.filter { $0.sign.element == element }
+    private var directoryData: GuideDirectoryData {
+        GuideDirectoryData(
+            profiles: Self.profiles,
+            panelProfiles: panelShelf,
+            userSigns: [viewModel.userSunSign, viewModel.userMoonSign, viewModel.userRisingSign].compactMap { $0 }
+        )
     }
 
     private func elementTitle(_ element: ZodiacElement) -> String {
@@ -51,8 +40,19 @@ struct AIAstrologistsView: View {
         }
     }
 
+    @ViewBuilder
     var body: some View {
-        ZStack {
+        if AppConfig.expertAstrologersEnabled {
+            ExpertAstrologersView(viewModel: viewModel)
+        } else {
+            legacyDirectory
+        }
+    }
+
+    private var legacyDirectory: some View {
+        let data = directoryData
+
+        return ZStack {
             CelestialBackground()
 
             ScrollView {
@@ -63,38 +63,43 @@ struct AIAstrologistsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 20)
 
-                    if !panelShelf.isEmpty {
-                        shelf(title: "YOUR GUIDES", profiles: panelShelf)
+                    if !data.panelProfiles.isEmpty {
+                        shelf(title: "YOUR GUIDES", profiles: data.panelProfiles)
                     }
 
-                    if !matchesShelf.isEmpty {
-                        shelf(title: "MATCHES YOUR CHART", profiles: matchesShelf)
+                    if !data.matchesShelf.isEmpty {
+                        shelf(title: "MATCHES YOUR CHART", profiles: data.matchesShelf)
                     }
 
                     ForEach(ZodiacElement.allCases, id: \.self) { element in
-                        shelf(title: elementTitle(element), profiles: elementShelf(element))
+                        shelf(title: elementTitle(element), profiles: data.elementShelf(element))
                     }
 
-                    allGuidesGrid
+                    allGuidesGrid(profiles: data.profiles)
 
-                    Spacer().frame(height: SimastrySpacing.tabBarClearance + 12)
+                    Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                 }
                 .padding(.top, 6)
             }
             .scrollIndicators(.hidden)
+            .accessibilityIdentifier("guides.directory.screen")
         }
         .navigationTitle("Guides")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationDestination(item: $pushedProfileId) { profileId in
-            if let profile = profiles.first(where: { $0.id == profileId }) {
+            if let profile = data.profile(withId: profileId) {
                 GuideProfileView(viewModel: viewModel, profile: profile)
             }
         }
         .onAppear {
+            refreshCalibratedGuideIds()
             guard !handledInitialPush, let initialProfileId else { return }
             handledInitialPush = true
             pushedProfileId = initialProfileId
+        }
+        .onChange(of: pushedProfileId) {
+            refreshCalibratedGuideIds()
         }
     }
 
@@ -109,9 +114,9 @@ struct AIAstrologistsView: View {
                 .padding(.horizontal, 20)
 
             ScrollView(.horizontal) {
-                HStack(spacing: 10) {
+                LazyHStack(spacing: 10) {
                     ForEach(profiles) { profile in
-                        posterCard(profile)
+                        posterCard(profile, isCalibrated: calibratedGuideIds.contains(profile.id))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -120,7 +125,7 @@ struct AIAstrologistsView: View {
         }
     }
 
-    private var allGuidesGrid: some View {
+    private func allGuidesGrid(profiles: [FactoryCompanionProfile]) -> some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
         return VStack(alignment: .leading, spacing: 10) {
@@ -132,7 +137,7 @@ struct AIAstrologistsView: View {
 
             LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
-                    posterCard(profile, width: nil)
+                    posterCard(profile, width: nil, isCalibrated: calibratedGuideIds.contains(profile.id))
                         .modifier(DirectoryCardAppear(index: index))
                 }
             }
@@ -142,7 +147,7 @@ struct AIAstrologistsView: View {
 
     /// Netflix-density poster: portrait, name, sign band. Six or more
     /// visible per screen instead of 1.3 credential cards.
-    private func posterCard(_ profile: FactoryCompanionProfile, width: CGFloat? = 104) -> some View {
+    private func posterCard(_ profile: FactoryCompanionProfile, width: CGFloat? = 104, isCalibrated: Bool) -> some View {
         Button {
             HapticManager.buttonPress()
             pushedProfileId = profile.id
@@ -169,7 +174,7 @@ struct AIAstrologistsView: View {
                             .padding(7)
                     }
                     .overlay(alignment: .topLeading) {
-                        if !GuideCalibrationStore.shared.calibration(for: profile.id).isDefault {
+                        if isCalibrated {
                             calibratedCardBadge
                                 .padding(7)
                         }
@@ -206,6 +211,11 @@ struct AIAstrologistsView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(profile.name), \(profile.sign.displayName) Guide. Opens profile.")
+        .accessibilityIdentifier("guides.directory.card.\(profile.id)")
+    }
+
+    private func refreshCalibratedGuideIds() {
+        calibratedGuideIds = GuideCalibrationStore.shared.calibratedGuideIds(in: Self.profiles.map(\.id))
     }
 
     private var calibratedCardBadge: some View {
@@ -224,17 +234,49 @@ struct AIAstrologistsView: View {
 
 }
 
-private struct OnlineStatusDot: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isPulsing = false
+private struct GuideDirectoryData {
+    let profiles: [FactoryCompanionProfile]
+    let panelProfiles: [FactoryCompanionProfile]
+    let matchesShelf: [FactoryCompanionProfile]
 
+    private let profilesByElement: [ZodiacElement: [FactoryCompanionProfile]]
+    private let profilesById: [String: FactoryCompanionProfile]
+
+    init(
+        profiles: [FactoryCompanionProfile],
+        panelProfiles: [FactoryCompanionProfile],
+        userSigns: [ZodiacSign]
+    ) {
+        self.profiles = profiles
+        self.panelProfiles = panelProfiles
+        profilesByElement = Dictionary(grouping: profiles, by: \.sign.element)
+        profilesById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        let panelIds = Set(panelProfiles.map(\.id))
+        let userElements = Set(userSigns.map(\.element))
+        matchesShelf = userSigns.isEmpty ? [] : profiles.filter { profile in
+            !panelIds.contains(profile.id)
+                && (userSigns.contains(profile.sign) || userElements.contains(profile.sign.element))
+        }
+    }
+
+    func elementShelf(_ element: ZodiacElement) -> [FactoryCompanionProfile] {
+        profilesByElement[element, default: []]
+    }
+
+    func profile(withId id: String) -> FactoryCompanionProfile? {
+        profilesById[id]
+    }
+}
+
+private struct OnlineStatusDot: View {
     private let green = Color(red: 0.31, green: 0.94, blue: 0.52)
 
     var body: some View {
         ZStack {
             Circle()
-                .strokeBorder(green.opacity(isPulsing ? 0.10 : 0.36), lineWidth: 1)
-                .frame(width: isPulsing ? 13 : 8, height: isPulsing ? 13 : 8)
+                .strokeBorder(green.opacity(0.28), lineWidth: 1)
+                .frame(width: 10, height: 10)
 
             Circle()
                 .fill(green)
@@ -243,16 +285,10 @@ private struct OnlineStatusDot: View {
                     Circle()
                         .strokeBorder(.black.opacity(0.58), lineWidth: 0.8)
                 }
-                .shadow(color: green.opacity(isPulsing ? 0.22 : 0.42), radius: isPulsing ? 3 : 2, y: 1)
+                .shadow(color: green.opacity(0.34), radius: 2, y: 1)
         }
         .frame(width: 14, height: 14)
         .accessibilityHidden(true)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                isPulsing = true
-            }
-        }
     }
 }
 

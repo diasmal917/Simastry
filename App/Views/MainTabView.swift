@@ -33,7 +33,6 @@ struct MainTabView: View {
             }
         }
         .tint(SimastryColor.gold)
-        .modifier(MinimizeTabBarOnScroll())   // native iOS 26: minimize on scroll down, expand on scroll up
         .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
             Button("Not now", role: .cancel) {
                 viewModel.cancelPendingInviteCode()
@@ -64,20 +63,6 @@ struct MainTabView: View {
                 }
             }
         )
-    }
-}
-
-/// Adopts the native iOS 26 Liquid Glass floating tab bar behavior: the bar
-/// minimizes into its capsule as content scrolls down and expands back to the
-/// full five tabs when scrolling up, matching Apple's WWDC25 content-first
-/// guidance. On iOS 18–25 the bar simply stays full.
-private struct MinimizeTabBarOnScroll: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.tabBarMinimizeBehavior(.onScrollDown)
-        } else {
-            content
-        }
     }
 }
 

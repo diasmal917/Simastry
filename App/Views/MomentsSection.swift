@@ -1,8 +1,7 @@
 import SwiftUI
 import PhotosUI
 
-/// Private photo wall on the Me tab. Photos never leave the device; the
-/// user's panel guides show up in the comments.
+/// Private photo wall on the Me tab. Photos never leave the device.
 struct MomentsSection: View {
     @Bindable var viewModel: AppViewModel
     @State private var pickerItem: PhotosPickerItem?
@@ -113,7 +112,9 @@ struct MomentsSection: View {
                 .font(.system(size: 26, weight: .light))
                 .foregroundStyle(SimastryColor.gold.opacity(0.7))
 
-            Text("Share a moment — your panel always shows up for you.")
+            Text(AppConfig.expertAstrologersEnabled
+                 ? "Save a private moment — ask the experts when you want perspective."
+                 : "Share a moment — your panel always shows up for you.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
@@ -140,7 +141,7 @@ struct MomentsSection: View {
                         Label("Delete Moment", systemImage: "trash")
                     }
                 }
-                .accessibilityLabel("Moment\(moment.caption.map { ": \($0)" } ?? ""), \(moment.comments.count) comments")
+                .accessibilityLabel("Moment\(moment.caption.map { ": \($0)" } ?? ""), \(displayedComments(for: moment).count) comments")
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -155,11 +156,12 @@ struct MomentsSection: View {
                 MomentImageView(url: viewModel.momentThumbURL(for: moment))
             }
             .overlay(alignment: .bottomTrailing) {
-                if !moment.comments.isEmpty {
+                let comments = displayedComments(for: moment)
+                if !comments.isEmpty {
                     HStack(spacing: 3) {
                         Image(systemName: SimastryIcon.quote)
                             .font(SimastryFont.microBold)
-                        Text("\(moment.comments.count)")
+                        Text("\(comments.count)")
                             .font(SimastryFont.microBold)
                     }
                     .foregroundStyle(.white)
@@ -193,6 +195,11 @@ struct MomentsSection: View {
         .accessibilityLabel("Add a moment from your photo library")
     }
 
+    private func displayedComments(for moment: Moment) -> [MomentComment] {
+        guard AppConfig.expertAstrologersEnabled else { return moment.comments }
+        return moment.comments.filter { $0.authorKind == .user }
+    }
+
     private var captionSheet: some View {
         ZStack {
             SimastryColor.midnight.ignoresSafeArea()
@@ -204,7 +211,9 @@ struct MomentsSection: View {
                     .tracking(2.0)
                     .padding(.top, 22)
 
-                Text("Optional — your guides read your words, not your photos.")
+                Text(AppConfig.expertAstrologersEnabled
+                     ? "Optional — captions stay private and help you reflect later."
+                     : "Optional — your guides read your words, not your photos.")
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
@@ -260,9 +269,15 @@ struct MomentDetailSheet: View {
     }
 
     private var typingEntries: [PanelMatcher.Entry] {
-        viewModel.panelGuideEntries.filter {
+        guard !AppConfig.expertAstrologersEnabled else { return [] }
+        return viewModel.panelGuideEntries.filter {
             viewModel.momentTypingKeys.contains("\(momentId.uuidString):\($0.profile.id)")
         }
+    }
+
+    private func displayedComments(for moment: Moment) -> [MomentComment] {
+        guard AppConfig.expertAstrologersEnabled else { return moment.comments }
+        return moment.comments.filter { $0.authorKind == .user }
     }
 
     private var trimmedComment: String {
@@ -291,6 +306,10 @@ struct MomentDetailSheet: View {
                             }
 
                             reactionRow(moment)
+
+                            if AppConfig.expertAstrologersEnabled {
+                                askExpertsButton(for: moment)
+                            }
 
                             commentsSection(moment)
                         }
@@ -353,7 +372,7 @@ struct MomentDetailSheet: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(SimastryColor.sunCoral)
 
-            Text(moment.reactionCount > 0 ? "\(moment.reactionCount) from your panel" : "Your panel is on its way")
+            Text(reactionText(for: moment))
                 .font(SimastryFont.labelMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
 
@@ -367,14 +386,53 @@ struct MomentDetailSheet: View {
         .accessibilityElement(children: .combine)
     }
 
+    private func reactionText(for moment: Moment) -> String {
+        if AppConfig.expertAstrologersEnabled {
+            return displayedComments(for: moment).isEmpty ? "Private moment" : "\(displayedComments(for: moment).count) private comments"
+        }
+        return moment.reactionCount > 0 ? "\(moment.reactionCount) from your panel" : "Your panel is on its way"
+    }
+
+    private func askExpertsButton(for moment: Moment) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            let question: String
+            if let caption = moment.caption?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !caption.isEmpty {
+                question = "What can the five expert astrologers help me reflect on about this moment? Caption: \(caption)"
+            } else {
+                question = "What can the five expert astrologers help me reflect on about a personal moment I saved?"
+            }
+            dismiss()
+            viewModel.openAIAstrologists(question: question, autoRunEveryone: true)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: SimastryIcon.astrologers)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Ask the experts about this")
+                    .font(SimastryFont.labelLarge)
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 12, weight: .bold))
+            }
+            .foregroundStyle(SimastryColor.midnight)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(SimastryGradient.gold, in: Capsule())
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Ask the expert astrologers about this moment")
+    }
+
     private func commentsSection(_ moment: Moment) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let comments = displayedComments(for: moment)
+        return VStack(alignment: .leading, spacing: 12) {
             Text("COMMENTS")
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.textSecondary)
                 .tracking(1.4)
 
-            ForEach(moment.comments) { comment in
+            ForEach(comments) { comment in
                 commentRow(comment)
             }
 

@@ -89,7 +89,7 @@ extension AppViewModel {
     ) async -> ChatThreadSummary? {
         await createGuidedRoom(
             with: selectedProfiles,
-            includedGuideProfileIds: includeGuides ? Set(panelGuideEntries.map { $0.profile.id }) : [],
+            includedGuideProfileIds: (!AppConfig.expertAstrologersEnabled && includeGuides) ? Set(panelGuideEntries.map { $0.profile.id }) : [],
             title: rawTitle
         )
     }
@@ -108,8 +108,11 @@ extension AppViewModel {
             showToast("Pick 1 to 4 people", subtitle: "Guided Rooms support 2 to 5 humans including you.", isError: true)
             return nil
         }
-        guard let currentProfile = profile,
-              let sender = currentDiscoveryMessageSender() else {
+        guard let currentProfile = profile else {
+            showToast("Couldn't create room", subtitle: "Sign in again, then try once more.", isError: true)
+            return nil
+        }
+        guard let sender = currentDiscoveryMessageSender() else {
             return nil
         }
 
@@ -156,9 +159,10 @@ extension AppViewModel {
             )
         }
 
-        if !includedGuideProfileIds.isEmpty {
+        let activeGuideProfileIds = AppConfig.expertAstrologersEnabled ? [] : includedGuideProfileIds
+        if !activeGuideProfileIds.isEmpty {
             members += panelGuideEntries.filter { entry in
-                includedGuideProfileIds.contains(entry.profile.id)
+                activeGuideProfileIds.contains(entry.profile.id)
             }.map { entry in
                 ChatThreadMember(
                     id: UUID(),
@@ -184,7 +188,9 @@ extension AppViewModel {
             senderGuideId: nil,
             senderDisplayName: "Simastry",
             senderSign: nil,
-            content: "Room started as a guided conversation. Use it for reflection, repair, and clarity; it is not therapy.",
+            content: AppConfig.expertAstrologersEnabled
+                ? "Room started. Use it for clear, respectful conversation; it is not therapy."
+                : "Room started as a guided conversation. Use it for reflection, repair, and clarity; it is not therapy.",
             activityKind: nil,
             activityPayload: nil,
             createdBy: currentProfile.id,
@@ -204,7 +210,11 @@ extension AppViewModel {
             return summary
         } catch {
             CrashReporter.log(error, context: "createGuidedRoom")
-            showToast("Couldn't create room", subtitle: "Check that everyone is still available and try again.", isError: true)
+            showToast(
+                "Couldn't create room",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Check that everyone is still available and try again."),
+                isError: true
+            )
             return nil
         }
     }
@@ -230,8 +240,11 @@ extension AppViewModel {
             return false
         }
 
-        guard let currentProfile = profile,
-              let sender = currentDiscoveryMessageSender() else {
+        guard let currentProfile = profile else {
+            showToast("Couldn't send message", subtitle: "Sign in again, then try once more.", isError: true)
+            return false
+        }
+        guard let sender = currentDiscoveryMessageSender() else {
             return false
         }
 
@@ -266,16 +279,25 @@ extension AppViewModel {
         } catch {
             removeRoomMessage(message)
             CrashReporter.log(error, context: "sendRoomMessage")
-            showToast("Couldn't send message", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't send message",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
             return false
         }
     }
 
     @discardableResult
     func sendRoomActivity(threadId: UUID, kind: ChatActivityKind) async -> Bool {
-        guard let summary = roomSummary(for: threadId),
-              let currentProfile = profile,
-              let sender = currentDiscoveryMessageSender() else {
+        guard let summary = roomSummary(for: threadId) else {
+            return false
+        }
+        guard let currentProfile = profile else {
+            showToast("Couldn't add activity", subtitle: "Sign in again, then try once more.", isError: true)
+            return false
+        }
+        guard let sender = currentDiscoveryMessageSender() else {
             return false
         }
 
@@ -307,7 +329,11 @@ extension AppViewModel {
         } catch {
             removeRoomMessage(message)
             CrashReporter.log(error, context: "sendRoomActivity")
-            showToast("Couldn't add activity", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't add activity",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
             return false
         }
     }
@@ -328,7 +354,11 @@ extension AppViewModel {
             showToast("Left room", subtitle: "The room was removed from your inbox.", isError: false)
         } catch {
             CrashReporter.log(error, context: "leaveGuidedRoom")
-            showToast("Couldn't leave room", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't leave room",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
         }
     }
 
@@ -353,7 +383,11 @@ extension AppViewModel {
             showToast("Report submitted", subtitle: "Thanks for helping keep rooms safe.", isError: false)
         } catch {
             CrashReporter.log(error, context: "reportGuidedRoom")
-            showToast("Couldn't send report", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't send report",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
         }
     }
 
@@ -366,7 +400,11 @@ extension AppViewModel {
             showToast("Blocked \(member.displayName)", subtitle: "Rooms with this person are hidden.", isError: false)
         } catch {
             CrashReporter.log(error, context: "blockRoomMember")
-            showToast("Couldn't block", subtitle: "Try again in a moment.", isError: true)
+            showToast(
+                "Couldn't block",
+                subtitle: socialActionErrorSubtitle(for: error, fallback: "Try again in a moment."),
+                isError: true
+            )
         }
     }
 

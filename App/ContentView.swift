@@ -53,7 +53,11 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .task {
             #if DEBUG
-            if viewModel.applyDebugPreviewStateIfRequested(arguments: ["-SimastryPreviewSeeded"]) {
+            var debugArguments = ProcessInfo.processInfo.arguments
+            if !debugArguments.contains("-SimastryPreviewSeeded") {
+                debugArguments.append("-SimastryPreviewSeeded")
+            }
+            if viewModel.applyDebugPreviewStateIfRequested(arguments: debugArguments) {
                 return
             }
             #endif

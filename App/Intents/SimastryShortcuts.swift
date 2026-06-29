@@ -5,7 +5,7 @@ enum SimastryShortcutDestination: String, CaseIterable, AppEnum {
     case today
     case predict
     case messages
-    case nadia
+    case expertAstrologers
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Simastry Destination"
 
@@ -13,7 +13,7 @@ enum SimastryShortcutDestination: String, CaseIterable, AppEnum {
         .today: "Today",
         .predict: "Predict",
         .messages: "Messages",
-        .nadia: "Nadia"
+        .expertAstrologers: "Expert Astrologers"
     ]
 }
 
@@ -76,7 +76,7 @@ struct OpenSimastryDestinationIntent: AppIntent {
         case .today: "Today"
         case .predict: "Predict"
         case .messages: "Messages"
-        case .nadia: "Nadia"
+        case .expertAstrologers: "Expert Astrologers"
         }
     }
 }
@@ -167,12 +167,12 @@ struct SimastryShortcutsProvider: AppShortcutsProvider {
             systemImageName: "sparkles"
         )
         AppShortcut(
-            intent: OpenSimastryDestinationIntent(destination: .nadia),
+            intent: OpenSimastryDestinationIntent(destination: .expertAstrologers),
             phrases: [
-                "Ask Nadia in \(.applicationName)",
-                "Open Nadia in \(.applicationName)"
+                "Ask Expert Astrologers in \(.applicationName)",
+                "Open Expert Astrologers in \(.applicationName)"
             ],
-            shortTitle: "Ask Nadia",
+            shortTitle: "Expert Astrologers",
             systemImageName: "person.wave.2.fill"
         )
     }

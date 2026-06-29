@@ -241,6 +241,10 @@ final class GuideCalibrationStore {
         return decoded
     }
 
+    func calibratedGuideIds(in guideIds: some Sequence<String>) -> Set<String> {
+        Set(guideIds.filter { !calibration(for: $0).isDefault })
+    }
+
     func save(_ calibration: GuideCalibration, for guideId: String) {
         guard let data = try? encoder.encode(calibration) else { return }
         defaults.set(data, forKey: storageKey(for: guideId))

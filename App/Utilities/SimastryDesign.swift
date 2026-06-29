@@ -11,10 +11,18 @@ struct SimastrySpacing {
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
 
-    /// Extra breathing room above the floating Liquid Glass tab bar. The native
-    /// iOS 26 `TabView` already insets scroll content for the bar, so this is a
-    /// small cushion rather than the full bar height.
+    /// Extra breathing room above the floating Liquid Glass tab bar. Measured on
+    /// iPhone 17 Pro (iOS 26.2): the system does NOT inset plain `ScrollView`
+    /// content for the floating bar, so screens must add their own clearance.
+    /// This token is the small in-flow cushion used between stacked tab content.
     static let tabBarClearance: CGFloat = 12
+
+    /// End-of-scroll room so the final card/text clears the floating Liquid Glass
+    /// tab bar. The bar's glass capsule top sits ~89pt above the screen bottom on
+    /// iPhone 17 Pro; 108pt leaves a comfortable ~20pt gap above it. Use this for
+    /// the trailing spacer / bottom padding on any scroll content that sits behind
+    /// the tab bar (tab roots and views pushed within a tab's NavigationStack).
+    static let tabBarEndClearance: CGFloat = 108
 }
 
 struct SimastrySpring {

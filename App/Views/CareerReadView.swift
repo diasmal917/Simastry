@@ -10,28 +10,26 @@ struct CareerReadView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        if let sun = viewModel.userSunSign {
-                            heroCard(sun: sun)
-                            pressureCard
-                            firstWeekCard
-                            strengthsAndWatchOut(sun: sun)
-                            bossDecoder
-                            methodPanel
-                            honestyFooter
-                        } else {
-                            missingChartCard
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if let sun = viewModel.userSunSign {
+                        heroCard(sun: sun)
+                        pressureCard
+                        firstWeekCard
+                        strengthsAndWatchOut(sun: sun)
+                        bossDecoder
+                        methodPanel
+                        honestyFooter
+                    } else {
+                        missingChartCard
                     }
-                    .padding(20)
-                    .padding(.bottom, 28)
                 }
-                .scrollIndicators(.hidden)
+                .padding(20)
+                .padding(.bottom, 28)
             }
+            .scrollIndicators(.hidden)
+            // Backdrop via `.presentationBackground` so content insets below the
+            // nav bar (no full-bleed ZStack layer that would clip the top).
             .navigationTitle("Career Read")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)

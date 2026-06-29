@@ -81,30 +81,28 @@ struct FirstReadChoiceView: View {
     private let arrowColumnWidth: CGFloat = 24
 
     var body: some View {
-        ZStack {
-            CelestialBackground()
+        ScrollView {
+            VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
+                Spacer().frame(height: SimastrySpacing.sm)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
-                    Spacer().frame(height: SimastrySpacing.sm)
+                header
 
-                    header
-
-                    VStack(spacing: SimastrySpacing.sm) {
-                        ForEach(firstReadEntryOptions) { option in
-                            entryCard(option)
-                        }
+                VStack(spacing: SimastrySpacing.sm) {
+                    ForEach(firstReadEntryOptions) { option in
+                        entryCard(option)
                     }
-
-                    privacyFooter
-
-                    Spacer().frame(height: 42)
                 }
-                .padding(.horizontal, SimastrySpacing.lg)
-                .padding(.bottom, 58)
+
+                privacyFooter
+
+                Spacer().frame(height: 42)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, SimastrySpacing.lg)
+            .padding(.bottom, 58)
         }
+        .scrollIndicators(.hidden)
+        // `.background` keeps the header below the nav bar (no ZStack clip).
+        .background { CelestialBackground() }
         .onAppear {
             guard !appeared else { return }
             if reduceMotion {
@@ -656,13 +654,14 @@ struct DecodeTextView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
-                .padding(.bottom, SimastrySpacing.tabBarClearance)
+                .padding(.bottom, SimastrySpacing.tabBarEndClearance)
             }
             .scrollIndicators(.hidden)
         }
         .navigationTitle("Decode")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .accessibilityIdentifier("decode.screen")
         .animation(.spring(SimastrySpring.smooth), value: decoded)
         .onChange(of: messageText) { decoded = false; privacyBlockMessage = nil }
         .onChange(of: theirSign) { decoded = false }

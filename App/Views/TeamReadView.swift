@@ -24,22 +24,19 @@ struct TeamReadView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        if let teamRead {
-                            teamReadCardStack(teamRead)
-                        } else {
-                            pickerPhase
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let teamRead {
+                        teamReadCardStack(teamRead)
+                    } else {
+                        pickerPhase
                     }
-                    .padding(20)
-                    .padding(.bottom, 28)
                 }
-                .scrollIndicators(.hidden)
+                .padding(20)
+                .padding(.bottom, 28)
             }
+            .scrollIndicators(.hidden)
+            .background { CelestialBackground() }
             .navigationTitle("Team Read")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -70,6 +67,7 @@ struct TeamReadView: View {
                 #endif
             }
         }
+        .accessibilityIdentifier("people.teamReadSheet")
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }

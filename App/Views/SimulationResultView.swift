@@ -123,7 +123,7 @@ struct SimulationResultView: View {
             }
 
             if localOutcome == nil {
-                Text("Come back after they reply — this trains your panel's accuracy stat.")
+                Text("Come back after they reply — this helps tune your prediction accuracy stat.")
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.textTertiary)
             }

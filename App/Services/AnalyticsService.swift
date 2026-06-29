@@ -51,6 +51,16 @@ final class AnalyticsService {
         case guideShared = "guide_shared"
         case guideDeleted = "guide_deleted"
 
+        // Expert Astrologers
+        case expertAstrologersViewed = "expert_astrologers_viewed"
+        case guidanceQuestionSubmitted = "guidance_question_submitted"
+        case specialistSelected = "specialist_selected"
+        case everyoneModeSelected = "everyone_mode_selected"
+        case specialistResponseStarted = "specialist_response_started"
+        case specialistResponseCompleted = "specialist_response_completed"
+        case specialistResponseFailed = "specialist_response_failed"
+        case individualSpecialistConversationOpened = "individual_specialist_conversation_opened"
+
         // Engagement
         case didYouKnowViewed = "did_you_know_viewed"
         case didYouKnowTapped = "did_you_know_tapped"

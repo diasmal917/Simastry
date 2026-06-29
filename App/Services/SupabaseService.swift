@@ -5,6 +5,7 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
     case notConfigured
     case invalidRedirectURL
     case missingSession
+    case profileMismatch
     case invalidFunctionResponse
     case functionFailed(String)
     case aiUsageLimit(String)
@@ -17,6 +18,8 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
             "Authentication redirect URL is invalid."
         case .missingSession:
             "Please sign in again before continuing."
+        case .profileMismatch:
+            "This profile belongs to a different signed-in account."
         case .invalidFunctionResponse:
             "The AI guide answered in an unexpected format."
         case .functionFailed(let message):
@@ -101,9 +104,10 @@ nonisolated final class SupabaseService {
     func invokeCompanionReplyResult(
         kind: CompanionReplyKind,
         feature: CompanionReplyFeature,
-        system: String,
-        user: String,
-        maxTokens: Int = 1024
+        system: String?,
+        user: String?,
+        maxTokens: Int = 1024,
+        expertAstrologerRequest: ExpertAstrologerReplyService.Request? = nil
     ) async throws -> CompanionReplyResult {
         let client = try configuredClient()
         guard let session = client.auth.currentSession else {
@@ -118,7 +122,8 @@ nonisolated final class SupabaseService {
             feature: feature.rawValue,
             system: system,
             user: user,
-            maxTokens: maxTokens
+            maxTokens: maxTokens,
+            expertAstrologerRequest: expertAstrologerRequest
         )
         var request = URLRequest(url: url)
         request.timeoutInterval = Self.companionReplyRequestTimeout
@@ -149,6 +154,20 @@ nonisolated final class SupabaseService {
 
         let decoded = try JSONDecoder().decode(CompanionReplyResponse.self, from: data)
         return CompanionReplyResult(text: decoded.text, usageEventId: decoded.usageEventId)
+    }
+
+    func invokeExpertAstrologerReply(
+        request expertRequest: ExpertAstrologerReplyService.Request,
+        maxTokens: Int = 520
+    ) async throws -> String {
+        try await invokeCompanionReplyResult(
+            kind: .chat,
+            feature: .expertAstrologer,
+            system: nil,
+            user: nil,
+            maxTokens: maxTokens,
+            expertAstrologerRequest: expertRequest
+        ).text
     }
 
     func signInWithApple(idToken: String) async throws {
@@ -250,6 +269,97 @@ nonisolated final class SupabaseService {
         return rows.compactMap(\.localFeedback)
     }
 
+    func fetchExpertAstrologerMessages(limit: Int = 500) async throws -> [SpecialistMessage] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        let rows: [ExpertAstrologerMessageRecord] = try await client
+            .from("expert_astrologer_messages")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .order("created_at", ascending: true)
+            .limit(limit)
+            .execute()
+            .value
+        return rows.compactMap(\.localMessage)
+    }
+
+    func fetchExpertAstrologerConsultationResponses(limit: Int = 160) async throws -> [SpecialistConsultationResponse] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        let rows: [ExpertAstrologerConsultationResponseRecord] = try await client
+            .from("expert_astrologer_consultation_responses")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .order("created_at", ascending: true)
+            .limit(limit)
+            .execute()
+            .value
+        return rows.compactMap(\.localResponse)
+    }
+
+    func upsertExpertAstrologerMessages(_ messages: [SpecialistMessage]) async throws {
+        let client = try configuredClient()
+        let userId = try await requireCurrentUserId()
+        let individualMessages = messages.filter { $0.mode == .individual }
+        guard !individualMessages.isEmpty else { return }
+
+        let conversations = Dictionary(grouping: individualMessages, by: \.conversationId)
+            .compactMap { conversationId, messages -> ExpertAstrologerConversationRecord? in
+                guard let first = messages.first else { return nil }
+                return ExpertAstrologerConversationRecord(
+                    id: conversationId,
+                    userId: userId,
+                    specialistId: first.specialistId,
+                    createdAt: messages.map(\.timestamp).min() ?? Date(),
+                    updatedAt: Date(),
+                    lastMessageAt: messages.map(\.timestamp).max()
+                )
+            }
+        let records = individualMessages.map { ExpertAstrologerMessageRecord(userId: userId, message: $0) }
+
+        try await client.from("expert_astrologer_conversations").upsert(conversations).execute()
+        try await client.from("expert_astrologer_messages").upsert(records).execute()
+    }
+
+    func upsertExpertAstrologerConsultation(
+        id: UUID,
+        userQuestion: String,
+        profileContextSummary: String?
+    ) async throws {
+        let client = try configuredClient()
+        let userId = try await requireCurrentUserId()
+        let record = ExpertAstrologerConsultationRecord(
+            id: id,
+            userId: userId,
+            userQuestion: userQuestion,
+            profileContextSummary: profileContextSummary
+        )
+        try await client.from("expert_astrologer_consultations").upsert(record).execute()
+    }
+
+    func upsertExpertAstrologerConsultationResponses(_ responses: [SpecialistConsultationResponse]) async throws {
+        let client = try configuredClient()
+        let userId = try await requireCurrentUserId()
+        guard !responses.isEmpty else { return }
+
+        let consultations = Dictionary(grouping: responses, by: \.multiConsultationId)
+            .compactMap { consultationId, responses -> ExpertAstrologerConsultationRecord? in
+                guard let first = responses.first else { return nil }
+                return ExpertAstrologerConsultationRecord(
+                    id: consultationId,
+                    userId: userId,
+                    userQuestion: first.userQuestion,
+                    profileContextSummary: first.profileContextSummary,
+                    createdAt: responses.map(\.timestamp).min() ?? Date(),
+                    updatedAt: Date()
+                )
+            }
+        let records = responses.map { ExpertAstrologerConsultationResponseRecord(userId: userId, response: $0) }
+
+        try await client.from("expert_astrologer_consultations").upsert(consultations).execute()
+        try await client.from("expert_astrologer_consultation_responses").upsert(records).execute()
+    }
+
     func fetchProfile() async throws -> UserProfile? {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
@@ -335,6 +445,26 @@ nonisolated final class SupabaseService {
             .execute()
     }
 
+    func deleteExpertAstrologerData(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("expert_astrologer_consultation_responses")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+        try await client.from("expert_astrologer_consultations")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+        try await client.from("expert_astrologer_messages")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+        try await client.from("expert_astrologer_conversations")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
     func fetchCurrentSocialProfile() async throws -> SocialProfile? {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
@@ -412,14 +542,14 @@ nonisolated final class SupabaseService {
 
     func addUserConnection(profileId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
         let connection = UserConnectionData(ownerId: userId, profileId: profileId, createdAt: Date())
         try await client.from("user_connections").insert(connection).execute()
     }
 
     func removeUserConnection(profileId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
         try await client.from("user_connections")
             .delete()
             .eq("owner_id", value: userId.uuidString)
@@ -505,7 +635,7 @@ nonisolated final class SupabaseService {
 
     func blockDiscoveryProfile(blockedId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
 
         let block = DiscoveryBlockData(
             blockerId: userId,
@@ -518,6 +648,7 @@ nonisolated final class SupabaseService {
 
     func reportDiscoveryProfile(_ report: DiscoveryReportData) async throws {
         let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: report.reporterId)
         try await client.from("discovery_reports").insert(report).execute()
     }
 
@@ -536,12 +667,13 @@ nonisolated final class SupabaseService {
 
     func sendDiscoveryMessage(_ message: DiscoveryMessageData) async throws {
         let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: message.senderId)
         try await client.from("discovery_messages").insert(message).execute()
     }
 
     func markDiscoveryConversationRead(with participantId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
         try await client.from("discovery_messages")
             .update(["is_read": true])
             .eq("recipient_id", value: userId.uuidString)
@@ -551,7 +683,7 @@ nonisolated final class SupabaseService {
 
     func deleteDiscoveryConversation(with participantId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
         try await client.from("discovery_messages")
             .delete()
             .or(
@@ -628,6 +760,7 @@ nonisolated final class SupabaseService {
         openingMessage: ChatMessage?
     ) async throws {
         let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: thread.creatorId)
         try await client.from("chat_threads").insert(thread).execute()
         try await client.from("chat_thread_members").insert(members).execute()
         if let openingMessage {
@@ -637,12 +770,13 @@ nonisolated final class SupabaseService {
 
     func sendChatMessage(_ message: ChatMessage) async throws {
         let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: message.createdBy)
         try await client.from("chat_messages").insert(message).execute()
     }
 
     func markChatThreadRead(threadId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
         try await client.from("chat_thread_members")
             .update(["last_read_at": ISO8601DateFormatter().string(from: Date())])
             .eq("thread_id", value: threadId.uuidString)
@@ -653,7 +787,7 @@ nonisolated final class SupabaseService {
 
     func leaveChatThread(threadId: UUID) async throws {
         let client = try configuredClient()
-        guard let userId = await currentUserId else { return }
+        let userId = try await requireCurrentUserId()
         try await client.from("chat_thread_members")
             .update(["is_active": false])
             .eq("thread_id", value: threadId.uuidString)
@@ -664,6 +798,7 @@ nonisolated final class SupabaseService {
 
     func reportChatThread(_ report: ChatReportData) async throws {
         let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: report.reporterId)
         try await client.from("chat_reports").insert(report).execute()
     }
 
@@ -704,6 +839,16 @@ nonisolated final class SupabaseService {
         return client
     }
 
+    private func requireCurrentUserId(matching expectedUserId: UUID? = nil) async throws -> UUID {
+        guard let userId = await currentUserId else {
+            throw SupabaseServiceError.missingSession
+        }
+        if let expectedUserId, expectedUserId != userId {
+            throw SupabaseServiceError.profileMismatch
+        }
+        return userId
+    }
+
     private func uuidOrFilter(column: String, ids: [UUID]) -> String {
         ids.map { "\(column).eq.\($0.uuidString)" }.joined(separator: ",")
     }
@@ -724,14 +869,16 @@ nonisolated enum CompanionReplyFeature: String, CaseIterable, Encodable, Sendabl
     case playbook
     case momentComment = "moment_comment"
     case dailyDecision = "daily_decision"
+    case expertAstrologer = "expert_astrologer"
 }
 
 nonisolated struct CompanionReplyPayload: Encodable, Sendable {
     let kind: String
     let feature: String
-    let system: String
-    let user: String
+    let system: String?
+    let user: String?
     let maxTokens: Int
+    let expertAstrologerRequest: ExpertAstrologerReplyService.Request?
 }
 
 nonisolated struct CompanionReplyResult: Equatable, Sendable {

@@ -34,14 +34,28 @@ struct CompanionsView: View {
         )
     }
 
+    private var castProfiles: [FactoryCompanionProfile] {
+        AppConfig.expertAstrologersEnabled
+            ? ExpertAstrologerRegistry.archivedProfiles
+            : FactoryCompanionCatalog.all
+    }
+
     var body: some View {
+        if AppConfig.expertAstrologersEnabled {
+            ExpertAstrologersView(viewModel: viewModel)
+        } else {
+            legacyCompanionsDeck
+        }
+    }
+
+    private var legacyCompanionsDeck: some View {
         NavigationStack {
             ZStack {
                 CelestialBackground()
 
                 castDeck
             }
-            .navigationTitle("Guides")
+            .navigationTitle(AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Guides")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
@@ -84,18 +98,18 @@ struct CompanionsView: View {
     }
 
     private var castDeck: some View {
-        let profiles = FactoryCompanionCatalog.all
+        let profiles = castProfiles
 
         return GeometryReader { proxy in
             let cardHeight = min(max(proxy.size.height - SimastrySpacing.tabBarClearance - 172, 468), 570)
 
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Guides")
+                    Text(AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Guides")
                         .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text("Browse the guide lens you want for Messages, Profile, and Predict.")
+                    Text(AppConfig.expertAstrologersEnabled ? "Five named AI astrologers, each grounded in a distinct tradition." : "Browse the guide lens you want for Messages, Profile, and Predict.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
@@ -158,7 +172,13 @@ struct CompanionsView: View {
     }
 
     private func castCard(_ profile: FactoryCompanionProfile, height: CGFloat) -> some View {
-        ZStack(alignment: .bottomLeading) {
+        let specialist = ExpertAstrologerRegistry.specialist(for: profile)
+        let title = specialist?.characterName ?? profile.name
+        let role = specialist?.publicTitle ?? profile.metadataLine
+        let description = specialist?.longDescription ?? profile.personalityBio
+        let tags = specialist?.focusAreas.prefix(3).map(\.self) ?? profile.tags.prefix(3).map(\.self)
+
+        return ZStack(alignment: .bottomLeading) {
             Image(profile.cardImageName)
                 .resizable()
                 .scaledToFill()
@@ -179,23 +199,29 @@ struct CompanionsView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(profile.name)
+                    Text(title)
                         .font(SimastryFont.displayMedium)
                         .foregroundStyle(.white)
 
-                    ZodiacIconView(sign: profile.sign, size: 32, showsGlow: true)
+                    if let specialist {
+                        Image(systemName: specialist.symbol)
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+                    } else {
+                        ZodiacIconView(sign: profile.sign, size: 32, showsGlow: true)
+                    }
                 }
 
-                Text(profile.metadataLine)
+                Text(role)
                     .font(SimastryFont.labelLarge)
                     .foregroundStyle(.white.opacity(0.84))
 
-                Text(profile.headline)
+                Text(specialist?.tradition ?? profile.headline)
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(profile.personalityBio)
+                Text(description)
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(.white.opacity(0.78))
                     .lineSpacing(3)
@@ -203,7 +229,7 @@ struct CompanionsView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 8) {
-                    ForEach(profile.tags.prefix(3), id: \.self) { tag in
+                    ForEach(tags, id: \.self) { tag in
                         Text(tag)
                             .font(SimastryFont.captionSmall)
                             .foregroundStyle(SimastryColor.midnight)
@@ -214,8 +240,8 @@ struct CompanionsView: View {
                 }
 
                 HStack(spacing: 8) {
-                    castSignalPill(systemImage: "scope", text: "\(profile.sign.displayName) lens", tint: profile.sign.color)
-                    castSignalPill(systemImage: "photo.fill", text: "Factory", tint: SimastryColor.gold)
+                    castSignalPill(systemImage: "scope", text: specialist?.publicTitle ?? "\(profile.sign.displayName) lens", tint: SimastryColor.gold)
+                    castSignalPill(systemImage: "photo.fill", text: "Profile art", tint: SimastryColor.gold)
                 }
             }
             .padding(20)
@@ -226,7 +252,7 @@ struct CompanionsView: View {
                 .stroke(.white.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.32), radius: 22, x: 0, y: 14)
-        .accessibilityLabel("\(profile.name), \(profile.metadataLine). \(profile.personalityBio)")
+        .accessibilityLabel("\(title), \(role). \(description)")
     }
 
     private func castSignalPill(systemImage: String, text: String, tint: Color) -> some View {
@@ -275,7 +301,7 @@ struct CompanionsView: View {
         HapticManager.buttonPress()
         withAnimation(.spring(SimastrySpring.snappy)) {
             dragOffset = .zero
-            currentCastIndex = (currentCastIndex + 1) % FactoryCompanionCatalog.all.count
+            currentCastIndex = (currentCastIndex + 1) % max(castProfiles.count, 1)
         }
     }
 

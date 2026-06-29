@@ -149,7 +149,7 @@ struct GuideProfileView: View {
                     actionRow
                     credentialBlock
                     postGrid
-                    Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                    Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -273,7 +273,9 @@ struct GuideProfileView: View {
     }
 
     private var bioBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let calibration = GuideCalibrationStore.shared.calibration(for: profile.id)
+
+        return VStack(alignment: .leading, spacing: 6) {
             Text(profile.headline)
                 .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.offWhite)
@@ -285,8 +287,8 @@ struct GuideProfileView: View {
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if !GuideCalibrationStore.shared.calibration(for: profile.id).isDefault {
-                calibratedBadge(summary: GuideCalibrationStore.shared.calibration(for: profile.id).displaySummary)
+            if !calibration.isDefault {
+                calibratedBadge(summary: calibration.displaySummary)
                     .padding(.top, 4)
             }
         }

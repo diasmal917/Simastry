@@ -29,24 +29,22 @@ struct AuraView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-                AuraStarfield()
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        auraHero
-                        barsCard
-                        AuraSummaryCard(summary: summary)
-                        methodPanel
-                        shareButton
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
-                    .padding(.bottom, 36)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    auraHero
+                    barsCard
+                    AuraSummaryCard(summary: summary)
+                    methodPanel
+                    shareButton
                 }
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 36)
             }
+            .scrollIndicators(.hidden)
+            // Starfield over the `.presentationBackground` celestial; using
+            // `.background` (not a ZStack layer) keeps content below the nav bar.
+            .background { AuraStarfield() }
             .navigationTitle("Aura")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

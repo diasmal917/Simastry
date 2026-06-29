@@ -23,6 +23,9 @@ nonisolated enum AppConfig {
     static let socialDiscoveryEnabled = true
     static let llmChatEnabled = true
     static let roomGuideReplyEnabled = false
+    static var expertAstrologersEnabled: Bool {
+        !ProcessInfo.processInfo.arguments.contains("-SimastryLegacyGuides")
+    }
 
     static let privacyPolicyURL = URL(string: "https://simastry.com/privacy")!
     static let termsOfServiceURL = URL(string: "https://simastry.com/terms")!

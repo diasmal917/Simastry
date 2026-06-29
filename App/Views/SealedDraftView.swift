@@ -36,27 +36,23 @@ struct SealedDraftView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        if isReread {
-                            rereadContent
-                        } else {
-                            composeContent
-                        }
-
-                        Text("Drafts are stored only on this iPhone — nothing is sent or uploaded.")
-                            .font(SimastryFont.captionSmall)
-                            .foregroundStyle(SimastryColor.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if isReread {
+                        rereadContent
+                    } else {
+                        composeContent
                     }
-                    .padding(20)
-                    .padding(.bottom, 28)
+
+                    Text("Drafts are stored only on this iPhone — nothing is sent or uploaded.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .scrollIndicators(.hidden)
+                .padding(20)
+                .padding(.bottom, 28)
             }
+            .scrollIndicators(.hidden)
             .navigationTitle(isReread ? "Morning Eyes" : "Before You Send")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)

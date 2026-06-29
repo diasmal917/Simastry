@@ -46,10 +46,10 @@ private struct LandingCompanionWindow: Identifiable {
 
 private let landingCompanionWindows: [LandingCompanionWindow] = [
     LandingCompanionWindow(
-        id: "ada",
-        imageName: "Factory_taurus-ada_card",
-        name: "Ada",
-        role: "Taurus Guide",
+        id: "leyla",
+        imageName: "Factory_virgo-mara_card",
+        name: "Leyla",
+        role: "Western Astrologer",
         isHero: true,
         widthRatio: 0.44,
         heightRatio: 0.92,
@@ -62,7 +62,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         id: "nadia",
         imageName: "Factory_sagittarius-nadia_profile",
         name: "Nadia",
-        role: "Sagittarius Guide",
+        role: "Evolutionary Astrologer",
         isHero: false,
         widthRatio: 0.29,
         heightRatio: 0.50,
@@ -72,10 +72,10 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         zIndex: 1
     ),
     LandingCompanionWindow(
-        id: "maria",
-        imageName: "Factory_gemini-rina_profile",
-        name: "Maria",
-        role: "Gemini Guide",
+        id: "naomi",
+        imageName: "Factory_capricorn-naomi_profile",
+        name: "Naomi",
+        role: "Chinese Astrologer",
         isHero: false,
         widthRatio: 0.29,
         heightRatio: 0.51,
@@ -85,10 +85,10 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         zIndex: 3
     ),
     LandingCompanionWindow(
-        id: "jonah",
-        imageName: "Factory_virgo-jonah_card",
-        name: "Jonah",
-        role: "Virgo Guide",
+        id: "mateo",
+        imageName: "Factory_libra-mateo_card",
+        name: "Mateo",
+        role: "Vedic Astrologer",
         isHero: false,
         widthRatio: 0.30,
         heightRatio: 0.52,
@@ -101,7 +101,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         id: "elias",
         imageName: "Factory_scorpio-elias_profile",
         name: "Elias",
-        role: "Scorpio Guide",
+        role: "Ancient Astrologer",
         isHero: false,
         widthRatio: 0.30,
         heightRatio: 0.51,
@@ -893,7 +893,7 @@ struct LandingView: View {
         }
         .padding(.horizontal, 12)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Featured Simastry guides: Ada the Taurus Guide, Jonah the Virgo Guide, Maria the Gemini Guide, Nadia the Sagittarius Guide, and Elias the Scorpio Guide")
+        .accessibilityLabel("Featured Simastry expert astrologers: Leyla, Mateo, Naomi, Elias, and Nadia")
     }
 
     private func constellationBackdrop(size: CGSize) -> some View {

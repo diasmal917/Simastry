@@ -42,6 +42,14 @@ struct PeopleView: View {
         }
     }
 
+    private var filteredPeopleIds: Set<UUID> {
+        Set(filteredPeople.map(\.id))
+    }
+
+    private var filteredRecentlyReflectedPeople: [RelationshipPerson] {
+        recentlyReflectedPeople.filter { filteredPeopleIds.contains($0.id) }
+    }
+
     private var needsAttentionPerson: RelationshipPerson? {
         viewModel.relationshipPeople.first { person in
             person.relationshipType == .partner || person.relationshipType == .family
@@ -68,7 +76,7 @@ struct PeopleView: View {
                             needsAttentionCard(needsAttentionPerson)
                         }
 
-                        if !recentlyReflectedPeople.isEmpty {
+                        if !filteredRecentlyReflectedPeople.isEmpty {
                             recentSection
                         }
 
@@ -78,13 +86,14 @@ struct PeopleView: View {
                             allPeopleSection
                         }
 
-                        Spacer().frame(height: SimastrySpacing.tabBarClearance + 32)
+                        Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
             }
             .scrollIndicators(.hidden)
             .background { CelestialBackground() }
+            .accessibilityHidden(activeSheet != nil)
             .navigationTitle("People")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -199,6 +208,7 @@ struct PeopleView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Read this group. How this group communicates.")
+        .accessibilityIdentifier("people.teamReadEntryButton")
     }
 
     private var peopleSubtitle: String {
@@ -273,7 +283,7 @@ struct PeopleView: View {
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("Recent reads", systemImage: "bookmark.fill")
-            ForEach(recentlyReflectedPeople.prefix(2)) { person in
+            ForEach(filteredRecentlyReflectedPeople.prefix(2)) { person in
                 NavigationLink(value: person) {
                     relationshipPersonCard(person)
                 }
@@ -572,16 +582,14 @@ struct RelationshipPersonDetailView: View {
                 icon: SimastryIcon.predict,
                 tint: SimastryColor.celestialBlue
             ) {
-                viewModel.predictionDraft = PredictionDraft(
+                viewModel.openPredict(with: PredictionDraft(
                     targetName: currentPerson.displayName,
                     targetSunSign: currentPerson.sunSign,
                     targetMoonSign: currentPerson.moonSign,
                     targetRisingSign: currentPerson.risingSign,
                     question: "What will \(currentPerson.displayName) say next?",
                     conversationText: nil
-                )
-                viewModel.selectedTab = .today
-                viewModel.predictRouteRequest += 1
+                ))
             }
 
             simulationRoomRow(
@@ -649,6 +657,7 @@ struct RelationshipPersonDetailView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(title). \(subtitle)")
+        .accessibilityIdentifier("people.detail.simulationRoom.\(title.replacingOccurrences(of: " ", with: ""))")
     }
 
     // MARK: - Persona Context
@@ -930,7 +939,7 @@ struct RelationshipPersonDetailView: View {
                 methodPanel
                 notesSection
                 privacySection
-                Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -1038,6 +1047,7 @@ struct RelationshipPersonDetailView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityHint("Opens Predict with \(currentPerson.displayName)'s chart signals filled in")
+        .accessibilityIdentifier("people.detail.predictReplyButton")
     }
 
     @ViewBuilder

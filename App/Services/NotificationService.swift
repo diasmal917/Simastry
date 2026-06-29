@@ -135,8 +135,8 @@ final class NotificationService {
         center.removePendingNotificationRequests(withIdentifiers: ["prediction_outcome_followup"])
 
         let content = UNMutableNotificationContent()
-        content.title = "Your panel is curious"
-        content.body = "Did they reply like the panel said? Tap to log it."
+        content.title = "How did it play out?"
+        content.body = "Tap to log whether the read matched what happened."
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://simulate"]
 
@@ -372,6 +372,18 @@ final class NotificationService {
     func cancelEveningCheckIn() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: ["evening_checkin"])
+    }
+
+    func cancelLegacyGuideAndCompanionNotifications() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [
+                "evening_checkin",
+                "companion_hook",
+                "inactive_reengagement",
+                "simulation_reminder",
+                "panel_daily_starter"
+            ] + Self.guideTipIdentifiers
+        )
     }
 
     func clearScheduledNotifications() {
