@@ -361,7 +361,7 @@ nonisolated enum ExpertAstrologerRegistry {
         .leylaWestern,
         .mateoVedic,
         .naomiChinese,
-        .eliasAncient,
+        .sorenAncient,
         .nadiaEvolutionary
     ]
 
@@ -471,23 +471,23 @@ private extension AstrologySpecialist {
         allowedTechniques: ["BaZi / Four Pillars", "Year Pillar", "Month Pillar", "Day Pillar", "Hour Pillar", "Heavenly Stems", "Earthly Branches", "Five Elements", "Luck Pillars"]
     )
 
-    static let eliasAncient = AstrologySpecialist(
+    static let sorenAncient = AstrologySpecialist(
         id: "elias-ancient",
-        characterName: "Elias",
+        characterName: "Soren",
         publicTitle: "Ancient Astrologer",
-        displayName: "Elias - Ancient Astrologer",
+        displayName: "Soren - Ancient Astrologer",
         emoji: "🏛",
         publicDescription: "Ancient predictive methods, fate, timing, and classical technique.",
         shortDescription: "Classical prediction, fate, and timing.",
-        longDescription: "Elias uses classical astrological techniques from antiquity. He is best for fate, timing, life chapters, predictive cycles, and clear traditional judgment.",
+        longDescription: "Soren uses classical astrological techniques from antiquity. He is best for fate, timing, life chapters, predictive cycles, and clear traditional judgment.",
         tradition: "Ancient astrology",
         internalTradition: "Hellenistic astrology",
         focusAreas: ["Ancient predictive methods", "Fate", "Timing", "Classical technique", "Life chapters", "Traditional judgment"],
         personalityTraits: ["Scholarly", "Composed", "Precise", "Analytical", "Restrained"],
         symbol: "building.columns.fill",
-        placeholderAvatar: "E",
+        placeholderAvatar: "S",
         harnessFileName: "elias-ancient",
-        legacyCharacterId: "scorpio-elias",
+        legacyCharacterId: "aries-cassian",
         forbiddenConcepts: ["Vedic dashas", "Nakshatras", "Chinese zodiac", "BaZi", "Modern psychological astrology as main frame", "Evolutionary shadow-work language", "Outer planets as primary anchors"],
         allowedTechniques: ["Whole Sign Houses", "Seven traditional planets", "Sect", "Benefics and malefics", "Planetary condition", "Essential dignity", "Lots", "Annual Profections", "Zodiacal Releasing"]
     )

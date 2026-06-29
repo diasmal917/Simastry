@@ -32,7 +32,7 @@ nonisolated enum ExpertAstrologerReplyService {
             return "Naomi - Chinese Astrologer\n\nI would not interpret Scorpio, because that belongs to Western astrology. From Chinese astrology, compatibility is better judged through BaZi: Day Masters, element balance, spouse palace interactions, branch combinations, and useful elements. With only a Western sign, I can only redirect the frame.\n\nPractical reflection: bring birth year, month, day, and hour for both people, and I can read the energetic balance more usefully."
         }
         if specialist.id == "elias-ancient", lowercasedQuestion.contains("pluto") {
-            return "Elias - Ancient Astrologer\n\nBy the ancient method, Pluto is not a core traditional planet. I would judge partnership through the 7th place, its ruler, Venus, Mars, sect, and the condition of the planets involved. If timing is the question, I would also look for the active time lord, if supplied.\n\nPractical reflection: ask what condition surrounds the 7th place before giving Pluto the whole judgment."
+            return "Soren - Ancient Astrologer\n\nBy the ancient method, Pluto is not a core traditional planet. I would judge partnership through the 7th place, its ruler, Venus, Mars, sect, and the condition of the planets involved. If timing is the question, I would also look for the active time lord, if supplied.\n\nPractical reflection: ask what condition surrounds the 7th place before giving Pluto the whole judgment."
         }
         if specialist.id == "nadia-evolutionary",
            lowercasedQuestion.contains("trauma") || lowercasedQuestion.contains("traumatized") {
@@ -63,7 +63,7 @@ nonisolated enum ExpertAstrologerReplyService {
         case "naomi-chinese":
             "Naomi - Chinese Astrologer\n\nFrom a Chinese astrology lens, I would look for elemental balance, useful timing, and the pattern created by the year, month, day, and hour pillars."
         case "elias-ancient":
-            "Elias - Ancient Astrologer\n\nFrom an ancient lens, I would judge planetary condition, sect, whole sign topics, and timing methods before giving a conclusion."
+            "Soren - Ancient Astrologer\n\nFrom an ancient lens, I would judge planetary condition, sect, whole sign topics, and timing methods before giving a conclusion."
         case "nadia-evolutionary":
             "Nadia - Evolutionary Astrologer\n\nFrom an evolutionary lens, I would ask what growth pattern, emotional repetition, or soul lesson this situation is inviting you to work with."
         default:

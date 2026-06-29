@@ -532,7 +532,7 @@ private struct ExpertAstrologerInboxRow: View {
         guard let latest = viewModel.specialistMessages
             .filter({ $0.role == .specialist })
             .max(by: { $0.timestamp < $1.timestamp }) else {
-            return "Ask Leyla, Mateo, Naomi, Elias, or Nadia for a tradition-specific read."
+            return "Ask Leyla, Mateo, Naomi, Soren, or Nadia for a tradition-specific read."
         }
         let name = ExpertAstrologerRegistry.specialist(id: latest.specialistId)?.characterName ?? "Expert"
         return "\(name): \(latest.content)"

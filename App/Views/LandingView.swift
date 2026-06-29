@@ -98,9 +98,9 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         zIndex: 2
     ),
     LandingCompanionWindow(
-        id: "elias",
-        imageName: "Factory_scorpio-elias_profile",
-        name: "Elias",
+        id: "soren",
+        imageName: "Factory_aries-cassian_profile",
+        name: "Soren",
         role: "Ancient Astrologer",
         isHero: false,
         widthRatio: 0.30,
@@ -893,7 +893,7 @@ struct LandingView: View {
         }
         .padding(.horizontal, 12)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Featured Simastry expert astrologers: Leyla, Mateo, Naomi, Elias, and Nadia")
+        .accessibilityLabel("Featured Simastry expert astrologers: Leyla, Mateo, Naomi, Soren, and Nadia")
     }
 
     private func constellationBackdrop(size: CGSize) -> some View {

@@ -387,7 +387,7 @@ struct ProfileView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Leyla, Mateo, Naomi, Elias, and Nadia")
+                        Text("Leyla, Mateo, Naomi, Soren, and Nadia")
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                             .lineLimit(2)
@@ -402,7 +402,7 @@ struct ProfileView: View {
             }
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel("Open Expert Astrologers")
-            .accessibilityHint("Consult Leyla, Mateo, Naomi, Elias, and Nadia")
+            .accessibilityHint("Consult Leyla, Mateo, Naomi, Soren, and Nadia")
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)

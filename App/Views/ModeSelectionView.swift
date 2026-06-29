@@ -252,7 +252,7 @@ struct ModeSelectionView: View {
             case .simulateAnyone:
                 return "Use this when you want a quick read on timing, direction, or what may unfold."
             case .soulmate:
-                return "Ask once, then choose Leyla, Mateo, Naomi, Elias, Nadia, or Everyone mode."
+                return "Ask once, then choose Leyla, Mateo, Naomi, Soren, Nadia, or Everyone mode."
             case .bestie:
                 return "Bring a real message into the expert flow and shape a reply with astrological context."
             }

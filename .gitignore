@@ -2,6 +2,20 @@
 /Simastry.xcodeproj/
 /App/Info.plist
 .DS_Store
+.claude/
+.xcodebuildmcp/
 
 /reports/specialist-evals/*.json
 /reports/specialist-evals/*.md
+
+/ExternalAssets/
+/Factory/
+/VerificationArtifacts/
+/website/
+/supabase/.temp/
+
+/BACKEND_HANDOFF.md
+/FRONTEND_HANDOFF.md
+/findings.md
+/progress.md
+/task_plan.md
