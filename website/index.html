@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simastry — Zodiac Companions For Real Conversations</title>
+  <meta name="description" content="Build zodiac AI companions, paste a real conversation, predict their reply, and choose the message with more emotional context.">
+  <meta property="og:title" content="Simastry — Zodiac Companions For Real Conversations">
+  <meta property="og:description" content="A cinematic Simastry landing page for companion creation, reply prediction, practical guides, and compatibility.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/app-icon.png">
+  <link rel="icon" type="image/png" href="assets/app-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260424c">
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+  <div class="page-stars" aria-hidden="true"></div>
+
+  <header class="site-header" id="top">
+    <div class="brand-mark" data-text="Simastry">Simastry</div>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#companions">Companions</a>
+      <a href="#predict">Predict</a>
+      <a href="#aura">Aura</a>
+      <a href="#astropedia">Guides</a>
+      <a href="#compatibility">Compatibility</a>
+      <a href="#download">Early Access</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="hero">
+      <div class="hero-backdrop hero-backdrop--current is-visible" id="hero-backdrop-current" aria-hidden="true"></div>
+      <div class="hero-backdrop hero-backdrop--next" id="hero-backdrop-next" aria-hidden="true"></div>
+      <div class="hero-scrim"></div>
+
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="hero-intro">
+            <p class="hero-eyebrow" id="hero-eyebrow">Current companion</p>
+            <h2 class="hero-headline" id="hero-headline">Meet the sign before you text back.</h2>
+          </div>
+          <p class="hero-description" id="hero-description">
+            Twelve zodiac AI companions built for real conversations, emotional timing, and chemistry that finally makes sense.
+          </p>
+
+          <div class="hero-points" id="hero-points" aria-live="polite"></div>
+
+          <div class="hero-actions">
+            <a class="button button--primary" href="#download">Request invite</a>
+            <a class="button button--ghost" href="#predict">See reply forecast</a>
+          </div>
+
+          <div class="hero-meta">
+            <div>
+              <span class="hero-meta__label">Built for</span>
+              <span class="hero-meta__value">companions, prediction, and practical astrology</span>
+            </div>
+            <div>
+              <span class="hero-meta__label">Calibrated by</span>
+              <span class="hero-meta__value">Sun, Moon, Rising, mode, and essence</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-stage" id="hero-stage" aria-label="Zodiac companion carousel">
+          <div class="hero-stage__cluster" id="hero-card-cluster"></div>
+
+          <div class="hero-stage__footer">
+            <div class="hero-progress">
+              <span class="hero-progress__count" id="hero-progress-count">01 / 06</span>
+              <div class="hero-progress__track">
+                <span class="hero-progress__fill" id="hero-progress-fill"></span>
+              </div>
+            </div>
+
+            <div class="hero-controls">
+              <button class="hero-control" id="hero-prev" type="button" aria-label="Previous companion">←</button>
+              <button class="hero-control" id="hero-next" type="button" aria-label="Next companion">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="loops section-reveal" id="product">
+      <div class="section-shell">
+        <div class="section-intro">
+          <p class="section-label">Product Tour</p>
+          <h2>From your chart to the next reply.</h2>
+          <p>
+            Simastry keeps the loop simple: calculate the real chart, paste the conversation, then compare the message you want to send against a forecasted reply.
+          </p>
+        </div>
+
+        <div class="loop-list">
+          <article class="loop-row">
+            <div class="loop-row__index">01</div>
+            <div class="loop-row__body">
+              <p class="loop-row__eyebrow">Your chart</p>
+              <h3>Birthday, time, and birthplace calculate the real big three.</h3>
+              <p>
+                Sun, Moon, and Rising are not treated like decoration. They are the base personality system that powers compatibility, companion setup, and learning surfaces throughout the app.
+              </p>
+            </div>
+            <div class="loop-row__signal loop-row__signal--gold">
+              <span>Inputs</span>
+              <strong>Date • Time • Place</strong>
+            </div>
+          </article>
+
+          <article class="loop-row">
+            <div class="loop-row__index">02</div>
+            <div class="loop-row__body">
+              <p class="loop-row__eyebrow">Build a companion</p>
+              <h3>Choose the path, calibrate the signs, then give them a name and essence.</h3>
+              <p>
+                Companions are shaped by mode, Sun, Moon, Rising, and visual tone, so they feel person-shaped instead of horoscope-shaped.
+              </p>
+            </div>
+            <div class="loop-row__signal loop-row__signal--blue">
+              <span>Companion setup</span>
+              <strong>Mode + Big Three</strong>
+            </div>
+          </article>
+
+          <article class="loop-row">
+            <div class="loop-row__index">03</div>
+            <div class="loop-row__body">
+              <p class="loop-row__eyebrow">Predict Their Reply</p>
+              <h3>Paste the conversation, ask the question, then test the reply you are considering.</h3>
+              <p>
+                Simastry forecasts what they might say next, explains the astrological logic underneath it, and lets you rerun the outcome against your own hypothetical message.
+              </p>
+            </div>
+            <div class="loop-row__signal loop-row__signal--violet">
+              <span>Forecast loop</span>
+              <strong>Thread + signs + question</strong>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="aura-sdk section-reveal" id="aura">
+      <div class="section-shell aura-sdk__shell">
+        <div class="section-intro section-intro--wide">
+          <p class="section-label">Aura</p>
+          <h2>Your chart, plus the signs you choose to carry.</h2>
+          <p>
+            Simastry Aura can include verified Zodiac ownership from the Zodiacs SDK. A held sign becomes read-only context for an Aura page, share card, or AI astrologist conversation when the user chooses to include it.
+          </p>
+        </div>
+
+        <div class="aura-sdk__grid" aria-label="Simastry Aura and Zodiacs SDK relationship">
+          <article class="aura-sdk__card">
+            <span>01</span>
+            <h3>Birth chart</h3>
+            <p>Born-with placements stay the foundation: date, time, place, Sun, Moon, and Rising.</p>
+          </article>
+          <article class="aura-sdk__card aura-sdk__card--gold">
+            <span>02</span>
+            <h3>Verified held signs</h3>
+            <p>The Zodiacs SDK reads public ownership from the official registry. No custody. No signing.</p>
+          </article>
+          <article class="aura-sdk__card">
+            <span>03</span>
+            <h3>Aura and AI context</h3>
+            <p>Held signs can shape a shared Aura page or give an AI astrologist another clear signal.</p>
+          </article>
+        </div>
+
+        <a class="aura-sdk__link" href="https://zodiacs.org/sdk/">Explore the Zodiacs SDK</a>
+      </div>
+    </section>
+
+    <section class="companion-lab section-reveal" id="companions">
+      <div class="section-shell companion-lab__shell">
+        <div class="section-intro section-intro--wide">
+          <p class="section-label">Companions</p>
+          <h2>Companions are calibrated, not randomly generated.</h2>
+          <p>
+            In the app, each companion can be shaped by path, signs, name, and essence. The demo below mirrors that setup flow so the website shows how personality changes when you change the inputs.
+          </p>
+        </div>
+
+        <div class="birth-strip">
+          <div class="birth-strip__copy">
+            <p class="birth-strip__eyebrow">Starts with your chart</p>
+            <strong>Refine your Sun, Moon, and Rising signs</strong>
+          </div>
+          <div class="birth-strip__fields" aria-hidden="true">
+            <span>Birthday</span>
+            <span>Birth Time</span>
+            <span>Birthplace</span>
+          </div>
+        </div>
+
+        <div class="companion-lab__layout">
+          <div class="companion-controls">
+            <div class="control-group">
+              <div class="control-group__header">
+                <span class="control-label">Path</span>
+                <p>The app supports romance, friendship, or anyone you want to read more clearly.</p>
+              </div>
+              <div class="pill-group" id="mode-picker"></div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-group__header">
+                <span class="control-label">The Big Three</span>
+                <p>Sun shapes the voice, Moon tunes the emotional layer, Rising changes the first impression.</p>
+              </div>
+              <div class="builder-select-grid">
+                <label class="field-card">
+                  <span>Sun</span>
+                  <select id="builder-sun"></select>
+                </label>
+                <label class="field-card">
+                  <span>Moon</span>
+                  <select id="builder-moon"></select>
+                </label>
+                <label class="field-card">
+                  <span>Rising</span>
+                  <select id="builder-rising"></select>
+                </label>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-group__header">
+                <span class="control-label">Name and essence</span>
+                <p>After signs, the companion gets a name and a visual tone so it feels embodied.</p>
+              </div>
+              <label class="field-card field-card--text">
+                <span>Name</span>
+                <input id="builder-name" type="text" value="Seren" maxlength="24" placeholder="Name your companion">
+              </label>
+              <div class="pill-group pill-group--wrap" id="essence-picker"></div>
+            </div>
+
+            <div class="context-strip">
+              <span class="context-strip__label">Next context layer</span>
+              <div class="context-strip__chips">
+                <span>relationship type</span>
+                <span>texting style</span>
+                <span>life stage</span>
+                <span>attachment</span>
+                <span>humor</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="companion-preview">
+            <div class="companion-preview__visual" id="builder-visual">
+              <div class="companion-preview__overlay">
+                <p class="companion-preview__eyebrow" id="builder-mode-label">Soulmate · Mysterious</p>
+                <h3 class="companion-preview__name" id="builder-display-name">Seren</h3>
+                <p class="companion-preview__summary" id="builder-summary"></p>
+                <div class="companion-preview__placements" id="builder-placements"></div>
+              </div>
+            </div>
+
+            <div class="companion-preview__insights" id="builder-insights"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="predict-showcase section-reveal" id="predict">
+      <div class="section-shell">
+        <div class="section-intro section-intro--wide">
+          <p class="section-label">Predict Their Reply</p>
+          <h2>Paste the thread, ask the real question, test the message.</h2>
+          <p>
+            Predict Their Reply is the core moment: Simastry reads the exchange, calibrates the signs, explains the likely tone, and lets you try a different text before you send it.
+          </p>
+        </div>
+
+        <div class="privacy-ribbon" role="note" aria-label="Privacy and consent note">
+          <span>Privacy-first</span>
+          <strong>Only paste conversations and personal details you have the right to use.</strong>
+          <p>Simastry is built for consent-aware reflection, not surveillance. Early access keeps that expectation visible before conversation upload.</p>
+        </div>
+
+        <div class="predict-showcase__grid">
+          <article class="predict-shot">
+            <p class="predict-shot__step">01 · Paste the thread</p>
+            <div class="device-shot">
+              <div class="device-shot__chrome">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="device-shot__body device-shot__body--thread">
+                <div class="thread-label">Conversation</div>
+                <div class="message-thread">
+                  <div class="message-bubble message-bubble--incoming">you still up?</div>
+                  <div class="message-bubble message-bubble--outgoing">yeah. i was deciding whether to text you.</div>
+                  <div class="message-bubble message-bubble--incoming">then i guess we had the same idea.</div>
+                  <div class="message-bubble message-bubble--outgoing">i want to know what that means.</div>
+                </div>
+                <div class="thread-footer">Paste the real conversation, not a cleaned-up summary.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="predict-shot">
+            <p class="predict-shot__step">02 · Calibrate them</p>
+            <div class="device-shot">
+              <div class="device-shot__chrome">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="device-shot__body">
+                <div class="shot-panel">
+                  <span class="shot-label">Their sign(s)</span>
+                  <div class="shot-chip-row">
+                    <span class="shot-chip" id="predict-sun-chip">Sun · Libra</span>
+                    <span class="shot-chip" id="predict-moon-chip">Moon · Scorpio</span>
+                    <span class="shot-chip" id="predict-rising-chip">Rising · Aquarius</span>
+                  </div>
+                </div>
+                <div class="shot-panel">
+                  <span class="shot-label">What do you want to know?</span>
+                  <div class="shot-question" id="predict-question">Will they reply tonight?</div>
+                </div>
+                <div class="shot-panel shot-panel--action">
+                  <span class="shot-action">Predict Their Response</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="predict-shot">
+            <p class="predict-shot__step">03 · Read the forecast</p>
+            <div class="device-shot">
+              <div class="device-shot__chrome">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="device-shot__body device-shot__body--forecast">
+                <div class="forecast-bubble">
+                  <p class="forecast-bubble__title">The stars say they’ll text:</p>
+                  <strong id="predict-result-message">I was thinking about you too. I just needed a second to feel it out.</strong>
+                </div>
+                <div class="forecast-meta">
+                  <span class="forecast-pill" id="predict-tone">Tone · Warm</span>
+                  <span class="forecast-pill" id="predict-confidence">84% confidence</span>
+                </div>
+                <div class="forecast-breakdown" id="predict-result-breakdown"></div>
+                <div class="forecast-whatif">
+                  <span class="shot-label">What if I said…</span>
+                  <div class="shot-question">come over and tell me in person.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="astropedia section-reveal" id="astropedia">
+      <div class="section-shell astropedia__shell">
+        <div class="section-intro section-intro--wide">
+          <p class="section-label">Guides</p>
+          <h2>Guides that make the forecast easier to use.</h2>
+          <p>
+            Astropedia sits after the prediction moment. It turns the why into practical sign-by-sign guidance: what this person needs, where tension lives, and how to phrase the next message.
+          </p>
+        </div>
+
+        <div class="astropedia__layout">
+          <div class="astropedia-panel astropedia-panel--browser">
+            <label class="astropedia-search">
+              <span>Search the library</span>
+              <input id="astropedia-search" type="text" placeholder="Try Libra communication or Scorpio love">
+            </label>
+
+            <div class="astropedia-results" id="astropedia-results"></div>
+
+            <div class="today-insight" id="today-insight"></div>
+          </div>
+
+          <div class="astropedia-panel astropedia-panel--content">
+            <div class="astropedia-controls">
+              <div class="pill-group pill-group--wrap" id="astropedia-topic-picker"></div>
+              <div class="sign-strip" id="astropedia-sign-picker"></div>
+            </div>
+
+            <article class="astropedia-article">
+              <p class="astropedia-article__eyebrow" id="astropedia-article-eyebrow"></p>
+              <h3 id="astropedia-article-title"></h3>
+              <p id="astropedia-article-body"></p>
+            </article>
+
+            <div class="chart-card-grid" id="astropedia-chart-cards"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="compatibility section-reveal" id="compatibility">
+      <div class="section-shell compatibility__shell">
+        <div class="section-intro section-intro--wide">
+          <p class="section-label">Compatibility</p>
+          <h2>Show why the match works, not just a number.</h2>
+          <p>
+            Simastry already breaks compatibility into core identity, emotional bond, first impressions, and growth edge. The site should make that explainability visible.
+          </p>
+        </div>
+
+        <div class="compatibility__layout">
+          <div class="compatibility-form">
+            <p class="compatibility-form__eyebrow">Your chart on file</p>
+            <h3>Scrub your big three manually.</h3>
+            <p>
+              Inside the app, these placements are calculated from your birth details. Here, they update the compatibility read live so people understand what changes when the chart changes.
+            </p>
+
+            <div class="builder-select-grid">
+              <label class="field-card">
+                <span>Your Sun</span>
+                <select id="user-sun"></select>
+              </label>
+              <label class="field-card">
+                <span>Your Moon</span>
+                <select id="user-moon"></select>
+              </label>
+              <label class="field-card">
+                <span>Your Rising</span>
+                <select id="user-rising"></select>
+              </label>
+            </div>
+
+            <div class="compatibility-form__note" id="compatibility-companion-name"></div>
+          </div>
+
+          <div class="compatibility-scorecard">
+            <div class="compatibility-meter">
+              <div class="compatibility-ring" id="compatibility-ring">
+                <span id="compatibility-score">82%</span>
+              </div>
+              <div class="compatibility-meter__copy">
+                <p class="compatibility-meter__eyebrow">Compatibility pulse</p>
+                <h3 id="compatibility-headline"></h3>
+                <p id="compatibility-summary"></p>
+              </div>
+            </div>
+
+            <div class="compatibility-breakdown" id="compatibility-rows"></div>
+            <div class="compatibility-growth" id="compatibility-growth"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="companions-cast section-reveal" id="the-twelve">
+      <div class="section-shell">
+        <div class="section-intro section-intro--wide">
+          <p class="section-label">The Twelve</p>
+          <h2>Every sign is a different conversation, and each one can be calibrated further.</h2>
+          <p>
+            The cast below is only the starting layer. In the app, each companion can still be tuned through Moon, Rising, path, and essence, so no sign is flattened into a stereotype.
+          </p>
+        </div>
+
+        <div class="companion-grid" id="companion-grid"></div>
+      </div>
+    </section>
+
+    <section class="download section-reveal" id="download">
+      <div class="section-shell download__shell">
+        <p class="section-label">Early Access</p>
+        <h2>Read the person. Build the companion. Then choose the message.</h2>
+        <p>
+          Simastry brings together chart setup, companion creation, prediction, compatibility, and practical guides in one premium iPhone experience. Request an invite for the next cohort.
+        </p>
+        <div class="download__actions">
+          <a class="button button--primary" href="mailto:hello@simastry.com?subject=Simastry%20early%20access">Request invite</a>
+          <a class="button button--ghost" href="#top">Back to top</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="legal-strip section-reveal" id="terms">
+      <div class="section-shell legal-strip__shell">
+        <p class="section-label">Terms & Conditions</p>
+        <div class="legal-strip__grid">
+          <article class="legal-note">
+            <h3>Use & eligibility</h3>
+            <p>Simastry is intended for adults 18+ using the app for reflection, messaging support, and entertainment. Access may be limited, paused, or updated during early release.</p>
+          </article>
+          <article class="legal-note">
+            <h3>Privacy & consent</h3>
+            <p>Only upload conversations and personal details you have the right to use. By requesting access, you confirm you are responsible for the content you submit and any third-party privacy obligations tied to it.</p>
+          </article>
+          <article class="legal-note">
+            <h3>AI guidance disclaimer</h3>
+            <p>Simastry generates AI-assisted astrological interpretations for personal insight only. It is not medical, legal, financial, or mental health advice. Questions about policies can be sent to <a href="mailto:hello@simastry.com?subject=Simastry%20terms%20request">hello@simastry.com</a>.</p>
+          </article>
+        </div>
+        <p class="legal-strip__source">
+          Verified Zodiac context is powered by the
+          <a href="https://zodiacs.org/sdk/">Zodiacs SDK</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js?v=20260424c"></script>
+</body>
+</html>
