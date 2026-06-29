@@ -39,6 +39,7 @@ final class AnalyticsService {
         case firstReadFallbackUsed = "first_read_fallback_used"
         case firstReadSaved = "first_read_saved"
         case firstReadContinueGuidesTapped = "first_read_continue_guides_tapped"
+        case firstReadCompareExpertsTapped = "first_read_compare_experts_tapped"
         case panelSeededFromFirstRead = "panel_seeded_from_first_read"
         case replyOptionCopied = "reply_option_copied"
         case replyOptionTuned = "reply_option_tuned"

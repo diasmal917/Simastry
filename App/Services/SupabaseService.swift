@@ -32,6 +32,8 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
 
 nonisolated final class SupabaseService {
     static let companionReplyRequestTimeout: TimeInterval = 12
+    static let zodiacsWalletLookupTimeout: TimeInterval = 16
+    private static let deviceIdKey = "simastry_backend_device_id"
 
     private let client: SupabaseClient?
 
@@ -131,6 +133,7 @@ nonisolated final class SupabaseService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(AppConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Self.backendDeviceId, forHTTPHeaderField: "X-Simastry-Device-Id")
         request.httpBody = try JSONEncoder().encode(payload)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -154,6 +157,62 @@ nonisolated final class SupabaseService {
 
         let decoded = try JSONDecoder().decode(CompanionReplyResponse.self, from: data)
         return CompanionReplyResult(text: decoded.text, usageEventId: decoded.usageEventId)
+    }
+
+    func fetchZodiacsWalletHoldings(for address: String) async throws -> AuraWalletHoldings {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard AuraWalletHoldings.isSupportedPublicWalletAddress(trimmed) else {
+            throw ZodiacsWalletServiceError.unsupportedAddress
+        }
+
+        let client = try configuredClient()
+        guard let session = client.auth.currentSession else {
+            throw SupabaseServiceError.missingSession
+        }
+        guard let url = URL(string: "\(AppConfig.supabaseURL)/functions/v1/zodiacs-wallet-lookup") else {
+            throw SupabaseServiceError.notConfigured
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = Self.zodiacsWalletLookupTimeout
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(AppConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Self.backendDeviceId, forHTTPHeaderField: "X-Simastry-Device-Id")
+        request.httpBody = try JSONEncoder().encode(ZodiacsWalletLookupRequest(publicAddress: trimmed))
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseServiceError.invalidFunctionResponse
+        }
+
+        if http.statusCode == 429 {
+            throw SupabaseServiceError.functionFailed(
+                CompanionReplyErrorEnvelope.message(from: data)
+                    ?? "Wallet lookup is being used quickly. Please wait and try again."
+            )
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            let message = CompanionReplyErrorEnvelope.message(from: data)
+                ?? "Wallet lookup is unavailable right now."
+            if message.localizedCaseInsensitiveContains("registry") {
+                throw ZodiacsWalletServiceError.registryUnavailable
+            }
+            if message.localizedCaseInsensitiveContains("wallet balance")
+                || message.localizedCaseInsensitiveContains("lookup") {
+                throw ZodiacsWalletServiceError.rpcUnavailable
+            }
+            throw SupabaseServiceError.functionFailed(message)
+        }
+
+        let decoded = try JSONDecoder().decode(ZodiacsWalletLookupResponse.self, from: data)
+        let counts = decoded.zodiacCounts.reduce(into: [ZodiacSign: Int]()) { partial, pair in
+            guard let sign = ZodiacSign(rawValue: pair.key.lowercased()), pair.value > 0 else { return }
+            partial[sign] = pair.value
+        }
+        return AuraWalletHoldings(publicAddress: decoded.publicAddress, zodiacCounts: counts)
     }
 
     func invokeExpertAstrologerReply(
@@ -852,6 +911,16 @@ nonisolated final class SupabaseService {
     private func uuidOrFilter(column: String, ids: [UUID]) -> String {
         ids.map { "\(column).eq.\($0.uuidString)" }.joined(separator: ",")
     }
+
+    private static var backendDeviceId: String {
+        if let existing = UserDefaults.standard.string(forKey: deviceIdKey),
+           !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return existing
+        }
+        let generated = UUID().uuidString
+        UserDefaults.standard.set(generated, forKey: deviceIdKey)
+        return generated
+    }
 }
 
 // MARK: - Companion Reply Channel
@@ -889,6 +958,22 @@ nonisolated struct CompanionReplyResult: Equatable, Sendable {
 nonisolated struct CompanionReplyResponse: Decodable, Sendable {
     let text: String
     let usageEventId: UUID?
+}
+
+nonisolated private struct ZodiacsWalletLookupRequest: Encodable, Sendable {
+    let publicAddress: String
+}
+
+nonisolated private struct ZodiacsWalletLookupResponse: Decodable, Sendable {
+    let publicAddress: String
+    let zodiacCounts: [String: Int]
+    let checkedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case publicAddress
+        case zodiacCounts
+        case checkedAt
+    }
 }
 
 nonisolated private struct CompanionReplyErrorEnvelope: Decodable, Sendable {

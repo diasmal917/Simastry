@@ -181,6 +181,7 @@ class AppViewModel {
         }
     }
     var isAuraWalletRefreshing: Bool = false
+    var auraWalletLookupStatus: AuraWalletLookupStatus = .idle
 
     var privateNotificationsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_private_notifications_enabled") == nil
         ? true
@@ -320,6 +321,7 @@ class AppViewModel {
         auraWalletHoldings = parsed
         auraWalletLastCheckedAt = Date()
         useAuraWalletForAura = true
+        auraWalletLookupStatus = parsed.hasZodiacCounts ? .manualCountsActive : .idle
 
         if parsed.hasZodiacCounts {
             showToast("Zodiacs added to Aura", subtitle: parsed.summaryLine, isError: false)
@@ -337,23 +339,28 @@ class AppViewModel {
         guard !address.isEmpty else { return }
 
         isAuraWalletRefreshing = true
+        auraWalletLookupStatus = .checking
         defer { isAuraWalletRefreshing = false }
 
         do {
-            let officialHoldings = try await ZodiacsWalletService.shared.fetchHoldings(for: address)
+            let officialHoldings = try await ZodiacsWalletService.shared.fetchHoldings(for: address, service: supabase)
             auraWalletHoldings = officialHoldings
             auraWalletLastCheckedAt = Date()
             useAuraWalletForAura = true
 
             if officialHoldings.hasZodiacCounts {
+                auraWalletLookupStatus = .found
                 showToast("Zodiacs found", subtitle: officialHoldings.summaryLine, isError: false)
             } else {
+                auraWalletLookupStatus = .notFound
                 showToast("No Zodiacs found", subtitle: "This address has no official Zodiacs on supported chains yet.", isError: false)
             }
         } catch {
             if auraWalletTotalZodiacs > 0 {
-                showToast("Using pasted counts", subtitle: "Live wallet lookup is unavailable right now.", isError: false)
+                auraWalletLookupStatus = .manualCountsActive
+                showToast("Using pasted counts", subtitle: "Secure wallet lookup is unavailable right now.", isError: false)
             } else {
+                auraWalletLookupStatus = .unavailable
                 showToast("Wallet lookup unavailable", subtitle: "Paste Zodiac counts like Aries x3 if you want to tune Aura now.", isError: true)
             }
         }
@@ -364,6 +371,7 @@ class AppViewModel {
         auraWalletHoldings = nil
         auraWalletLastCheckedAt = nil
         isAuraWalletRefreshing = false
+        auraWalletLookupStatus = .idle
         showToast("Wallet removed", subtitle: "Aura will use chart signals only.", isError: false)
     }
 

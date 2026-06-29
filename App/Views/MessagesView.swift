@@ -57,13 +57,17 @@ struct MessagesView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         HapticManager.buttonPress()
-                        showCreateRoom = true
+                        if AppConfig.expertAstrologersEnabled {
+                            openExpertAstrologers()
+                        } else {
+                            showCreateRoom = true
+                        }
                     } label: {
-                        toolbarActionIcon(systemName: "person.3.fill")
+                        toolbarActionIcon(systemName: AppConfig.expertAstrologersEnabled ? SimastryIcon.astrologers : "person.3.fill")
                     }
-                    .accessibilityLabel("New Room")
-                    .accessibilityHint("Create a private guided room with opted-in people")
-                    .accessibilityIdentifier("talk.toolbar.newRoomButton")
+                    .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "New Room")
+                    .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Open the five expert astrologers" : "Create a private guided room with opted-in people")
+                    .accessibilityIdentifier(AppConfig.expertAstrologersEnabled ? "talk.toolbar.expertAstrologersButton" : "talk.toolbar.newRoomButton")
                     .buttonStyle(.plain)
                 }
 
@@ -135,7 +139,16 @@ struct MessagesView: View {
     }
 
     private var hasInboxContent: Bool {
-        !viewModel.inboxMessages.isEmpty || !viewModel.chatThreadSummaries.isEmpty || !viewModel.connectedProfiles.isEmpty
+        !displayedInboxMessages.isEmpty || !displayedThreadSummaries.isEmpty || !viewModel.connectedProfiles.isEmpty
+    }
+
+    private var displayedInboxMessages: [CompanionMessage] {
+        guard AppConfig.expertAstrologersEnabled else { return viewModel.inboxMessages }
+        return viewModel.inboxMessages.filter { $0.source == .discovery }
+    }
+
+    private var displayedThreadSummaries: [ChatThreadSummary] {
+        viewModel.chatThreadSummaries
     }
 
     private var isPresentingModal: Bool {
@@ -318,9 +331,11 @@ struct MessagesView: View {
     }
 
     private func threadMessage(for companionId: UUID) -> CompanionMessage? {
-        if let message = viewModel.inboxMessages.first(where: { $0.companionId == companionId }) {
+        if let message = displayedInboxMessages.first(where: { $0.companionId == companionId }) {
             return message
         }
+
+        guard !AppConfig.expertAstrologersEnabled else { return nil }
 
         if let message = viewModel.companionMessages
             .filter({ $0.companionId == companionId })
@@ -362,7 +377,7 @@ struct MessagesView: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
 
-            ForEach(viewModel.inboxMessages) { message in
+            ForEach(displayedInboxMessages) { message in
                 MessageRow(message: message, publicProfile: viewModel.publicProfile(for: message.companionId))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -407,7 +422,7 @@ struct MessagesView: View {
                     }
             }
 
-            ForEach(viewModel.chatThreadSummaries) { room in
+            ForEach(displayedThreadSummaries) { room in
                 GuidedRoomInboxRow(
                     room: room,
                     currentUserId: viewModel.profile?.id
@@ -433,7 +448,7 @@ struct MessagesView: View {
     }
 
     private var connectedProfilesWithoutThreads: [SocialProfile] {
-        let threadIds = Set(viewModel.inboxMessages.filter { $0.source == .discovery }.map(\.companionId))
+        let threadIds = Set(displayedInboxMessages.filter { $0.source == .discovery }.map(\.companionId))
         return viewModel.connectedProfiles.filter { !threadIds.contains($0.id) }
     }
 

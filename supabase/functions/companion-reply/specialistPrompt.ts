@@ -64,6 +64,21 @@ export const specialistIds = [
 
 export type SpecialistId = typeof specialistIds[number];
 
+const specialistAliases: Record<string, SpecialistId> = {
+  western: "leyla-western",
+  "leyla": "leyla-western",
+  vedic: "mateo-vedic",
+  "mateo": "mateo-vedic",
+  chinese: "naomi-chinese",
+  "naomi": "naomi-chinese",
+  ancient: "elias-ancient",
+  "soren": "elias-ancient",
+  "soren-ancient": "elias-ancient",
+  "elias": "elias-ancient",
+  evolutionary: "nadia-evolutionary",
+  "nadia": "nadia-evolutionary",
+};
+
 export const sharedSafetyHarness = `
 Shared astrology safety harness:
 - Astrology is symbolic and reflective, not guaranteed fact.
@@ -251,7 +266,15 @@ ${request.userQuestion}
 }
 
 export function specialistForId(id: string): Specialist | undefined {
-  return specialists[id as SpecialistId];
+  const normalized = normalizedSpecialistId(id);
+  return normalized ? specialists[normalized] : undefined;
+}
+
+export function normalizedSpecialistId(id: string): SpecialistId | undefined {
+  if ((specialistIds as readonly string[]).includes(id)) {
+    return id as SpecialistId;
+  }
+  return specialistAliases[id.trim().toLowerCase()];
 }
 
 export function summarizeProfileContext(context?: UserAstrologyContext): string {

@@ -469,12 +469,20 @@ struct HomeView: View {
             VStack(spacing: 8) {
                 Button {
                     HapticManager.buttonPress()
-                    viewModel.openPrivatePredictionFromToday()
+                    if AppConfig.expertAstrologersEnabled {
+                        viewModel.openAIAstrologists(
+                            question: prompt,
+                            autoRunEveryone: false,
+                            specialistId: "nadia-evolutionary"
+                        )
+                    } else {
+                        viewModel.openPrivatePredictionFromToday()
+                    }
                 } label: {
-                    Label("Ask something private", systemImage: "sparkles")
+                    Label(AppConfig.expertAstrologersEnabled ? "Ask Nadia" : "Ask something private", systemImage: "sparkles")
                 }
                 .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
-                .accessibilityHint("Opens Predict for a private question")
+                .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens Nadia, the Evolutionary Astrologer" : "Opens Predict for a private question")
             }
         }
         .padding(16)
@@ -753,7 +761,7 @@ struct HomeView: View {
                 Button {
                     HapticManager.buttonPress()
                     viewModel.analytics.track(
-                        .firstReadContinueGuidesTapped,
+                        AppConfig.expertAstrologersEnabled ? .firstReadCompareExpertsTapped : .firstReadContinueGuidesTapped,
                         params: [
                             "selectedSign": sign.rawValue,
                             "bestNextMove": draft.bestNextMove?.type.rawValue ?? "none"
@@ -1547,7 +1555,11 @@ struct HomeView: View {
     private var talkToPanelButton: some View {
         Button {
             HapticManager.buttonPress()
-            viewModel.openPanelChat()
+            if AppConfig.expertAstrologersEnabled {
+                viewModel.openAIAstrologists()
+            } else {
+                viewModel.openPanelChat()
+            }
         } label: {
             HStack(spacing: 10) {
                 panelFaceStack(size: 26)

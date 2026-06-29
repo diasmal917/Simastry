@@ -378,6 +378,8 @@ nonisolated enum ExpertAstrologerRegistry {
             "vedic": "mateo-vedic",
             "chinese": "naomi-chinese",
             "ancient": "elias-ancient",
+            "soren": "elias-ancient",
+            "soren-ancient": "elias-ancient",
             "evolutionary": "nadia-evolutionary"
         ]
         guard let mappedId = legacyAliases[id] else { return nil }

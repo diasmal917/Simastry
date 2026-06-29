@@ -1,5 +1,14 @@
 import Foundation
 
+nonisolated enum AuraWalletLookupStatus: String, Codable, Sendable {
+    case idle
+    case checking
+    case found
+    case notFound
+    case unavailable
+    case manualCountsActive
+}
+
 nonisolated struct AuraWalletHoldings: Codable, Equatable, Sendable {
     let publicAddress: String
     let zodiacCountsByRawValue: [String: Int]
@@ -107,10 +116,8 @@ nonisolated struct AuraWalletHoldings: Codable, Equatable, Sendable {
     private static func zodiacCounts(in text: String) -> [ZodiacSign: Int] {
         ZodiacSign.allCases.reduce(into: [:]) { partial, sign in
             let explicitTotal = explicitCount(for: sign, in: text)
-            let occurrenceTotal = occurrenceCount(for: sign, in: text)
-            let count = max(explicitTotal, occurrenceTotal)
-            if count > 0 {
-                partial[sign] = count
+            if explicitTotal > 0 {
+                partial[sign] = explicitTotal
             }
         }
     }
@@ -121,16 +128,6 @@ nonisolated struct AuraWalletHoldings: Codable, Equatable, Sendable {
         let beforeSign = #"\b(\d{1,4})\s*(?:x|×)?\s*\b\#(signPattern)\b"#
         return integerMatches(pattern: afterSign, in: text, captureGroup: 1).reduce(0, +)
             + integerMatches(pattern: beforeSign, in: text, captureGroup: 1).reduce(0, +)
-    }
-
-    private static func occurrenceCount(for sign: ZodiacSign, in text: String) -> Int {
-        let signPattern = NSRegularExpression.escapedPattern(for: sign.displayName)
-        let pattern = #"\b\#(signPattern)\b"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-            return 0
-        }
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        return regex.numberOfMatches(in: text, options: [], range: range)
     }
 
     private static func integerMatches(pattern: String, in text: String, captureGroup: Int) -> [Int] {

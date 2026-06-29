@@ -84,8 +84,7 @@ extension AppViewModel {
             .sorted { $0.timestamp < $1.timestamp }
     }
 
-    func currentAstrologyContext() -> UserAstrologyContext {
-        let partner = relationshipPeople.first
+    func currentAstrologyContext(partner: RelationshipPerson? = nil) -> UserAstrologyContext {
         return UserAstrologyContext(
             userName: profile?.displayName,
             sunSign: userSunSign?.displayName,
@@ -105,7 +104,11 @@ extension AppViewModel {
     }
 
     @discardableResult
-    func submitIndividualSpecialistMessage(specialistId: String, question: String) async -> Bool {
+    func submitIndividualSpecialistMessage(
+        specialistId: String,
+        question: String,
+        context explicitContext: UserAstrologyContext? = nil
+    ) async -> Bool {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         guard let specialist = ExpertAstrologerRegistry.specialist(id: specialistId) else { return false }
@@ -121,7 +124,7 @@ extension AppViewModel {
         }
 
         let conversationId = specialistConversationId(for: specialistId)
-        let context = currentAstrologyContext()
+        let context = explicitContext ?? currentAstrologyContext()
         let outgoing = SpecialistMessage(
             conversationId: conversationId,
             specialistId: specialistId,
@@ -133,7 +136,6 @@ extension AppViewModel {
         specialistMessages.append(outgoing)
         saveExpertAstrologerState()
         syncExpertAstrologerMessagesIfPossible([outgoing])
-        await consumeMessage()
 
         typingSpecialistIds.insert(specialistId)
         analytics.track(
@@ -154,12 +156,13 @@ extension AppViewModel {
         let response: String
         do {
             response = try await generateExpertAstrologerReply(request: request)
+            await consumeMessage()
             analytics.track(
                 .specialistResponseCompleted,
                 params: analyticsParams(specialistId: specialistId, mode: .individual, question: trimmed, context: context)
             )
         } catch {
-            response = "The \(specialist.displayName) could not respond right now. Please try again."
+            response = Self.specialistFailureMessage(for: specialist, error: error)
             analytics.track(
                 .specialistResponseFailed,
                 params: analyticsParams(specialistId: specialistId, mode: .individual, question: trimmed, context: context)
@@ -181,7 +184,11 @@ extension AppViewModel {
         return true
     }
 
-    func startEveryoneConsultation(question: String, multiConsultationId: UUID = UUID()) async -> UUID? {
+    func startEveryoneConsultation(
+        question: String,
+        multiConsultationId: UUID = UUID(),
+        context explicitContext: UserAstrologyContext? = nil
+    ) async -> UUID? {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         guard validateGuideMessageForSend(trimmed) else { return nil }
@@ -203,9 +210,7 @@ extension AppViewModel {
             runningEveryoneConsultationIds.remove(multiConsultationId)
         }
 
-        await consumeMessage()
-
-        let context = currentAstrologyContext()
+        let context = explicitContext ?? currentAstrologyContext()
         analytics.track(.everyoneModeSelected, params: analyticsParams(specialistId: "everyone", mode: .everyone, question: trimmed, context: context))
 
         let specialists = ExpertAstrologerRegistry.specialists
@@ -232,6 +237,10 @@ extension AppViewModel {
             context: context,
             isRetry: false
         )
+
+        if everyoneResponses(for: multiConsultationId).contains(where: { $0.specialistResponse != nil }) {
+            await consumeMessage()
+        }
 
         return multiConsultationId
     }
@@ -390,7 +399,7 @@ extension AppViewModel {
                         return EveryoneSpecialistResult(
                             specialistId: specialist.id,
                             response: nil,
-                            errorMessage: nil,
+                            errorMessage: Self.specialistFailureMessage(for: specialist, error: error),
                             latencyMs: Int(Date().timeIntervalSince(startedAt) * 1000)
                         )
                     }
@@ -491,6 +500,15 @@ extension AppViewModel {
         let normalized = question.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let known = ["love", "relationships", "career", "family", "timing", "life direction"]
         return known.first { normalized == $0 || normalized.contains($0) } ?? "custom"
+    }
+
+    nonisolated private static func specialistFailureMessage(for specialist: AstrologySpecialist, error: Error) -> String {
+        if let localized = error as? LocalizedError,
+           let description = localized.errorDescription,
+           !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return description
+        }
+        return "The \(specialist.displayName) could not respond right now. Please try again."
     }
 
     private func mergeExpertAstrologerMessages(_ remoteMessages: [SpecialistMessage]) {

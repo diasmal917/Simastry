@@ -13,8 +13,55 @@ struct ExpertAstrologersView: View {
     @State private var selectedSpecialistRoute: SpecialistRoute?
     @State private var showingInfoForSpecialist: AstrologySpecialist?
     @State private var didApplyInitialQuestion: Bool = false
+    @State private var contextSelection: ExpertContextSelection = .me
+    @State private var selectedConversationContext: UserAstrologyContext?
 
     private let suggestedQuestions = ["Love", "Relationships", "Career", "Family", "Timing", "Life Direction"]
+
+    private var selectedPerson: RelationshipPerson? {
+        guard case .person(let id) = contextSelection else { return nil }
+        return viewModel.relationshipPeople.first { $0.id == id }
+    }
+
+    private var selectedAstrologyContext: UserAstrologyContext {
+        switch contextSelection {
+        case .me:
+            return viewModel.currentAstrologyContext()
+        case .general:
+            return UserAstrologyContext(
+                userName: nil,
+                sunSign: nil,
+                moonSign: nil,
+                risingSign: nil,
+                birthDateAvailable: false,
+                birthTimeAvailable: false,
+                birthPlaceAvailable: false,
+                partnerName: nil,
+                partnerSunSign: nil,
+                partnerMoonSign: nil,
+                partnerRisingSign: nil,
+                partnerBirthDateAvailable: false,
+                partnerBirthTimeAvailable: false,
+                partnerBirthPlaceAvailable: false
+            )
+        case .person:
+            return viewModel.currentAstrologyContext(partner: selectedPerson)
+        }
+    }
+
+    private var contextHelperText: String {
+        switch contextSelection {
+        case .me:
+            return "Uses only your saved chart context."
+        case .general:
+            return "No saved birth or People context will be attached."
+        case .person:
+            if let selectedPerson {
+                return "Uses your chart plus \(selectedPerson.displayName)'s saved People context."
+            }
+            return "Choose a saved person before asking about them."
+        }
+    }
 
     init(viewModel: AppViewModel, initialQuestion: String? = nil, autoRunEveryone: Bool = false) {
         self.viewModel = viewModel
@@ -26,6 +73,7 @@ struct ExpertAstrologersView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                contextSelector
                 questionComposer
 
                 if let submittedQuestion {
@@ -49,7 +97,8 @@ struct ExpertAstrologersView: View {
                 SpecialistConversationView(
                     viewModel: viewModel,
                     specialist: specialist,
-                    initialQuestion: submittedQuestion
+                    initialQuestion: submittedQuestion,
+                    context: selectedConversationContext ?? selectedAstrologyContext
                 )
             }
         }
@@ -137,6 +186,61 @@ struct ExpertAstrologersView: View {
         .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.6))
     }
 
+    private var contextSelector: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("Reading context")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .tracking(1)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    contextChip(.me, title: "About me", systemImage: "person.crop.circle")
+                    contextChip(.general, title: "General", systemImage: "sparkles")
+                    ForEach(viewModel.relationshipPeople) { person in
+                        contextChip(.person(person.id), title: person.displayName, systemImage: "person.text.rectangle")
+                    }
+                }
+                .padding(.vertical, 1)
+            }
+
+            Text(contextHelperText)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .surfaceCard(cornerRadius: 18)
+    }
+
+    private func contextChip(
+        _ selection: ExpertContextSelection,
+        title: String,
+        systemImage: String
+    ) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            contextSelection = selection
+        } label: {
+            Label(title, systemImage: systemImage)
+                .font(SimastryFont.labelMedium)
+                .foregroundStyle(contextSelection == selection ? SimastryColor.midnight : SimastryColor.offWhite)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(
+                    contextSelection == selection
+                        ? AnyShapeStyle(SimastryGradient.gold)
+                        : AnyShapeStyle(.white.opacity(0.06)),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(.white.opacity(contextSelection == selection ? 0.20 : 0.10), lineWidth: 0.8)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("expertAstrologers.context.\(selection.accessibilityId)")
+    }
+
     private func specialistSelection(question: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Who would you like to hear from?")
@@ -199,13 +303,14 @@ struct ExpertAstrologersView: View {
         guard !trimmed.isEmpty else { return }
         submittedQuestion = trimmed
         selectedConsultationId = nil
+        let context = selectedAstrologyContext
         AnalyticsService.shared.track(
             .guidanceQuestionSubmitted,
             params: [
                 "questionCategory": questionCategory(for: trimmed),
                 "mode": "pending",
-                "hasBirthData": viewModel.currentAstrologyContext().analyticsParams["hasBirthData"] ?? "false",
-                "hasPartnerData": viewModel.currentAstrologyContext().analyticsParams["hasPartnerData"] ?? "false"
+                "hasBirthData": context.analyticsParams["hasBirthData"] ?? "false",
+                "hasPartnerData": context.analyticsParams["hasPartnerData"] ?? "false"
             ]
         )
     }
@@ -237,9 +342,14 @@ struct ExpertAstrologersView: View {
         guard !isRunningEveryone else { return }
         isRunningEveryone = true
         let consultationId = UUID()
+        let context = selectedAstrologyContext
         selectedConsultationId = consultationId
         Task {
-            let id = await viewModel.startEveryoneConsultation(question: question, multiConsultationId: consultationId)
+            let id = await viewModel.startEveryoneConsultation(
+                question: question,
+                multiConsultationId: consultationId,
+                context: context
+            )
             selectedConsultationId = id
             isRunningEveryone = false
         }
@@ -253,7 +363,8 @@ struct ExpertAstrologersView: View {
     }
 
     private func openSpecialist(_ specialist: AstrologySpecialist, question: String) {
-        let context = viewModel.currentAstrologyContext()
+        let context = selectedAstrologyContext
+        selectedConversationContext = context
         AnalyticsService.shared.track(
             .specialistSelected,
             params: [
@@ -276,6 +387,23 @@ struct ExpertAstrologersView: View {
 
 private struct SpecialistRoute: Identifiable, Hashable {
     let id: String
+}
+
+private enum ExpertContextSelection: Hashable {
+    case me
+    case general
+    case person(UUID)
+
+    var accessibilityId: String {
+        switch self {
+        case .me:
+            return "me"
+        case .general:
+            return "general"
+        case .person(let id):
+            return "person.\(id.uuidString)"
+        }
+    }
 }
 
 private struct EveryoneHeroCard: View {
@@ -450,6 +578,7 @@ private struct SpecialistConversationView: View {
     @Bindable var viewModel: AppViewModel
     let specialist: AstrologySpecialist
     let initialQuestion: String?
+    let context: UserAstrologyContext
 
     @State private var draft: String = ""
     @State private var hasSubmittedInitialQuestion = false
@@ -518,7 +647,8 @@ private struct SpecialistConversationView: View {
             hasSubmittedInitialQuestion = true
             await viewModel.submitIndividualSpecialistMessage(
                 specialistId: specialist.id,
-                question: initialQuestion
+                question: initialQuestion,
+                context: context
             )
         }
         .accessibilityIdentifier("expertAstrologers.conversation.\(specialist.id)")
@@ -561,7 +691,11 @@ private struct SpecialistConversationView: View {
         guard !text.isEmpty else { return }
         draft = ""
         Task {
-            await viewModel.submitIndividualSpecialistMessage(specialistId: specialist.id, question: text)
+            await viewModel.submitIndividualSpecialistMessage(
+                specialistId: specialist.id,
+                question: text,
+                context: context
+            )
         }
     }
 }
