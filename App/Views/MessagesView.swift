@@ -74,7 +74,7 @@ struct MessagesView: View {
                     } label: {
                         toolbarActionIcon(systemName: "magnifyingglass")
                     }
-                    .accessibilityLabel("New Message")
+                    .accessibilityLabel("Search experts and users")
                     .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Search public users or open expert astrologers" : "Search public users and guides to start a conversation")
                     .accessibilityIdentifier("talk.toolbar.newMessageButton")
                     .buttonStyle(.plain)

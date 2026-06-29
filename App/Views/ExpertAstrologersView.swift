@@ -810,15 +810,20 @@ private struct SpecialistInfoSheet: View {
                 .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
-            ForEach(values, id: \.self) { value in
-                Text(value)
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .simastryGlassPill()
+            // Wrapping chips fill the card width instead of stacking in a narrow
+            // left column with dead space on the right.
+            FlowLayout(spacing: 8, lineSpacing: 8) {
+                ForEach(values, id: \.self) { value in
+                    Text(value)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .simastryGlassPill()
+                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .surfaceCard(cornerRadius: 18)
     }

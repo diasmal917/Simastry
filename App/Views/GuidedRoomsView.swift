@@ -107,30 +107,28 @@ struct GuidedRoomCreateView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    introCard
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        introCard
-
-                        if AppConfig.socialDiscoveryEnabled {
-                            peopleSection
-                            if !AppConfig.expertAstrologersEnabled {
-                                guidesSection
-                            }
-                            titleSection
-                            createButton
-                        } else {
-                            unavailableCard
+                    if AppConfig.socialDiscoveryEnabled {
+                        peopleSection
+                        if !AppConfig.expertAstrologersEnabled {
+                            guidesSection
                         }
+                        titleSection
+                        createButton
+                    } else {
+                        unavailableCard
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 36)
                 }
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 36)
             }
+            .scrollIndicators(.hidden)
+            // `.background` keeps the intro card below the nav bar (no clip).
+            .background { CelestialBackground() }
             .navigationTitle("New Room")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)

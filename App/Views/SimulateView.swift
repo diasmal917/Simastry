@@ -94,7 +94,8 @@ struct SimulateView: View {
 
     private var nextPredictActionSubtitle: String {
         if !hasAdvancedPastCategory {
-            return "Step 2 of 3"
+            // Matches the top step rail (Choose = step 1 of 3).
+            return "Step 1 of 3"
         }
         if selectedCategory.requiresTargetSign && selectedSunSign == nil {
             return "Required for reply predictions"

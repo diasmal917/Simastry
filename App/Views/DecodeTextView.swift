@@ -622,42 +622,40 @@ struct DecodeTextView: View {
     }
 
     var body: some View {
-        ZStack {
-            CelestialBackground()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                inputCard
+                signPicker
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    inputCard
-                    signPicker
+                GoldButton("Decode it", isEnabled: canDecode) {
+                    decode()
+                }
 
-                    GoldButton("Decode it", isEnabled: canDecode) {
-                        decode()
-                    }
-
-                    if let privacyBlockMessage {
-                        Text(privacyBlockMessage)
-                            .font(SimastryFont.bodySmall)
-                            .foregroundStyle(SimastryColor.amber)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if decoded, let theirSign {
-                        resultStack(sign: theirSign)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
-                    Text("Decoded on this iPhone — the message is never sent or stored.")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.textTertiary)
+                if let privacyBlockMessage {
+                    Text(privacyBlockMessage)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.amber)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, SimastrySpacing.tabBarEndClearance)
+
+                if decoded, let theirSign {
+                    resultStack(sign: theirSign)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                Text("Decoded on this iPhone — the message is never sent or stored.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, SimastrySpacing.tabBarEndClearance)
         }
+        .scrollIndicators(.hidden)
+        // `.background` keeps "What did they mean?" below the nav bar (no ghost).
+        .background { CelestialBackground() }
         .navigationTitle("Decode")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -742,7 +740,7 @@ struct DecodeTextView: View {
                                     theirSign = theirSign == sign ? nil : sign
                                 }
                             }
-                            .accessibilityLabel("Decode as a \(sign.displayName)")
+                            .accessibilityLabel("Decode as \(sign.displayName)")
 
                             Text(sign.displayName)
                                 .font(SimastryFont.captionSmall)
