@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum HomeRoute: Hashable {
     case aiAstrologist(profileId: String?)
@@ -14,6 +15,43 @@ private struct HiddenBottomScrollEdgeEffect: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+private struct TodayRootScrollConfigurator: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        DispatchQueue.main.async {
+            configureNearestScrollView(from: view)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            configureNearestScrollView(from: uiView)
+        }
+    }
+
+    private func configureNearestScrollView(from view: UIView) {
+        guard let scrollView = view.firstSuperview(of: UIScrollView.self) else { return }
+        scrollView.alwaysBounceHorizontal = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.isDirectionalLockEnabled = true
+    }
+}
+
+private extension UIView {
+    func firstSuperview<T: UIView>(of type: T.Type) -> T? {
+        var current = superview
+        while let view = current {
+            if let match = view as? T {
+                return match
+            }
+            current = view.superview
+        }
+        return nil
     }
 }
 
@@ -228,6 +266,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
             .onAppear {
                 streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
@@ -263,6 +302,7 @@ struct HomeView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .background { CelestialBackground() }
         .modifier(HiddenBottomScrollEdgeEffect())
         .navigationTitle("Today")
