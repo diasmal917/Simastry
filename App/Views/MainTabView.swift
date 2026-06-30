@@ -33,6 +33,10 @@ struct MainTabView: View {
             }
         }
         .tint(SimastryColor.gold)
+        // Vertical surfaces across every tab (and their pushed screens) must not
+        // be draggable sideways; horizontal rows still scroll because their
+        // content overflows.
+        .lockHorizontalScroll()
         .alert("Apply invite code?", isPresented: inviteConfirmationBinding) {
             Button("Not now", role: .cancel) {
                 viewModel.cancelPendingInviteCode()

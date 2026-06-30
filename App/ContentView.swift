@@ -54,7 +54,7 @@ struct ContentView: View {
             }
 
             if showResumeLoading {
-                RacingZodiacLoadingView(mode: .resume)
+                ResumeVeilView()
                     .transition(.opacity)
                     .zIndex(20)
                     .allowsHitTesting(false)
@@ -91,24 +91,28 @@ struct ContentView: View {
             } else if newPhase == .inactive {
                 shouldShowResumeLoadingOnActive = viewModel.currentScreen != .loading
             } else if newPhase == .active {
-                let shouldShowResume = shouldShowResumeLoadingIfNeeded()
                 resumeLoadingTask?.cancel()
-                resumeLoadingTask = Task {
-                    if shouldShowResume {
-                        Task {
-                            try? await Task.sleep(for: .milliseconds(1400))
-                            await MainActor.run {
-                                hideResumeLoading()
-                            }
-                        }
-                    }
+                let shouldVeil = shouldShowResumeLoadingOnActive && viewModel.currentScreen != .loading
+                shouldShowResumeLoadingOnActive = false
+                resumeLoadingTask = Task { @MainActor in
+                    // Delay-to-show: only veil if the refresh actually lags, so a
+                    // quick resume never flashes an overlay.
+                    let showTask: Task<Void, Never>? = shouldVeil ? Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(250))
+                        if !Task.isCancelled { showResumeVeil() }
+                    } : nil
+                    // Safety cap so a stalled refresh can never leave the veil stuck.
+                    let capTask: Task<Void, Never>? = shouldVeil ? Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(1600))
+                        if !Task.isCancelled { hideResumeLoading() }
+                    } : nil
+
                     await viewModel.refreshRealtimeSurfaces()
                     viewModel.consumePendingShortcutDestination()
-                    if shouldShowResume {
-                        await MainActor.run {
-                            hideResumeLoading()
-                        }
-                    }
+
+                    showTask?.cancel()
+                    capTask?.cancel()
+                    hideResumeLoading()
                 }
             }
         }
@@ -143,26 +147,21 @@ struct ContentView: View {
     }
 
     private var loadingView: some View {
-        RacingZodiacLoadingView(mode: .initialLoading)
+        SimastryLaunchView(onRetry: {
+            Task { await viewModel.checkAuthState() }
+        })
     }
 
-    @discardableResult
-    private func shouldShowResumeLoadingIfNeeded() -> Bool {
-        guard shouldShowResumeLoadingOnActive, viewModel.currentScreen != .loading else {
-            shouldShowResumeLoadingOnActive = false
-            return false
-        }
-        shouldShowResumeLoadingOnActive = false
-
+    private func showResumeVeil() {
+        guard !showResumeLoading else { return }
         withAnimation(.easeOut(duration: 0.16)) {
             showResumeLoading = true
         }
-        return true
     }
 
     private func hideResumeLoading() {
         guard showResumeLoading else { return }
-        withAnimation(.easeOut(duration: 0.18)) {
+        withAnimation(.easeOut(duration: 0.2)) {
             showResumeLoading = false
         }
     }
@@ -201,18 +200,65 @@ struct OnboardingLanguageMenu: View {
     }
 }
 
-enum RacingZodiacLoadingMode {
-    case initialLoading
-    case resume
-}
-
-struct RacingZodiacLoadingView: View {
-    let mode: RacingZodiacLoadingMode
+/// A calm, slowly breathing celestial glow used as the app's loading motif.
+/// No spinner gimmick — a soft gold/blue radial glow and a thin ring that
+/// expand and fade in a slow ~2.4s cycle. Static when Reduce Motion is on.
+struct BreathingCelestialGlow: View {
+    var diameter: CGFloat = 132
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var zoomed = false
-    @State private var settled = false
-    @State private var glow = false
+    @State private var breathe = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            SimastryColor.gold.opacity(0.5),
+                            SimastryColor.celestialBlue.opacity(0.18),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 2,
+                        endRadius: diameter * 0.5
+                    )
+                )
+                .frame(width: diameter, height: diameter)
+                .blur(radius: 8)
+                .scaleEffect(reduceMotion ? 1.0 : (breathe ? 1.1 : 0.82))
+                .opacity(reduceMotion ? 0.85 : (breathe ? 0.95 : 0.5))
+
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [SimastryColor.gold.opacity(0.7), SimastryColor.celestialBlue.opacity(0.38)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.1
+                )
+                .frame(width: diameter * 0.42, height: diameter * 0.42)
+                .scaleEffect(reduceMotion ? 1.0 : (breathe ? 1.05 : 0.92))
+                .opacity(reduceMotion ? 0.75 : (breathe ? 0.9 : 0.55))
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                breathe = true
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Full-screen cold-start launch: the static brand wordmark over a calm
+/// breathing glow, with a timeout/retry fallback if the session check stalls.
+struct SimastryLaunchView: View {
+    var onRetry: (() -> Void)?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
     @State private var showTimeoutFallback = false
 
     var body: some View {
@@ -220,110 +266,99 @@ struct RacingZodiacLoadingView: View {
             SimastryColor.pureBlack.ignoresSafeArea()
 
             RadialGradient(
-                colors: [
-                    SimastryColor.celestialBlue.opacity(0.34),
-                    SimastryColor.pureBlack.opacity(0.0)
-                ],
+                colors: [SimastryColor.celestialBlue.opacity(0.22), .clear],
                 center: .center,
                 startRadius: 24,
-                endRadius: 360
+                endRadius: 380
             )
             .ignoresSafeArea()
-            .opacity(glow ? 0.74 : 0.4)
 
-            Text("Simastry")
-                .font(.system(size: 72, weight: .bold).italic())
-                .foregroundStyle(SimastryColor.offWhite)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .shadow(color: SimastryColor.gold.opacity(glow ? 0.5 : 0.14), radius: glow ? 32 : 12, y: glow ? 10 : 4)
-                .scaleEffect(wordmarkScale)
-                .opacity(wordmarkOpacity)
-                .blur(radius: wordmarkBlur)
-                .accessibilityHidden(true)
+            VStack(spacing: 28) {
+                Spacer()
 
-            if mode == .initialLoading {
-                VStack(spacing: 18) {
-                    Spacer()
+                SimastryWordmark(font: .system(size: 54, weight: .bold).italic())
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .shadow(color: SimastryColor.gold.opacity(0.22), radius: 20, y: 6)
 
-                    SimastryWordmark(font: .system(size: 68, weight: .bold).italic())
-                        .minimumScaleFactor(0.62)
-                        .lineLimit(1)
-                        .shadow(color: SimastryColor.gold.opacity(0.28), radius: 22, y: 7)
+                BreathingCelestialGlow()
 
-                    ProgressView()
-                        .tint(SimastryColor.gold)
-                        .scaleEffect(1.08)
+                Spacer()
 
+                Group {
                     if showTimeoutFallback {
-                        Text("Still loading your session. If this takes much longer, check your connection and reopen Simastry.")
+                        timeoutFallback
+                    } else {
+                        Text("Preparing your session…")
                             .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 20)
                     }
-
-                    Spacer().frame(height: 58)
                 }
-                .padding(.horizontal, 24)
-                .opacity(stableLoadingOpacity)
+                .transition(.opacity)
+                .padding(.bottom, 52)
             }
+            .padding(.horizontal, 28)
+            .opacity(appeared ? 1 : 0)
         }
-        .clipped()
-        .onAppear(perform: runAnimation)
+        .onAppear {
+            withAnimation(.easeOut(duration: reduceMotion ? 0.01 : 0.4)) { appeared = true }
+        }
         .task {
-            guard mode == .initialLoading else { return }
             try? await Task.sleep(for: .seconds(8))
-            showTimeoutFallback = true
+            withAnimation(.easeOut(duration: 0.3)) { showTimeoutFallback = true }
         }
-        .accessibilityLabel(mode == .initialLoading ? "Loading Simastry" : "Returning to Simastry")
-        .accessibilityAddTraits(.isImage)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loading Simastry")
     }
 
-    private var wordmarkScale: CGFloat {
-        guard !reduceMotion else { return 1.0 }
-        return zoomed ? 7.4 : 0.88
-    }
+    private var timeoutFallback: some View {
+        VStack(spacing: 10) {
+            Text("This is taking longer than usual.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.offWhite)
+            Text("Check your connection — you can keep waiting or try again.")
+                .font(SimastryFont.caption)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
-    private var wordmarkOpacity: Double {
-        guard !reduceMotion else { return mode == .initialLoading ? 0.0 : 1.0 }
-        return zoomed ? 0.0 : 1.0
-    }
-
-    private var wordmarkBlur: CGFloat {
-        guard !reduceMotion else { return 0 }
-        return zoomed ? 6.0 : 0
-    }
-
-    private var stableLoadingOpacity: Double {
-        if reduceMotion { return 1.0 }
-        return settled ? 1.0 : 0.0
-    }
-
-    private func runAnimation() {
-        if reduceMotion {
-            withAnimation(.easeOut(duration: 0.22)) {
-                glow = true
-                settled = true
-            }
-            return
-        }
-
-        withAnimation(.timingCurve(0.08, 0.84, 0.12, 1.0, duration: mode == .initialLoading ? 0.84 : 0.72)) {
-            zoomed = true
-            glow = true
-        }
-
-        guard mode == .initialLoading else { return }
-
-        Task {
-            try? await Task.sleep(nanoseconds: 520_000_000)
-            await MainActor.run {
-                withAnimation(.easeOut(duration: 0.24)) {
-                    settled = true
+            if let onRetry {
+                Button(action: onRetry) {
+                    Text("Try again")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 10)
+                        .goldGlassPill(interactive: true)
                 }
+                .buttonStyle(SpringPressStyle())
+                .padding(.top, 4)
+                .accessibilityIdentifier("loading.retryButton")
             }
         }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// Brief, non-blocking resume veil. A soft material dim with a small breathing
+/// glow — distinct from the cold-start launch. Shown only when a resume refresh
+/// actually lags, and dismissed the moment it finishes.
+struct ResumeVeilView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
+
+            BreathingCelestialGlow(diameter: 88)
+        }
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.easeOut(duration: reduceMotion ? 0.01 : 0.22)) { appeared = true }
+        }
+        .accessibilityHidden(true)
     }
 }

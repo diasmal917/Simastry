@@ -1269,6 +1269,7 @@ private struct SpecialistProfileSheet: View {
                 }
                 .padding(20)
             }
+            .lockHorizontalScroll()
             .navigationTitle(specialist.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1476,6 +1477,7 @@ private struct AddMissingAstrologyInfoSheet: View {
                 }
                 .padding(20)
             }
+            .lockHorizontalScroll()
             .navigationTitle("Add Missing Info")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -1356,6 +1356,7 @@ struct AddRelationshipPersonView: View {
                     .padding(.vertical, 18)
                 }
                 .tint(SimastryColor.gold)
+                .lockHorizontalScroll()
             }
             .navigationTitle("New person")
             .navigationBarTitleDisplayMode(.inline)

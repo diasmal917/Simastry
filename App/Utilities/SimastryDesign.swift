@@ -729,3 +729,16 @@ struct ReducedMotionModifier: ViewModifier {
         content.animation(reduceMotion ? reducedAnimation : animation, value: reduceMotion)
     }
 }
+
+extension View {
+    /// Stops vertical scroll surfaces from being dragged/rubber-banded
+    /// horizontally — a sideways "pull" iOS allows on otherwise-vertical scroll
+    /// views. `.basedOnSize` only permits horizontal bounce when content is
+    /// genuinely wider than the viewport, so intentional horizontal rows (chips,
+    /// pickers) keep scrolling while full-screen vertical content can no longer
+    /// be pulled sideways. Applied at a tab or sheet root it covers every scroll
+    /// view inside via the environment.
+    func lockHorizontalScroll() -> some View {
+        scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
+}

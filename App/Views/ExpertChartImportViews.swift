@@ -154,6 +154,7 @@ struct ExpertChartConfirmView: View {
                 }
                 .padding(20)
             }
+            .lockHorizontalScroll()
             .navigationTitle("Confirm Chart")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
