@@ -560,7 +560,12 @@ class AppViewModel {
 
     func completeAgeVerification() {
         verifyAge()
-        currentScreen = .firstReadChoice
+        // Skip the legacy 3-way choice — go straight to collecting birth details,
+        // then the five-expert first read.
+        firstReadOnboardingIntent = .astrologer
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            currentScreen = .birthDetails
+        }
     }
 
     func chooseFirstReadIntent(_ intent: FirstReadOnboardingIntent) {
@@ -3523,6 +3528,17 @@ extension AppViewModel {
             isDebugPreviewStateActive = true
             isAgeVerified = true
             currentScreen = .firstRead
+            return true
+        }
+        if debugPreviewScreen(from: arguments) == "firstExpertRead" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            onboardingDisplayName = "Maya"
+            onboardingBirthday = Calendar.current.date(from: DateComponents(year: 1995, month: 8, day: 12))
+            userSunSign = .leo
+            userMoonSign = .cancer
+            userRisingSign = .libra
+            currentScreen = .firstExpertRead
             return true
         }
 

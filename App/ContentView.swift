@@ -24,6 +24,8 @@ struct ContentView: View {
                     FirstReadView(viewModel: viewModel)
                 case .birthDetails:
                     BirthDetailsView(viewModel: viewModel)
+                case .firstExpertRead:
+                    FirstExpertReadView(viewModel: viewModel)
                 case .signUp:
                     SignUpView(viewModel: viewModel)
                 case .signIn:
@@ -139,7 +141,7 @@ struct ContentView: View {
 
     private var showsFloatingOnboardingLanguageMenu: Bool {
         switch viewModel.currentScreen {
-        case .landing, .ageGate, .firstReadChoice, .firstPrediction, .firstRead, .birthDetails, .signIn, .signUp:
+        case .landing, .ageGate, .firstReadChoice, .firstPrediction, .firstRead, .birthDetails, .firstExpertRead, .signIn, .signUp:
             true
         case .loading, .home:
             false

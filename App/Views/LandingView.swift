@@ -911,12 +911,11 @@ struct LandingView: View {
     }
 
     private func beginOnboarding() {
+        viewModel.firstReadOnboardingIntent = .astrologer
         withAnimation(.spring(SimastrySpring.smooth)) {
-            if viewModel.isAgeVerified {
-                viewModel.currentScreen = .firstReadChoice
-            } else {
-                viewModel.currentScreen = .ageGate
-            }
+            // Straight to birth details (then the five-expert first read) — the
+            // legacy 3-way choice is skipped.
+            viewModel.currentScreen = viewModel.isAgeVerified ? .birthDetails : .ageGate
         }
     }
 

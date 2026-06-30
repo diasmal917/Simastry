@@ -372,7 +372,8 @@ extension AppViewModel {
         question: String,
         multiConsultationId: UUID = UUID(),
         context explicitContext: UserAstrologyContext? = nil,
-        selectedPersonId: UUID? = nil
+        selectedPersonId: UUID? = nil,
+        enforceLimit: Bool = true
     ) async -> UUID? {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -381,7 +382,8 @@ extension AppViewModel {
         guard !runningEveryoneConsultationIds.contains(multiConsultationId) else {
             return multiConsultationId
         }
-        guard canSendMessage() else {
+        // The onboarding first read is free and never blocked by the daily limit.
+        if enforceLimit, !canSendMessage() {
             showToast(
                 "Messages used up",
                 subtitle: "You've used all \(dailyMessageLimit) messages today. Upgrade for unlimited messages.",
@@ -425,7 +427,7 @@ extension AppViewModel {
             isRetry: false
         )
 
-        if everyoneResponses(for: multiConsultationId).contains(where: { $0.specialistResponse != nil }) {
+        if enforceLimit, everyoneResponses(for: multiConsultationId).contains(where: { $0.specialistResponse != nil }) {
             await consumeMessage()
         }
 
