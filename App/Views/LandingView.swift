@@ -123,23 +123,35 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
 private struct LandingPrimaryButton: View {
     let title: String
     let action: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pressed = false
+    @State private var glow = false
+    @State private var shimmerPhase: CGFloat = -1
 
     var body: some View {
         Button {
             HapticManager.buttonPress()
             action()
         } label: {
-            HStack(spacing: 9) {
+            HStack(spacing: 10) {
                 Text(title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 18, weight: .heavy))
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 15, weight: .heavy))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(SimastryColor.midnight)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 17)
-            .goldGlassPill(interactive: true)
+            .padding(.vertical, 20)
+            .background {
+                buttonSurface.clipShape(Capsule())
+            }
+            .overlay {
+                Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.8)
+            }
+            // A bright gold halo that gently breathes so the CTA pops off the dark.
+            .shadow(color: SimastryColor.gold.opacity(glow ? 0.62 : 0.32), radius: glow ? 30 : 18, y: 7)
+            .shadow(color: SimastryColor.gold.opacity(0.22), radius: 6, y: 0)
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed ? 0.97 : 1)
@@ -149,6 +161,37 @@ private struct LandingPrimaryButton: View {
                 .onChanged { _ in pressed = true }
                 .onEnded { _ in pressed = false }
         )
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                glow = true
+            }
+            withAnimation(.linear(duration: 2.4).delay(0.7).repeatForever(autoreverses: false)) {
+                shimmerPhase = 1.4
+            }
+        }
+    }
+
+    private var buttonSurface: some View {
+        ZStack {
+            LinearGradient(
+                colors: [SimastryColor.goldLight, SimastryColor.gold, SimastryColor.goldDark],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            if !reduceMotion {
+                GeometryReader { geo in
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.6), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geo.size.width * 0.42)
+                    .offset(x: shimmerPhase * geo.size.width)
+                    .blendMode(.screen)
+                }
+            }
+        }
     }
 }
 
