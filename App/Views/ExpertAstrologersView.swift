@@ -103,7 +103,12 @@ struct ExpertAstrologersView: View {
             }
         }
         .sheet(item: $showingInfoForSpecialist) { specialist in
-            SpecialistInfoSheet(specialist: specialist)
+            SpecialistProfileSheet(
+                viewModel: viewModel,
+                specialist: specialist,
+                question: submittedQuestion ?? question,
+                context: selectedAstrologyContext
+            )
         }
         .onAppear {
             AnalyticsService.shared.track(.expertAstrologersViewed)
@@ -259,8 +264,15 @@ struct ExpertAstrologersView: View {
             everyoneResponses
 
             ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                let readiness = ExpertReadinessBuilder.checklist(
+                    for: specialist,
+                    question: question,
+                    context: selectedAstrologyContext,
+                    manualData: viewModel.expertManualAstrologyData
+                )
                 SpecialistSelectionRow(
                     specialist: specialist,
+                    readiness: readiness,
                     onOpen: {
                         HapticManager.buttonPress()
                         openSpecialist(specialist, question: question)
@@ -284,11 +296,29 @@ struct ExpertAstrologersView: View {
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
+                EveryoneProgressSummary(
+                    responses: responses,
+                    typingSpecialistIds: viewModel.typingSpecialistIds
+                )
+
                 ForEach(responses) { response in
                     EveryoneResponseCard(
                         response: response,
                         specialist: ExpertAstrologerRegistry.specialist(id: response.specialistId),
                         isLoading: viewModel.typingSpecialistIds.contains(response.specialistId),
+                        readiness: ExpertAstrologerRegistry.specialist(id: response.specialistId).map {
+                            ExpertReadinessBuilder.checklist(
+                                for: $0,
+                                question: response.userQuestion,
+                                context: selectedConversationContext ?? selectedAstrologyContext,
+                                manualData: viewModel.expertManualAstrologyData
+                            )
+                        },
+                        onProfile: {
+                            if let specialist = ExpertAstrologerRegistry.specialist(id: response.specialistId) {
+                                showingInfoForSpecialist = specialist
+                            }
+                        },
                         onRetry: {
                             retryEveryoneResponse(response)
                         }
@@ -343,6 +373,7 @@ struct ExpertAstrologersView: View {
         isRunningEveryone = true
         let consultationId = UUID()
         let context = selectedAstrologyContext
+        selectedConversationContext = context
         selectedConsultationId = consultationId
         Task {
             let id = await viewModel.startEveryoneConsultation(
@@ -443,8 +474,95 @@ private struct EveryoneHeroCard: View {
     }
 }
 
+private struct EveryoneProgressSummary: View {
+    let responses: [SpecialistConsultationResponse]
+    let typingSpecialistIds: Set<String>
+
+    private var responseBySpecialistId: [String: SpecialistConsultationResponse] {
+        Dictionary(uniqueKeysWithValues: responses.map { ($0.specialistId, $0) })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ForEach(ExpertProgressStepProvider.everyoneSteps(), id: \.0) { specialistId, loadingText in
+                let response = responseBySpecialistId[specialistId]
+                let isLoading = typingSpecialistIds.contains(specialistId)
+                HStack(alignment: .top, spacing: 9) {
+                    Image(systemName: iconName(response: response, isLoading: isLoading))
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(iconColor(response: response, isLoading: isLoading))
+                        .frame(width: 16, height: 16)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title(for: specialistId))
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                            .lineLimit(1)
+                        Text(statusText(response: response, isLoading: isLoading, loadingText: loadingText))
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .accessibilityIdentifier("expertAstrologers.progressSummary.\(specialistId)")
+            }
+        }
+        .padding(14)
+        .simastryGlass(cornerRadius: 18)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("expertAstrologers.progressSummary")
+    }
+
+    private func title(for specialistId: String) -> String {
+        ExpertAstrologerRegistry.specialist(id: specialistId)?.characterName ?? specialistId
+    }
+
+    private func statusText(
+        response: SpecialistConsultationResponse?,
+        isLoading: Bool,
+        loadingText: String
+    ) -> String {
+        if response?.errorMessage != nil {
+            return "Could not complete this lens. Retry is available below."
+        }
+        if response?.specialistResponse != nil {
+            return "Complete"
+        }
+        if isLoading {
+            return loadingText
+        }
+        return "Queued"
+    }
+
+    private func iconName(response: SpecialistConsultationResponse?, isLoading: Bool) -> String {
+        if response?.errorMessage != nil {
+            return "exclamationmark.circle.fill"
+        }
+        if response?.specialistResponse != nil {
+            return "checkmark.circle.fill"
+        }
+        if isLoading {
+            return "sparkles"
+        }
+        return "clock"
+    }
+
+    private func iconColor(response: SpecialistConsultationResponse?, isLoading: Bool) -> Color {
+        if response?.errorMessage != nil {
+            return Color.orange.opacity(0.9)
+        }
+        if response?.specialistResponse != nil || isLoading {
+            return SimastryColor.gold
+        }
+        return SimastryColor.deepMuted
+    }
+}
+
 private struct SpecialistSelectionRow: View {
     let specialist: AstrologySpecialist
+    let readiness: ExpertReadinessChecklist
     let onOpen: () -> Void
     let onInfo: () -> Void
 
@@ -472,6 +590,11 @@ private struct SpecialistSelectionRow: View {
                             .font(SimastryFont.caption)
                             .foregroundStyle(SimastryColor.mutedSilver)
                             .fixedSize(horizontal: false, vertical: true)
+
+                        Label(readiness.status.title, systemImage: readiness.canAnswerNow ? "checkmark.seal.fill" : "exclamationmark.circle.fill")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(readiness.canAnswerNow ? SimastryColor.gold.opacity(0.9) : SimastryColor.mutedSilver)
+                            .lineLimit(1)
                     }
 
                     Spacer(minLength: 8)
@@ -506,6 +629,8 @@ private struct EveryoneResponseCard: View {
     let response: SpecialistConsultationResponse
     let specialist: AstrologySpecialist?
     let isLoading: Bool
+    let readiness: ExpertReadinessChecklist?
+    let onProfile: () -> Void
     let onRetry: () -> Void
 
     var body: some View {
@@ -528,16 +653,31 @@ private struct EveryoneResponseCard: View {
                         .lineLimit(1)
                 }
                 Spacer()
+
+                if response.specialistResponse != nil {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.gold)
+                        .accessibilityLabel("Complete")
+                }
+
+                Button(action: onProfile) {
+                    Image(systemName: "info.circle")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.gold.opacity(0.86))
+                        .frame(width: 34, height: 34)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open expert profile")
+                .accessibilityIdentifier("expertAstrologers.response.profile.\(response.specialistId)")
             }
 
             if isLoading && response.specialistResponse == nil && response.errorMessage == nil {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .tint(SimastryColor.gold)
-                    Text("Reading through \(specialist?.characterName ?? "this specialist")'s \(specialist?.publicTitle ?? "tradition")...")
-                        .font(SimastryFont.caption)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                }
+                ExpertReplyProgressView(
+                    specialist: specialist,
+                    readiness: readiness,
+                    mode: .everyone
+                )
             } else if let error = response.errorMessage {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(error)
@@ -582,9 +722,28 @@ private struct SpecialistConversationView: View {
 
     @State private var draft: String = ""
     @State private var hasSubmittedInitialQuestion = false
+    @State private var showingProfile = false
 
     private var messages: [SpecialistMessage] {
         viewModel.specialistConversation(for: specialist.id)
+    }
+
+    private var readiness: ExpertReadinessChecklist {
+        ExpertReadinessBuilder.checklist(
+            for: specialist,
+            question: pendingInitialQuestion ?? draft,
+            context: context,
+            manualData: viewModel.expertManualAstrologyData
+        )
+    }
+
+    private var pendingInitialQuestion: String? {
+        guard !hasSubmittedInitialQuestion,
+              let initialQuestion = initialQuestion?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !initialQuestion.isEmpty else {
+            return nil
+        }
+        return initialQuestion
     }
 
     var body: some View {
@@ -592,7 +751,22 @@ private struct SpecialistConversationView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        SpecialistHeaderCard(specialist: specialist)
+                        SpecialistHeaderCard(
+                            specialist: specialist,
+                            readiness: readiness,
+                            onInfo: {
+                                showingProfile = true
+                            }
+                        )
+
+                        if let pendingInitialQuestion, !messages.isEmpty {
+                            SendSeededQuestionCard(
+                                question: pendingInitialQuestion,
+                                specialistName: specialist.characterName
+                            ) {
+                                sendInitialQuestion(pendingInitialQuestion)
+                            }
+                        }
 
                         ForEach(messages) { message in
                             SpecialistMessageBubble(
@@ -603,16 +777,11 @@ private struct SpecialistConversationView: View {
                         }
 
                         if viewModel.typingSpecialistIds.contains(specialist.id) {
-                            HStack {
-                                ProgressView()
-                                    .tint(SimastryColor.gold)
-                                Text("\(specialist.characterName) is reading...")
-                                    .font(SimastryFont.caption)
-                                    .foregroundStyle(SimastryColor.mutedSilver)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .simastryGlass(cornerRadius: 16)
+                            ExpertReplyProgressView(
+                                specialist: specialist,
+                                readiness: readiness,
+                                mode: .individual
+                            )
                             .id("typing")
                         }
                     }
@@ -637,6 +806,14 @@ private struct SpecialistConversationView: View {
         .navigationTitle(specialist.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $showingProfile) {
+            SpecialistProfileSheet(
+                viewModel: viewModel,
+                specialist: specialist,
+                question: pendingInitialQuestion ?? draft,
+                context: context
+            )
+        }
         .task {
             guard !hasSubmittedInitialQuestion,
                   messages.isEmpty,
@@ -698,19 +875,63 @@ private struct SpecialistConversationView: View {
             )
         }
     }
+
+    private func sendInitialQuestion(_ text: String) {
+        hasSubmittedInitialQuestion = true
+        Task {
+            await viewModel.submitIndividualSpecialistMessage(
+                specialistId: specialist.id,
+                question: text,
+                context: context
+            )
+        }
+    }
 }
 
 private struct SpecialistHeaderCard: View {
     let specialist: AstrologySpecialist
+    let readiness: ExpertReadinessChecklist?
+    let onInfo: (() -> Void)?
+
+    init(
+        specialist: AstrologySpecialist,
+        readiness: ExpertReadinessChecklist? = nil,
+        onInfo: (() -> Void)? = nil
+    ) {
+        self.specialist = specialist
+        self.readiness = readiness
+        self.onInfo = onInfo
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SpecialistProfileHero(specialist: specialist)
+            HStack(alignment: .top, spacing: 10) {
+                SpecialistProfileHero(specialist: specialist)
+
+                if let onInfo {
+                    Button(action: onInfo) {
+                        Image(systemName: "info.circle")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.gold.opacity(0.9))
+                            .frame(width: 38, height: 38)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open \(specialist.characterName)'s expert profile")
+                    .accessibilityIdentifier("expertAstrologers.conversation.profileButton")
+                }
+            }
 
             Text(specialist.longDescription)
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let readiness {
+                Label(readiness.status.title, systemImage: readiness.canAnswerNow ? "checkmark.seal.fill" : "exclamationmark.circle.fill")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(readiness.canAnswerNow ? SimastryColor.gold : SimastryColor.mutedSilver)
+                    .accessibilityIdentifier("expertAstrologers.readinessStatus.\(specialist.id)")
+            }
         }
         .padding(16)
         .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.45))
@@ -912,18 +1133,129 @@ private extension Date {
     }
 }
 
-private struct SpecialistInfoSheet: View {
+private struct SendSeededQuestionCard: View {
+    let question: String
+    let specialistName: String
+    let onSend: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Ready to ask \(specialistName)")
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+
+            Text(question)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onSend) {
+                Label("Send this question", systemImage: "arrow.up.circle.fill")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 9)
+                    .goldGlassPill(interactive: true)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityIdentifier("expertAstrologers.sendSeededQuestion")
+        }
+        .padding(14)
+        .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.36))
+    }
+}
+
+private struct ExpertReplyProgressView: View {
+    let specialist: AstrologySpecialist?
+    let readiness: ExpertReadinessChecklist?
+    let mode: ExpertAstrologerMode
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var currentIndex = 0
+
+    private var steps: [String] {
+        if let specialist, let readiness {
+            return ExpertProgressStepProvider.steps(for: specialist, checklist: readiness)
+        }
+        return mode == .everyone
+            ? ExpertProgressStepProvider.everyoneSteps().map(\.1)
+            : ["Checking the available context...", "Preparing a grounded response..."]
+    }
+
+    private var stepsKey: String {
+        steps.joined(separator: "|")
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ProgressView()
+                .tint(SimastryColor.gold)
+                .scaleEffect(0.92)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(steps[min(currentIndex, max(steps.count - 1, 0))])
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let readiness, !readiness.canAnswerNow {
+                    Text("Missing data is being treated as unavailable, not guessed.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.deepMuted)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .simastryGlass(cornerRadius: 16)
+        .onAppear {
+            currentIndex = 0
+        }
+        .task(id: stepsKey) {
+            currentIndex = 0
+            guard !reduceMotion, steps.count > 1 else { return }
+            for index in 1..<steps.count {
+                try? await Task.sleep(for: .milliseconds(1150))
+                if Task.isCancelled { return }
+                currentIndex = index
+            }
+        }
+        .accessibilityIdentifier("expertAstrologers.progress.\(specialist?.id ?? mode.rawValue)")
+    }
+}
+
+private struct SpecialistProfileSheet: View {
+    @Bindable var viewModel: AppViewModel
     let specialist: AstrologySpecialist
+    let question: String?
+    let context: UserAstrologyContext
     @Environment(\.dismiss) private var dismiss
+    @State private var showingIntake = false
+
+    private var readiness: ExpertReadinessChecklist {
+        ExpertReadinessBuilder.checklist(
+            for: specialist,
+            question: question,
+            context: context,
+            manualData: viewModel.expertManualAstrologyData
+        )
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SpecialistHeaderCard(specialist: specialist)
-                    infoSection(title: "How this expert works", values: specialist.allowedTechniques)
-                    infoSection(title: "Stays away from", values: specialist.forbiddenConcepts)
-                    infoSection(title: "Response style", values: specialist.personalityTraits)
+                    SpecialistHeaderCard(specialist: specialist, readiness: readiness)
+                    profileIntro
+                    ExpertReadinessChecklistCard(readiness: readiness) {
+                        showingIntake = true
+                    }
+                    chipSection(title: "Best for", values: specialist.bestForChips)
+                    chipSection(title: "Methods \(specialist.characterName) uses", values: specialist.allowedTechniques)
+                    chipSection(title: "Methods \(specialist.characterName) avoids", values: specialist.forbiddenConcepts)
+                    chipSection(title: "Sample questions", values: specialist.sampleQuestions)
+                    safetyNote
                 }
                 .padding(20)
             }
@@ -936,16 +1268,53 @@ private struct SpecialistInfoSheet: View {
             }
         }
         .presentationBackground { CelestialBackground() }
+        .sheet(isPresented: $showingIntake) {
+            AddMissingAstrologyInfoSheet(
+                viewModel: viewModel,
+                specialist: specialist,
+                preferredRoute: readiness.ctaRoute
+            )
+        }
+        .accessibilityIdentifier("expertAstrologers.profile.\(specialist.id)")
     }
 
-    private func infoSection(title: String, values: [String]) -> some View {
+    private var profileIntro: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(specialist.tradition)
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(1)
+
+            Text(specialist.expertBio)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 18)
+    }
+
+    private var safetyNote: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Credibility boundary", systemImage: "shield.lefthalf.filled")
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.offWhite)
+
+            Text(specialist.safetyNote)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.35))
+    }
+
+    private func chipSection(title: String, values: [String]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(SimastryFont.labelLarge)
                 .foregroundStyle(SimastryColor.offWhite)
 
-            // Wrapping chips fill the card width instead of stacking in a narrow
-            // left column with dead space on the right.
             FlowLayout(spacing: 8, lineSpacing: 8) {
                 ForEach(values, id: \.self) { value in
                     Text(value)
@@ -960,5 +1329,338 @@ private struct SpecialistInfoSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .surfaceCard(cornerRadius: 18)
+    }
+}
+
+private struct ExpertReadinessChecklistCard: View {
+    let readiness: ExpertReadinessChecklist
+    let onAddMissingInfo: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: readiness.canAnswerNow ? "checkmark.seal.fill" : "exclamationmark.circle.fill")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.gold)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Readiness checklist")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text(readiness.readinessSummary)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Button(action: onAddMissingInfo) {
+                Label(readiness.ctaLabel, systemImage: "plus.circle.fill")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .goldGlassPill(interactive: true)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityIdentifier("expertAstrologers.readiness.addMissing")
+
+            readinessGroup(title: "Already known", items: readiness.knownItems, empty: "No profile data is attached yet.")
+            readinessGroup(title: "Missing required", items: readiness.missingRequiredItems, empty: "Nothing required is missing.")
+            readinessGroup(title: "Would improve this answer", items: readiness.missingOptionalItems, empty: "No optional gaps for this question.")
+
+            Text(readiness.privacyNote)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 18, accent: SimastryColor.gold.opacity(0.45))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("expertAstrologers.readinessChecklist")
+    }
+
+    private func readinessGroup(title: String, items: [AstrologyReadinessItem], empty: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold.opacity(0.9))
+                .tracking(1)
+
+            if items.isEmpty {
+                Text(empty)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.deepMuted)
+            } else {
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(items.prefix(6)) { item in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: icon(for: item.source))
+                                .font(SimastryFont.captionSmall)
+                                .foregroundStyle(item.source == .missing || item.source == .notCalculated ? SimastryColor.deepMuted : SimastryColor.gold)
+                                .frame(width: 14)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(SimastryFont.caption)
+                                    .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
+                                Text(item.detail)
+                                    .font(SimastryFont.captionSmall)
+                                    .foregroundStyle(SimastryColor.mutedSilver)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func icon(for source: AstrologyDataSource) -> String {
+        switch source {
+        case .profile, .people: "checkmark.circle.fill"
+        case .userSupplied: "person.fill.checkmark"
+        case .calculated: "function"
+        case .notCalculated: "slash.circle"
+        case .missing: "circle"
+        }
+    }
+}
+
+private struct AddMissingAstrologyInfoSheet: View {
+    @Bindable var viewModel: AppViewModel
+    let specialist: AstrologySpecialist
+    let preferredRoute: ExpertDataIntakeRoute?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var didLoad = false
+    @State private var includeBirthDate = false
+    @State private var birthDate = Calendar.current.date(from: DateComponents(year: 1995, month: 1, day: 1)) ?? Date()
+    @State private var includeBirthTime = false
+    @State private var birthTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
+    @State private var birthPlace = ""
+    @State private var userDoesNotKnowBirthTime = false
+    @State private var includePartnerBirthDate = false
+    @State private var partnerBirthDate = Calendar.current.date(from: DateComponents(year: 1995, month: 1, day: 1)) ?? Date()
+    @State private var includePartnerBirthTime = false
+    @State private var partnerBirthTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
+    @State private var partnerBirthPlace = ""
+    @State private var knownVedicNakshatra = ""
+    @State private var knownSiderealMoonRashi = ""
+    @State private var knownBaziDayMaster = ""
+    @State private var knownFourPillars = ""
+    @State private var knownHellenisticSect = ""
+    @State private var knownProfectionYear = ""
+    @State private var relationshipPatternNotes = ""
+    @State private var reflectionPrompts = ""
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    intro
+                    birthInfoSection
+                    partnerInfoSection
+                    manualTraditionSection
+                }
+                .padding(20)
+            }
+            .navigationTitle("Add Missing Info")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        save()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationBackground { CelestialBackground() }
+        .onAppear(perform: loadOnce)
+        .accessibilityIdentifier("expertAstrologers.addMissingInfo")
+    }
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("For \(specialist.characterName)")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(1)
+            Text("Add only what you actually know. Manual tradition fields are labeled as user-supplied and are not treated as Simastry calculations.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 18)
+    }
+
+    private var birthInfoSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Your birth context")
+
+            Toggle("Birth date", isOn: $includeBirthDate)
+                .tint(SimastryColor.gold)
+            if includeBirthDate {
+                DatePicker("Date", selection: $birthDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+            }
+
+            Toggle("Birth time", isOn: $includeBirthTime)
+                .tint(SimastryColor.gold)
+                .disabled(userDoesNotKnowBirthTime)
+            if includeBirthTime && !userDoesNotKnowBirthTime {
+                DatePicker("Time", selection: $birthTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.compact)
+            }
+
+            Toggle("I do not know my birth time", isOn: $userDoesNotKnowBirthTime)
+                .tint(SimastryColor.gold)
+                .onChange(of: userDoesNotKnowBirthTime) { _, value in
+                    if value { includeBirthTime = false }
+                }
+
+            TextField("Birth place, e.g. City, Country", text: $birthPlace)
+                .textInputAutocapitalization(.words)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .padding(12)
+                .background(SimastryColor.surfaceSunken.opacity(0.55), in: .rect(cornerRadius: 14))
+        }
+        .formCard()
+    }
+
+    private var partnerInfoSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Partner or person context")
+
+            Toggle("Partner/person birth date", isOn: $includePartnerBirthDate)
+                .tint(SimastryColor.gold)
+            if includePartnerBirthDate {
+                DatePicker("Date", selection: $partnerBirthDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+            }
+
+            Toggle("Partner/person birth time", isOn: $includePartnerBirthTime)
+                .tint(SimastryColor.gold)
+            if includePartnerBirthTime {
+                DatePicker("Time", selection: $partnerBirthTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.compact)
+            }
+
+            TextField("Partner/person birth place", text: $partnerBirthPlace)
+                .textInputAutocapitalization(.words)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .padding(12)
+                .background(SimastryColor.surfaceSunken.opacity(0.55), in: .rect(cornerRadius: 14))
+        }
+        .formCard()
+    }
+
+    private var manualTraditionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("User-supplied tradition fields")
+            manualTextField("Known Vedic nakshatra", text: $knownVedicNakshatra)
+            manualTextField("Known sidereal Moon / rashi", text: $knownSiderealMoonRashi)
+            manualTextField("Known BaZi Day Master", text: $knownBaziDayMaster)
+            manualTextField("Known Four Pillars", text: $knownFourPillars)
+            manualTextField("Known Hellenistic sect", text: $knownHellenisticSect)
+            manualTextField("Known profection year", text: $knownProfectionYear)
+            manualTextField("Relationship pattern notes", text: $relationshipPatternNotes, lineLimit: 2...4)
+            manualTextField("Reflection prompts", text: $reflectionPrompts, lineLimit: 2...4)
+        }
+        .formCard()
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(SimastryFont.labelLarge)
+            .foregroundStyle(SimastryColor.offWhite)
+    }
+
+    private func manualTextField(
+        _ title: String,
+        text: Binding<String>,
+        lineLimit: ClosedRange<Int> = 1...2
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.gold.opacity(0.88))
+            TextField("User-supplied, not app-calculated", text: text, axis: .vertical)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(lineLimit)
+                .padding(12)
+                .background(SimastryColor.surfaceSunken.opacity(0.55), in: .rect(cornerRadius: 14))
+        }
+    }
+
+    private func loadOnce() {
+        guard !didLoad else { return }
+        didLoad = true
+        let manual = viewModel.expertManualAstrologyData
+        includeBirthDate = viewModel.onboardingBirthday != nil
+        birthDate = viewModel.onboardingBirthday ?? birthDate
+        includeBirthTime = viewModel.onboardingBirthTime != nil
+        birthTime = viewModel.onboardingBirthTime ?? birthTime
+        birthPlace = viewModel.onboardingBirthplace ?? ""
+        userDoesNotKnowBirthTime = manual.userDoesNotKnowBirthTime
+        includePartnerBirthDate = manual.partnerBirthDate != nil
+        partnerBirthDate = manual.partnerBirthDate ?? partnerBirthDate
+        includePartnerBirthTime = manual.partnerBirthTime != nil
+        partnerBirthTime = manual.partnerBirthTime ?? partnerBirthTime
+        partnerBirthPlace = manual.partnerBirthPlace
+        knownVedicNakshatra = manual.knownVedicNakshatra
+        knownSiderealMoonRashi = manual.knownSiderealMoonRashi
+        knownBaziDayMaster = manual.knownBaziDayMaster
+        knownFourPillars = manual.knownFourPillars
+        knownHellenisticSect = manual.knownHellenisticSect
+        knownProfectionYear = manual.knownProfectionYear
+        relationshipPatternNotes = manual.relationshipPatternNotes
+        reflectionPrompts = manual.reflectionPrompts
+    }
+
+    private func save() {
+        if includeBirthDate {
+            viewModel.onboardingBirthday = birthDate
+        }
+        if includeBirthTime && !userDoesNotKnowBirthTime {
+            viewModel.onboardingBirthTime = birthTime
+        } else if userDoesNotKnowBirthTime {
+            viewModel.onboardingBirthTime = nil
+        }
+        let trimmedBirthPlace = birthPlace.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedBirthPlace.isEmpty {
+            viewModel.onboardingBirthplace = trimmedBirthPlace
+        }
+
+        var manual = viewModel.expertManualAstrologyData
+        manual.userDoesNotKnowBirthTime = userDoesNotKnowBirthTime
+        manual.partnerBirthDate = includePartnerBirthDate ? partnerBirthDate : nil
+        manual.partnerBirthTime = includePartnerBirthTime ? partnerBirthTime : nil
+        manual.partnerBirthPlace = partnerBirthPlace.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.knownVedicNakshatra = knownVedicNakshatra.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.knownSiderealMoonRashi = knownSiderealMoonRashi.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.knownBaziDayMaster = knownBaziDayMaster.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.knownFourPillars = knownFourPillars.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.knownHellenisticSect = knownHellenisticSect.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.knownProfectionYear = knownProfectionYear.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.relationshipPatternNotes = relationshipPatternNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+        manual.reflectionPrompts = reflectionPrompts.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.expertManualAstrologyData = manual
+    }
+}
+
+private extension View {
+    func formCard() -> some View {
+        self
+            .padding(16)
+            .surfaceCard(cornerRadius: 18)
     }
 }

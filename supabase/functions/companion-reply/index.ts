@@ -191,6 +191,14 @@ function validatePayload(payload: CompanionReplyPayload) {
     for (const message of expert.transcript ?? []) {
       validateText("transcript.content", message.content, 1, 2_000);
     }
+    validateOptionalStringArray("knownDataPoints", expert.knownDataPoints, 80, 160);
+    validateOptionalStringArray("missingDataPoints", expert.missingDataPoints, 120, 220);
+    validateOptionalStringArray("dataLimitations", expert.dataLimitations, 120, 320);
+    validateOptionalRecord("userSuppliedTraditionData", expert.userSuppliedTraditionData, 24, 500);
+    validateOptionalRecord("calculatedTraditionData", expert.calculatedTraditionData, 24, 500);
+    if (expert.readinessSummary !== undefined) {
+      validateText("readinessSummary", expert.readinessSummary, 1, 800);
+    }
     return;
   }
 
@@ -213,6 +221,12 @@ function normalizePayload(payload: CompanionReplyPayload): CompanionReplyPayload
         ...message,
         content: message.content.trim().slice(0, 2_000),
       })),
+      knownDataPoints: sanitizeStringArray(expert.knownDataPoints, 80, 160),
+      missingDataPoints: sanitizeStringArray(expert.missingDataPoints, 120, 220),
+      userSuppliedTraditionData: sanitizeRecord(expert.userSuppliedTraditionData, 24, 500),
+      calculatedTraditionData: sanitizeRecord(expert.calculatedTraditionData, 24, 500),
+      readinessSummary: expert.readinessSummary?.trim().slice(0, 800),
+      dataLimitations: sanitizeStringArray(expert.dataLimitations, 120, 320),
     },
   };
 }
@@ -228,6 +242,47 @@ function validateText(field: string, value: unknown, min: number, max: number) {
   if (length > max) {
     throw new CompanionReplyError("payload_too_large", `${field} is too long.`, 413);
   }
+}
+
+function validateOptionalStringArray(field: string, value: unknown, maxItems: number, maxCharacters: number) {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || value.length > maxItems) {
+    throw new CompanionReplyError("invalid_payload", `${field} is invalid.`, 400);
+  }
+  for (const item of value) {
+    validateText(field, item, 1, maxCharacters);
+  }
+}
+
+function validateOptionalRecord(field: string, value: unknown, maxItems: number, maxCharacters: number) {
+  if (value === undefined) return;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CompanionReplyError("invalid_payload", `${field} is invalid.`, 400);
+  }
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length > maxItems) {
+    throw new CompanionReplyError("invalid_payload", `${field} has too many entries.`, 400);
+  }
+  for (const [key, item] of entries) {
+    validateText(`${field}.${key}`, item, 1, maxCharacters);
+  }
+}
+
+function sanitizeStringArray(value: unknown, maxItems: number, maxCharacters: number): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .slice(0, maxItems)
+    .map((item) => String(item).trim().slice(0, maxCharacters))
+    .filter(Boolean);
+}
+
+function sanitizeRecord(value: unknown, maxItems: number, maxCharacters: number): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .slice(0, maxItems)
+    .map(([key, item]) => [key.trim().slice(0, 80), String(item).trim().slice(0, maxCharacters)] as const)
+    .filter(([key, item]) => key.length > 0 && item.length > 0);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 async function firstUsageLimitExceeded(userId: string, deviceId: string | null): Promise<UsageLimit | null> {
@@ -471,7 +526,13 @@ function estimateRequestCharacters(payload: CompanionReplyPayload): number {
     const expert = payload.expertAstrologerRequest;
     return expert.userQuestion.length
       + (expert.transcript ?? []).reduce((total, message) => total + message.content.length, 0)
-      + (expert.profileContext ? JSON.stringify(expert.profileContext).length : 0);
+      + (expert.profileContext ? JSON.stringify(expert.profileContext).length : 0)
+      + (expert.knownDataPoints ? JSON.stringify(expert.knownDataPoints).length : 0)
+      + (expert.missingDataPoints ? JSON.stringify(expert.missingDataPoints).length : 0)
+      + (expert.userSuppliedTraditionData ? JSON.stringify(expert.userSuppliedTraditionData).length : 0)
+      + (expert.calculatedTraditionData ? JSON.stringify(expert.calculatedTraditionData).length : 0)
+      + (expert.readinessSummary?.length ?? 0)
+      + (expert.dataLimitations ? JSON.stringify(expert.dataLimitations).length : 0);
   }
   return (payload.system?.length ?? 0) + (payload.user?.length ?? 0);
 }

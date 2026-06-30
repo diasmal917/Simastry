@@ -37,6 +37,8 @@ extension AppViewModel {
         typingSpecialistIds = []
         runningEveryoneConsultationIds = []
         runningEveryoneResponseKeys = []
+        expertManualAstrologyData = ExpertManualAstrologyData()
+        ExpertManualAstrologyData.clear()
         UserDefaults.standard.removeObject(forKey: Self.specialistMessagesKey)
         UserDefaults.standard.removeObject(forKey: Self.specialistConsultationResponsesKey)
         UserDefaults.standard.removeObject(forKey: Self.specialistConversationIdsKey)
@@ -90,9 +92,9 @@ extension AppViewModel {
             sunSign: userSunSign?.displayName,
             moonSign: userMoonSign?.displayName,
             risingSign: userRisingSign?.displayName,
-            birthDateAvailable: onboardingBirthday != nil || userSunSign != nil,
-            birthTimeAvailable: onboardingBirthTime != nil || userRisingSign != nil,
-            birthPlaceAvailable: !(onboardingBirthplace ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || userRisingSign != nil,
+            birthDateAvailable: onboardingBirthday != nil,
+            birthTimeAvailable: onboardingBirthTime != nil,
+            birthPlaceAvailable: !(onboardingBirthplace ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             partnerName: partner?.displayName,
             partnerSunSign: partner?.sunSign.displayName,
             partnerMoonSign: partner?.moonSign?.displayName,
@@ -125,6 +127,12 @@ extension AppViewModel {
 
         let conversationId = specialistConversationId(for: specialistId)
         let context = explicitContext ?? currentAstrologyContext()
+        let readiness = ExpertReadinessBuilder.checklist(
+            for: specialist,
+            question: trimmed,
+            context: context,
+            manualData: expertManualAstrologyData
+        )
         let outgoing = SpecialistMessage(
             conversationId: conversationId,
             specialistId: specialistId,
@@ -150,7 +158,9 @@ extension AppViewModel {
             conversationId: conversationId,
             multiConsultationId: nil,
             profileContext: context,
-            transcript: specialistConversation(for: specialistId)
+            transcript: specialistConversation(for: specialistId),
+            readiness: readiness,
+            manualData: expertManualAstrologyData
         )
 
         let response: String
@@ -374,8 +384,15 @@ extension AppViewModel {
             )
         }
 
+        let manualData = expertManualAstrologyData
         await withTaskGroup(of: EveryoneSpecialistResult.self) { group in
             for specialist in specialistsToRun {
+                let readiness = ExpertReadinessBuilder.checklist(
+                    for: specialist,
+                    question: question,
+                    context: context,
+                    manualData: manualData
+                )
                 let request = ExpertAstrologerReplyService.Request(
                     specialistId: specialist.id,
                     mode: .everyone,
@@ -383,7 +400,9 @@ extension AppViewModel {
                     conversationId: nil,
                     multiConsultationId: multiConsultationId,
                     profileContext: context,
-                    transcript: []
+                    transcript: [],
+                    readiness: readiness,
+                    manualData: manualData
                 )
                 group.addTask {
                     let startedAt = Date()
@@ -456,7 +475,7 @@ extension AppViewModel {
             if shouldForceExpertAstrologerPreviewFailure(for: request.specialistId) {
                 throw ExpertAstrologerError.generationFailed
             }
-            try? await Task.sleep(for: .milliseconds(450))
+            try? await Task.sleep(for: .milliseconds(expertAstrologerPreviewDelayMs()))
             return ExpertAstrologerReplyService.localFallback(for: request)
         }
         #endif
@@ -646,6 +665,12 @@ private extension AppViewModel {
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
         )
+    }
+
+    func expertAstrologerPreviewDelayMs() -> Int {
+        let raw = ProcessInfo.processInfo.environment["SIMASTRY_EXPERT_PREVIEW_DELAY_MS"]
+            .flatMap(Int.init) ?? 450
+        return min(max(raw, 0), 5_000)
     }
 }
 #endif

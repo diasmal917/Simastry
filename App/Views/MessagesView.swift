@@ -254,7 +254,7 @@ struct MessagesView: View {
                         systemImage: "square.grid.2x2.fill",
                         hint: "Open the five-tradition comparison flow"
                     ) {
-                        openExpertAstrologers(question: "What should I reply back?", autoRunEveryone: false)
+                        openExpertAstrologers(question: "What should I reply back?", autoRunEveryone: true)
                     }
                 } else {
                     talkSecondaryAction(

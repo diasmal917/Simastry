@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var viewModel = AppViewModel()
     @State private var showResumeLoading = false
     @State private var shouldShowResumeLoadingOnActive = false
+    @State private var resumeLoadingTask: Task<Void, Never>?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -90,10 +91,24 @@ struct ContentView: View {
             } else if newPhase == .inactive {
                 shouldShowResumeLoadingOnActive = viewModel.currentScreen != .loading
             } else if newPhase == .active {
-                showResumeLoadingIfNeeded()
-                Task {
+                let shouldShowResume = shouldShowResumeLoadingIfNeeded()
+                resumeLoadingTask?.cancel()
+                resumeLoadingTask = Task {
+                    if shouldShowResume {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(1400))
+                            await MainActor.run {
+                                hideResumeLoading()
+                            }
+                        }
+                    }
                     await viewModel.refreshRealtimeSurfaces()
                     viewModel.consumePendingShortcutDestination()
+                    if shouldShowResume {
+                        await MainActor.run {
+                            hideResumeLoading()
+                        }
+                    }
                 }
             }
         }
@@ -131,24 +146,24 @@ struct ContentView: View {
         RacingZodiacLoadingView(mode: .initialLoading)
     }
 
-    private func showResumeLoadingIfNeeded() {
+    @discardableResult
+    private func shouldShowResumeLoadingIfNeeded() -> Bool {
         guard shouldShowResumeLoadingOnActive, viewModel.currentScreen != .loading else {
             shouldShowResumeLoadingOnActive = false
-            return
+            return false
         }
         shouldShowResumeLoadingOnActive = false
 
         withAnimation(.easeOut(duration: 0.16)) {
             showResumeLoading = true
         }
+        return true
+    }
 
-        Task {
-            try? await Task.sleep(nanoseconds: 1_050_000_000)
-            await MainActor.run {
-                withAnimation(.easeOut(duration: 0.22)) {
-                    showResumeLoading = false
-                }
-            }
+    private func hideResumeLoading() {
+        guard showResumeLoading else { return }
+        withAnimation(.easeOut(duration: 0.18)) {
+            showResumeLoading = false
         }
     }
 }
@@ -198,6 +213,7 @@ struct RacingZodiacLoadingView: View {
     @State private var zoomed = false
     @State private var settled = false
     @State private var glow = false
+    @State private var showTimeoutFallback = false
 
     var body: some View {
         ZStack {
@@ -238,7 +254,17 @@ struct RacingZodiacLoadingView: View {
                     ProgressView()
                         .tint(SimastryColor.gold)
                         .scaleEffect(1.08)
-                        .padding(.bottom, 58)
+
+                    if showTimeoutFallback {
+                        Text("Still loading your session. If this takes much longer, check your connection and reopen Simastry.")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 20)
+                    }
+
+                    Spacer().frame(height: 58)
                 }
                 .padding(.horizontal, 24)
                 .opacity(stableLoadingOpacity)
@@ -246,6 +272,11 @@ struct RacingZodiacLoadingView: View {
         }
         .clipped()
         .onAppear(perform: runAnimation)
+        .task {
+            guard mode == .initialLoading else { return }
+            try? await Task.sleep(for: .seconds(8))
+            showTimeoutFallback = true
+        }
         .accessibilityLabel(mode == .initialLoading ? "Loading Simastry" : "Returning to Simastry")
         .accessibilityAddTraits(.isImage)
     }

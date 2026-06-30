@@ -1,7 +1,7 @@
 import Foundation
 
 nonisolated enum ExpertAstrologerReplyService {
-    static let replyTimeout: Double = 8
+    static let replyTimeout: Double = SupabaseService.companionReplyRequestTimeout
     static let replyMaxTokens: Int = 520
 
     struct Request: Encodable, Sendable {
@@ -12,6 +12,38 @@ nonisolated enum ExpertAstrologerReplyService {
         let multiConsultationId: UUID?
         let profileContext: UserAstrologyContext
         let transcript: [SpecialistMessage]
+        let knownDataPoints: [String]
+        let missingDataPoints: [String]
+        let userSuppliedTraditionData: [String: String]
+        let calculatedTraditionData: [String: String]
+        let readinessSummary: String
+        let dataLimitations: [String]
+
+        init(
+            specialistId: String,
+            mode: ExpertAstrologerMode,
+            userQuestion: String,
+            conversationId: UUID?,
+            multiConsultationId: UUID?,
+            profileContext: UserAstrologyContext,
+            transcript: [SpecialistMessage],
+            readiness: ExpertReadinessChecklist,
+            manualData: ExpertManualAstrologyData
+        ) {
+            self.specialistId = specialistId
+            self.mode = mode
+            self.userQuestion = userQuestion
+            self.conversationId = conversationId
+            self.multiConsultationId = multiConsultationId
+            self.profileContext = profileContext
+            self.transcript = transcript
+            self.knownDataPoints = readiness.knownDataPoints
+            self.missingDataPoints = readiness.missingDataPoints
+            self.userSuppliedTraditionData = manualData.userSuppliedTraditionData
+            self.calculatedTraditionData = [:]
+            self.readinessSummary = readiness.readinessSummary
+            self.dataLimitations = readiness.dataLimitations
+        }
     }
 
     static func localFallback(for request: Request) -> String {

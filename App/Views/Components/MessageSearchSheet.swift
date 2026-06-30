@@ -462,7 +462,7 @@ private struct MessageGuideBubble: View {
     }
 
     private var role: String {
-        specialist?.publicTitle ?? "\(profile.sign.displayName) guide"
+        specialist?.publicTitle ?? (AppConfig.expertAstrologersEnabled ? "Expert astrologer" : "\(profile.sign.displayName) guide")
     }
 
     private var displayName: String {
@@ -527,7 +527,7 @@ private struct MessageGuidePreviewCard: View {
     }
 
     private var role: String {
-        specialist?.publicTitle ?? "\(profile.sign.displayName) guide"
+        specialist?.publicTitle ?? (AppConfig.expertAstrologersEnabled ? "Expert astrologer" : "\(profile.sign.displayName) guide")
     }
 
     private var displayName: String {
@@ -692,11 +692,11 @@ private struct MessageSearchGuideRow: View {
     }
 
     private var role: String {
-        specialist?.publicTitle ?? "\(profile.sign.displayName) Guide"
+        specialist?.publicTitle ?? (AppConfig.expertAstrologersEnabled ? "Expert Astrologer" : "\(profile.sign.displayName) Guide")
     }
 
     private var description: String {
-        specialist?.publicDescription ?? GuideDirectoryCopy.specialty(for: profile)
+        specialist?.publicDescription ?? (AppConfig.expertAstrologersEnabled ? "One of the five Simastry astrology specialists." : GuideDirectoryCopy.specialty(for: profile))
     }
 
     private var displayName: String {

@@ -75,6 +75,11 @@ class AppViewModel {
     var pendingExpertAstrologerQuestion: String?
     var pendingExpertAstrologerAutoRunEveryone: Bool = false
     var pendingExpertAstrologerSpecialistId: String?
+    var expertManualAstrologyData: ExpertManualAstrologyData = ExpertManualAstrologyData.load() {
+        didSet {
+            expertManualAstrologyData.save()
+        }
+    }
     #if DEBUG
     var consumedExpertAstrologerPreviewFailures: Set<String> = []
     #endif

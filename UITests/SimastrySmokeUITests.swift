@@ -55,7 +55,10 @@ final class SimastrySmokeUITests: XCTestCase {
     }
 
     func testExpertAstrologersEveryoneAndIndividualFlow() throws {
-        launchSeededApp(arguments: ["-SimastryPreviewScreen", "astrologists"])
+        launchSeededApp(
+            arguments: ["-SimastryPreviewScreen", "astrologists"],
+            environment: ["SIMASTRY_EXPERT_PREVIEW_DELAY_MS": "1800"]
+        )
 
         XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.scrollViews["expertAstrologers.screen"].waitForExistence(timeout: 6))
@@ -64,11 +67,16 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Who would you like to hear from?"].waitForExistence(timeout: 4))
 
         app.buttons["expertAstrologers.everyoneButton"].tap()
-        XCTAssertTrue(app.otherElements["expertAstrologers.response.leyla-western"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.otherElements["expertAstrologers.response.mateo-vedic"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.otherElements["expertAstrologers.response.naomi-chinese"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.otherElements["expertAstrologers.response.elias-ancient"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.otherElements["expertAstrologers.response.nadia-evolutionary"].waitForExistence(timeout: 8))
+        XCTAssertTrue(element("expertAstrologers.progressSummary.leyla-western").waitForExistence(timeout: 3))
+        XCTAssertTrue(element("expertAstrologers.progressSummary.mateo-vedic").waitForExistence(timeout: 3))
+        XCTAssertTrue(element("expertAstrologers.progressSummary.naomi-chinese").waitForExistence(timeout: 3))
+        XCTAssertTrue(element("expertAstrologers.progressSummary.elias-ancient").waitForExistence(timeout: 3))
+        XCTAssertTrue(element("expertAstrologers.progressSummary.nadia-evolutionary").waitForExistence(timeout: 3))
+        XCTAssertTrue(element("expertAstrologers.response.leyla-western").waitForExistence(timeout: 8))
+        XCTAssertTrue(element("expertAstrologers.response.mateo-vedic").waitForExistence(timeout: 8))
+        XCTAssertTrue(element("expertAstrologers.response.naomi-chinese").waitForExistence(timeout: 8))
+        XCTAssertTrue(element("expertAstrologers.response.elias-ancient").waitForExistence(timeout: 8))
+        XCTAssertTrue(element("expertAstrologers.response.nadia-evolutionary").waitForExistence(timeout: 8))
 
         let western = app.buttons["expertAstrologers.specialist.leyla-western"]
         XCTAssertTrue(reveal(western, maxSwipes: 12), "Expected Leyla Western Astrologer card")
@@ -108,10 +116,64 @@ final class SimastrySmokeUITests: XCTestCase {
         naomiInfo.tap()
 
         XCTAssertTrue(app.navigationBars["Naomi - Chinese Astrologer"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.staticTexts["How this expert works"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.staticTexts["BaZi / Four Pillars"].waitForExistence(timeout: 4))
-        XCTAssertTrue(reveal(app.staticTexts["Stays away from"], maxSwipes: 5))
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Methods Naomi uses"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Four Pillars"].waitForExistence(timeout: 4))
+        XCTAssertTrue(reveal(app.staticTexts["Methods Naomi avoids"], maxSwipes: 5))
         XCTAssertTrue(reveal(app.staticTexts["Western zodiac signs"], maxSwipes: 2))
+    }
+
+    func testExpertAstrologersReadinessAndMissingInfoCTA() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "astrologists"])
+
+        XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 10))
+        app.buttons["expertAstrologers.chip.Love"].tap()
+
+        let leylaInfo = app.buttons["expertAstrologers.info.leyla-western"]
+        XCTAssertTrue(reveal(leylaInfo, maxSwipes: 4), "Expected Leyla info button")
+        leylaInfo.tap()
+
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        let addMissing = app.buttons["expertAstrologers.readiness.addMissing"]
+        XCTAssertTrue(reveal(addMissing, maxSwipes: 4), "Expected missing-info CTA")
+        addMissing.tap()
+
+        XCTAssertTrue(app.navigationBars["Add Missing Info"].waitForExistence(timeout: 4))
+        XCTAssertTrue(reveal(app.staticTexts["User-supplied tradition fields"], maxSwipes: 8))
+        app.buttons["Cancel"].tap()
+        app.buttons["Done"].tap()
+
+        let mateoInfo = app.buttons["expertAstrologers.info.mateo-vedic"]
+        XCTAssertTrue(reveal(mateoInfo, maxSwipes: 4), "Expected Mateo info button")
+        mateoInfo.tap()
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        XCTAssertTrue(reveal(app.staticTexts["Birth time"], maxSwipes: 4))
+        app.buttons["Done"].tap()
+
+        let sorenInfo = app.buttons["expertAstrologers.info.elias-ancient"]
+        XCTAssertTrue(reveal(sorenInfo, maxSwipes: 8), "Expected Soren info button")
+        sorenInfo.tap()
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        XCTAssertTrue(reveal(app.staticTexts["Birth time"], maxSwipes: 4))
+        app.buttons["Done"].tap()
+    }
+
+    func testCompareAllFiveStartsEveryoneModeFromTalk() throws {
+        launchSeededApp(environment: ["SIMASTRY_EXPERT_PREVIEW_DELAY_MS": "1800"])
+
+        XCTAssertTrue(app.tabBars.buttons["Talk"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["Talk"].tap()
+
+        let compare = app.buttons.containing(NSPredicate(format: "label CONTAINS[c] %@", "Compare all five")).firstMatch
+        XCTAssertTrue(compare.waitForExistence(timeout: 6))
+        compare.tap()
+
+        XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 6))
+        XCTAssertTrue(element("expertAstrologers.response.leyla-western").waitForExistence(timeout: 6))
+        XCTAssertTrue(element("expertAstrologers.response.mateo-vedic").waitForExistence(timeout: 6))
+        XCTAssertTrue(element("expertAstrologers.response.naomi-chinese").waitForExistence(timeout: 6))
+        XCTAssertTrue(element("expertAstrologers.response.elias-ancient").waitForExistence(timeout: 6))
+        XCTAssertTrue(element("expertAstrologers.response.nadia-evolutionary").waitForExistence(timeout: 6))
     }
 
     func testTalkExpertModeDoesNotShowLegacyPanelOverhangs() throws {
@@ -173,10 +235,6 @@ final class SimastrySmokeUITests: XCTestCase {
         app.buttons["Done"].tap()
 
         app.tabBars.buttons["Talk"].tap()
-
-        app.buttons["talk.toolbar.newRoomButton"].tap()
-        XCTAssertTrue(app.otherElements["talk.newRoomSheet"].waitForExistence(timeout: 4))
-        app.buttons["Cancel"].tap()
 
         app.buttons["talk.toolbar.newMessageButton"].tap()
         XCTAssertTrue(app.otherElements["talk.messageSearchSheet"].waitForExistence(timeout: 4))
@@ -242,4 +300,7 @@ final class SimastrySmokeUITests: XCTestCase {
         return element.exists && element.isHittable
     }
 
+    private func element(_ identifier: String) -> XCUIElement {
+        app.descendants(matching: .any)[identifier]
+    }
 }
