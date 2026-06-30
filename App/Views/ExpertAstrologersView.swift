@@ -1444,6 +1444,7 @@ private struct AddMissingAstrologyInfoSheet: View {
     @State private var includePartnerBirthTime = false
     @State private var partnerBirthTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
     @State private var partnerBirthPlace = ""
+    @State private var partnerDoesNotKnowBirthTime = false
     @State private var knownVedicNakshatra = ""
     @State private var knownSiderealMoonRashi = ""
     @State private var knownBaziDayMaster = ""
@@ -1523,6 +1524,7 @@ private struct AddMissingAstrologyInfoSheet: View {
                 .onChange(of: userDoesNotKnowBirthTime) { _, value in
                     if value { includeBirthTime = false }
                 }
+                .accessibilityIdentifier("expertAstrologers.addMissingInfo.userUnknownTime")
 
             TextField("Birth place, e.g. City, Country", text: $birthPlace)
                 .textInputAutocapitalization(.words)
@@ -1547,10 +1549,18 @@ private struct AddMissingAstrologyInfoSheet: View {
 
             Toggle("Partner/person birth time", isOn: $includePartnerBirthTime)
                 .tint(SimastryColor.gold)
-            if includePartnerBirthTime {
+                .disabled(partnerDoesNotKnowBirthTime)
+            if includePartnerBirthTime && !partnerDoesNotKnowBirthTime {
                 DatePicker("Time", selection: $partnerBirthTime, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.compact)
             }
+
+            Toggle("I do not know their birth time", isOn: $partnerDoesNotKnowBirthTime)
+                .tint(SimastryColor.gold)
+                .onChange(of: partnerDoesNotKnowBirthTime) { _, value in
+                    if value { includePartnerBirthTime = false }
+                }
+                .accessibilityIdentifier("expertAstrologers.addMissingInfo.partnerUnknownTime")
 
             TextField("Partner/person birth place", text: $partnerBirthPlace)
                 .textInputAutocapitalization(.words)
@@ -1565,14 +1575,14 @@ private struct AddMissingAstrologyInfoSheet: View {
     private var manualTraditionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("User-supplied tradition fields")
-            manualTextField("Known Vedic nakshatra", text: $knownVedicNakshatra)
-            manualTextField("Known sidereal Moon / rashi", text: $knownSiderealMoonRashi)
-            manualTextField("Known BaZi Day Master", text: $knownBaziDayMaster)
-            manualTextField("Known Four Pillars", text: $knownFourPillars)
-            manualTextField("Known Hellenistic sect", text: $knownHellenisticSect)
-            manualTextField("Known profection year", text: $knownProfectionYear)
-            manualTextField("Relationship pattern notes", text: $relationshipPatternNotes, lineLimit: 2...4)
-            manualTextField("Reflection prompts", text: $reflectionPrompts, lineLimit: 2...4)
+            manualTextField("Known Vedic nakshatra", text: $knownVedicNakshatra, identifier: "knownVedicNakshatra")
+            manualTextField("Known sidereal Moon / rashi", text: $knownSiderealMoonRashi, identifier: "knownSiderealMoonRashi")
+            manualTextField("Known BaZi Day Master", text: $knownBaziDayMaster, identifier: "knownBaziDayMaster")
+            manualTextField("Known Four Pillars", text: $knownFourPillars, identifier: "knownFourPillars")
+            manualTextField("Known Hellenistic sect", text: $knownHellenisticSect, identifier: "knownHellenisticSect")
+            manualTextField("Known profection year", text: $knownProfectionYear, identifier: "knownProfectionYear")
+            manualTextField("Relationship pattern notes", text: $relationshipPatternNotes, identifier: "relationshipPatternNotes", lineLimit: 2...4)
+            manualTextField("Reflection prompts", text: $reflectionPrompts, identifier: "reflectionPrompts", lineLimit: 2...4)
         }
         .formCard()
     }
@@ -1586,6 +1596,7 @@ private struct AddMissingAstrologyInfoSheet: View {
     private func manualTextField(
         _ title: String,
         text: Binding<String>,
+        identifier: String,
         lineLimit: ClosedRange<Int> = 1...2
     ) -> some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -1598,6 +1609,7 @@ private struct AddMissingAstrologyInfoSheet: View {
                 .lineLimit(lineLimit)
                 .padding(12)
                 .background(SimastryColor.surfaceSunken.opacity(0.55), in: .rect(cornerRadius: 14))
+                .accessibilityIdentifier("expertAstrologers.addMissingInfo.field.\(identifier)")
         }
     }
 
@@ -1616,6 +1628,7 @@ private struct AddMissingAstrologyInfoSheet: View {
         includePartnerBirthTime = manual.partnerBirthTime != nil
         partnerBirthTime = manual.partnerBirthTime ?? partnerBirthTime
         partnerBirthPlace = manual.partnerBirthPlace
+        partnerDoesNotKnowBirthTime = manual.partnerDoesNotKnowBirthTime
         knownVedicNakshatra = manual.knownVedicNakshatra
         knownSiderealMoonRashi = manual.knownSiderealMoonRashi
         knownBaziDayMaster = manual.knownBaziDayMaster
@@ -1643,7 +1656,8 @@ private struct AddMissingAstrologyInfoSheet: View {
         var manual = viewModel.expertManualAstrologyData
         manual.userDoesNotKnowBirthTime = userDoesNotKnowBirthTime
         manual.partnerBirthDate = includePartnerBirthDate ? partnerBirthDate : nil
-        manual.partnerBirthTime = includePartnerBirthTime ? partnerBirthTime : nil
+        manual.partnerBirthTime = (includePartnerBirthTime && !partnerDoesNotKnowBirthTime) ? partnerBirthTime : nil
+        manual.partnerDoesNotKnowBirthTime = partnerDoesNotKnowBirthTime
         manual.partnerBirthPlace = partnerBirthPlace.trimmingCharacters(in: .whitespacesAndNewlines)
         manual.knownVedicNakshatra = knownVedicNakshatra.trimmingCharacters(in: .whitespacesAndNewlines)
         manual.knownSiderealMoonRashi = knownSiderealMoonRashi.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1654,6 +1668,10 @@ private struct AddMissingAstrologyInfoSheet: View {
         manual.relationshipPatternNotes = relationshipPatternNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         manual.reflectionPrompts = reflectionPrompts.trimmingCharacters(in: .whitespacesAndNewlines)
         viewModel.expertManualAstrologyData = manual
+
+        // Mirror the saved birth + manual intake to Supabase so the expert
+        // backend can hydrate prompts and other devices can reload it.
+        viewModel.persistExpertAstrologyIntakeIfPossible()
     }
 }
 

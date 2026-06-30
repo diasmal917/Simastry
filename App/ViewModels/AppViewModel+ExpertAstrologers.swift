@@ -62,6 +62,138 @@ extension AppViewModel {
             // consultation flow when connectivity or schema rollout lags.
             CrashReporter.log(error, context: "refreshExpertAstrologerState")
         }
+
+        // Intake is isolated so a missing/lagging table never blocks chat sync.
+        do {
+            if let intake = try await supabase.fetchExpertAstrologyIntake() {
+                hydrateFromIntake(intake)
+            }
+        } catch {
+            CrashReporter.log(error, context: "refreshExpertAstrologyIntake")
+        }
+    }
+
+    // MARK: - Expert Astrology Intake
+
+    /// Mirrors the user's birth + manual tradition data to
+    /// `public.expert_astrology_intake`. The snapshot is built on the main actor
+    /// so the upsert task only carries a Sendable value across actors.
+    func persistExpertAstrologyIntakeIfPossible() {
+        guard isAuthenticated else { return }
+        #if DEBUG
+        if isDebugPreviewStateActive { return }
+        #endif
+
+        let draft = currentExpertAstrologyIntakeRecord(userId: UUID())
+        Task { [weak self, draft] in
+            guard let self else { return }
+            guard let userId = await self.supabase.currentUserId else { return }
+            var record = draft
+            record.userId = userId
+            do {
+                try await self.supabase.upsertExpertAstrologyIntake(record)
+            } catch {
+                CrashReporter.log(error, context: "persistExpertAstrologyIntake")
+            }
+        }
+    }
+
+    /// Builds the intake snapshot from onboarding birth data + manual fields.
+    /// Birth/partner times are dropped when the matching "unknown" flag is set,
+    /// honoring the table's `*_birth_time_unknown ⇒ *_birth_time IS NULL` checks.
+    func currentExpertAstrologyIntakeRecord(userId: UUID) -> ExpertAstrologyIntakeRecord {
+        let manual = expertManualAstrologyData
+        let birthTimeUnknown = manual.userDoesNotKnowBirthTime
+        let partnerBirthTimeUnknown = manual.partnerDoesNotKnowBirthTime
+        let birthPlace = (onboardingBirthplace ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let partnerPlace = manual.partnerBirthPlace.trimmingCharacters(in: .whitespacesAndNewlines)
+        return ExpertAstrologyIntakeRecord(
+            userId: userId,
+            birthDate: Self.formatIntakeDate(onboardingBirthday),
+            birthTime: birthTimeUnknown ? nil : Self.formatIntakeTime(onboardingBirthTime),
+            birthTimeUnknown: birthTimeUnknown,
+            birthPlace: birthPlace.isEmpty ? nil : birthPlace,
+            partnerBirthDate: Self.formatIntakeDate(manual.partnerBirthDate),
+            partnerBirthTime: partnerBirthTimeUnknown ? nil : Self.formatIntakeTime(manual.partnerBirthTime),
+            partnerBirthTimeUnknown: partnerBirthTimeUnknown,
+            partnerBirthPlace: partnerPlace.isEmpty ? nil : partnerPlace,
+            userSuppliedTraditionData: manual.intakeTraditionData
+        )
+    }
+
+    /// Reloads a saved intake row into local state. Local edits always win:
+    /// manual fields and birth context are only filled where they are currently
+    /// empty, so unsynced changes and onboarding/profile sync are never clobbered.
+    private func hydrateFromIntake(_ record: ExpertAstrologyIntakeRecord) {
+        var manual = expertManualAstrologyData
+        manual.applyIntakeTraditionData(record.userSuppliedTraditionData)
+        if record.birthTimeUnknown { manual.userDoesNotKnowBirthTime = true }
+        if record.partnerBirthTimeUnknown { manual.partnerDoesNotKnowBirthTime = true }
+
+        if manual.partnerBirthDate == nil, let date = Self.parseIntakeDate(record.partnerBirthDate) {
+            manual.partnerBirthDate = date
+        }
+        if manual.partnerBirthTime == nil, !manual.partnerDoesNotKnowBirthTime,
+           let time = Self.parseIntakeTime(record.partnerBirthTime) {
+            manual.partnerBirthTime = time
+        }
+        if manual.partnerBirthPlace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let place = record.partnerBirthPlace?.trimmingCharacters(in: .whitespacesAndNewlines), !place.isEmpty {
+            manual.partnerBirthPlace = place
+        }
+
+        if manual != expertManualAstrologyData {
+            expertManualAstrologyData = manual
+        }
+
+        // Backfill the user's own birth context only when missing locally.
+        if onboardingBirthday == nil, let date = Self.parseIntakeDate(record.birthDate) {
+            onboardingBirthday = date
+        }
+        if onboardingBirthTime == nil, !record.birthTimeUnknown, let time = Self.parseIntakeTime(record.birthTime) {
+            onboardingBirthTime = time
+        }
+        if (onboardingBirthplace ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let place = record.birthPlace?.trimmingCharacters(in: .whitespacesAndNewlines), !place.isEmpty {
+            onboardingBirthplace = place
+        }
+    }
+
+    private static func formatIntakeDate(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        return intakeFormatter(format: "yyyy-MM-dd").string(from: date)
+    }
+
+    private static func formatIntakeTime(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        return intakeFormatter(format: "HH:mm:ss").string(from: date)
+    }
+
+    private static func parseIntakeDate(_ string: String?) -> Date? {
+        guard let string, !string.isEmpty else { return nil }
+        return intakeFormatter(format: "yyyy-MM-dd").date(from: string)
+    }
+
+    private static func parseIntakeTime(_ string: String?) -> Date? {
+        guard let string, !string.isEmpty else { return nil }
+        // Postgres `time` serializes as HH:mm:ss; tolerate a bare HH:mm too.
+        for format in ["HH:mm:ss", "HH:mm"] {
+            if let date = intakeFormatter(format: format).date(from: string) {
+                return date
+            }
+        }
+        return nil
+    }
+
+    /// Wall-clock formatter in the user's current timezone, matching the values
+    /// the date/time pickers produce.
+    private static func intakeFormatter(format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .current
+        formatter.dateFormat = format
+        return formatter
     }
 
     func specialistConversationId(for specialistId: String) -> UUID {
@@ -163,16 +295,45 @@ extension AppViewModel {
             manualData: expertManualAstrologyData
         )
 
-        let response: String
+        var streamingMessageId: UUID?
+        func applyPartial(_ text: String) {
+            if let id = streamingMessageId,
+               let index = specialistMessages.firstIndex(where: { $0.id == id }) {
+                specialistMessages[index].content = text
+            } else {
+                // First streamed token: retire the typing indicator and start the
+                // assistant bubble that grows as more text arrives.
+                typingSpecialistIds.remove(specialistId)
+                let message = SpecialistMessage(
+                    conversationId: conversationId,
+                    specialistId: specialistId,
+                    role: .specialist,
+                    content: text,
+                    mode: .individual,
+                    profileContextSummary: context.summary
+                )
+                streamingMessageId = message.id
+                specialistMessages.append(message)
+            }
+        }
+
+        let finalText: String
         do {
-            response = try await generateExpertAstrologerReply(request: request)
+            let outcome = try await generateExpertAstrologerReply(request: request) { applyPartial($0) }
+            finalText = outcome.text
             await consumeMessage()
             analytics.track(
                 .specialistResponseCompleted,
-                params: analyticsParams(specialistId: specialistId, mode: .individual, question: trimmed, context: context)
+                params: analyticsParams(
+                    specialistId: specialistId,
+                    mode: .individual,
+                    question: trimmed,
+                    context: context,
+                    extra: usageEventParams(outcome.usageEventId)
+                )
             )
         } catch {
-            response = Self.specialistFailureMessage(for: specialist, error: error)
+            finalText = Self.specialistFailureMessage(for: specialist, error: error)
             analytics.track(
                 .specialistResponseFailed,
                 params: analyticsParams(specialistId: specialistId, mode: .individual, question: trimmed, context: context)
@@ -180,16 +341,24 @@ extension AppViewModel {
         }
 
         typingSpecialistIds.remove(specialistId)
-        let incoming = SpecialistMessage(
+
+        let finalized: SpecialistMessage
+        if let id = streamingMessageId,
+           let index = specialistMessages.firstIndex(where: { $0.id == id }) {
+            specialistMessages[index].content = finalText
+            finalized = specialistMessages[index]
+        } else {
+            finalized = SpecialistMessage(
                 conversationId: conversationId,
                 specialistId: specialistId,
                 role: .specialist,
-                content: response,
+                content: finalText,
                 mode: .individual,
                 profileContextSummary: context.summary
-        )
-        specialistMessages.append(incoming)
-        syncExpertAstrologerMessagesIfPossible([incoming])
+            )
+            specialistMessages.append(finalized)
+        }
+        syncExpertAstrologerMessagesIfPossible([finalized])
         saveExpertAstrologerState()
         return true
     }
@@ -405,23 +574,11 @@ extension AppViewModel {
                     manualData: manualData
                 )
                 group.addTask {
-                    let startedAt = Date()
-                    do {
-                        let text = try await self.generateExpertAstrologerReply(request: request)
-                        return EveryoneSpecialistResult(
-                            specialistId: specialist.id,
-                            response: text,
-                            errorMessage: nil,
-                            latencyMs: Int(Date().timeIntervalSince(startedAt) * 1000)
-                        )
-                    } catch {
-                        return EveryoneSpecialistResult(
-                            specialistId: specialist.id,
-                            response: nil,
-                            errorMessage: Self.specialistFailureMessage(for: specialist, error: error),
-                            latencyMs: Int(Date().timeIntervalSince(startedAt) * 1000)
-                        )
-                    }
+                    await self.streamEveryoneSpecialistReply(
+                        multiConsultationId: multiConsultationId,
+                        specialist: specialist,
+                        request: request
+                    )
                 }
             }
 
@@ -446,6 +603,13 @@ extension AppViewModel {
                 let event: AnalyticsService.Event = result.response == nil
                     ? .specialistResponseFailed
                     : .specialistResponseCompleted
+                var extra: [String: String] = [
+                    "latencyMs": "\(result.latencyMs)",
+                    "retry": isRetry ? "true" : "false"
+                ]
+                if let usageEventId = result.usageEventId {
+                    extra["usageEventId"] = usageEventId.uuidString
+                }
                 analytics.track(
                     event,
                     params: analyticsParams(
@@ -453,10 +617,7 @@ extension AppViewModel {
                         mode: .everyone,
                         question: question,
                         context: context,
-                        extra: [
-                            "latencyMs": "\(result.latencyMs)",
-                            "retry": isRetry ? "true" : "false"
-                        ]
+                        extra: extra
                     )
                 )
             }
@@ -467,24 +628,132 @@ extension AppViewModel {
         "\(multiConsultationId.uuidString).\(specialistId)"
     }
 
-    private func generateExpertAstrologerReply(
+    /// Streams one specialist's Everyone-mode reply, growing its card in memory
+    /// as tokens arrive, and returns the final result for persistence + analytics.
+    private func streamEveryoneSpecialistReply(
+        multiConsultationId: UUID,
+        specialist: AstrologySpecialist,
         request: ExpertAstrologerReplyService.Request
-    ) async throws -> String {
+    ) async -> EveryoneSpecialistResult {
+        let startedAt = Date()
+        func applyPartial(_ text: String) {
+            setEveryoneResponsePartial(
+                multiConsultationId: multiConsultationId,
+                specialistId: specialist.id,
+                text: text
+            )
+        }
+        do {
+            let outcome = try await generateExpertAstrologerReply(request: request) { applyPartial($0) }
+            return EveryoneSpecialistResult(
+                specialistId: specialist.id,
+                response: outcome.text,
+                errorMessage: nil,
+                latencyMs: Int(Date().timeIntervalSince(startedAt) * 1000),
+                usageEventId: outcome.usageEventId
+            )
+        } catch {
+            return EveryoneSpecialistResult(
+                specialistId: specialist.id,
+                response: nil,
+                errorMessage: Self.specialistFailureMessage(for: specialist, error: error),
+                latencyMs: Int(Date().timeIntervalSince(startedAt) * 1000),
+                usageEventId: nil
+            )
+        }
+    }
+
+    /// Updates only the in-memory streamed text for an Everyone card. The final
+    /// value is persisted and synced once on completion via `updateEveryoneResponse`.
+    private func setEveryoneResponsePartial(
+        multiConsultationId: UUID,
+        specialistId: String,
+        text: String
+    ) {
+        guard let index = specialistConsultationResponses.firstIndex(where: {
+            $0.multiConsultationId == multiConsultationId && $0.specialistId == specialistId
+        }) else { return }
+        specialistConsultationResponses[index].specialistResponse = text
+        specialistConsultationResponses[index].errorMessage = nil
+    }
+
+    private func usageEventParams(_ usageEventId: UUID?) -> [String: String] {
+        guard let usageEventId else { return [:] }
+        return ["usageEventId": usageEventId.uuidString]
+    }
+
+    /// Generates an expert reply, streaming when enabled. `onPartial` receives
+    /// the cumulative assistant text on each delta (called on the main actor).
+    /// Falls back to the JSON request when streaming is disabled, unavailable,
+    /// or fails before the first token; a mid-stream failure surfaces as an error.
+    private func generateExpertAstrologerReply(
+        request: ExpertAstrologerReplyService.Request,
+        onPartial: (String) -> Void = { _ in }
+    ) async throws -> ExpertAstrologerReplyOutcome {
         #if DEBUG
         if isDebugPreviewStateActive {
             if shouldForceExpertAstrologerPreviewFailure(for: request.specialistId) {
                 throw ExpertAstrologerError.generationFailed
             }
-            try? await Task.sleep(for: .milliseconds(expertAstrologerPreviewDelayMs()))
-            return ExpertAstrologerReplyService.localFallback(for: request)
+            let text = ExpertAstrologerReplyService.localFallback(for: request)
+            await simulateStreamedExpertPreview(text, onPartial: onPartial)
+            return ExpertAstrologerReplyOutcome(text: text, usageEventId: nil)
         }
         #endif
 
         guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply else {
-            return ExpertAstrologerReplyService.localFallback(for: request)
+            return ExpertAstrologerReplyOutcome(
+                text: ExpertAstrologerReplyService.localFallback(for: request),
+                usageEventId: nil
+            )
         }
         guard ExpertAstrologerRegistry.specialist(id: request.specialistId) != nil else {
             throw ExpertAstrologerError.missingSpecialist
+        }
+
+        if AppConfig.expertAstrologerStreamingEnabled {
+            var accumulated = ""
+            var sawDelta = false
+            var metaUsageEventId: UUID?
+            do {
+                let stream = supabase.streamExpertAstrologerReply(
+                    request: request,
+                    maxTokens: ExpertAstrologerReplyService.replyMaxTokens
+                )
+                for try await event in stream {
+                    switch event {
+                    case let .meta(usageEventId, _, _):
+                        metaUsageEventId = usageEventId
+                    case let .delta(chunk):
+                        sawDelta = true
+                        accumulated += chunk
+                        onPartial(accumulated)
+                    case let .done(text, usageEventId):
+                        let final = text.isEmpty ? accumulated : text
+                        if !final.isEmpty { onPartial(final) }
+                        return ExpertAstrologerReplyOutcome(
+                            text: final,
+                            usageEventId: usageEventId ?? metaUsageEventId
+                        )
+                    case let .error(_, message):
+                        if sawDelta {
+                            throw SupabaseServiceError.functionFailed(message)
+                        }
+                        throw ExpertAstrologerStreamFallback.unavailable
+                    }
+                }
+                // Stream closed without an explicit `done` frame.
+                if sawDelta {
+                    return ExpertAstrologerReplyOutcome(text: accumulated, usageEventId: metaUsageEventId)
+                }
+                // Nothing arrived — fall through to the JSON request.
+            } catch is ExpertAstrologerStreamFallback {
+                // Intentional fall-through to JSON.
+            } catch {
+                // A failure after streaming began is a real error; only pre-token
+                // failures are silently downgraded to the JSON fallback.
+                if sawDelta { throw error }
+            }
         }
 
         guard let response = await GuideReplyService.withTimeout(seconds: ExpertAstrologerReplyService.replyTimeout, operation: { [supabase] in
@@ -495,7 +764,7 @@ extension AppViewModel {
         }) else {
             throw ExpertAstrologerError.generationFailed
         }
-        return response
+        return ExpertAstrologerReplyOutcome(text: response, usageEventId: nil)
     }
 
     private func analyticsParams(
@@ -633,11 +902,23 @@ private enum ExpertAstrologerError: Error {
     case generationFailed
 }
 
+/// Internal signal that streaming could not start (no tokens received), so the
+/// caller should transparently fall back to the JSON request.
+private enum ExpertAstrologerStreamFallback: Error {
+    case unavailable
+}
+
+private struct ExpertAstrologerReplyOutcome: Sendable {
+    let text: String
+    let usageEventId: UUID?
+}
+
 private struct EveryoneSpecialistResult: Sendable {
     let specialistId: String
     let response: String?
     let errorMessage: String?
     let latencyMs: Int
+    let usageEventId: UUID?
 }
 
 #if DEBUG
@@ -671,6 +952,36 @@ private extension AppViewModel {
         let raw = ProcessInfo.processInfo.environment["SIMASTRY_EXPERT_PREVIEW_DELAY_MS"]
             .flatMap(Int.init) ?? 450
         return min(max(raw, 0), 5_000)
+    }
+
+    /// Replays the local fallback as incremental chunks so preview/UI-test runs
+    /// exercise the same incremental-render path as live SSE, within the
+    /// existing preview delay budget.
+    func simulateStreamedExpertPreview(_ text: String, onPartial: (String) -> Void) async {
+        let chunks = Self.previewStreamChunks(text)
+        guard !chunks.isEmpty else { return }
+        let perChunkMs = max(1, expertAstrologerPreviewDelayMs() / chunks.count)
+        var accumulated = ""
+        for chunk in chunks {
+            try? await Task.sleep(for: .milliseconds(perChunkMs))
+            if Task.isCancelled { return }
+            accumulated += chunk
+            onPartial(accumulated)
+        }
+    }
+
+    static func previewStreamChunks(_ text: String, maxChunks: Int = 14) -> [String] {
+        guard !text.isEmpty else { return [] }
+        let characters = Array(text)
+        let chunkSize = max(1, Int(ceil(Double(characters.count) / Double(maxChunks))))
+        var chunks: [String] = []
+        var index = 0
+        while index < characters.count {
+            let upper = min(index + chunkSize, characters.count)
+            chunks.append(String(characters[index..<upper]))
+            index = upper
+        }
+        return chunks
     }
 }
 #endif

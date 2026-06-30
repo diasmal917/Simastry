@@ -36,7 +36,7 @@ nonisolated struct SpecialistMessage: Identifiable, Codable, Equatable, Sendable
     let conversationId: UUID
     let specialistId: String
     let role: SpecialistMessageRole
-    let content: String
+    var content: String
     let timestamp: Date
     let mode: ExpertAstrologerMode
     let multiConsultationId: UUID?
@@ -283,6 +283,89 @@ nonisolated struct ExpertAstrologerConsultationResponseRecord: Identifiable, Cod
             mode: mode,
             profileContextSummary: profileContextSummary
         )
+    }
+}
+
+/// One row of `public.expert_astrology_intake`. Birth date/time are stored as
+/// wall-clock strings (`yyyy-MM-dd` / `HH:mm:ss`) and the tradition data holds
+/// only the whitelisted, user-supplied fields — never app-calculated values.
+/// Encoding always emits every column so an upsert is a full snapshot (clearing
+/// a field writes SQL null rather than silently preserving the old value).
+nonisolated struct ExpertAstrologyIntakeRecord: Codable, Equatable, Sendable {
+    var userId: UUID
+    var birthDate: String?
+    var birthTime: String?
+    var birthTimeUnknown: Bool
+    var birthPlace: String?
+    var partnerBirthDate: String?
+    var partnerBirthTime: String?
+    var partnerBirthTimeUnknown: Bool
+    var partnerBirthPlace: String?
+    var userSuppliedTraditionData: [String: String]
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case birthDate = "birth_date"
+        case birthTime = "birth_time"
+        case birthTimeUnknown = "birth_time_unknown"
+        case birthPlace = "birth_place"
+        case partnerBirthDate = "partner_birth_date"
+        case partnerBirthTime = "partner_birth_time"
+        case partnerBirthTimeUnknown = "partner_birth_time_unknown"
+        case partnerBirthPlace = "partner_birth_place"
+        case userSuppliedTraditionData = "user_supplied_tradition_data"
+    }
+
+    init(
+        userId: UUID,
+        birthDate: String?,
+        birthTime: String?,
+        birthTimeUnknown: Bool,
+        birthPlace: String?,
+        partnerBirthDate: String?,
+        partnerBirthTime: String?,
+        partnerBirthTimeUnknown: Bool,
+        partnerBirthPlace: String?,
+        userSuppliedTraditionData: [String: String]
+    ) {
+        self.userId = userId
+        self.birthDate = birthDate
+        self.birthTime = birthTime
+        self.birthTimeUnknown = birthTimeUnknown
+        self.birthPlace = birthPlace
+        self.partnerBirthDate = partnerBirthDate
+        self.partnerBirthTime = partnerBirthTime
+        self.partnerBirthTimeUnknown = partnerBirthTimeUnknown
+        self.partnerBirthPlace = partnerBirthPlace
+        self.userSuppliedTraditionData = userSuppliedTraditionData
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        birthDate = try container.decodeIfPresent(String.self, forKey: .birthDate)
+        birthTime = try container.decodeIfPresent(String.self, forKey: .birthTime)
+        birthTimeUnknown = try container.decodeIfPresent(Bool.self, forKey: .birthTimeUnknown) ?? false
+        birthPlace = try container.decodeIfPresent(String.self, forKey: .birthPlace)
+        partnerBirthDate = try container.decodeIfPresent(String.self, forKey: .partnerBirthDate)
+        partnerBirthTime = try container.decodeIfPresent(String.self, forKey: .partnerBirthTime)
+        partnerBirthTimeUnknown = try container.decodeIfPresent(Bool.self, forKey: .partnerBirthTimeUnknown) ?? false
+        partnerBirthPlace = try container.decodeIfPresent(String.self, forKey: .partnerBirthPlace)
+        userSuppliedTraditionData = try container.decodeIfPresent([String: String].self, forKey: .userSuppliedTraditionData) ?? [:]
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(userId, forKey: .userId)
+        try container.encode(birthDate, forKey: .birthDate)
+        try container.encode(birthTime, forKey: .birthTime)
+        try container.encode(birthTimeUnknown, forKey: .birthTimeUnknown)
+        try container.encode(birthPlace, forKey: .birthPlace)
+        try container.encode(partnerBirthDate, forKey: .partnerBirthDate)
+        try container.encode(partnerBirthTime, forKey: .partnerBirthTime)
+        try container.encode(partnerBirthTimeUnknown, forKey: .partnerBirthTimeUnknown)
+        try container.encode(partnerBirthPlace, forKey: .partnerBirthPlace)
+        try container.encode(userSuppliedTraditionData, forKey: .userSuppliedTraditionData)
     }
 }
 

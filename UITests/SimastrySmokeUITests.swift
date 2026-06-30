@@ -158,6 +158,63 @@ final class SimastrySmokeUITests: XCTestCase {
         app.buttons["Done"].tap()
     }
 
+    func testExpertAstrologersIntakePersistsUserSuppliedFields() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "astrologists"])
+
+        XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 10))
+        app.buttons["expertAstrologers.chip.Love"].tap()
+
+        let mateoInfo = app.buttons["expertAstrologers.info.mateo-vedic"]
+        XCTAssertTrue(reveal(mateoInfo, maxSwipes: 4), "Expected Mateo info button")
+        mateoInfo.tap()
+
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        let addMissing = app.buttons["expertAstrologers.readiness.addMissing"]
+        XCTAssertTrue(reveal(addMissing, maxSwipes: 4), "Expected missing-info CTA")
+        addMissing.tap()
+        XCTAssertTrue(app.navigationBars["Add Missing Info"].waitForExistence(timeout: 4))
+
+        // The partner section exposes a dedicated "don't know their birth time"
+        // toggle that mirrors the user's, populating partner_birth_time_unknown.
+        let partnerUnknownTime = app.switches["expertAstrologers.addMissingInfo.partnerUnknownTime"]
+        XCTAssertTrue(reveal(partnerUnknownTime, maxSwipes: 8), "Expected partner unknown-time toggle")
+        partnerUnknownTime.tap()
+
+        // Manual tradition fields are user-supplied and must round-trip locally.
+        let nakshatra = element("expertAstrologers.addMissingInfo.field.knownVedicNakshatra")
+        XCTAssertTrue(reveal(nakshatra, maxSwipes: 8), "Expected Vedic nakshatra field")
+        nakshatra.tap()
+        nakshatra.typeText("Rohini")
+
+        app.buttons["Save"].tap()
+
+        // Back on Mateo's profile: the saved nakshatra is now labeled user-supplied.
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        XCTAssertTrue(reveal(app.staticTexts["Vedic nakshatra"], maxSwipes: 8),
+                      "Expected the saved nakshatra to appear in the readiness checklist")
+        let userSuppliedLabel = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "user-supplied, not app-calculated")
+        ).firstMatch
+        XCTAssertTrue(reveal(userSuppliedLabel, maxSwipes: 4),
+                      "Expected manual tradition fields to be labeled user-supplied")
+
+        // Reopen the intake sheet: the saved value and toggle persisted.
+        let reopen = app.buttons["expertAstrologers.readiness.addMissing"]
+        XCTAssertTrue(reveal(reopen, maxSwipes: 4), "Expected missing-info CTA to reopen")
+        reopen.tap()
+        XCTAssertTrue(app.navigationBars["Add Missing Info"].waitForExistence(timeout: 4))
+
+        let reopenedNakshatra = element("expertAstrologers.addMissingInfo.field.knownVedicNakshatra")
+        XCTAssertTrue(reveal(reopenedNakshatra, maxSwipes: 8), "Expected nakshatra field on reopen")
+        XCTAssertEqual(reopenedNakshatra.value as? String, "Rohini",
+                       "Expected the user-supplied nakshatra to persist across sheet open/close")
+
+        let reopenedPartnerUnknown = app.switches["expertAstrologers.addMissingInfo.partnerUnknownTime"]
+        XCTAssertTrue(reveal(reopenedPartnerUnknown, maxSwipes: 8), "Expected partner unknown-time toggle on reopen")
+        XCTAssertEqual(reopenedPartnerUnknown.value as? String, "1",
+                       "Expected partner unknown-time to persist across sheet open/close")
+    }
+
     func testCompareAllFiveStartsEveryoneModeFromTalk() throws {
         launchSeededApp(environment: ["SIMASTRY_EXPERT_PREVIEW_DELAY_MS": "1800"])
 

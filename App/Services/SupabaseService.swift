@@ -32,6 +32,10 @@ nonisolated enum SupabaseServiceError: LocalizedError, Sendable {
 
 nonisolated final class SupabaseService {
     static let companionReplyRequestTimeout: TimeInterval = 12
+    /// Idle timeout for SSE streaming. URLSession resets this on each received
+    /// chunk, so it bounds first-token latency and inter-token gaps, not the
+    /// total stream duration.
+    static let companionReplyStreamRequestTimeout: TimeInterval = 30
     static let zodiacsWalletLookupTimeout: TimeInterval = 16
     private static let deviceIdKey = "simastry_backend_device_id"
 
@@ -52,6 +56,12 @@ nonisolated final class SupabaseService {
     init() {
         let rawURL = AppConfig.supabaseURL
         let rawKey = AppConfig.supabaseAnonKey
+
+        #if DEBUG
+        if DebugSupabaseOverride.isActive {
+            print("[Simastry] DEBUG Supabase override active → \(rawURL)")
+        }
+        #endif
 
         guard !rawURL.isEmpty, let url = URL(string: rawURL), !rawKey.isEmpty else {
             client = nil
@@ -125,7 +135,8 @@ nonisolated final class SupabaseService {
             system: system,
             user: user,
             maxTokens: maxTokens,
-            expertAstrologerRequest: expertAstrologerRequest
+            expertAstrologerRequest: expertAstrologerRequest,
+            stream: nil
         )
         var request = URLRequest(url: url)
         request.timeoutInterval = Self.companionReplyRequestTimeout
@@ -227,6 +238,138 @@ nonisolated final class SupabaseService {
             maxTokens: maxTokens,
             expertAstrologerRequest: expertRequest
         ).text
+    }
+
+    /// Streams an expert-astrologer reply over Server-Sent Events. The caller
+    /// renders `delta` text incrementally and finalizes on `done`; `meta` and
+    /// `error` carry usage/identity and failure info respectively.
+    func streamExpertAstrologerReply(
+        request expertRequest: ExpertAstrologerReplyService.Request,
+        maxTokens: Int = 520
+    ) -> AsyncThrowingStream<CompanionReplyStreamEvent, Error> {
+        streamCompanionReply(
+            kind: .chat,
+            feature: .expertAstrologer,
+            maxTokens: maxTokens,
+            expertAstrologerRequest: expertRequest
+        )
+    }
+
+    /// POSTs to `companion-reply` with `Accept: text/event-stream` (and
+    /// `stream: true`) and yields decoded SSE frames. Only assistant `delta`
+    /// text and the `meta`/`done`/`error` envelopes are surfaced — never raw
+    /// prompts, hidden reasoning, or provider metadata.
+    func streamCompanionReply(
+        kind: CompanionReplyKind,
+        feature: CompanionReplyFeature,
+        maxTokens: Int,
+        system: String? = nil,
+        user: String? = nil,
+        expertAstrologerRequest: ExpertAstrologerReplyService.Request? = nil
+    ) -> AsyncThrowingStream<CompanionReplyStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let client = try configuredClient()
+                    guard let session = client.auth.currentSession else {
+                        throw SupabaseServiceError.missingSession
+                    }
+                    guard let url = URL(string: "\(AppConfig.supabaseURL)/functions/v1/companion-reply") else {
+                        throw SupabaseServiceError.notConfigured
+                    }
+
+                    let payload = CompanionReplyPayload(
+                        kind: kind.rawValue,
+                        feature: feature.rawValue,
+                        system: system,
+                        user: user,
+                        maxTokens: maxTokens,
+                        expertAstrologerRequest: expertAstrologerRequest,
+                        stream: true
+                    )
+                    var request = URLRequest(url: url)
+                    request.timeoutInterval = Self.companionReplyStreamRequestTimeout
+                    request.httpMethod = "POST"
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+                    request.setValue(AppConfig.supabaseAnonKey, forHTTPHeaderField: "apikey")
+                    request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+                    request.setValue(Self.backendDeviceId, forHTTPHeaderField: "X-Simastry-Device-Id")
+                    request.httpBody = try JSONEncoder().encode(payload)
+
+                    let (bytes, response) = try await URLSession.shared.bytes(for: request)
+                    guard let http = response as? HTTPURLResponse else {
+                        throw SupabaseServiceError.invalidFunctionResponse
+                    }
+                    guard (200..<300).contains(http.statusCode) else {
+                        if http.statusCode == 429 {
+                            throw SupabaseServiceError.aiUsageLimit("You have reached today's AI guide limit.")
+                        }
+                        throw SupabaseServiceError.functionFailed(
+                            "The expert is unavailable right now. Please try again."
+                        )
+                    }
+
+                    var eventName = ""
+                    var dataLines: [String] = []
+                    func flush() {
+                        defer { eventName = ""; dataLines = [] }
+                        guard !dataLines.isEmpty else { return }
+                        if let event = Self.parseSSE(event: eventName, data: dataLines.joined(separator: "\n")) {
+                            continuation.yield(event)
+                        }
+                    }
+
+                    for try await line in bytes.lines {
+                        if Task.isCancelled { break }
+                        if line.isEmpty {
+                            flush()
+                        } else if line.hasPrefix(":") {
+                            continue // SSE comment / keep-alive
+                        } else if line.hasPrefix("event:") {
+                            eventName = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                        } else if line.hasPrefix("data:") {
+                            var value = String(line.dropFirst(5))
+                            if value.hasPrefix(" ") { value.removeFirst() }
+                            dataLines.append(value)
+                        }
+                    }
+                    flush() // emit a trailing frame that had no blank-line terminator
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func parseSSE(event: String, data: String) -> CompanionReplyStreamEvent? {
+        guard let payload = data.data(using: .utf8) else { return nil }
+        let decoder = JSONDecoder()
+        switch event {
+        case "meta":
+            let frame = try? decoder.decode(SSEMetaFrame.self, from: payload)
+            return .meta(
+                usageEventId: frame?.usageEventId,
+                specialistId: frame?.specialistId,
+                mode: frame?.mode
+            )
+        case "delta":
+            guard let frame = try? decoder.decode(SSEDeltaFrame.self, from: payload) else { return nil }
+            return .delta(frame.text)
+        case "done":
+            let frame = try? decoder.decode(SSEDoneFrame.self, from: payload)
+            return .done(text: frame?.text ?? "", usageEventId: frame?.usageEventId)
+        case "error":
+            let frame = try? decoder.decode(SSEErrorFrame.self, from: payload)
+            return .error(
+                code: frame?.code,
+                message: frame?.message ?? "The expert is unavailable right now. Please try again."
+            )
+        default:
+            return nil
+        }
     }
 
     func signInWithApple(idToken: String) async throws {
@@ -419,6 +562,42 @@ nonisolated final class SupabaseService {
         try await client.from("expert_astrologer_consultation_responses").upsert(records).execute()
     }
 
+    // MARK: - Expert Astrology Intake
+
+    /// Loads the signed-in user's single intake row, if any. RLS limits the
+    /// result to the current user.
+    func fetchExpertAstrologyIntake() async throws -> ExpertAstrologyIntakeRecord? {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return nil }
+        let rows: [ExpertAstrologyIntakeRecord] = try await client
+            .from("expert_astrology_intake")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// Upserts the user's intake snapshot. The backend reads this row to hydrate
+    /// expert-astrologer prompts.
+    func upsertExpertAstrologyIntake(_ record: ExpertAstrologyIntakeRecord) async throws {
+        let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: record.userId)
+        try await client
+            .from("expert_astrology_intake")
+            .upsert(record, onConflict: "user_id")
+            .execute()
+    }
+
+    func deleteExpertAstrologyIntake(for userId: String) async throws {
+        let client = try configuredClient()
+        try await client.from("expert_astrology_intake")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
     func fetchProfile() async throws -> UserProfile? {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
@@ -506,6 +685,10 @@ nonisolated final class SupabaseService {
 
     func deleteExpertAstrologerData(for userId: String) async throws {
         let client = try configuredClient()
+        try await client.from("expert_astrology_intake")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
         try await client.from("expert_astrologer_consultation_responses")
             .delete()
             .eq("user_id", value: userId)
@@ -948,11 +1131,43 @@ nonisolated struct CompanionReplyPayload: Encodable, Sendable {
     let user: String?
     let maxTokens: Int
     let expertAstrologerRequest: ExpertAstrologerReplyService.Request?
+    /// Opts the request into SSE streaming. Omitted (nil) for plain JSON calls,
+    /// so existing non-streaming payloads encode exactly as before.
+    let stream: Bool?
 }
 
 nonisolated struct CompanionReplyResult: Equatable, Sendable {
     let text: String
     let usageEventId: UUID?
+}
+
+/// A decoded Server-Sent Event from `companion-reply`. Carries only assistant
+/// text and the surrounding envelope — never chain-of-thought or provider data.
+nonisolated enum CompanionReplyStreamEvent: Equatable, Sendable {
+    case meta(usageEventId: UUID?, specialistId: String?, mode: String?)
+    case delta(String)
+    case done(text: String, usageEventId: UUID?)
+    case error(code: String?, message: String)
+}
+
+private struct SSEMetaFrame: Decodable {
+    let usageEventId: UUID?
+    let specialistId: String?
+    let mode: String?
+}
+
+private struct SSEDeltaFrame: Decodable {
+    let text: String
+}
+
+private struct SSEDoneFrame: Decodable {
+    let text: String?
+    let usageEventId: UUID?
+}
+
+private struct SSEErrorFrame: Decodable {
+    let code: String?
+    let message: String?
 }
 
 nonisolated struct CompanionReplyResponse: Decodable, Sendable {

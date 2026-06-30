@@ -4,8 +4,24 @@ nonisolated enum AppConfig {
     static let projectID = "veufwogjdfwjxweftfws"
     static let revenueCatAPIKey = ""
     static let predictionAPIBaseURL = infoValue("SimastryPredictionAPIBaseURL")
-    static let supabaseAnonKey = "sb_publishable_xB_035Vop01OlsW19lWx4A_2sWlSMrT"
-    static let supabaseURL = "https://veufwogjdfwjxweftfws.supabase.co"
+    /// Production Supabase project. In DEBUG these resolve a local override (see
+    /// `DebugSupabaseOverride`) for integration testing; release builds and the
+    /// unmodified production defaults are never affected.
+    static var supabaseAnonKey: String {
+        #if DEBUG
+        if let override = DebugSupabaseOverride.anonKey { return override }
+        #endif
+        return productionSupabaseAnonKey
+    }
+    static var supabaseURL: String {
+        #if DEBUG
+        if let override = DebugSupabaseOverride.url { return override }
+        #endif
+        return productionSupabaseURL
+    }
+
+    private static let productionSupabaseAnonKey = "sb_publishable_xB_035Vop01OlsW19lWx4A_2sWlSMrT"
+    private static let productionSupabaseURL = "https://veufwogjdfwjxweftfws.supabase.co"
     static let teamID = "A6PP462J72"
     static let toolkitURL = ""
     static let telemetryDeckAppID = ""
@@ -23,6 +39,10 @@ nonisolated enum AppConfig {
     static let socialDiscoveryEnabled = true
     static let llmChatEnabled = true
     static let roomGuideReplyEnabled = false
+    /// When true, expert-astrologer replies stream over SSE and render
+    /// incrementally; the JSON request remains the fallback if streaming is
+    /// unavailable or fails before the first token.
+    static let expertAstrologerStreamingEnabled = true
     static var expertAstrologersEnabled: Bool {
         !ProcessInfo.processInfo.arguments.contains("-SimastryLegacyGuides")
     }
@@ -49,3 +69,50 @@ nonisolated enum AppConfig {
         Bundle.main.object(forInfoDictionaryKey: key) as? String ?? ""
     }
 }
+
+#if DEBUG
+/// DEBUG-only Supabase backend override for local integration testing against a
+/// `supabase start` stack. It is never compiled into release builds, so
+/// production always targets the remote project. Enable either:
+///
+///   • Launch argument `-SimastryUseLocalSupabase`
+///       → URL `http://127.0.0.1:54321` + the standard local anon key.
+///   • Environment variables (take precedence; use for a non-default key/port):
+///       `SIMASTRY_SUPABASE_URL_OVERRIDE`
+///       `SIMASTRY_SUPABASE_ANON_KEY_OVERRIDE`
+///
+/// Example: run the app (or `xcodebuild test`) with `-SimastryUseLocalSupabase`,
+/// or set `SIMASTRY_SUPABASE_URL_OVERRIDE=http://127.0.0.1:54321`.
+enum DebugSupabaseOverride {
+    static let localURL = "http://127.0.0.1:54321"
+
+    /// The anon key `supabase start` mints for local stacks (identical across
+    /// local instances). Override with the env var if your CLI prints another.
+    static let localAnonKey =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+
+    static var url: String? {
+        let environment = ProcessInfo.processInfo.environment
+        if let value = environment["SIMASTRY_SUPABASE_URL_OVERRIDE"], !value.isEmpty {
+            return value
+        }
+        if ProcessInfo.processInfo.arguments.contains("-SimastryUseLocalSupabase") {
+            return localURL
+        }
+        return nil
+    }
+
+    /// Resolved only when a URL override is active, so the anon key always
+    /// matches the backend being targeted.
+    static var anonKey: String? {
+        guard url != nil else { return nil }
+        let environment = ProcessInfo.processInfo.environment
+        if let value = environment["SIMASTRY_SUPABASE_ANON_KEY_OVERRIDE"], !value.isEmpty {
+            return value
+        }
+        return localAnonKey
+    }
+
+    static var isActive: Bool { url != nil }
+}
+#endif

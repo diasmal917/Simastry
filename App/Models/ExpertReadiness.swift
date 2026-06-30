@@ -257,6 +257,7 @@ nonisolated struct ExpertManualAstrologyData: Codable, Equatable, Sendable {
     var partnerBirthDate: Date?
     var partnerBirthTime: Date?
     var partnerBirthPlace: String = ""
+    var partnerDoesNotKnowBirthTime: Bool = false
     var knownVedicNakshatra: String = ""
     var knownSiderealMoonRashi: String = ""
     var knownBaziDayMaster: String = ""
@@ -296,6 +297,9 @@ nonisolated struct ExpertManualAstrologyData: Codable, Equatable, Sendable {
         if userDoesNotKnowBirthTime {
             values["userBirthTimeStatus"] = "User says they do not know their birth time."
         }
+        if partnerDoesNotKnowBirthTime {
+            values["partnerBirthTimeStatus"] = "User says they do not know the partner/person birth time."
+        }
         if partnerBirthDateAvailable {
             values["partnerBirthDate"] = "User supplied partner/person birth date availability."
         }
@@ -306,6 +310,43 @@ nonisolated struct ExpertManualAstrologyData: Codable, Equatable, Sendable {
             values["partnerBirthPlace"] = "User supplied partner/person birth place availability."
         }
         return values
+    }
+
+    /// Manual tradition fields keyed by the backend intake whitelist
+    /// (`public.expert_astrology_intake.user_supplied_tradition_data`). Only
+    /// user-typed values are included — never app-calculated placements — and
+    /// only non-empty entries are sent.
+    var intakeTraditionData: [String: String] {
+        var values: [String: String] = [:]
+        Self.add(&values, key: "vedic.nakshatra", value: knownVedicNakshatra)
+        Self.add(&values, key: "vedic.siderealMoonRashi", value: knownSiderealMoonRashi)
+        Self.add(&values, key: "bazi.dayMaster", value: knownBaziDayMaster)
+        Self.add(&values, key: "bazi.fourPillars", value: knownFourPillars)
+        Self.add(&values, key: "hellenistic.sect", value: knownHellenisticSect)
+        Self.add(&values, key: "hellenistic.profectionYear", value: knownProfectionYear)
+        Self.add(&values, key: "evolutionary.relationshipPatternNotes", value: relationshipPatternNotes)
+        Self.add(&values, key: "evolutionary.reflectionPrompts", value: reflectionPrompts)
+        return values
+    }
+
+    /// Applies whitelisted intake tradition data (dotted keys) onto the manual
+    /// fields, only filling fields that are currently empty so unsynced local
+    /// edits are never clobbered on reload.
+    mutating func applyIntakeTraditionData(_ data: [String: String]) {
+        func fill(_ keyPath: WritableKeyPath<ExpertManualAstrologyData, String>, _ key: String) {
+            guard self[keyPath: keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+            if let value = data[key]?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
+                self[keyPath: keyPath] = value
+            }
+        }
+        fill(\.knownVedicNakshatra, "vedic.nakshatra")
+        fill(\.knownSiderealMoonRashi, "vedic.siderealMoonRashi")
+        fill(\.knownBaziDayMaster, "bazi.dayMaster")
+        fill(\.knownFourPillars, "bazi.fourPillars")
+        fill(\.knownHellenisticSect, "hellenistic.sect")
+        fill(\.knownProfectionYear, "hellenistic.profectionYear")
+        fill(\.relationshipPatternNotes, "evolutionary.relationshipPatternNotes")
+        fill(\.reflectionPrompts, "evolutionary.reflectionPrompts")
     }
 
     var partnerBirthDateAvailable: Bool {
@@ -325,6 +366,28 @@ nonisolated struct ExpertManualAstrologyData: Codable, Equatable, Sendable {
         if !trimmed.isEmpty {
             values[key] = trimmed
         }
+    }
+}
+
+extension ExpertManualAstrologyData {
+    /// Tolerant decoder: any missing key falls back to its default. Adding a
+    /// field must never reset a user's already-persisted intake on upgrade.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        userDoesNotKnowBirthTime = try container.decodeIfPresent(Bool.self, forKey: .userDoesNotKnowBirthTime) ?? userDoesNotKnowBirthTime
+        partnerBirthDate = try container.decodeIfPresent(Date.self, forKey: .partnerBirthDate)
+        partnerBirthTime = try container.decodeIfPresent(Date.self, forKey: .partnerBirthTime)
+        partnerBirthPlace = try container.decodeIfPresent(String.self, forKey: .partnerBirthPlace) ?? partnerBirthPlace
+        partnerDoesNotKnowBirthTime = try container.decodeIfPresent(Bool.self, forKey: .partnerDoesNotKnowBirthTime) ?? partnerDoesNotKnowBirthTime
+        knownVedicNakshatra = try container.decodeIfPresent(String.self, forKey: .knownVedicNakshatra) ?? knownVedicNakshatra
+        knownSiderealMoonRashi = try container.decodeIfPresent(String.self, forKey: .knownSiderealMoonRashi) ?? knownSiderealMoonRashi
+        knownBaziDayMaster = try container.decodeIfPresent(String.self, forKey: .knownBaziDayMaster) ?? knownBaziDayMaster
+        knownFourPillars = try container.decodeIfPresent(String.self, forKey: .knownFourPillars) ?? knownFourPillars
+        knownHellenisticSect = try container.decodeIfPresent(String.self, forKey: .knownHellenisticSect) ?? knownHellenisticSect
+        knownProfectionYear = try container.decodeIfPresent(String.self, forKey: .knownProfectionYear) ?? knownProfectionYear
+        relationshipPatternNotes = try container.decodeIfPresent(String.self, forKey: .relationshipPatternNotes) ?? relationshipPatternNotes
+        reflectionPrompts = try container.decodeIfPresent(String.self, forKey: .reflectionPrompts) ?? reflectionPrompts
     }
 }
 
