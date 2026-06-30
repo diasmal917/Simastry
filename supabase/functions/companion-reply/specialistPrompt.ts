@@ -4,6 +4,7 @@ export type CompanionReplyPayload = {
   system?: string;
   user?: string;
   maxTokens?: number;
+  stream?: boolean;
   expertAstrologerRequest?: ExpertAstrologerRequest;
 };
 
@@ -28,6 +29,10 @@ export type UserAstrologyContext = {
   sunSign?: string;
   moonSign?: string;
   risingSign?: string;
+  birthDate?: string;
+  birthTime?: string;
+  birthTimeUnknown?: boolean;
+  birthPlace?: string;
   birthDateAvailable: boolean;
   birthTimeAvailable: boolean;
   birthPlaceAvailable: boolean;
@@ -35,6 +40,10 @@ export type UserAstrologyContext = {
   partnerSunSign?: string;
   partnerMoonSign?: string;
   partnerRisingSign?: string;
+  partnerBirthDate?: string;
+  partnerBirthTime?: string;
+  partnerBirthTimeUnknown?: boolean;
+  partnerBirthPlace?: string;
   partnerBirthDateAvailable: boolean;
   partnerBirthTimeAvailable: boolean;
   partnerBirthPlaceAvailable: boolean;
@@ -314,6 +323,24 @@ export function summarizeProfileContext(context?: UserAstrologyContext): string 
     context.partnerRisingSign ? `Rising ${context.partnerRisingSign}` : undefined,
   ].filter(Boolean);
   if (partnerPlacements.length > 0) lines.push(`Partner/person placements: ${partnerPlacements.join(", ")}`);
+  const userSuppliedBirth = [
+    context.birthDate ? `date ${context.birthDate}` : undefined,
+    context.birthTime ? `time ${context.birthTime}` : undefined,
+    context.birthTimeUnknown ? "time marked unknown by user" : undefined,
+    context.birthPlace ? `place ${context.birthPlace}` : undefined,
+  ].filter(Boolean);
+  if (userSuppliedBirth.length > 0) {
+    lines.push(`User-supplied birth details: ${userSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated chart data.`);
+  }
+  const partnerSuppliedBirth = [
+    context.partnerBirthDate ? `date ${context.partnerBirthDate}` : undefined,
+    context.partnerBirthTime ? `time ${context.partnerBirthTime}` : undefined,
+    context.partnerBirthTimeUnknown ? "time marked unknown by user" : undefined,
+    context.partnerBirthPlace ? `place ${context.partnerBirthPlace}` : undefined,
+  ].filter(Boolean);
+  if (partnerSuppliedBirth.length > 0) {
+    lines.push(`Partner/person user-supplied birth details: ${partnerSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated compatibility data.`);
+  }
   lines.push(`Birth data: user date ${availability(context.birthDateAvailable)}, time ${availability(context.birthTimeAvailable)}, place ${availability(context.birthPlaceAvailable)}`);
   if (context.partnerName) {
     lines.push(`Partner birth data: date ${availability(context.partnerBirthDateAvailable)}, time ${availability(context.partnerBirthTimeAvailable)}, place ${availability(context.partnerBirthPlaceAvailable)}`);

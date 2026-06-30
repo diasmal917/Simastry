@@ -1,8 +1,16 @@
+import { mergeExpertAstrologyIntake, type ExpertAstrologyIntakeRow } from "./intake.ts";
 import { buildPrompt, normalizedSpecialistId, type CompanionReplyPayload } from "./specialistPrompt.ts";
+import {
+  anthropicErrorFromSseBlock,
+  anthropicTextDeltaFromSseBlock,
+  encodeSseEvent,
+  shouldStreamReply,
+  streamHeaders,
+} from "./streaming.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-simastry-device-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept, x-simastry-device-id",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -55,10 +63,13 @@ const deviceUsageLimits: UsageLimit[] = [
   },
 ];
 
-Deno.serve(async (request: Request): Promise<Response> => {
+Deno.serve(handleCompanionReply);
+
+export async function handleCompanionReply(request: Request): Promise<Response> {
   const startedAt = Date.now();
   let payload: CompanionReplyPayload | undefined;
   let usageEvent: UsageEvent | undefined;
+  let streamingRequested = shouldStreamReply(request);
 
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -72,13 +83,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const user = await authenticateRequest(request);
     const deviceId = normalizedDeviceId(request.headers.get("x-simastry-device-id"));
     payload = await readPayload(request);
+    streamingRequested = shouldStreamReply(request, payload);
     validatePayload(payload);
     payload = normalizePayload(payload);
 
-    const requestCharacters = estimateRequestCharacters(payload);
+    const preHydrationRequestCharacters = estimateRequestCharacters(payload);
     const limit = await firstUsageLimitExceeded(user.id, deviceId);
     if (limit) {
-      await insertLimitedUsageEvent(user.id, deviceId, payload, requestCharacters, limit.label);
+      await insertLimitedUsageEvent(user.id, deviceId, payload, preHydrationRequestCharacters, limit.label);
       logReplyEvent("companion_reply_limited", payload, startedAt, {
         userId: user.id,
         deviceId,
@@ -92,6 +104,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }, 429);
     }
 
+    payload = await hydrateExpertAstrologyIntake(user.id, payload);
+    const requestCharacters = estimateRequestCharacters(payload);
     usageEvent = await insertUsageEvent(user.id, deviceId, payload, requestCharacters);
     logReplyEvent("companion_reply_started", payload, startedAt, {
       userId: user.id,
@@ -100,6 +114,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
     });
 
     const prompt = buildPrompt(payload);
+    if (streamingRequested) {
+      return streamCompanionReply({
+        prompt,
+        payload,
+        usageEvent,
+        startedAt,
+        userId: user.id,
+        deviceId,
+      });
+    }
+
     const text = await callAnthropic(prompt.system, prompt.user, payload.maxTokens ?? 512);
     await safeUpdateUsageEvent(usageEvent.id, "success", text.length);
     logReplyEvent("companion_reply_completed", payload, startedAt, {
@@ -118,6 +143,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
       errorCode: companionError.code,
       status: companionError.status,
     });
+    if (streamingRequested) {
+      return streamErrorResponse(companionError, companionError.status);
+    }
     return jsonResponse({
       error: {
         code: companionError.code,
@@ -125,7 +153,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       },
     }, companionError.status);
   }
-});
+}
 
 async function readPayload(request: Request): Promise<CompanionReplyPayload> {
   const contentLength = request.headers.get("content-length");
@@ -172,6 +200,10 @@ function validatePayload(payload: CompanionReplyPayload) {
     throw new CompanionReplyError("invalid_payload", "The AI request is missing.", 400);
   }
 
+  if (payload.stream !== undefined && typeof payload.stream !== "boolean") {
+    throw new CompanionReplyError("invalid_payload", "The stream flag is invalid.", 400);
+  }
+
   if (payload.maxTokens !== undefined && (!Number.isFinite(payload.maxTokens) || payload.maxTokens < 1)) {
     throw new CompanionReplyError("invalid_payload", "The max token request is invalid.", 400);
   }
@@ -213,6 +245,7 @@ function normalizePayload(payload: CompanionReplyPayload): CompanionReplyPayload
   if (!specialistId) return payload;
   return {
     ...payload,
+    stream: payload.stream === true ? true : undefined,
     expertAstrologerRequest: {
       ...expert,
       specialistId,
@@ -241,6 +274,49 @@ function validateText(field: string, value: unknown, min: number, max: number) {
   }
   if (length > max) {
     throw new CompanionReplyError("payload_too_large", `${field} is too long.`, 413);
+  }
+}
+
+async function hydrateExpertAstrologyIntake(
+  userId: string,
+  payload: CompanionReplyPayload,
+): Promise<CompanionReplyPayload> {
+  if (payload.feature !== "expert_astrologer" || !payload.expertAstrologerRequest) {
+    return payload;
+  }
+
+  const intake = await fetchExpertAstrologyIntake(userId);
+  return mergeExpertAstrologyIntake(payload, intake);
+}
+
+async function fetchExpertAstrologyIntake(userId: string): Promise<ExpertAstrologyIntakeRow | undefined> {
+  const url = new URL(`${requiredEnv("SUPABASE_URL")}/rest/v1/expert_astrology_intake`);
+  url.searchParams.set(
+    "select",
+    [
+      "birth_date",
+      "birth_time",
+      "birth_time_unknown",
+      "birth_place",
+      "partner_birth_date",
+      "partner_birth_time",
+      "partner_birth_time_unknown",
+      "partner_birth_place",
+      "user_supplied_tradition_data",
+    ].join(","),
+  );
+  url.searchParams.set("user_id", `eq.${userId}`);
+  url.searchParams.set("limit", "1");
+
+  try {
+    const rows = await supabaseRest<ExpertAstrologyIntakeRow[]>(url, { method: "GET" });
+    return rows[0];
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "expert_astrology_intake_fetch_failed",
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return undefined;
   }
 }
 
@@ -425,6 +501,73 @@ async function safeUpdateUsageEvent(
   }
 }
 
+type StreamCompanionReplyArgs = {
+  prompt: { system: string; user: string };
+  payload: CompanionReplyPayload;
+  usageEvent: UsageEvent;
+  startedAt: number;
+  userId: string;
+  deviceId: string | null;
+};
+
+function streamCompanionReply(args: StreamCompanionReplyArgs): Response {
+  const abortController = new AbortController();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const write = (event: "meta" | "delta" | "done" | "error", data: unknown) => {
+        controller.enqueue(encodeSseEvent(event, data));
+      };
+
+      write("meta", {
+        usageEventId: args.usageEvent.id,
+        specialistId: args.payload.expertAstrologerRequest?.specialistId ?? null,
+        mode: args.payload.expertAstrologerRequest?.mode ?? null,
+      });
+
+      try {
+        const text = await callAnthropicStream(
+          args.prompt.system,
+          args.prompt.user,
+          args.payload.maxTokens ?? 512,
+          (delta) => write("delta", { text: delta }),
+          abortController.signal,
+        );
+        await safeUpdateUsageEvent(args.usageEvent.id, "success", text.length);
+        logReplyEvent("companion_reply_completed", args.payload, args.startedAt, {
+          userId: args.userId,
+          deviceId: args.deviceId,
+          usageEventId: args.usageEvent.id,
+          responseCharacters: text.length,
+          streamed: true,
+        });
+        write("done", { text, usageEventId: args.usageEvent.id });
+      } catch (error) {
+        const companionError = toCompanionReplyError(error);
+        await safeUpdateUsageEvent(args.usageEvent.id, "failed", 0, companionError.code);
+        logReplyEvent("companion_reply_failed", args.payload, args.startedAt, {
+          errorCode: companionError.code,
+          status: companionError.status,
+          streamed: true,
+        });
+        write("error", {
+          code: companionError.code,
+          message: companionError.message,
+        });
+      } finally {
+        controller.close();
+      }
+    },
+    cancel() {
+      abortController.abort();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: streamHeaders(corsHeaders),
+  });
+}
+
 type SupabaseRestInit = {
   method: string;
   headers?: Record<string, string>;
@@ -499,6 +642,95 @@ async function callAnthropic(system: string, user: string, maxTokens: number): P
     throw new CompanionReplyError("provider_format", "The AI specialist answered in an unexpected format.", 502);
   }
   return text;
+}
+
+async function callAnthropicStream(
+  system: string,
+  user: string,
+  maxTokens: number,
+  onDelta: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const apiKey = requiredEnv("ANTHROPIC_API_KEY");
+  const model = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-4-6";
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    signal,
+    body: JSON.stringify({
+      model,
+      max_tokens: clampMaxTokens(maxTokens),
+      system,
+      stream: true,
+      messages: [{ role: "user", content: user }],
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error(JSON.stringify({
+      event: "anthropic_stream_request_failed",
+      status: response.status,
+      bodyExcerpt: detail.slice(0, 800),
+    }));
+    throw new CompanionReplyError("provider_unavailable", "The AI specialist is unavailable right now. Please try again.", 502);
+  }
+
+  if (!response.body) {
+    throw new CompanionReplyError("provider_format", "The AI specialist answered in an unexpected format.", 502);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let fullText = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    buffer = buffer.replace(/\r\n/g, "\n");
+
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const providerError = anthropicErrorFromSseBlock(block);
+      if (providerError) {
+        throw new CompanionReplyError("provider_unavailable", providerError.message, 502);
+      }
+      const delta = anthropicTextDeltaFromSseBlock(block);
+      if (delta) {
+        fullText += delta;
+        onDelta(delta);
+      }
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+
+  buffer += decoder.decode();
+  const tail = buffer.trim();
+  if (tail) {
+    const providerError = anthropicErrorFromSseBlock(tail);
+    if (providerError) {
+      throw new CompanionReplyError("provider_unavailable", providerError.message, 502);
+    }
+    const delta = anthropicTextDeltaFromSseBlock(tail);
+    if (delta) {
+      fullText += delta;
+      onDelta(delta);
+    }
+  }
+
+  const trimmed = fullText.trim();
+  if (!trimmed) {
+    throw new CompanionReplyError("provider_format", "The AI specialist answered in an unexpected format.", 502);
+  }
+  return trimmed;
 }
 
 function logReplyEvent(
@@ -581,6 +813,24 @@ function jsonResponse(body: unknown, status: number): Response {
       "Content-Type": "application/json",
     },
   });
+}
+
+function streamErrorResponse(error: CompanionReplyError, status: number): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encodeSseEvent("error", {
+          code: error.code,
+          message: error.message,
+        }));
+        controller.close();
+      },
+    }),
+    {
+      status,
+      headers: streamHeaders(corsHeaders),
+    },
+  );
 }
 
 class CompanionReplyError extends Error {
