@@ -35,6 +35,7 @@ private struct LandingCompanionWindow: Identifiable {
     let imageName: String
     let name: String
     let role: String
+    let shortBio: String
     let isHero: Bool
     let widthRatio: CGFloat
     let heightRatio: CGFloat
@@ -50,6 +51,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         imageName: "Factory_sagittarius-nadia_profile",
         name: "Nadia",
         role: "Evolutionary Astrologer",
+        shortBio: "Healing, shadow work, and emotional growth.",
         isHero: true,
         widthRatio: 0.49,
         heightRatio: 0.74,
@@ -63,6 +65,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         imageName: "Factory_virgo-mara_profile",
         name: "Leyla",
         role: "Western Astrologer",
+        shortBio: "Love, identity, compatibility, and timing.",
         isHero: false,
         widthRatio: 0.34,
         heightRatio: 0.47,
@@ -76,6 +79,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         imageName: "Factory_capricorn-naomi_profile",
         name: "Naomi",
         role: "Chinese Astrologer",
+        shortBio: "Five Elements, life cycles, and strategy.",
         isHero: false,
         widthRatio: 0.31,
         heightRatio: 0.47,
@@ -89,6 +93,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         imageName: "Factory_libra-mateo_profile",
         name: "Mateo",
         role: "Vedic Astrologer",
+        shortBio: "Karma, timing, dharma, and spiritual patterns.",
         isHero: false,
         widthRatio: 0.31,
         heightRatio: 0.47,
@@ -102,6 +107,7 @@ private let landingCompanionWindows: [LandingCompanionWindow] = [
         imageName: "Factory_aries-cassian_profile",
         name: "Soren",
         role: "Ancient Astrologer",
+        shortBio: "Classical prediction, fate, and life chapters.",
         isHero: false,
         widthRatio: 0.31,
         heightRatio: 0.47,
@@ -159,6 +165,12 @@ struct LandingView: View {
     @State private var readingTimer: Timer?
     @State private var motionManager: CMMotionManager = CMMotionManager()
     @State private var selectedSlideID: Int = LandingView.initialSlideID()
+    @State private var featuredExpertIndex: Int = 0
+    @State private var featuredExpertTimer: Timer?
+    // slotOfExpert[i] = the layout slot expert i occupies (0 = center hero,
+    // 1...4 = the four corners). Rotating swaps the next expert into the
+    // center, so only that pair moves each cycle.
+    @State private var slotOfExpert: [Int] = [0, 1, 2, 3, 4]
 
     private var localizedLandingSlides: [LandingSlide] {
         [
@@ -274,14 +286,18 @@ struct LandingView: View {
             ZStack {
                 landingBackground(size: geo.size)
 
-                TabView(selection: $selectedSlideID) {
-                    ForEach(localizedLandingSlides) { slide in
-                        landingSlide(slide, size: geo.size, topInset: geo.safeAreaInsets.top)
-                            .tag(slide.id)
+                if AppConfig.landingUsesCinematicHero {
+                    cinematicHeroContent(size: geo.size, topInset: geo.safeAreaInsets.top)
+                } else {
+                    TabView(selection: $selectedSlideID) {
+                        ForEach(localizedLandingSlides) { slide in
+                            landingSlide(slide, size: geo.size, topInset: geo.safeAreaInsets.top)
+                                .tag(slide.id)
+                        }
                     }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(.spring(SimastrySpring.smooth), value: selectedSlideID)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.spring(SimastrySpring.smooth), value: selectedSlideID)
 
                 // Fixed wordmark — pinned above the carousel so it stays put while
                 // the slides page beneath it (each slide reserves this same band).
@@ -303,6 +319,7 @@ struct LandingView: View {
         .onAppear {
             startMotionUpdates()
             startReadingCycle()
+            startFeaturedRotation()
             withAnimation(.spring(SimastrySpring.smooth).delay(0.3)) {
                 appeared = true
             }
@@ -311,6 +328,8 @@ struct LandingView: View {
             stopMotionUpdates()
             readingTimer?.invalidate()
             readingTimer = nil
+            featuredExpertTimer?.invalidate()
+            featuredExpertTimer = nil
         }
     }
 
@@ -780,7 +799,9 @@ struct LandingView: View {
 
     private func landingActionBar(bottomInset: CGFloat) -> some View {
         VStack(spacing: 12) {
-            slideDots
+            if !AppConfig.landingUsesCinematicHero {
+                slideDots
+            }
 
             LandingPrimaryButton(title: localization.string("landing.getStarted")) {
                 beginOnboarding()
@@ -874,6 +895,154 @@ struct LandingView: View {
             .animation(.spring(SimastrySpring.smooth).delay(0.08), value: appeared)
     }
 
+    // MARK: - Cinematic single-hero landing
+
+    private func cinematicHeroContent(size: CGSize, topInset: CGFloat) -> some View {
+        let compact = size.height < 760
+        let bottomClearance: CGFloat = compact ? 198 : 224
+
+        return VStack(spacing: compact ? 12 : 16) {
+            // Reserve the band the pinned wordmark occupies (drawn in `body`).
+            wordmark
+                .padding(.top, landingTopPadding(for: size, topInset: topInset))
+                .hidden()
+
+            companionWindowArrangement(size: size)
+                .frame(height: size.height * (compact ? 0.30 : 0.33))
+
+            featuredBioCard
+
+            heroHeadline(compact: compact)
+
+            valuePillars
+
+            Spacer(minLength: bottomClearance)
+        }
+        .frame(width: size.width, height: size.height)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 18)
+        .animation(.spring(SimastrySpring.smooth).delay(0.12), value: appeared)
+    }
+
+    private var featuredBioCard: some View {
+        let expert = landingCompanionWindows[min(featuredExpertIndex, landingCompanionWindows.count - 1)]
+        return VStack(spacing: 9) {
+            VStack(spacing: 4) {
+                Text("\(expert.name) · \(expert.role)")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Text(expert.shortBio)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // Clean crossfade between experts instead of overlapping text.
+            .id(featuredExpertIndex)
+            .transition(.opacity)
+
+            HStack(spacing: 7) {
+                ForEach(landingCompanionWindows.indices, id: \.self) { i in
+                    Capsule()
+                        .fill(i == featuredExpertIndex ? SimastryColor.gold : Color.white.opacity(0.26))
+                        .frame(width: i == featuredExpertIndex ? 20 : 7, height: 7)
+                }
+            }
+            .padding(.top, 2)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .landingGlass(cornerRadius: 22)
+        .padding(.horizontal, 30)
+        .animation(.spring(SimastrySpring.smooth), value: featuredExpertIndex)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(expert.name), \(expert.role). \(expert.shortBio)")
+    }
+
+    private func heroHeadline(compact: Bool) -> some View {
+        VStack(spacing: 5) {
+            Text("Ask once. Hear five traditions.")
+                .font(.system(size: compact ? 21 : 24, weight: .bold))
+                .foregroundStyle(SimastryColor.offWhite)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Choose the read that resonates.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+        }
+        .shadow(color: .black.opacity(0.4), radius: 6, y: 3)
+        .padding(.horizontal, 28)
+    }
+
+    private var valuePillars: some View {
+        HStack(spacing: 10) {
+            heroPillar(icon: "sparkles", title: "Astrologers", subtitle: "Ask five experts")
+            heroPillar(icon: "wand.and.stars", title: "Predict", subtitle: "What's coming")
+            heroPillar(icon: "person.2.fill", title: "Your people", subtitle: "Read & reply")
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private func heroPillar(icon: String, title: String, subtitle: String) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+            Text(title)
+                .font(SimastryFont.labelMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1)
+            Text(subtitle)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 6)
+        .landingGlass(cornerRadius: 18)
+    }
+
+    /// Layout slots for the hero collage. Slot 0 is the centered, enlarged hero;
+    /// 1–4 are the four surrounding corners. (width, height, x, y, rotation),
+    /// all as ratios of the collage canvas.
+    private static let heroSlots: [(w: CGFloat, h: CGFloat, x: CGFloat, y: CGFloat, rot: Double)] = [
+        (0.48, 0.74, 0.50, 0.50, 0),
+        (0.30, 0.45, 0.165, 0.30, -2.5),
+        (0.30, 0.45, 0.835, 0.31, 2.5),
+        (0.30, 0.45, 0.175, 0.74, 2.5),
+        (0.30, 0.45, 0.825, 0.73, -2.5)
+    ]
+
+    private func startFeaturedRotation() {
+        guard AppConfig.landingUsesCinematicHero, !reduceMotion else { return }
+        featuredExpertTimer?.invalidate()
+        featuredExpertTimer = Timer.scheduledTimer(withTimeInterval: 3.4, repeats: true) { _ in
+            Task { @MainActor in advanceFeaturedExpert() }
+        }
+    }
+
+    private func advanceFeaturedExpert() {
+        let next = (featuredExpertIndex + 1) % landingCompanionWindows.count
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            // Swap the next expert into the center; whoever held the center takes
+            // the slot the next expert is vacating — so only that pair animates.
+            if let centerHolder = slotOfExpert.firstIndex(of: 0), centerHolder != next {
+                slotOfExpert[centerHolder] = slotOfExpert[next]
+                slotOfExpert[next] = 0
+            }
+            featuredExpertIndex = next
+        }
+    }
+
     // MARK: - Companion collage (Slide 5 · feature universe)
 
     private func companionWindowArrangement(size: CGSize) -> some View {
@@ -884,16 +1053,22 @@ struct LandingView: View {
                 constellationBackdrop(size: canvas)
                     .allowsHitTesting(false)
 
-                ForEach(landingCompanionWindows) { window in
-                    companionWindow(window, canvasSize: canvas)
-                        .zIndex(window.zIndex)
+                ForEach(Array(landingCompanionWindows.enumerated()), id: \.element.id) { index, window in
+                    let slotIndex = slotOfExpert.indices.contains(index) ? slotOfExpert[index] : index
+                    companionWindow(
+                        window,
+                        canvasSize: canvas,
+                        slot: Self.heroSlots[min(slotIndex, Self.heroSlots.count - 1)],
+                        isFeatured: slotIndex == 0
+                    )
+                    .zIndex(slotIndex == 0 ? 10 : 4)
                 }
             }
             .frame(width: canvas.width, height: canvas.height)
         }
         .padding(.horizontal, 12)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Featured Simastry expert astrologers: Leyla, Mateo, Naomi, Soren, and Nadia")
+        .accessibilityLabel("Five Simastry expert astrologers: Leyla, Mateo, Naomi, Soren, and Nadia")
     }
 
     private func constellationBackdrop(size: CGSize) -> some View {
@@ -925,10 +1100,15 @@ struct LandingView: View {
         }
     }
 
-    private func companionWindow(_ window: LandingCompanionWindow, canvasSize: CGSize) -> some View {
-        let width = canvasSize.width * window.widthRatio
-        let height = canvasSize.height * window.heightRatio
-        let radius: CGFloat = window.isHero ? 26 : 20
+    private func companionWindow(
+        _ window: LandingCompanionWindow,
+        canvasSize: CGSize,
+        slot: (w: CGFloat, h: CGFloat, x: CGFloat, y: CGFloat, rot: Double),
+        isFeatured: Bool
+    ) -> some View {
+        let width = canvasSize.width * slot.w
+        let height = canvasSize.height * slot.h
+        let radius: CGFloat = isFeatured ? 24 : 18
 
         return Image(window.imageName)
             .resizable()
@@ -936,73 +1116,34 @@ struct LandingView: View {
             .frame(width: width, height: height, alignment: .top)
             .clipped()
             .frame(width: width, height: height)
+            // Subtle grounding scrim only — no text; the bio card below names the
+            // featured expert, so the photos stay clean.
             .overlay(alignment: .bottom) {
-                paneScrim(window, radius: radius)
+                LinearGradient(colors: [.clear, .black.opacity(0.28)], startPoint: .center, endPoint: .bottom)
+                    .allowsHitTesting(false)
             }
             .clipShape(.rect(cornerRadius: radius))
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
-                            colors: [
-                                .white.opacity(window.isHero ? 0.30 : 0.16),
-                                .white.opacity(0.05)
-                            ],
+                            colors: [.white.opacity(isFeatured ? 0.32 : 0.16), .white.opacity(0.05)],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
-                        lineWidth: window.isHero ? 1.0 : 0.7
+                        lineWidth: isFeatured ? 1.0 : 0.7
                     )
             }
-            .shadow(color: .black.opacity(0.5), radius: 22, y: 14)
-            .shadow(color: SimastryColor.gold.opacity(window.isHero ? 0.20 : 0.06), radius: 18, y: 0)
-            .rotationEffect(.degrees(window.rotation))
-            .position(
-                x: canvasSize.width * window.xRatio,
-                y: canvasSize.height * window.yRatio
-            )
-    }
-
-    @ViewBuilder
-    private func paneScrim(_ window: LandingCompanionWindow, radius: CGFloat) -> some View {
-        let labelsTrailing = !window.isHero && window.xRatio > 0.5
-        let alignment: HorizontalAlignment = labelsTrailing ? .trailing : .leading
-
-        VStack(alignment: alignment, spacing: window.isHero ? 3 : 1) {
-            if window.isHero {
-                HStack(spacing: 4) {
-                    Image(systemName: SimastryIcon.method)
-                        .font(SimastryFont.microBold)
-                    Text("SIMASTRY METHOD")
-                        .font(SimastryFont.microBold)
-                        .tracking(0.8)
-                }
-                .foregroundStyle(SimastryColor.goldLight)
+            // Gold ring marks the centered, featured expert.
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(SimastryColor.gold, lineWidth: 1.5)
+                    .opacity(isFeatured ? 0.9 : 0)
             }
-
-            Text(window.name)
-                .font(window.isHero ? SimastryFont.titleSmall : SimastryFont.labelSmall)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-
-            Text(window.role)
-                .font(window.isHero ? SimastryFont.labelSmall : SimastryFont.captionSmall)
-                .foregroundStyle(.white.opacity(0.78))
-                .lineLimit(1)
-                .minimumScaleFactor(0.58)
-                .allowsTightening(true)
-        }
-        .frame(maxWidth: .infinity, alignment: labelsTrailing ? .trailing : .leading)
-        .padding(.horizontal, window.isHero ? 14 : 10)
-        .padding(.top, 26)
-        .padding(.bottom, window.isHero ? 12 : 8)
-        .background(
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.55), .black.opacity(0.85)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+            .shadow(color: .black.opacity(0.5), radius: 22, y: 14)
+            .shadow(color: SimastryColor.gold.opacity(isFeatured ? 0.40 : 0.05), radius: isFeatured ? 28 : 14, y: 0)
+            .rotationEffect(.degrees(slot.rot))
+            .position(x: canvasSize.width * slot.x, y: canvasSize.height * slot.y)
     }
 
     // MARK: - Shimmer Stars

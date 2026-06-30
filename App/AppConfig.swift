@@ -43,6 +43,10 @@ nonisolated enum AppConfig {
     /// incrementally; the JSON request remains the fallback if streaming is
     /// unavailable or fails before the first token.
     static let expertAstrologerStreamingEnabled = true
+    /// When true, the landing screen uses the cinematic single-hero layout
+    /// (rotating glass experts + value pillars). Flip to false to restore the
+    /// legacy paged carousel, which remains intact for that reason.
+    static let landingUsesCinematicHero = true
     static var expertAstrologersEnabled: Bool {
         !ProcessInfo.processInfo.arguments.contains("-SimastryLegacyGuides")
     }
