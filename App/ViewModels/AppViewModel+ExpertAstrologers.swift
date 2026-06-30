@@ -71,6 +71,8 @@ extension AppViewModel {
         } catch {
             CrashReporter.log(error, context: "refreshExpertAstrologyIntake")
         }
+
+        await refreshExpertChartImports()
     }
 
     // MARK: - Expert Astrology Intake
@@ -159,12 +161,12 @@ extension AppViewModel {
         }
     }
 
-    private static func formatIntakeDate(_ date: Date?) -> String? {
+    static func formatIntakeDate(_ date: Date?) -> String? {
         guard let date else { return nil }
         return intakeFormatter(format: "yyyy-MM-dd").string(from: date)
     }
 
-    private static func formatIntakeTime(_ date: Date?) -> String? {
+    static func formatIntakeTime(_ date: Date?) -> String? {
         guard let date else { return nil }
         return intakeFormatter(format: "HH:mm:ss").string(from: date)
     }
@@ -241,12 +243,14 @@ extension AppViewModel {
     func submitIndividualSpecialistMessage(
         specialistId: String,
         question: String,
-        context explicitContext: UserAstrologyContext? = nil
+        context explicitContext: UserAstrologyContext? = nil,
+        selectedPersonId: UUID? = nil
     ) async -> Bool {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         guard let specialist = ExpertAstrologerRegistry.specialist(id: specialistId) else { return false }
         guard validateGuideMessageForSend(trimmed) else { return false }
+        if let selectedPersonId { persistPersonAstrologyIntakeIfPossible(personId: selectedPersonId) }
         guard canSendMessage() else {
             showToast(
                 "Messages used up",
@@ -289,6 +293,7 @@ extension AppViewModel {
             userQuestion: trimmed,
             conversationId: conversationId,
             multiConsultationId: nil,
+            selectedPersonId: selectedPersonId,
             profileContext: context,
             transcript: specialistConversation(for: specialistId),
             readiness: readiness,
@@ -366,11 +371,13 @@ extension AppViewModel {
     func startEveryoneConsultation(
         question: String,
         multiConsultationId: UUID = UUID(),
-        context explicitContext: UserAstrologyContext? = nil
+        context explicitContext: UserAstrologyContext? = nil,
+        selectedPersonId: UUID? = nil
     ) async -> UUID? {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         guard validateGuideMessageForSend(trimmed) else { return nil }
+        if let selectedPersonId { persistPersonAstrologyIntakeIfPossible(personId: selectedPersonId) }
         guard !runningEveryoneConsultationIds.contains(multiConsultationId) else {
             return multiConsultationId
         }
@@ -414,6 +421,7 @@ extension AppViewModel {
             specialists: specialists,
             question: trimmed,
             context: context,
+            selectedPersonId: selectedPersonId,
             isRetry: false
         )
 
@@ -452,6 +460,7 @@ extension AppViewModel {
             specialists: [specialist],
             question: response.userQuestion,
             context: context,
+            selectedPersonId: nil,
             isRetry: true
         )
         return true
@@ -517,6 +526,7 @@ extension AppViewModel {
         specialists: [AstrologySpecialist],
         question: String,
         context: UserAstrologyContext,
+        selectedPersonId: UUID?,
         isRetry: Bool
     ) async {
         let specialistsToRun = specialists.filter { specialist in
@@ -568,6 +578,7 @@ extension AppViewModel {
                     userQuestion: question,
                     conversationId: nil,
                     multiConsultationId: multiConsultationId,
+                    selectedPersonId: selectedPersonId,
                     profileContext: context,
                     transcript: [],
                     readiness: readiness,

@@ -932,6 +932,7 @@ struct RelationshipPersonDetailView: View {
                 situationSection
                 simulationRoomSection
                 personaContextSection
+                ExpertChartImportSection(viewModel: viewModel, subject: .person(currentPerson))
                 PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
                 coupleReadButton
                 relationshipPatternSection

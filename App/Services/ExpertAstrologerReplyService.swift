@@ -10,6 +10,9 @@ nonisolated enum ExpertAstrologerReplyService {
         let userQuestion: String
         let conversationId: UUID?
         let multiConsultationId: UUID?
+        /// Saved person the question is about. When present, the backend reads
+        /// `expert_person_astrology_intake` + that person's latest chart import.
+        let selectedPersonId: UUID?
         let profileContext: UserAstrologyContext
         let transcript: [SpecialistMessage]
         let knownDataPoints: [String]
@@ -25,6 +28,7 @@ nonisolated enum ExpertAstrologerReplyService {
             userQuestion: String,
             conversationId: UUID?,
             multiConsultationId: UUID?,
+            selectedPersonId: UUID? = nil,
             profileContext: UserAstrologyContext,
             transcript: [SpecialistMessage],
             readiness: ExpertReadinessChecklist,
@@ -35,6 +39,7 @@ nonisolated enum ExpertAstrologerReplyService {
             self.userQuestion = userQuestion
             self.conversationId = conversationId
             self.multiConsultationId = multiConsultationId
+            self.selectedPersonId = selectedPersonId
             self.profileContext = profileContext
             self.transcript = transcript
             self.knownDataPoints = readiness.knownDataPoints

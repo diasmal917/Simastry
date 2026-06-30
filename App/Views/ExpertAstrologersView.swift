@@ -15,6 +15,7 @@ struct ExpertAstrologersView: View {
     @State private var didApplyInitialQuestion: Bool = false
     @State private var contextSelection: ExpertContextSelection = .me
     @State private var selectedConversationContext: UserAstrologyContext?
+    @State private var selectedConversationPersonId: UUID?
 
     private let suggestedQuestions = ["Love", "Relationships", "Career", "Family", "Timing", "Life Direction"]
 
@@ -98,7 +99,8 @@ struct ExpertAstrologersView: View {
                     viewModel: viewModel,
                     specialist: specialist,
                     initialQuestion: submittedQuestion,
-                    context: selectedConversationContext ?? selectedAstrologyContext
+                    context: selectedConversationContext ?? selectedAstrologyContext,
+                    selectedPersonId: selectedConversationPersonId
                 )
             }
         }
@@ -373,13 +375,16 @@ struct ExpertAstrologersView: View {
         isRunningEveryone = true
         let consultationId = UUID()
         let context = selectedAstrologyContext
+        let personId = selectedPerson?.id
         selectedConversationContext = context
+        selectedConversationPersonId = personId
         selectedConsultationId = consultationId
         Task {
             let id = await viewModel.startEveryoneConsultation(
                 question: question,
                 multiConsultationId: consultationId,
-                context: context
+                context: context,
+                selectedPersonId: personId
             )
             selectedConsultationId = id
             isRunningEveryone = false
@@ -396,6 +401,7 @@ struct ExpertAstrologersView: View {
     private func openSpecialist(_ specialist: AstrologySpecialist, question: String) {
         let context = selectedAstrologyContext
         selectedConversationContext = context
+        selectedConversationPersonId = selectedPerson?.id
         AnalyticsService.shared.track(
             .specialistSelected,
             params: [
@@ -719,6 +725,7 @@ private struct SpecialistConversationView: View {
     let specialist: AstrologySpecialist
     let initialQuestion: String?
     let context: UserAstrologyContext
+    let selectedPersonId: UUID?
 
     @State private var draft: String = ""
     @State private var hasSubmittedInitialQuestion = false
@@ -825,7 +832,8 @@ private struct SpecialistConversationView: View {
             await viewModel.submitIndividualSpecialistMessage(
                 specialistId: specialist.id,
                 question: initialQuestion,
-                context: context
+                context: context,
+                selectedPersonId: selectedPersonId
             )
         }
         .accessibilityIdentifier("expertAstrologers.conversation.\(specialist.id)")
@@ -871,7 +879,8 @@ private struct SpecialistConversationView: View {
             await viewModel.submitIndividualSpecialistMessage(
                 specialistId: specialist.id,
                 question: text,
-                context: context
+                context: context,
+                selectedPersonId: selectedPersonId
             )
         }
     }
@@ -882,7 +891,8 @@ private struct SpecialistConversationView: View {
             await viewModel.submitIndividualSpecialistMessage(
                 specialistId: specialist.id,
                 question: text,
-                context: context
+                context: context,
+                selectedPersonId: selectedPersonId
             )
         }
     }
@@ -1462,6 +1472,7 @@ private struct AddMissingAstrologyInfoSheet: View {
                     birthInfoSection
                     partnerInfoSection
                     manualTraditionSection
+                    ExpertChartImportSection(viewModel: viewModel, subject: .userSelf)
                 }
                 .padding(20)
             }

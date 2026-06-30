@@ -80,6 +80,9 @@ class AppViewModel {
             expertManualAstrologyData.save()
         }
     }
+    /// Cached chart-import rows (newest first) so the readiness/person UI can
+    /// reflect uploaded screenshots without refetching per view.
+    var expertChartImports: [ExpertChartImportRecord] = []
     #if DEBUG
     var consumedExpertAstrologerPreviewFailures: Set<String> = []
     #endif
@@ -1012,6 +1015,9 @@ class AppViewModel {
                 remoteFailures.append("expert_astrologers")
                 CrashReporter.log(error, context: "deleteAccountExpertAstrologers")
             }
+
+            // Best-effort: clear uploaded chart screenshots from private storage.
+            await supabase.deleteExpertChartImages(for: userId.uuidString)
 
             do {
                 try await supabase.deleteAvatarFiles(for: userId.uuidString)
@@ -3559,6 +3565,9 @@ extension AppViewModel {
             companionMessages = []
             savedGuides = []
             seedDebugExpertAstrologerState(now: now)
+            if arguments.contains("-SimastryPreviewSeedChartImport") {
+                seedDebugExpertChartImport(userId: userId)
+            }
         } else {
             let companion = CompanionData(
                 id: companionId,
@@ -3791,6 +3800,22 @@ extension AppViewModel {
         }
 
         return true
+    }
+
+    /// Seeds an `uploaded` self chart import so the review/confirm flow is
+    /// reachable in previews/UI tests without driving the system photo picker.
+    private func seedDebugExpertChartImport(userId: UUID) {
+        expertChartImports = [
+            ExpertChartImportRecord(
+                id: UUID(uuidString: "30000000-0000-0000-0000-000000000001") ?? UUID(),
+                userId: userId,
+                subjectType: ExpertChartSubject.userSelf.subjectType,
+                personId: nil,
+                storagePath: "\(userId.uuidString.lowercased())/self/seed.jpg",
+                status: ExpertChartImportStatus.uploaded.rawValue,
+                sourceLabel: "Uploaded chart screenshot"
+            )
+        ]
     }
 
     private func seedDebugExpertAstrologerState(now: Date) {

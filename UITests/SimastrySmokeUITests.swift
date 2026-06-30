@@ -215,6 +215,54 @@ final class SimastrySmokeUITests: XCTestCase {
                        "Expected partner unknown-time to persist across sheet open/close")
     }
 
+    func testExpertAstrologersChartScreenshotConfirmFlow() throws {
+        // Seed an uploaded chart import so the review/confirm flow is reachable
+        // without driving the out-of-process system photo picker.
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "astrologists", "-SimastryPreviewSeedChartImport"])
+
+        XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 10))
+        app.buttons["expertAstrologers.chip.Love"].tap()
+
+        let leylaInfo = app.buttons["expertAstrologers.info.leyla-western"]
+        XCTAssertTrue(reveal(leylaInfo, maxSwipes: 4), "Expected Leyla info button")
+        leylaInfo.tap()
+
+        XCTAssertTrue(app.staticTexts["Readiness checklist"].waitForExistence(timeout: 4))
+        let addMissing = app.buttons["expertAstrologers.readiness.addMissing"]
+        XCTAssertTrue(reveal(addMissing, maxSwipes: 4), "Expected missing-info CTA")
+        addMissing.tap()
+        XCTAssertTrue(app.navigationBars["Add Missing Info"].waitForExistence(timeout: 4))
+
+        // The seeded upload renders its status + Review action in the self sheet.
+        XCTAssertTrue(reveal(app.staticTexts["Screenshot uploaded"], maxSwipes: 12),
+                      "Expected the seeded chart import status in the intake sheet")
+        let reviewButton = app.buttons["Review"].firstMatch
+        XCTAssertTrue(reviewButton.waitForExistence(timeout: 2), "Expected Review affordance for the seeded chart import")
+        reviewButton.tap()
+
+        XCTAssertTrue(app.navigationBars["Confirm Chart"].waitForExistence(timeout: 4))
+        XCTAssertTrue(
+            app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS[c] %@", "user-supplied, not app-calculated")
+            ).firstMatch.waitForExistence(timeout: 4),
+            "Confirm screen must label values user-supplied, not app-calculated"
+        )
+
+        // Confirm a single whitelisted field; this writes to confirmed_data.
+        let sunField = element("expertAstrologers.chartConfirm.field.western.sunSign")
+        XCTAssertTrue(reveal(sunField, maxSwipes: 6), "Expected the whitelisted Sun-sign confirm field")
+        sunField.tap()
+        sunField.typeText("Leo")
+
+        // Both the underlying intake sheet and this one expose a nav-bar Save;
+        // scope to the Confirm Chart bar to disambiguate.
+        app.navigationBars["Confirm Chart"].buttons["Save"].tap()
+
+        // Back on the intake sheet, the import now reads as confirmed.
+        XCTAssertTrue(reveal(app.staticTexts["Chart details confirmed"], maxSwipes: 8),
+                      "Expected the import to read as confirmed after saving")
+    }
+
     func testCompareAllFiveStartsEveryoneModeFromTalk() throws {
         launchSeededApp(environment: ["SIMASTRY_EXPERT_PREVIEW_DELAY_MS": "1800"])
 

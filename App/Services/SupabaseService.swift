@@ -598,6 +598,92 @@ nonisolated final class SupabaseService {
             .execute()
     }
 
+    // MARK: - Expert Astrology Chart Imports
+
+    /// Uploads a chart screenshot to the private `expert-astrology-charts`
+    /// bucket. `path` must start with the lowercased user id (RLS + table checks).
+    func uploadExpertChartImage(data: Data, contentType: String, path: String) async throws {
+        let client = try configuredClient()
+        let bucket = client.storage.from(ExpertChartImportRecord.bucket)
+        try await bucket.upload(path, data: data, options: FileOptions(contentType: contentType, upsert: false))
+    }
+
+    func insertExpertChartImport(_ record: ExpertChartImportRecord) async throws {
+        let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: record.userId)
+        try await client.from("expert_astrology_chart_imports").insert(record).execute()
+    }
+
+    /// Moves user-confirmed fields into `confirmed_data` and flips the row to
+    /// `confirmed`. `extracted_data` is never written from the client.
+    func confirmExpertChartImport(id: UUID, confirmedData: [String: String]) async throws {
+        let client = try configuredClient()
+        let userId = try await requireCurrentUserId()
+        let payload = ExpertChartImportConfirmation(
+            confirmed_data: confirmedData,
+            status: ExpertChartImportStatus.confirmed.rawValue
+        )
+        try await client.from("expert_astrology_chart_imports")
+            .update(payload)
+            .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+    }
+
+    /// All of the user's chart imports, newest first, so the client can resolve
+    /// the latest import per subject locally in a single round-trip.
+    func fetchExpertChartImports(limit: Int = 200) async throws -> [ExpertChartImportRecord] {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return [] }
+        return try await client.from("expert_astrology_chart_imports")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .order("updated_at", ascending: false)
+            .limit(limit)
+            .execute()
+            .value
+    }
+
+    func upsertPersonAstrologyIntake(_ record: ExpertPersonAstrologyIntakeRecord) async throws {
+        let client = try configuredClient()
+        _ = try await requireCurrentUserId(matching: record.userId)
+        try await client.from("expert_person_astrology_intake")
+            .upsert(record, onConflict: "user_id,person_id")
+            .execute()
+    }
+
+    func deletePersonAstrologyIntake(personId: UUID) async throws {
+        let client = try configuredClient()
+        let userId = try await requireCurrentUserId()
+        try await client.from("expert_person_astrology_intake")
+            .delete()
+            .eq("user_id", value: userId.uuidString)
+            .eq("person_id", value: personId.uuidString)
+            .execute()
+    }
+
+    /// Best-effort removal of a user's uploaded chart screenshots. The DB rows
+    /// cascade on auth-user deletion; this clears the private storage objects too.
+    func deleteExpertChartImages(for userId: String) async {
+        guard let client = try? configuredClient() else { return }
+        let bucket = client.storage.from(ExpertChartImportRecord.bucket)
+        let owner = userId.lowercased()
+        var paths: [String] = []
+        if let selfFiles = try? await bucket.list(path: "\(owner)/self") {
+            paths += selfFiles.map { "\(owner)/self/\($0.name)" }
+        }
+        if let peopleDirs = try? await bucket.list(path: "\(owner)/people") {
+            for dir in peopleDirs {
+                if let files = try? await bucket.list(path: "\(owner)/people/\(dir.name)") {
+                    paths += files.map { "\(owner)/people/\(dir.name)/\($0.name)" }
+                }
+            }
+        }
+        if !paths.isEmpty {
+            _ = try? await bucket.remove(paths: paths)
+        }
+    }
+
     func fetchProfile() async throws -> UserProfile? {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return nil }
@@ -686,6 +772,14 @@ nonisolated final class SupabaseService {
     func deleteExpertAstrologerData(for userId: String) async throws {
         let client = try configuredClient()
         try await client.from("expert_astrology_intake")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+        try await client.from("expert_person_astrology_intake")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+        try await client.from("expert_astrology_chart_imports")
             .delete()
             .eq("user_id", value: userId)
             .execute()
