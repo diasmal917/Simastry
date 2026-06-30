@@ -14,6 +14,7 @@ export type ExpertAstrologerRequest = {
   userQuestion: string;
   conversationId?: string;
   multiConsultationId?: string;
+  selectedPersonId?: string;
   profileContext?: UserAstrologyContext;
   transcript?: SpecialistMessage[];
   knownDataPoints?: string[];
@@ -203,8 +204,12 @@ Do not invent placements, transits, nodes, Pluto aspects, or Chiron signatures.
   },
 };
 
-export function buildPrompt(payload: CompanionReplyPayload): { system: string; user: string } {
-  if (payload.feature === "expert_astrologer" && payload.expertAstrologerRequest) {
+export function buildPrompt(
+  payload: CompanionReplyPayload,
+): { system: string; user: string } {
+  if (
+    payload.feature === "expert_astrologer" && payload.expertAstrologerRequest
+  ) {
     return buildExpertAstrologerPrompt(payload.expertAstrologerRequest);
   }
 
@@ -218,7 +223,9 @@ export function buildPrompt(payload: CompanionReplyPayload): { system: string; u
   };
 }
 
-export function buildExpertAstrologerPrompt(request: ExpertAstrologerRequest): { system: string; user: string } {
+export function buildExpertAstrologerPrompt(
+  request: ExpertAstrologerRequest,
+): { system: string; user: string } {
   const specialist = specialistForId(request.specialistId);
   if (!specialist) {
     throw new Error("Unknown astrology specialist.");
@@ -262,6 +269,7 @@ Never mix astrological traditions.
 Never invent chart data.
 Only use data listed under calculated tradition data as calculated chart data.
 You may mention user-supplied tradition data only as user-supplied, not verified or app-calculated.
+Uploaded chart screenshot data may only be used when it is explicitly user-confirmed; unconfirmed extraction output is unavailable.
 Treat every missing data point and data limitation as unavailable.
 Do not infer or fill missing placements, dashas, BaZi pillars, sect, Lots, transits, aspects, houses, or timing periods.
 Never claim scientific certainty.
@@ -300,7 +308,9 @@ export function normalizedSpecialistId(id: string): SpecialistId | undefined {
   return specialistAliases[id.trim().toLowerCase()];
 }
 
-export function summarizeProfileContext(context?: UserAstrologyContext): string {
+export function summarizeProfileContext(
+  context?: UserAstrologyContext,
+): string {
   if (!context) {
     return [
       "No structured profile context was supplied.",
@@ -315,14 +325,18 @@ export function summarizeProfileContext(context?: UserAstrologyContext): string 
     context.moonSign ? `Moon ${context.moonSign}` : undefined,
     context.risingSign ? `Rising ${context.risingSign}` : undefined,
   ].filter(Boolean);
-  if (placements.length > 0) lines.push(`User placements: ${placements.join(", ")}`);
+  if (placements.length > 0) {
+    lines.push(`User placements: ${placements.join(", ")}`);
+  }
   if (context.partnerName) lines.push(`Partner/person: ${context.partnerName}`);
   const partnerPlacements = [
     context.partnerSunSign ? `Sun ${context.partnerSunSign}` : undefined,
     context.partnerMoonSign ? `Moon ${context.partnerMoonSign}` : undefined,
     context.partnerRisingSign ? `Rising ${context.partnerRisingSign}` : undefined,
   ].filter(Boolean);
-  if (partnerPlacements.length > 0) lines.push(`Partner/person placements: ${partnerPlacements.join(", ")}`);
+  if (partnerPlacements.length > 0) {
+    lines.push(`Partner/person placements: ${partnerPlacements.join(", ")}`);
+  }
   const userSuppliedBirth = [
     context.birthDate ? `date ${context.birthDate}` : undefined,
     context.birthTime ? `time ${context.birthTime}` : undefined,
@@ -330,7 +344,9 @@ export function summarizeProfileContext(context?: UserAstrologyContext): string 
     context.birthPlace ? `place ${context.birthPlace}` : undefined,
   ].filter(Boolean);
   if (userSuppliedBirth.length > 0) {
-    lines.push(`User-supplied birth details: ${userSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated chart data.`);
+    lines.push(
+      `User-supplied birth details: ${userSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated chart data.`,
+    );
   }
   const partnerSuppliedBirth = [
     context.partnerBirthDate ? `date ${context.partnerBirthDate}` : undefined,
@@ -339,25 +355,50 @@ export function summarizeProfileContext(context?: UserAstrologyContext): string 
     context.partnerBirthPlace ? `place ${context.partnerBirthPlace}` : undefined,
   ].filter(Boolean);
   if (partnerSuppliedBirth.length > 0) {
-    lines.push(`Partner/person user-supplied birth details: ${partnerSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated compatibility data.`);
+    lines.push(
+      `Partner/person user-supplied birth details: ${partnerSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated compatibility data.`,
+    );
   }
-  lines.push(`Birth data: user date ${availability(context.birthDateAvailable)}, time ${availability(context.birthTimeAvailable)}, place ${availability(context.birthPlaceAvailable)}`);
+  lines.push(
+    `Birth data: user date ${availability(context.birthDateAvailable)}, time ${availability(context.birthTimeAvailable)}, place ${
+      availability(context.birthPlaceAvailable)
+    }`,
+  );
   if (context.partnerName) {
-    lines.push(`Partner birth data: date ${availability(context.partnerBirthDateAvailable)}, time ${availability(context.partnerBirthTimeAvailable)}, place ${availability(context.partnerBirthPlaceAvailable)}`);
+    lines.push(
+      `Partner birth data: date ${availability(context.partnerBirthDateAvailable)}, time ${availability(context.partnerBirthTimeAvailable)}, place ${
+        availability(context.partnerBirthPlaceAvailable)
+      }`,
+    );
   }
-  lines.push("Unavailable unless explicitly listed above: calculated dasha sequences, nakshatras, BaZi pillars, Day Masters, Luck Pillars, sect, Lots, profections, Zodiacal Releasing periods, exact aspects, transits, composite charts, and detailed synastry.");
+  lines.push(
+    "Unavailable unless explicitly listed above: calculated dasha sequences, nakshatras, BaZi pillars, Day Masters, Luck Pillars, sect, Lots, profections, Zodiacal Releasing periods, exact aspects, transits, composite charts, and detailed synastry.",
+  );
   return lines.join("\n");
 }
 
-export function summarizeReadinessContext(request: ExpertAstrologerRequest): string {
+export function summarizeReadinessContext(
+  request: ExpertAstrologerRequest,
+): string {
   const lines: string[] = [];
-  lines.push(request.readinessSummary ?? "No structured readiness summary was supplied.");
+  lines.push(
+    request.readinessSummary ?? "No structured readiness summary was supplied.",
+  );
   lines.push(formatList("Known data points", request.knownDataPoints));
   lines.push(formatList("Missing data points", request.missingDataPoints));
-  lines.push(formatRecord("User-supplied tradition data", request.userSuppliedTraditionData));
-  lines.push(formatRecord("Calculated tradition data", request.calculatedTraditionData));
+  lines.push(
+    formatRecord(
+      "User-supplied tradition data",
+      request.userSuppliedTraditionData,
+    ),
+  );
+  lines.push(
+    formatRecord("Calculated tradition data", request.calculatedTraditionData),
+  );
   lines.push(formatList("Data limitations", request.dataLimitations));
-  lines.push("Rule: do not use any placement, timing period, pillar, dasha, sect, Lot, aspect, transit, house, or compatibility chart unless it appears as calculated data or is explicitly labeled user-supplied.");
+  lines.push(
+    "Rule: do not use any placement, timing period, pillar, dasha, sect, Lot, aspect, transit, house, or compatibility chart unless it appears as calculated data or is explicitly labeled user-supplied.",
+  );
   return lines.join("\n");
 }
 
@@ -374,7 +415,10 @@ function formatRecord(title: string, values?: Record<string, string>): string {
   return `${title}: ${entries.map(([key, value]) => `${key}=${value}`).join("; ")}`;
 }
 
-function summarizeTranscript(messages: SpecialistMessage[], specialist: Specialist): string {
+function summarizeTranscript(
+  messages: SpecialistMessage[],
+  specialist: Specialist,
+): string {
   const scoped = messages
     .filter((message) => message.specialistId === specialist.id)
     .slice(-10);
