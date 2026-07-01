@@ -169,6 +169,225 @@ private struct FeaturedGuidePaneContent: View {
     }
 }
 
+private struct TodayExpertsPanelCard: View {
+    @Bindable var viewModel: AppViewModel
+    @Binding var profileRoute: AstrologerProfileRoute?
+    let appeared: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 7) {
+                Image(systemName: SimastryIcon.astrologers)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.goldLight)
+
+                Text(AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS" : "YOUR GUIDES")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.5)
+
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+
+            expertsCarousel
+
+            VStack(spacing: 10) {
+                allAstrologersButton
+                talkToPanelButton
+            }
+            .padding(.horizontal, 4)
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+        .fullScreenCover(item: $profileRoute) { route in
+            AstrologerProfilePagerView(viewModel: viewModel, startSpecialistId: route.id)
+        }
+    }
+
+    private var expertsCarousel: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                    expertCarouselCard(specialist)
+                        .containerRelativeFrame(.horizontal, count: 20, span: 17, spacing: 12)
+                }
+            }
+            .scrollTargetLayout()
+            .padding(.horizontal, 20)
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .scrollClipDisabled()
+        .padding(.horizontal, -20)
+    }
+
+    private func expertCarouselCard(_ specialist: AstrologySpecialist) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            profileRoute = AstrologerProfileRoute(id: specialist.id)
+        } label: {
+            ZStack(alignment: .bottomLeading) {
+                if let profile = specialist.archivedProfile {
+                    Image(profile.gridImageNames.first ?? profile.profileImageName)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    LinearGradient(colors: [SimastryColor.surfaceSunken, SimastryColor.midnight], startPoint: .top, endPoint: .bottom)
+                }
+
+                LinearGradient(colors: [.clear, .black.opacity(0.35), .black.opacity(0.92)], startPoint: .center, endPoint: .bottom)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(specialist.tradition.uppercased())
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.goldLight)
+                        .tracking(1.2)
+                        .lineLimit(1)
+
+                    Text(specialist.characterName)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+
+                    Text(specialist.shortDescription)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 5) {
+                        Text("View profile")
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(SimastryColor.gold)
+                    .padding(.top, 3)
+                }
+                .padding(16)
+            }
+            .frame(height: 280)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: [SimastryColor.gold.opacity(0.36), .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 0.8
+                    )
+            }
+            .shadow(color: .black.opacity(0.45), radius: 16, y: 8)
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityIdentifier("today.expertCard.\(specialist.id)")
+    }
+
+    private var allAstrologersButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: SimastryIcon.astrologers)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.82))
+
+                Text("View Astrologers")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(SimastryColor.midnight.opacity(0.8))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(SimastryGradient.gold, in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
+            }
+            .shadow(color: SimastryColor.gold.opacity(0.20), radius: 12, y: 6)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "View Astrologers. Opens the five expert astrologers." : "View Astrologers. Opens the complete guides directory.")
+    }
+
+    private var talkToPanelButton: some View {
+        Button {
+            HapticManager.buttonPress()
+            if AppConfig.expertAstrologersEnabled {
+                viewModel.openAIAstrologists()
+            } else {
+                viewModel.openPanelChat()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                panelFaceStack(size: 26)
+
+                Text(AppConfig.expertAstrologersEnabled ? "Ask the experts" : "Talk to your panel")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Spacer()
+
+                if !AppConfig.expertAstrologersEnabled && viewModel.unreadPanelCount > 0 {
+                    Text("\(viewModel.unreadPanelCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(SimastryColor.midnight)
+                        .frame(minWidth: 19)
+                        .frame(height: 19)
+                        .background(SimastryColor.gold, in: Capsule())
+                }
+
+                Image(systemName: SimastryIcon.message)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SimastryColor.goldLight.opacity(0.92))
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .background(SimastryColor.surfaceSunken.opacity(0.88), in: Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.16), SimastryColor.gold.opacity(0.16)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            }
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Ask the five expert astrologers." : "Talk to your panel. Group chat with your three guides.")
+    }
+
+    private func panelFaceStack(size: CGFloat) -> some View {
+        HStack(spacing: -10) {
+            let entries = AppConfig.expertAstrologersEnabled
+                ? ExpertAstrologerRegistry.archivedProfiles
+                : viewModel.panelGuideEntries.map(\.profile)
+            ForEach(Array(entries.enumerated()), id: \.element.id) { index, profile in
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size, alignment: .top)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().strokeBorder((AppConfig.expertAstrologersEnabled ? SimastryColor.gold : profile.sign.color).opacity(0.65), lineWidth: 1)
+                    }
+                    .background {
+                        Circle().fill(SimastryColor.midnight)
+                            .frame(width: size + 3, height: size + 3)
+                    }
+                    .zIndex(Double(entries.count - index))
+            }
+        }
+    }
+}
+
 struct HomeView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
@@ -1618,34 +1837,7 @@ struct HomeView: View {
     // MARK: - Expert Astrologers
 
     private var panelCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 7) {
-                Image(systemName: SimastryIcon.astrologers)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SimastryColor.goldLight)
-
-                Text(AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS" : "YOUR GUIDES")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.textSecondary)
-                    .tracking(1.5)
-
-                Spacer()
-            }
-            .padding(.horizontal, 4)
-
-            expertsCarousel
-
-            VStack(spacing: 10) {
-                allAstrologersButton
-                talkToPanelButton
-            }
-            .padding(.horizontal, 4)
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 12)
-        .fullScreenCover(item: $profileRoute) { route in
-            AstrologerProfilePagerView(viewModel: viewModel, startSpecialistId: route.id)
-        }
+        TodayExpertsPanelCard(viewModel: viewModel, profileRoute: $profileRoute, appeared: appeared)
     }
 
     // Full-bleed, swipeable deck of the five experts. Each card opens that
