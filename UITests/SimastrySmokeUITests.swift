@@ -78,8 +78,22 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(element("expertAstrologers.response.elias-ancient").waitForExistence(timeout: 8))
         XCTAssertTrue(element("expertAstrologers.response.nadia-evolutionary").waitForExistence(timeout: 8))
 
+        XCTAssertFalse(app.buttons["expertAstrologers.specialist.leyla-western"].exists)
+        XCTAssertFalse(app.buttons["expertAstrologers.specialist.mateo-vedic"].exists)
+        XCTAssertFalse(app.buttons["expertAstrologers.specialist.naomi-chinese"].exists)
+        XCTAssertFalse(app.buttons["expertAstrologers.specialist.elias-ancient"].exists)
+        XCTAssertFalse(app.buttons["expertAstrologers.specialist.nadia-evolutionary"].exists)
+    }
+
+    func testExpertAstrologersIndividualRosterOpensBeforeEveryoneMode() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "astrologists"])
+
+        XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.scrollViews["expertAstrologers.screen"].waitForExistence(timeout: 6))
+
+        app.buttons["expertAstrologers.chip.Love"].tap()
         let western = app.buttons["expertAstrologers.specialist.leyla-western"]
-        XCTAssertTrue(reveal(western, maxSwipes: 12), "Expected Leyla Western Astrologer card")
+        XCTAssertTrue(reveal(western, maxSwipes: 6), "Expected Leyla Western Astrologer card")
         western.tap()
 
         XCTAssertTrue(app.navigationBars["Leyla - Western Astrologer"].waitForExistence(timeout: 6))
@@ -331,6 +345,8 @@ final class SimastrySmokeUITests: XCTestCase {
 
         app.buttons["people.toolbar.addPersonButton"].tap()
         XCTAssertTrue(app.otherElements["people.addPersonSheet"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["people.addPerson.importContactsButton"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.switches["people.addPerson.openChartUploadToggle"].waitForExistence(timeout: 4))
         app.buttons["people.addPerson.cancelButton"].tap()
 
         let teamRead = app.buttons["people.teamReadEntryButton"]
@@ -358,6 +374,24 @@ final class SimastrySmokeUITests: XCTestCase {
         readMessage.tap()
         XCTAssertTrue(app.navigationBars["Decode"].waitForExistence(timeout: 4))
         app.buttons["Close"].tap()
+    }
+
+    func testAddPersonCanRouteToChartUploadAfterSave() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewTab", "1"])
+
+        XCTAssertTrue(app.tabBars.buttons["People"].waitForExistence(timeout: 10))
+        app.buttons["people.toolbar.addPersonButton"].tap()
+        XCTAssertTrue(app.otherElements["people.addPersonSheet"].waitForExistence(timeout: 4))
+
+        let chartUploadToggle = app.switches["people.addPerson.openChartUploadToggle"]
+        XCTAssertTrue(chartUploadToggle.waitForExistence(timeout: 4))
+        chartUploadToggle.tap()
+
+        app.buttons["people.addPerson.saveButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Smoke Person"].waitForExistence(timeout: 6))
+        XCTAssertTrue(element("expertAstrologers.chartImport.person").waitForExistence(timeout: 4),
+                      "Expected saved person detail to expose chart screenshot upload")
     }
 
     func testDiscoveryProfileStartsLocalConversationAndOpensTalk() throws {
