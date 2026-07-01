@@ -1,12 +1,20 @@
 import SwiftUI
 import PhotosUI
+import ContactsUI
 import UIKit
 
-nonisolated private enum PeopleSheet: String, Identifiable {
+nonisolated private enum PeopleSheet: Identifiable {
     case addPerson
     case teamRead
 
-    var id: String { rawValue }
+    var id: String {
+        switch self {
+        case .addPerson:
+            return "addPerson"
+        case .teamRead:
+            return "teamRead"
+        }
+    }
 }
 
 /// Renders a `.searchable` field as a top-right toolbar button that expands on
@@ -29,6 +37,7 @@ struct PeopleView: View {
     @State private var activeSheet: PeopleSheet?
     @State private var navigationPath = NavigationPath()
     @State private var handledTeamReadRouteRequest: Int = 0
+    @State private var pendingChartUploadPerson: RelationshipPerson?
 
     private var filteredPeople: [RelationshipPerson] {
         viewModel.relationshipPeople.filter { person in
@@ -130,7 +139,10 @@ struct PeopleView: View {
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .addPerson:
-                    AddRelationshipPersonView(viewModel: viewModel)
+                    AddRelationshipPersonView(viewModel: viewModel) { person, shouldOpenChartUpload in
+                        guard shouldOpenChartUpload else { return }
+                        pendingChartUploadPerson = person
+                    }
                 case .teamRead:
                     TeamReadView(viewModel: viewModel)
                 }
@@ -154,6 +166,11 @@ struct PeopleView: View {
             }
             .onChange(of: viewModel.teamReadRouteRequest) {
                 presentRoutesIfRequested()
+            }
+            .onChange(of: activeSheet?.id) {
+                guard activeSheet == nil, let person = pendingChartUploadPerson else { return }
+                pendingChartUploadPerson = nil
+                navigationPath.append(person)
             }
         }
     }
@@ -927,12 +944,12 @@ struct RelationshipPersonDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header
+                ExpertChartImportSection(viewModel: viewModel, subject: .person(currentPerson))
                 howToTalkSection
                 predictReplyButton
                 situationSection
                 simulationRoomSection
                 personaContextSection
-                ExpertChartImportSection(viewModel: viewModel, subject: .person(currentPerson))
                 PersonPlaybookSection(viewModel: viewModel, person: currentPerson)
                 coupleReadButton
                 relationshipPatternSection
@@ -1303,9 +1320,75 @@ private enum AddPersonFocusedField: Hashable {
     case privateLabel
 }
 
+private struct RelationshipContactImportPayload {
+    let displayName: String
+    let imageData: Data?
+    let birthday: Date?
+}
+
+private struct RelationshipContactPicker: UIViewControllerRepresentable {
+    let onSelect: (RelationshipContactImportPayload) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    func makeUIViewController(context: Context) -> CNContactPickerViewController {
+        let controller = CNContactPickerViewController()
+        controller.delegate = context.coordinator
+        controller.displayedPropertyKeys = [
+            CNContactGivenNameKey,
+            CNContactFamilyNameKey,
+            CNContactNicknameKey,
+            CNContactImageDataKey,
+            CNContactBirthdayKey
+        ]
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: CNContactPickerViewController, context: Context) {}
+
+    final class Coordinator: NSObject, CNContactPickerDelegate {
+        let onSelect: (RelationshipContactImportPayload) -> Void
+
+        init(onSelect: @escaping (RelationshipContactImportPayload) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            let formattedName = CNContactFormatter.string(from: contact, style: .fullName)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let nickname = contact.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayName = [formattedName, nickname, contact.organizationName]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .first { !$0.isEmpty } ?? "New person"
+
+            onSelect(
+                RelationshipContactImportPayload(
+                    displayName: displayName,
+                    imageData: contact.imageDataAvailable ? contact.imageData : nil,
+                    birthday: Self.birthday(from: contact.birthday)
+                )
+            )
+        }
+
+        private static func birthday(from components: DateComponents?) -> Date? {
+            guard var components,
+                  components.year != nil,
+                  components.month != nil,
+                  components.day != nil else {
+                return nil
+            }
+            components.calendar = components.calendar ?? Calendar(identifier: .gregorian)
+            return components.date
+        }
+    }
+}
+
 struct AddRelationshipPersonView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: AppViewModel
+    var onSaved: ((RelationshipPerson, Bool) -> Void)? = nil
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectionPath = NavigationPath()
     @State private var imageData: Data?
@@ -1320,6 +1403,8 @@ struct AddRelationshipPersonView: View {
     @State private var hasBirthDate: Bool = false
     @State private var birthDate: Date = .now
     @State private var notes: String = ""
+    @State private var showingContactPicker: Bool = false
+    @State private var openChartUploadAfterSave: Bool = false
     @FocusState private var focusedField: AddPersonFocusedField?
 
     private var canSave: Bool {
@@ -1395,6 +1480,11 @@ struct AddRelationshipPersonView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingContactPicker) {
+                RelationshipContactPicker { payload in
+                    applyImportedContact(payload)
+                }
+            }
         }
         .accessibilityIdentifier("people.addPersonSheet")
         .accessibilityValue(debugStateSummary)
@@ -1454,11 +1544,26 @@ struct AddRelationshipPersonView: View {
                 Text("Private relationship context")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
-                Text("Manual only. No contact import, public discovery, distance, or dating signals.")
+                Text("Import only name, photo, and birthday if you choose. No phone, email, discovery, distance, or dating signals.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    HapticManager.buttonPress()
+                    showingContactPicker = true
+                } label: {
+                    Label("Import from Contacts", systemImage: "person.crop.circle.badge.plus")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .simastryGlassPill(interactive: true)
+                }
+                .buttonStyle(SpringPressStyle())
+                .padding(.top, 5)
+                .accessibilityIdentifier("people.addPerson.importContactsButton")
             }
         }
         .padding(18)
@@ -1497,6 +1602,17 @@ struct AddRelationshipPersonView: View {
                     .accessibilityIdentifier("people.addPerson.privateLabelField")
 
                 relationshipChoiceGrid
+
+                Toggle("Upload birth chart after saving", isOn: $openChartUploadAfterSave)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .tint(SimastryColor.gold)
+                    .accessibilityIdentifier("people.addPerson.openChartUploadToggle")
+
+                Text("Use this when you have their chart screenshot and want Simastry to keep those details attached to this person privately.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(SimastryFont.bodyMedium)
             .foregroundStyle(SimastryColor.offWhite)
@@ -2191,7 +2307,21 @@ struct AddRelationshipPersonView: View {
             personalityType: personalityType
         )
         viewModel.addRelationshipPerson(person)
+        onSaved?(person, openChartUploadAfterSave)
         dismiss()
+    }
+
+    private func applyImportedContact(_ payload: RelationshipContactImportPayload) {
+        HapticManager.buttonPress()
+        name = payload.displayName
+        if let imageData = payload.imageData,
+           let prepared = SimastryPersonPhoto.prepared(imageData) {
+            self.imageData = prepared
+        }
+        if let birthday = payload.birthday {
+            birthDate = birthday
+            hasBirthDate = true
+        }
     }
 }
 

@@ -62,6 +62,7 @@
           ],
           "ITSAppUsesNonExemptEncryption": false,
           "NSCameraUsageDescription": "Take an optional Aura Snapshot photo to tune today’s color palette and guidance locally.",
+          "NSContactsUsageDescription": "Import a person’s name, photo, and birthday from Contacts when you choose to add them to your private People list.",
           "NSMotionUsageDescription": "Create a subtle parallax effect that responds to how you move your device.",
           "NSPhotoLibraryAddUsageDescription": "Save shareable astrology cards to your photo library.",
           "UIApplicationSupportsIndirectInputEvents": true,
