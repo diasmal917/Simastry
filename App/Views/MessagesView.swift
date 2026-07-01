@@ -1077,7 +1077,7 @@ private struct MessageDetailSheet: View {
             case .guide(let profile):
                 NavigationStack {
                     if AppConfig.expertAstrologersEnabled {
-                        ExpertAstrologersView(viewModel: viewModel)
+                        ExpertAstrologersView(viewModel: viewModel, showsDoneButton: true)
                     } else {
                         GuideProfileView(viewModel: viewModel, profile: profile)
                     }

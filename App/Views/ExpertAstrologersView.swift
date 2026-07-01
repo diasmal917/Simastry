@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ExpertAstrologersView: View {
     @Bindable var viewModel: AppViewModel
+    @Environment(\.dismiss) private var dismiss
 
     private let initialQuestion: String?
     private let autoRunEveryone: Bool
+    private let showsDoneButton: Bool
 
     @State private var question: String = ""
     @State private var submittedQuestion: String?
@@ -64,10 +66,16 @@ struct ExpertAstrologersView: View {
         }
     }
 
-    init(viewModel: AppViewModel, initialQuestion: String? = nil, autoRunEveryone: Bool = false) {
+    init(
+        viewModel: AppViewModel,
+        initialQuestion: String? = nil,
+        autoRunEveryone: Bool = false,
+        showsDoneButton: Bool = false
+    ) {
         self.viewModel = viewModel
         self.initialQuestion = initialQuestion
         self.autoRunEveryone = autoRunEveryone
+        self.showsDoneButton = showsDoneButton
     }
 
     var body: some View {
@@ -93,6 +101,14 @@ struct ExpertAstrologersView: View {
         .navigationTitle("Expert Astrologers")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            if showsDoneButton {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .tint(SimastryColor.gold)
+                }
+            }
+        }
         .navigationDestination(item: $selectedSpecialistRoute) { route in
             if let specialist = ExpertAstrologerRegistry.specialist(id: route.id) {
                 SpecialistConversationView(
@@ -249,7 +265,9 @@ struct ExpertAstrologersView: View {
     }
 
     private func specialistSelection(question: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let hasEveryoneResponses = !viewModel.everyoneResponses(for: selectedConsultationId).isEmpty
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Who would you like to hear from?")
                 .font(SimastryFont.titleMedium)
                 .foregroundStyle(SimastryColor.offWhite)
@@ -265,24 +283,26 @@ struct ExpertAstrologersView: View {
 
             everyoneResponses
 
-            ForEach(ExpertAstrologerRegistry.specialists) { specialist in
-                let readiness = ExpertReadinessBuilder.checklist(
-                    for: specialist,
-                    question: question,
-                    context: selectedAstrologyContext,
-                    manualData: viewModel.expertManualAstrologyData
-                )
-                SpecialistSelectionRow(
-                    specialist: specialist,
-                    readiness: readiness,
-                    onOpen: {
-                        HapticManager.buttonPress()
-                        openSpecialist(specialist, question: question)
-                    },
-                    onInfo: {
-                        showingInfoForSpecialist = specialist
-                    }
-                )
+            if !hasEveryoneResponses {
+                ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                    let readiness = ExpertReadinessBuilder.checklist(
+                        for: specialist,
+                        question: question,
+                        context: selectedAstrologyContext,
+                        manualData: viewModel.expertManualAstrologyData
+                    )
+                    SpecialistSelectionRow(
+                        specialist: specialist,
+                        readiness: readiness,
+                        onOpen: {
+                            HapticManager.buttonPress()
+                            openSpecialist(specialist, question: question)
+                        },
+                        onInfo: {
+                            showingInfoForSpecialist = specialist
+                        }
+                    )
+                }
             }
         }
         .padding(.top, 4)
@@ -964,6 +984,14 @@ private struct SpecialistProfileHero: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 142, alignment: .top)
                     .clipped()
+                    .opacity(0.38)
+
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 142, alignment: .top)
+                    .clipped()
             } else {
                 LinearGradient(
                     colors: [SimastryColor.surfaceSunken.opacity(0.7), SimastryColor.midnight.opacity(0.92)],
@@ -1267,7 +1295,9 @@ private struct SpecialistProfileSheet: View {
                     chipSection(title: "Sample questions", values: specialist.sampleQuestions)
                     safetyNote
                 }
-                .padding(20)
+                .frame(maxWidth: 560, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
             }
             .lockHorizontalScroll()
             .navigationTitle(specialist.displayName)
