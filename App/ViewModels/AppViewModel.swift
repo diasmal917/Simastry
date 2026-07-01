@@ -1755,16 +1755,12 @@ class AppViewModel {
 
     func navigateAfterAuth() async {
         await loadProfile()
-        await loadSocialProfile()
         if shouldPersistPendingBirthChart {
             await saveUserSigns()
         }
         await loadCompanions()
-        await refreshExpertAstrologerStateFromRemote()
-        await checkSubscriptionStatus()
         loadSavedGuides()
         loadProfileImage()
-        await refreshInbox()
         syncHomeSetupPhase()
         selectedTab = .today
         currentScreen = .home
@@ -1772,8 +1768,6 @@ class AppViewModel {
             analytics.track(.onboardingCompleted)
             ReviewPromptService.shared.recordPositiveAction()
         }
-        await setupNotifications()
-        updateWidgetData()
 
         // Resolve any pending deep link from the virality funnel
         if let deepLink = pendingDeepLink {
@@ -1786,6 +1780,19 @@ class AppViewModel {
         } else {
             consumeFirstReadOnboardingIntentIfReady()
         }
+
+        Task { @MainActor in
+            await refreshPostLaunchSurfaces()
+        }
+    }
+
+    private func refreshPostLaunchSurfaces() async {
+        await loadSocialProfile()
+        await refreshExpertAstrologerStateFromRemote()
+        await checkSubscriptionStatus()
+        await refreshInbox()
+        await setupNotifications()
+        updateWidgetData()
     }
 
     func saveUserSigns() async {
