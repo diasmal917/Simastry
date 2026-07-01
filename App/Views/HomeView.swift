@@ -8,6 +8,10 @@ private enum HomeRoute: Hashable {
     case decode
 }
 
+private struct AstrologerProfileRoute: Identifiable {
+    let id: String
+}
+
 private struct HiddenBottomScrollEdgeEffect: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
@@ -19,26 +23,51 @@ private struct HiddenBottomScrollEdgeEffect: ViewModifier {
 }
 
 private struct TodayRootScrollConfigurator: UIViewRepresentable {
+    final class Coordinator: NSObject {
+        weak var configuredScrollView: UIScrollView?
+
+        @objc func clampHorizontalOffset(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = gesture.view as? UIScrollView else { return }
+            Self.clamp(scrollView)
+        }
+
+        static func clamp(_ scrollView: UIScrollView) {
+            let lockedX = -scrollView.adjustedContentInset.left
+            guard abs(scrollView.contentOffset.x - lockedX) > 0.5 else { return }
+            scrollView.setContentOffset(CGPoint(x: lockedX, y: scrollView.contentOffset.y), animated: false)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
         view.isUserInteractionEnabled = false
         DispatchQueue.main.async {
-            configureNearestScrollView(from: view)
+            configureNearestScrollView(from: view, coordinator: context.coordinator)
         }
         return view
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
         DispatchQueue.main.async {
-            configureNearestScrollView(from: uiView)
+            configureNearestScrollView(from: uiView, coordinator: context.coordinator)
         }
     }
 
-    private func configureNearestScrollView(from view: UIView) {
+    private func configureNearestScrollView(from view: UIView, coordinator: Coordinator) {
         guard let scrollView = view.firstSuperview(of: UIScrollView.self) else { return }
         scrollView.alwaysBounceHorizontal = false
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.isDirectionalLockEnabled = true
+        Coordinator.clamp(scrollView)
+
+        guard coordinator.configuredScrollView !== scrollView else { return }
+        coordinator.configuredScrollView?.panGestureRecognizer.removeTarget(coordinator, action: #selector(Coordinator.clampHorizontalOffset(_:)))
+        scrollView.panGestureRecognizer.addTarget(coordinator, action: #selector(Coordinator.clampHorizontalOffset(_:)))
+        coordinator.configuredScrollView = scrollView
     }
 }
 
@@ -52,6 +81,91 @@ private extension UIView {
             current = view.superview
         }
         return nil
+    }
+}
+
+private struct FeaturedGuidePaneContent: View {
+    let profile: FactoryCompanionProfile
+    let title: String
+    let role: String
+    let headline: String
+    let badgeText: String
+    let reduceMotion: Bool
+    let kenBurnsActive: Bool
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Image(profile.cardImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 240, alignment: .top)
+                .clipped()
+                .scaleEffect(kenBurnsActive && !reduceMotion ? 1.07 : 1.0, anchor: .top)
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: 14).repeatForever(autoreverses: true),
+                    value: kenBurnsActive
+                )
+
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0.35),
+                    .init(color: .black.opacity(0.55), location: 0.72),
+                    .init(color: .black.opacity(0.88), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 5) {
+                    Image(systemName: SimastryIcon.method)
+                        .font(SimastryFont.microBold)
+                    Text(badgeText)
+                        .font(SimastryFont.microBold)
+                        .tracking(1.0)
+                }
+                .foregroundStyle(SimastryColor.goldLight)
+
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(SimastryFont.titleLarge)
+                        .foregroundStyle(.white)
+
+                    Text(role)
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.goldLight)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+
+                Text(headline)
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(.white.opacity(0.88))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [profile.sign.color.opacity(0.40), .white.opacity(0.08)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.9
+                )
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
@@ -75,6 +189,7 @@ struct HomeView: View {
     @State private var rereadDraft: SealedDraft?
     @State private var generatingDailyDecisionCategory: DailyDecisionCategory?
     @State private var showAuraSnapshotSheet: Bool = false
+    @State private var profileRoute: AstrologerProfileRoute?
     @State private var showingPredictionSourceInfo: Bool = false
     @State private var showingDailyDeciderInfo: Bool = false
     @Namespace private var panelHeroNamespace
@@ -222,10 +337,19 @@ struct HomeView: View {
         }
     }
 
+    private var debugExpertsFirst: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-SimastryPreviewScrollExperts")
+        #else
+        false
+        #endif
+    }
+
     private var homeContent: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 14) {
                 Spacer().frame(height: 6)
+                if debugExpertsFirst { panelCard }
 
                 // Today as a daily command center: lead with the header and the
                 // Ask the Future hero (the #1 daily job), then today's timing and
@@ -254,7 +378,7 @@ struct HomeView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 10)
 
-                panelCard
+                if !debugExpertsFirst { panelCard }
 
                 firstReadMemoryCard
 
@@ -267,6 +391,7 @@ struct HomeView: View {
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
+            .containerRelativeFrame(.horizontal)
             .onAppear {
                 streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
@@ -274,6 +399,11 @@ struct HomeView: View {
                 viewModel.todayStore.reloadSavedPrompts()
                 viewModel.todayStore.reloadDailyDecisions()
                 viewModel.reloadAuraSnapshot()
+                #if DEBUG
+                if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
+                    profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
+                }
+                #endif
                 if !reduceMotion {
                     kenBurnsActive = true
                 }
@@ -1488,42 +1618,119 @@ struct HomeView: View {
     // MARK: - Expert Astrologers
 
     private var panelCard: some View {
-        let profile = featuredProfile
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 7) {
+                Image(systemName: SimastryIcon.astrologers)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.goldLight)
 
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                HStack(spacing: 7) {
-                    Image(systemName: SimastryIcon.astrologers)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(SimastryColor.goldLight)
-
-                    Text(AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS" : "YOUR GUIDES")
-                        .font(SimastryFont.overline)
-                        .foregroundStyle(SimastryColor.textSecondary)
-                        .tracking(1.5)
-                }
+                Text(AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS" : "YOUR GUIDES")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.5)
 
                 Spacer()
             }
+            .padding(.horizontal, 4)
 
-            featuredGuidePane(profile)
+            expertsCarousel
 
-            castRow
-
-            allAstrologersButton
-
-            talkToPanelButton
+            VStack(spacing: 10) {
+                allAstrologersButton
+                talkToPanelButton
+            }
+            .padding(.horizontal, 4)
         }
-        .padding(14)
-        .surfaceCard(cornerRadius: 24)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+        .fullScreenCover(item: $profileRoute) { route in
+            AstrologerProfilePagerView(viewModel: viewModel, startSpecialistId: route.id)
+        }
+    }
+
+    // Full-bleed, swipeable deck of the five experts. Each card opens that
+    // astrologer's full profile (where you can swipe between all five).
+    private var expertsCarousel: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                    expertCarouselCard(specialist)
+                        .containerRelativeFrame(.horizontal, count: 20, span: 17, spacing: 12)
+                }
+            }
+            .scrollTargetLayout()
+            .padding(.horizontal, 20)
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .scrollClipDisabled()
+        .padding(.horizontal, -20)
+    }
+
+    private func expertCarouselCard(_ specialist: AstrologySpecialist) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            profileRoute = AstrologerProfileRoute(id: specialist.id)
+        } label: {
+            ZStack(alignment: .bottomLeading) {
+                if let profile = specialist.archivedProfile {
+                    Image(profile.gridImageNames.first ?? profile.profileImageName)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    LinearGradient(colors: [SimastryColor.surfaceSunken, SimastryColor.midnight], startPoint: .top, endPoint: .bottom)
+                }
+
+                LinearGradient(colors: [.clear, .black.opacity(0.35), .black.opacity(0.92)], startPoint: .center, endPoint: .bottom)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(specialist.tradition.uppercased())
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.goldLight)
+                        .tracking(1.2)
+                        .lineLimit(1)
+
+                    Text(specialist.characterName)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+
+                    Text(specialist.shortDescription)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 5) {
+                        Text("View profile")
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(SimastryColor.gold)
+                    .padding(.top, 3)
+                }
+                .padding(16)
+            }
+            .frame(height: 280)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: [SimastryColor.gold.opacity(0.36), .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 0.8
+                    )
+            }
+            .shadow(color: .black.opacity(0.45), radius: 16, y: 8)
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityIdentifier("today.expertCard.\(specialist.id)")
     }
 
     private var allAstrologersButton: some View {
         Button {
             HapticManager.buttonPress()
-            navigationPath.append(HomeRoute.aiAstrologist(profileId: nil))
+            profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: SimastryIcon.astrologers)
@@ -1632,75 +1839,21 @@ struct HomeView: View {
         let role = specialist?.publicTitle ?? "\(profile.sign.displayName) Guide"
         let headline = specialist?.publicDescription ?? profile.headline
 
-        return NavigationLink(value: destination) {
-            ZStack(alignment: .bottom) {
-                featuredGuideMedia(profile)
-
-                LinearGradient(
-                    stops: [
-                        .init(color: .clear, location: 0.35),
-                        .init(color: .black.opacity(0.55), location: 0.72),
-                        .init(color: .black.opacity(0.88), location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 5) {
-                        Image(systemName: SimastryIcon.method)
-                            .font(SimastryFont.microBold)
-                        Text(AppConfig.expertAstrologersEnabled ? "EXPERT ASTROLOGER" : "SIMASTRY METHOD")
-                            .font(SimastryFont.microBold)
-                            .tracking(1.0)
-                    }
-                    .foregroundStyle(SimastryColor.goldLight)
-
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(title)
-                            .font(SimastryFont.titleLarge)
-                            .foregroundStyle(.white)
-
-                        Text(role)
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.goldLight)
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
-
-                    Text(headline)
-                        .font(SimastryFont.bodySmall)
-                        .foregroundStyle(.white.opacity(0.88))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [profile.sign.color.opacity(0.40), .white.opacity(0.08)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 0.9
-                    )
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .matchedTransitionSource(id: profile.id, in: panelHeroNamespace)
+        return Button {
+            HapticManager.buttonPress()
+            navigationPath.append(destination)
+        } label: {
+            FeaturedGuidePaneContent(
+                profile: profile,
+                title: title,
+                role: role,
+                headline: headline,
+                badgeText: AppConfig.expertAstrologersEnabled ? "EXPERT ASTROLOGER" : "SIMASTRY METHOD",
+                reduceMotion: reduceMotion,
+                kenBurnsActive: kenBurnsActive
+            )
         }
         .buttonStyle(SpringPressStyle())
-        .simultaneousGesture(TapGesture().onEnded {
-            HapticManager.buttonPress()
-        })
         .accessibilityLabel("\(title), \(role). \(headline)")
     }
 
