@@ -1438,7 +1438,8 @@ struct AddRelationshipPersonView: View {
                         Spacer().frame(height: 18)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
+                    .padding(.top, 72)
+                    .padding(.bottom, 18)
                 }
                 .tint(SimastryColor.gold)
                 .lockHorizontalScroll()
@@ -1799,16 +1800,11 @@ struct AddRelationshipPersonView: View {
                     .tracking(0.7)
 
                 if allowsUnknown {
-                    Text("Unknown ok")
-                        .font(SimastryFont.captionSmall.weight(.semibold))
-                        .foregroundStyle(SimastryColor.deepMuted)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.white.opacity(0.055), in: Capsule())
+                    optionalChartSignalPill(title: title)
                 }
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 48), spacing: 12)], alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 10)], alignment: .leading, spacing: 14) {
                 if allowsUnknown {
                     unknownSignButton(
                         title: title,
@@ -1834,6 +1830,18 @@ struct AddRelationshipPersonView: View {
         .accessibilityIdentifier("people.addPerson.sign.\(title.lowercased())")
     }
 
+    private func optionalChartSignalPill(title: String) -> some View {
+        Label("Optional", systemImage: "info.circle")
+            .font(SimastryFont.captionSmall.weight(.semibold))
+            .foregroundStyle(SimastryColor.deepMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.white.opacity(0.055), in: Capsule())
+            .help("\(title) can be left blank. Adding it later improves relationship and timing accuracy.")
+            .accessibilityLabel("\(title) optional")
+            .accessibilityHint("You can skip this now, but adding it later improves accuracy.")
+    }
+
     private func zodiacSignButton(
         sign: ZodiacSign,
         title: String,
@@ -1846,12 +1854,22 @@ struct AddRelationshipPersonView: View {
             action()
         } label: {
             ZStack(alignment: .topTrailing) {
-                // Just the icon, no disc/ring behind it — selection is opacity + scale.
-                ZodiacIconView(sign: sign, size: 46, showsGlow: isSelected)
-                    .frame(width: 48, height: 48)
-                    .accessibilityHidden(true)
-                    .opacity(isSelected ? 1.0 : 0.6)
-                    .scaleEffect(isSelected ? 1.08 : 1.0)
+                VStack(spacing: 5) {
+                    // Just the icon, no disc/ring behind it — selection is opacity + scale.
+                    ZodiacIconView(sign: sign, size: 42, showsGlow: isSelected)
+                        .frame(width: 46, height: 46)
+                        .accessibilityHidden(true)
+                        .opacity(isSelected ? 1.0 : 0.6)
+                        .scaleEffect(isSelected ? 1.08 : 1.0)
+
+                    Text(sign.displayName)
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: 64, height: 70)
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -1862,8 +1880,8 @@ struct AddRelationshipPersonView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .frame(width: 52, height: 52)
-            .contentShape(.circle)
+            .frame(width: 64, height: 72)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .contentShape(.rect)
@@ -1884,13 +1902,23 @@ struct AddRelationshipPersonView: View {
             action()
         } label: {
             ZStack(alignment: .topTrailing) {
-                Image(systemName: "questionmark.circle.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
-                    .frame(width: 48, height: 48)
-                    .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Circle())
-                    .opacity(isSelected ? 1.0 : 0.72)
-                    .accessibilityHidden(true)
+                VStack(spacing: 5) {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                        .frame(width: 46, height: 46)
+                        .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Circle())
+                        .opacity(isSelected ? 1.0 : 0.72)
+                        .accessibilityHidden(true)
+
+                    Text("Not sure")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: 64, height: 70)
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -1901,12 +1929,14 @@ struct AddRelationshipPersonView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .frame(width: 52, height: 52)
-            .contentShape(.circle)
+            .frame(width: 64, height: 72)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .contentShape(.rect)
-        .accessibilityLabel("\(title) unknown")
+        .help("\(title) can be skipped. Add it later for a more accurate read.")
+        .accessibilityLabel("\(title) not sure")
+        .accessibilityHint("Optional. Add it later for a more accurate read.")
         .accessibilityIdentifier(identifier)
         .accessibilityValue(isSelected ? "selected" : "not selected")
         .accessibilityAddTraits(.isButton)
