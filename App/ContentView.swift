@@ -255,7 +255,7 @@ struct BreathingCelestialGlow: View {
 }
 
 /// Full-screen cold-start launch: the static brand wordmark over a calm
-/// breathing glow, with a timeout/retry fallback if the session check stalls.
+/// zodiac-column illustration, with a timeout/retry fallback if the session check stalls.
 struct SimastryLaunchView: View {
     var onRetry: (() -> Void)?
 
@@ -267,23 +267,29 @@ struct SimastryLaunchView: View {
         ZStack {
             SimastryColor.pureBlack.ignoresSafeArea()
 
-            RadialGradient(
-                colors: [SimastryColor.celestialBlue.opacity(0.22), .clear],
-                center: .center,
-                startRadius: 24,
-                endRadius: 380
-            )
-            .ignoresSafeArea()
+            Image("LoadingZodiacColumns")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+                .overlay {
+                    LinearGradient(
+                        colors: [
+                            .black.opacity(0.18),
+                            .black.opacity(0.08),
+                            .black.opacity(0.42)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
 
-            VStack(spacing: 28) {
-                Spacer()
-
-                SimastryWordmark(font: .system(size: 54, weight: .bold).italic())
+            VStack(spacing: 22) {
+                SimastryWordmark(font: .system(size: 28, weight: .bold).italic())
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
-                    .shadow(color: SimastryColor.gold.opacity(0.22), radius: 20, y: 6)
-
-                BreathingCelestialGlow()
+                    .shadow(color: SimastryColor.gold.opacity(0.18), radius: 14, y: 5)
+                    .padding(.top, 88)
 
                 Spacer()
 
@@ -297,7 +303,7 @@ struct SimastryLaunchView: View {
                     }
                 }
                 .transition(.opacity)
-                .padding(.bottom, 52)
+                .padding(.bottom, 46)
             }
             .padding(.horizontal, 28)
             .opacity(appeared ? 1 : 0)
