@@ -791,6 +791,18 @@ nonisolated enum ExpertReadinessBuilder {
 }
 
 extension AstrologySpecialist {
+    /// The engraved liquid-glass tradition emblem for this specialist
+    /// (reply progress, profile badge).
+    var emblemImageName: String {
+        switch id {
+        case "mateo-vedic": "EmblemVedic"
+        case "naomi-chinese": "EmblemBazi"
+        case "elias-ancient": "EmblemHellenistic"
+        case "nadia-evolutionary": "EmblemEvolutionary"
+        default: "EmblemWestern"
+        }
+    }
+
     var expertBio: String {
         switch id {
         case "leyla-western":

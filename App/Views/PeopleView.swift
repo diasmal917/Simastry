@@ -401,9 +401,11 @@ struct PeopleView: View {
             presentAddPerson()
         } label: {
             VStack(spacing: 16) {
-                Image(systemName: "person.crop.circle.badge.plus")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
+                Image("EmptyPeople")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 130, height: 130)
+                    .accessibilityHidden(true)
 
                 Text(viewModel.relationshipPeople.isEmpty ? "No people yet" : "No matching people")
                     .font(SimastryFont.titleMedium)

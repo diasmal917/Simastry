@@ -1382,10 +1382,21 @@ private struct ExpertReplyProgressView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            ProgressView()
-                .tint(SimastryColor.gold)
-                .scaleEffect(0.92)
-                .accessibilityHidden(true)
+            // The tradition's engraved glass emblem stands in for a generic
+            // spinner; the trailing ProgressView keeps the live-motion cue.
+            if let specialist {
+                Image(specialist.emblemImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 28, height: 28)
+                    .clipShape(Circle())
+                    .accessibilityHidden(true)
+            } else {
+                ProgressView()
+                    .tint(SimastryColor.gold)
+                    .scaleEffect(0.92)
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(steps[min(currentIndex, max(steps.count - 1, 0))])
@@ -1398,6 +1409,15 @@ private struct ExpertReplyProgressView: View {
                         .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.deepMuted)
                 }
+            }
+
+            if specialist != nil {
+                Spacer(minLength: 6)
+
+                ProgressView()
+                    .tint(SimastryColor.gold)
+                    .scaleEffect(0.8)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.horizontal, 16)

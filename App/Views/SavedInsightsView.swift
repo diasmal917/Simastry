@@ -47,9 +47,11 @@ struct SavedInsightsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "bookmark")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold.opacity(0.8))
+            Image("EmptyJournal")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 140, height: 140)
+                .accessibilityHidden(true)
 
             Text("Nothing saved yet")
                 .font(SimastryFont.titleSmall)

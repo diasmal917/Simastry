@@ -183,17 +183,18 @@ private struct AstrologerProfilePage: View {
 
                 Spacer(minLength: 0)
 
-                // Floating Liquid Glass zodiac badge — recovers the tradition
-                // glyph without the old starfield card art.
-                Image(systemName: specialist.symbol)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .frame(width: 50, height: 50)
-                    .background(.ultraThinMaterial, in: Circle())
+                // Floating engraved-glass tradition emblem (kit asset) —
+                // each expert's method rendered as a brass-line instrument.
+                Image(specialist.emblemImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 54, height: 54)
+                    .clipShape(Circle())
                     .overlay {
                         Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.7)
                     }
                     .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
+                    .accessibilityHidden(true)
             }
             .padding(20)
         }

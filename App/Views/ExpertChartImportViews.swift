@@ -173,7 +173,16 @@ struct ExpertChartConfirmView: View {
     }
 
     private var intro: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            Image("ChartUploadConfirm")
+                .resizable()
+                .scaledToFill()
+                .frame(height: 108)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .accessibilityHidden(true)
+
             Text("From your screenshot")
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.gold)
