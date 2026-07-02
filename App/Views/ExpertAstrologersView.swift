@@ -471,40 +471,65 @@ private enum ExpertContextSelection: Hashable {
     }
 }
 
+/// The council photograph makes "all five" literal: one cinematic frame of
+/// the specialists around the chart table, with the CTA anchored on a scrim.
 private struct EveryoneHeroCard: View {
     let isRunning: Bool
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            Text("✨")
-                .font(.system(size: 34))
-                .frame(width: 54, height: 54)
-                .background(SimastryColor.gold.opacity(0.14), in: Circle())
+        ZStack(alignment: .bottomLeading) {
+            Image("CouncilKeyArt")
+                .resizable()
+                .scaledToFill()
+                .frame(height: 170)
+                .frame(maxWidth: .infinity)
+                .clipped()
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Everyone")
-                    .font(SimastryFont.titleMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.42), .black.opacity(0.88)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-                Text("Compare all five traditions side by side.")
-                    .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Everyone")
+                        .font(SimastryFont.titleMedium)
+                        .foregroundStyle(.white)
+
+                    Text("Compare all five traditions side by side.")
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                if isRunning {
+                    ProgressView()
+                        .tint(SimastryColor.gold)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.gold)
+                }
             }
-
-            Spacer()
-
-            if isRunning {
-                ProgressView()
-                    .tint(SimastryColor.gold)
-            } else {
-                Image(systemName: "chevron.right")
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(SimastryColor.gold)
-            }
+            .padding(15)
         }
-        .padding(16)
-        .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.85))
+        .frame(height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [SimastryColor.gold.opacity(0.5), .white.opacity(0.1)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
