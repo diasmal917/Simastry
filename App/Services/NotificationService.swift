@@ -35,15 +35,16 @@ final class NotificationService {
         }
     }
 
-    /// The single daily push: one morning note at 8:30, composed from the
-    /// user's saved chart signals and the real computed sky — never urgency,
-    /// never conversation content. Replaces the old transit/brief/decider trio.
-    func scheduleDailyMorningNote(focusName: String, body: String) {
+    /// The single daily push: one morning note at 8:30 in the user's chosen
+    /// expert's voice, composed from honestly derivable data (real transits,
+    /// planetary weekday, seasonal element) — never urgency, never
+    /// conversation content. Replaces the old transit/brief/decider trio.
+    func scheduleDailyMorningNote(expertName: String, body: String) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["daily_morning_note"])
 
         let content = UNMutableNotificationContent()
-        content.title = "Morning note · \(focusName) focus"
+        content.title = "\(expertName) · Morning note"
         content.body = body
         content.sound = .default
         content.userInfo = ["deeplink": "simastry://home"]

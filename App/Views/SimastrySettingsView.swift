@@ -181,6 +181,32 @@ struct SimastrySettingsView: View {
             .tint(SimastryColor.gold)
             .padding(14)
             .simastryGlass(cornerRadius: 16)
+
+            if viewModel.privateNotificationsEnabled {
+                Menu {
+                    ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                        Button {
+                            HapticManager.buttonPress()
+                            viewModel.dailyNoteSpecialistId = specialist.id
+                        } label: {
+                            if specialist.id == viewModel.dailyNoteSpecialistId {
+                                Label("\(specialist.characterName) · \(specialist.publicTitle)", systemImage: "checkmark")
+                            } else {
+                                Text("\(specialist.characterName) · \(specialist.publicTitle)")
+                            }
+                        }
+                    }
+                } label: {
+                    settingRow(
+                        icon: "person.crop.circle.badge.checkmark",
+                        title: "Note written by",
+                        detail: viewModel.dailyNoteSpecialist?.characterName ?? "Leyla",
+                        tint: SimastryColor.gold,
+                        showsChevron: true
+                    )
+                }
+                .accessibilityIdentifier("settings.dailyNoteExpertPicker")
+            }
         }
     }
 

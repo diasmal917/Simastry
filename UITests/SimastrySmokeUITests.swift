@@ -41,6 +41,20 @@ final class SimastrySmokeUITests: XCTestCase {
         add(attachment)
     }
 
+    func testTodayDailyExpertNoteOpensConsultation() throws {
+        launchSeededApp()
+
+        XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
+        let ask = app.buttons["today.expertNoteAskButton"]
+        XCTAssertTrue(ask.waitForExistence(timeout: 6), "Expected the daily expert note card at the top of Today")
+        ask.tap()
+
+        XCTAssertTrue(
+            app.otherElements["expertAstrologers.conversation.leyla-western"].waitForExistence(timeout: 8),
+            "Expected the note's Ask button to open the chosen expert's consultation"
+        )
+    }
+
     func testPeoplePredictDraftLandsInReplyFlow() throws {
         launchSeededApp(arguments: ["-SimastryPreviewScreen", "playbook"])
 

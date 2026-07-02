@@ -202,6 +202,22 @@ class AppViewModel {
         }
     }
 
+    /// Which expert writes the daily note (Today card + morning push).
+    var dailyNoteSpecialistId: String = UserDefaults.standard.string(forKey: "simastry_daily_note_specialist_id") ?? "leyla-western" {
+        didSet {
+            UserDefaults.standard.set(dailyNoteSpecialistId, forKey: "simastry_daily_note_specialist_id")
+            // Tomorrow's push should speak in the newly chosen voice.
+            if isAuthenticated, privateNotificationsEnabled {
+                scheduleDailyMorningNoteNotification()
+            }
+        }
+    }
+
+    var dailyNoteSpecialist: AstrologySpecialist? {
+        ExpertAstrologerRegistry.specialist(id: dailyNoteSpecialistId)
+            ?? ExpertAstrologerRegistry.specialists.first
+    }
+
     var conversationSuggestionsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_conversation_suggestions_enabled") == nil
         ? true
         : UserDefaults.standard.bool(forKey: "simastry_conversation_suggestions_enabled") {
@@ -1685,34 +1701,20 @@ class AppViewModel {
         )
     }
 
-    /// Composes the single morning note. Prefers tomorrow's real computed sky
-    /// (whole-sign transit contact); falls back to the rotating chart-signal
-    /// line. The notification fires the next morning, so both use tomorrow's
-    /// focus rotation (Home uses dayOfYear % 3).
+    /// Schedules the single morning push in the chosen expert's voice. The
+    /// notification fires the next morning, so it is composed for tomorrow —
+    /// the same deterministic note the Today card will show that day.
     func scheduleDailyMorningNoteNotification() {
-        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let type = CommunicationTypeProfile.make(
+        guard let specialist = dailyNoteSpecialist else { return }
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        let body = DailyExpertNoteComposer.notificationBody(
+            for: specialist.id,
+            on: tomorrow,
             sun: userSunSign,
             moon: userMoonSign,
             rising: userRisingSign
         )
-        let (focusName, briefLine): (String, String?) = switch (dayOfYear + 1) % 3 {
-        case 0: ("Sun", type?.sunSignal)
-        case 1: ("Moon", type?.moonSignal)
-        default: ("Rising", type?.risingSignal)
-        }
-
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-        let reading = TransitEngine.dailyReading(
-            sun: userSunSign,
-            moon: userMoonSign,
-            rising: userRisingSign,
-            on: tomorrow
-        )
-
-        // Nothing honest to say without any chart signals — schedule nothing.
-        guard let body = reading.map({ "\($0.headline) — \($0.guidance)" }) ?? briefLine else { return }
-        notificationService.scheduleDailyMorningNote(focusName: focusName, body: body)
+        notificationService.scheduleDailyMorningNote(expertName: specialist.characterName, body: body)
     }
 
     func generateDailyDecision(

@@ -325,6 +325,7 @@ struct HomeView: View {
     @State private var profileRoute: AstrologerProfileRoute?
     @State private var showingPredictionSourceInfo: Bool = false
     @State private var showingDailyDeciderInfo: Bool = false
+    @State private var showMoreForToday: Bool = false
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -476,14 +477,13 @@ struct HomeView: View {
                 Spacer().frame(height: 6)
                 if debugExpertsFirst { panelCard }
 
-                // Today as a daily command center: lead with the header and the
-                // Ask the Future hero (the #1 daily job), then today's timing and
-                // quick decisions, the active loop, and only then the guide panel
-                // and longer-tail learn/extra content. Guides support the flows;
-                // they are no longer the first hero on the screen.
+                // Today as a morning ritual: the chosen expert's note leads,
+                // then the daily read and one tiny action; Predict and the
+                // experts panel follow, and the longer-tail Aura/first-read/
+                // learn content sits behind the "More for today" disclosure.
                 todayHeader
 
-                predictHeroCard
+                dailyExpertNoteCard
 
                 todaysReadCard
 
@@ -491,23 +491,13 @@ struct HomeView: View {
 
                 situationCard
 
+                predictHeroCard
+
                 continueStrip
-
-                todayWithGuideCard
-
-                AuraSnapshotCard(
-                    snapshot: viewModel.auraSnapshot,
-                    onOpen: { showAuraSnapshotSheet = true },
-                    onClear: { viewModel.clearAuraSnapshot() }
-                )
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 10)
 
                 if !debugExpertsFirst { panelCard }
 
-                firstReadMemoryCard
-
-                learnCard
+                moreForTodaySection
 
                 sealedDraftsRow
 
@@ -684,61 +674,174 @@ struct HomeView: View {
         .offset(y: appeared ? 0 : 8)
     }
 
-    private var todayCardGuide: FactoryCompanionProfile {
-        ExpertAstrologerRegistry.specialist(id: "nadia-evolutionary")?.archivedProfile
-            ?? featuredProfile
-    }
-
-    private var todayWithGuideCard: some View {
-        let prompt = dailyNadiaPrompt
-        let guide = todayCardGuide
+    /// The daily ritual anchor: the chosen expert's short note for today,
+    /// composed only from honestly derivable data (see DailyExpertNoteComposer)
+    /// and matching the morning notification word for word.
+    private var dailyExpertNoteCard: some View {
+        let specialist = viewModel.dailyNoteSpecialist
+        let note = DailyExpertNoteComposer.note(
+            for: specialist?.id ?? "leyla-western",
+            sun: viewModel.userSunSign,
+            moon: viewModel.userMoonSign,
+            rising: viewModel.userRisingSign
+        )
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                Image(guide.profileImageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 48, height: 48, alignment: .top)
-                    .clipShape(Circle())
-                    .overlay {
-                        Circle().strokeBorder(SimastryColor.gold.opacity(0.7), lineWidth: 1.2)
-                    }
+                expertNoteAvatar(specialist)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TODAY WITH \(guide.name.uppercased())")
+                    Text("TODAY'S NOTE · \(specialist?.characterName.uppercased() ?? "YOUR EXPERT")")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.gold)
                         .tracking(1.4)
 
-                    Text(prompt)
+                    Text(note.headline)
                         .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 4)
+
+                expertNoteSwitcher
             }
 
-            VStack(spacing: 8) {
-                Button {
-                    HapticManager.buttonPress()
-                    if AppConfig.expertAstrologersEnabled {
-                        viewModel.openAIAstrologists(
-                            question: prompt,
-                            autoRunEveryone: false,
-                            specialistId: "nadia-evolutionary"
-                        )
-                    } else {
-                        viewModel.openPrivatePredictionFromToday()
-                    }
-                } label: {
-                    Label(AppConfig.expertAstrologersEnabled ? "Ask Nadia" : "Ask something private", systemImage: "sparkles")
-                }
-                .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
-                .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens Nadia, the Evolutionary Astrologer" : "Opens Predict for a private question")
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .padding(.top, 3)
+
+                Text(note.move)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.goldLight)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openAIAstrologists(
+                    question: note.askPrompt,
+                    autoRunEveryone: false,
+                    specialistId: note.specialistId
+                )
+            } label: {
+                Label("Ask \(specialist?.characterName ?? "the experts") about this", systemImage: "sparkles")
+            }
+            .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
+            .accessibilityHint("Opens a consultation about today's note")
+            .accessibilityIdentifier("today.expertNoteAskButton")
         }
         .padding(16)
         .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.7))
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("today.expertNoteCard")
+    }
+
+    @ViewBuilder
+    private func expertNoteAvatar(_ specialist: AstrologySpecialist?) -> some View {
+        if let profile = specialist?.archivedProfile {
+            Image(profile.profileImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 48, height: 48, alignment: .top)
+                .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder(SimastryColor.gold.opacity(0.7), lineWidth: 1.2)
+                }
+                .accessibilityHidden(true)
+        } else {
+            ZStack {
+                Circle().fill(SimastryColor.surfaceSunken.opacity(0.5))
+                Image(systemName: specialist?.symbol ?? "sparkles")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+            }
+            .frame(width: 48, height: 48)
+            .accessibilityHidden(true)
+        }
+    }
+
+    /// Lets the user choose which expert writes the daily note; the morning
+    /// push reschedules in the new voice via the view model.
+    private var expertNoteSwitcher: some View {
+        Menu {
+            ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                Button {
+                    HapticManager.buttonPress()
+                    viewModel.dailyNoteSpecialistId = specialist.id
+                } label: {
+                    if specialist.id == viewModel.dailyNoteSpecialistId {
+                        Label("\(specialist.characterName) · \(specialist.publicTitle)", systemImage: "checkmark")
+                    } else {
+                        Text("\(specialist.characterName) · \(specialist.publicTitle)")
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold.opacity(0.9))
+                .frame(width: 30, height: 30)
+                .background(.white.opacity(0.06), in: Circle())
+        }
+        .accessibilityLabel("Change who writes the daily note")
+        .accessibilityIdentifier("today.expertNoteSwitcher")
+    }
+
+    /// Longer-tail content, collapsed by default so the morning scan stays
+    /// under one screen: Aura, the saved first read, and the Learn card.
+    private var moreForTodaySection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                HapticManager.buttonPress()
+                withAnimation(.spring(SimastrySpring.smooth)) { showMoreForToday.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+
+                    Text("MORE FOR TODAY")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.5)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .rotationEffect(.degrees(showMoreForToday ? 180 : 0))
+                }
+                .padding(14)
+                .contentShape(.rect)
+            }
+            .buttonStyle(SpringPressStyle())
+            .surfaceCard(cornerRadius: 20)
+            .accessibilityLabel(showMoreForToday ? "Hide extra Today content" : "Show extra Today content")
+            .accessibilityIdentifier("today.moreForTodayButton")
+
+            if showMoreForToday {
+                Group {
+                    AuraSnapshotCard(
+                        snapshot: viewModel.auraSnapshot,
+                        onOpen: { showAuraSnapshotSheet = true },
+                        onClear: { viewModel.clearAuraSnapshot() }
+                    )
+
+                    firstReadMemoryCard
+
+                    learnCard
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
     }
@@ -1103,17 +1206,6 @@ struct HomeView: View {
                 .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens the saved Today prompt with expert astrologers" : "Opens the saved Today prompt with its guide")
             }
         }
-    }
-
-    private var dailyNadiaPrompt: String {
-        let prompts = [
-            "Say the true thing with enough room for the other person to stay open.",
-            "Before you reply, separate honesty from urgency.",
-            "A clean question will work better today than a perfect paragraph.",
-            "If the conversation feels tight, lead with space before explanation."
-        ]
-        let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        return prompts[day % prompts.count]
     }
 
     private func continuePill(title: String, icon: String) -> some View {

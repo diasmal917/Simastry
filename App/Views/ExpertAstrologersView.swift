@@ -731,6 +731,11 @@ private struct EveryoneResponseCard: View {
                     .foregroundStyle(SimastryColor.offWhite)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let readiness {
+                    ReadingSourcesFooter(readiness: readiness)
+                        .padding(.top, 2)
+                }
             }
         }
         .padding(16)
@@ -773,6 +778,10 @@ private struct SpecialistConversationView: View {
         return initialQuestion
     }
 
+    private var lastSpecialistMessageId: UUID? {
+        messages.last(where: { $0.role == .specialist })?.id
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
@@ -801,6 +810,13 @@ private struct SpecialistConversationView: View {
                                 message: message
                             )
                             .id(message.id)
+
+                            // Ambient trust: under the latest reply, show what
+                            // this expert is actually working from right now.
+                            if message.id == lastSpecialistMessageId {
+                                ReadingSourcesFooter(readiness: readiness)
+                                    .padding(.leading, 42)
+                            }
                         }
 
                         if viewModel.typingSpecialistIds.contains(specialist.id) {
@@ -924,6 +940,50 @@ private struct SpecialistConversationView: View {
                 selectedPersonId: selectedPersonId
             )
         }
+    }
+}
+
+/// One-line trust footer under a reply: what data the expert is actually
+/// working from and what is treated as unavailable — the readiness checklist,
+/// made ambient at the moment it matters.
+private struct ReadingSourcesFooter: View {
+    let readiness: ExpertReadinessChecklist
+
+    private var usedLine: String {
+        let titles = readiness.knownItems.map(\.title)
+        return titles.isEmpty
+            ? "Used: none of your saved data"
+            : "Used: \(compact(titles))"
+    }
+
+    private var unavailableLine: String? {
+        let titles = (readiness.missingRequiredItems + readiness.missingOptionalItems).map(\.title)
+        guard !titles.isEmpty else { return nil }
+        return "Unavailable, not guessed: \(compact(titles))"
+    }
+
+    private func compact(_ values: [String], limit: Int = 3) -> String {
+        let shown = values.prefix(limit).joined(separator: ", ")
+        let more = values.count - limit
+        return more > 0 ? "\(shown) +\(more) more" : shown
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label(usedLine, systemImage: "checkmark.seal")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let unavailableLine {
+                Label(unavailableLine, systemImage: "slash.circle")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("expertAstrologers.readingSources")
     }
 }
 
