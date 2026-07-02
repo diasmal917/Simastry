@@ -202,7 +202,7 @@ class AppViewModel {
         }
     }
 
-    /// Which expert writes the daily note (Today card + morning push).
+    /// Which expert writes the daily note (Today card, morning push, widget).
     var dailyNoteSpecialistId: String = UserDefaults.standard.string(forKey: "simastry_daily_note_specialist_id") ?? "leyla-western" {
         didSet {
             UserDefaults.standard.set(dailyNoteSpecialistId, forKey: "simastry_daily_note_specialist_id")
@@ -210,6 +210,7 @@ class AppViewModel {
             if isAuthenticated, privateNotificationsEnabled {
                 scheduleDailyMorningNoteNotification()
             }
+            publishDailyNotesForWidget()
         }
     }
 
@@ -1684,6 +1685,33 @@ class AppViewModel {
             notificationService.scheduleGuideTipNudges()
         }
         scheduleDailyMorningNoteNotification()
+        publishDailyNotesForWidget()
+    }
+
+    /// Pre-composes today's and tomorrow's notes into the shared app group so
+    /// the widget can render (and flip at midnight) without computing anything.
+    func publishDailyNotesForWidget() {
+        guard let specialist = dailyNoteSpecialist else { return }
+        let calendar = Calendar.current
+        let today = Date()
+        let days = [today, calendar.date(byAdding: .day, value: 1, to: today) ?? today]
+        let notes = days.map { day -> SharedDailyNote in
+            let note = DailyExpertNoteComposer.note(
+                for: specialist.id,
+                on: day,
+                sun: userSunSign,
+                moon: userMoonSign,
+                rising: userRisingSign
+            )
+            return SharedDailyNote(
+                dateKey: SharedDailyNote.dateKey(for: day),
+                expertName: specialist.characterName,
+                headline: note.headline,
+                move: note.move
+            )
+        }
+        SharedDefaults.writeDailyNotes(notes)
+        WidgetCenter.shared.reloadTimelines(ofKind: "SimastryDailyNote")
     }
 
     /// Daily nudge that a guide opened the panel's conversation starter.

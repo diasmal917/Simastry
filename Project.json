@@ -42,6 +42,10 @@
         {
           "package": "SwissEphemeris",
           "product": "SwissEphemeris"
+        },
+        {
+          "target": "SimastryWidgets",
+          "embed": true
         }
       ],
       "info": {
@@ -61,8 +65,8 @@
             }
           ],
           "ITSAppUsesNonExemptEncryption": false,
-          "NSCameraUsageDescription": "Take an optional Aura Snapshot photo to tune today’s color palette and guidance locally.",
-          "NSContactsUsageDescription": "Import a person’s name, photo, and birthday from Contacts when you choose to add them to your private People list.",
+          "NSCameraUsageDescription": "Take an optional Aura Snapshot photo to tune today\u2019s color palette and guidance locally.",
+          "NSContactsUsageDescription": "Import a person\u2019s name, photo, and birthday from Contacts when you choose to add them to your private People list.",
           "NSMotionUsageDescription": "Create a subtle parallax effect that responds to how you move your device.",
           "NSPhotoLibraryAddUsageDescription": "Save shareable astrology cards to your photo library.",
           "UIApplicationSupportsIndirectInputEvents": true,
@@ -90,7 +94,15 @@
           "path": "App"
         }
       ],
-      "type": "application"
+      "type": "application",
+      "entitlements": {
+        "path": "App/Simastry.entitlements",
+        "properties": {
+          "com.apple.security.application-groups": [
+            "group.com.simastry.shared"
+          ]
+        }
+      }
     },
     "SimastryUITests": {
       "dependencies": [
@@ -111,6 +123,46 @@
         }
       ],
       "type": "bundle.ui-testing"
+    },
+    "SimastryWidgets": {
+      "platform": "iOS",
+      "type": "app-extension",
+      "sources": [
+        {
+          "path": "Widget"
+        },
+        {
+          "path": "App/Utilities/SharedDefaults.swift"
+        }
+      ],
+      "info": {
+        "path": "Widget/Info.plist",
+        "properties": {
+          "CFBundleDisplayName": "Simastry",
+          "NSExtension": {
+            "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
+          }
+        }
+      },
+      "entitlements": {
+        "path": "Widget/SimastryWidgets.entitlements",
+        "properties": {
+          "com.apple.security.application-groups": [
+            "group.com.simastry.shared"
+          ]
+        }
+      },
+      "settings": {
+        "CODE_SIGN_STYLE": "Automatic",
+        "DEVELOPMENT_TEAM": "A6PP462J72",
+        "MARKETING_VERSION": "1.0",
+        "CURRENT_PROJECT_VERSION": "1",
+        "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819.widgets",
+        "PRODUCT_NAME": "$(TARGET_NAME)",
+        "SWIFT_VERSION": "5.0",
+        "TARGETED_DEVICE_FAMILY": "1",
+        "SKIP_INSTALL": "YES"
+      }
     }
   }
 }
