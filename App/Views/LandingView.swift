@@ -209,6 +209,10 @@ struct LandingView: View {
     @State private var motionManager: CMMotionManager = CMMotionManager()
     @State private var selectedSlideID: Int = LandingView.initialSlideID()
     @State private var featuredExpertIndex: Int = 0
+    // The caption swaps sequentially (fade out → replace → fade in) so two
+    // experts' text can never double-expose inside the glass pill.
+    @State private var captionExpertIndex: Int = 0
+    @State private var captionOpacity: Double = 1
     @State private var featuredExpertTimer: Timer?
     // slotOfExpert[i] = the layout slot expert i occupies (0 = center hero,
     // 1...4 = the four corners). Rotating swaps the next expert into the
@@ -967,7 +971,7 @@ struct LandingView: View {
     }
 
     private var featuredBioCard: some View {
-        let expert = landingCompanionWindows[min(featuredExpertIndex, landingCompanionWindows.count - 1)]
+        let expert = landingCompanionWindows[min(captionExpertIndex, landingCompanionWindows.count - 1)]
         return VStack(spacing: 9) {
             VStack(spacing: 4) {
                 Text("\(expert.name) · \(expert.role)")
@@ -982,9 +986,7 @@ struct LandingView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            // Clean crossfade between experts instead of overlapping text.
-            .id(featuredExpertIndex)
-            .transition(.opacity)
+            .opacity(captionOpacity)
 
             HStack(spacing: 7) {
                 ForEach(landingCompanionWindows.indices, id: \.self) { i in
@@ -1082,6 +1084,12 @@ struct LandingView: View {
                 slotOfExpert[next] = 0
             }
             featuredExpertIndex = next
+        }
+        withAnimation(.easeOut(duration: 0.14)) { captionOpacity = 0 }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(150))
+            captionExpertIndex = next
+            withAnimation(.easeIn(duration: 0.2)) { captionOpacity = 1 }
         }
     }
 

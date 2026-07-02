@@ -170,10 +170,10 @@ struct SimastrySettingsView: View {
                 }
             )) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Private reminders")
+                    Text("Daily morning note")
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
-                    Text("Subtle chart-signal reminders and daily picks. No private conversation content in previews.")
+                    Text("One note each morning, composed from your saved chart signals and today's sky. Off by default; no conversation content in previews.")
                         .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }

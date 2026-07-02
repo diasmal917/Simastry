@@ -70,6 +70,9 @@ class AppViewModel {
     var specialistMessages: [SpecialistMessage] = []
     var specialistConsultationResponses: [SpecialistConsultationResponse] = []
     var typingSpecialistIds: Set<String> = []
+    /// Transient per-specialist send failures (never persisted, never written
+    /// into the transcript) so the conversation can offer an inline retry.
+    var failedSpecialistSends: [String: FailedSpecialistSend] = [:]
     var runningEveryoneConsultationIds: Set<UUID> = []
     var runningEveryoneResponseKeys: Set<String> = []
     var pendingExpertAstrologerQuestion: String?
@@ -191,9 +194,9 @@ class AppViewModel {
     var isAuraWalletRefreshing: Bool = false
     var auraWalletLookupStatus: AuraWalletLookupStatus = .idle
 
-    var privateNotificationsEnabled: Bool = UserDefaults.standard.object(forKey: "simastry_private_notifications_enabled") == nil
-        ? true
-        : UserDefaults.standard.bool(forKey: "simastry_private_notifications_enabled") {
+    /// Opt-in: notifications stay off until the user explicitly enables the
+    /// daily note, so the permission prompt is always tied to that choice.
+    var privateNotificationsEnabled: Bool = UserDefaults.standard.bool(forKey: "simastry_private_notifications_enabled") {
         didSet {
             UserDefaults.standard.set(privateNotificationsEnabled, forKey: privateNotificationsEnabledKey)
         }
@@ -1654,43 +1657,17 @@ class AppViewModel {
             return
         }
 
-        await notificationService.requestProvisionalPermission()
-        await notificationService.trackEngagement()
+        // Reached only after an explicit enable (or an account that already
+        // enabled it), so the permission prompt is tied to a user choice.
+        await notificationService.requestFullPermission()
         notificationService.clearScheduledNotifications()
-
-        if AppConfig.expertAstrologersEnabled {
-            notificationService.cancelLegacyGuideAndCompanionNotifications()
-        } else if let companion = companions.first {
-            notificationService.scheduleEveningCheckIn(companionName: companion.name)
-            notificationService.scheduleInactiveReEngagement(companionName: companion.name, userSign: profile?.sunSign ?? "")
-        }
-
-        if !AppConfig.expertAstrologersEnabled {
-            notificationService.scheduleSimulationReminder(companionName: primaryCompanion?.name ?? "")
-        }
-
-        if let rising = profile?.risingSign, let tier = profile?.tier {
-            // Tomorrow morning's notification carries tomorrow's computed sky.
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            let reading = TransitEngine.dailyReading(
-                sun: userSunSign,
-                moon: userMoonSign,
-                rising: userRisingSign,
-                on: tomorrow
-            )
-            notificationService.scheduleDailyTransit(
-                risingSign: rising,
-                tier: tier,
-                readingBody: reading.map { "\($0.headline) — \($0.guidance)" }
-            )
-        }
+        notificationService.cancelLegacyGuideAndCompanionNotifications()
 
         if !AppConfig.expertAstrologersEnabled {
             schedulePanelStarterNotification()
             notificationService.scheduleGuideTipNudges()
         }
-        scheduleDailyBriefNotification()
-        notificationService.scheduleDailyDecider()
+        scheduleDailyMorningNoteNotification()
     }
 
     /// Daily nudge that a guide opened the panel's conversation starter.
@@ -1708,23 +1685,34 @@ class AppViewModel {
         )
     }
 
-    /// Mirrors Home's rotating daily brief. The notification fires the next
-    /// morning, so it carries tomorrow's focus (Home uses dayOfYear % 3).
-    func scheduleDailyBriefNotification() {
-        guard let type = CommunicationTypeProfile.make(
+    /// Composes the single morning note. Prefers tomorrow's real computed sky
+    /// (whole-sign transit contact); falls back to the rotating chart-signal
+    /// line. The notification fires the next morning, so both use tomorrow's
+    /// focus rotation (Home uses dayOfYear % 3).
+    func scheduleDailyMorningNoteNotification() {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let type = CommunicationTypeProfile.make(
             sun: userSunSign,
             moon: userMoonSign,
             rising: userRisingSign
-        ) else { return }
-
-        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let (focusName, line): (String, String) = switch (dayOfYear + 1) % 3 {
-        case 0: ("Sun", type.sunSignal)
-        case 1: ("Moon", type.moonSignal)
-        default: ("Rising", type.risingSignal)
+        )
+        let (focusName, briefLine): (String, String?) = switch (dayOfYear + 1) % 3 {
+        case 0: ("Sun", type?.sunSignal)
+        case 1: ("Moon", type?.moonSignal)
+        default: ("Rising", type?.risingSignal)
         }
 
-        notificationService.scheduleDailyBrief(focusName: focusName, body: line)
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        let reading = TransitEngine.dailyReading(
+            sun: userSunSign,
+            moon: userMoonSign,
+            rising: userRisingSign,
+            on: tomorrow
+        )
+
+        // Nothing honest to say without any chart signals — schedule nothing.
+        guard let body = reading.map({ "\($0.headline) — \($0.guidance)" }) ?? briefLine else { return }
+        notificationService.scheduleDailyMorningNote(focusName: focusName, body: body)
     }
 
     func generateDailyDecision(

@@ -811,6 +811,15 @@ private struct SpecialistConversationView: View {
                             )
                             .id("typing")
                         }
+
+                        if let failure = viewModel.failedSpecialistSends[specialist.id],
+                           !viewModel.typingSpecialistIds.contains(specialist.id) {
+                            SpecialistRetryCard(errorText: failure.errorText) {
+                                Task {
+                                    await viewModel.retryIndividualSpecialistSend(specialistId: specialist.id)
+                                }
+                            }
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
@@ -915,6 +924,38 @@ private struct SpecialistConversationView: View {
                 selectedPersonId: selectedPersonId
             )
         }
+    }
+}
+
+/// Inline, transient failure state for an individual consultation. The reply
+/// that failed is never written into the thread — this card owns the error
+/// text and the retry, and disappears once a retry succeeds.
+private struct SpecialistRetryCard: View {
+    let errorText: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(errorText)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onRetry) {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 9)
+                    .goldGlassPill(interactive: true)
+            }
+            .buttonStyle(SpringPressStyle())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .surfaceCard(cornerRadius: 18, accent: Color.orange.opacity(0.35))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("expertAstrologers.conversationRetry")
     }
 }
 

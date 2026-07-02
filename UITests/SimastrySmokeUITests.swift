@@ -114,7 +114,7 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(reveal(retryMateo, maxSwipes: 8), "Expected Mateo's failed Everyone card to expose Retry")
         retryMateo.tap()
 
-        let jyotishResponse = app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "From a Jyotish lens")).firstMatch
+        let jyotishResponse = app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "weighed through karma")).firstMatch
         XCTAssertTrue(jyotishResponse.waitForExistence(timeout: 8))
         XCTAssertFalse(app.buttons["expertAstrologers.retry.leyla-western"].exists)
     }

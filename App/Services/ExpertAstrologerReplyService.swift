@@ -51,6 +51,9 @@ nonisolated enum ExpertAstrologerReplyService {
         }
     }
 
+    /// Offline/pre-auth reading. Each specialist has a fully distinct voice —
+    /// no shared sentences — and no name prefix (every surface that renders
+    /// these already shows the expert's name and title in its own header).
     static func localFallback(for request: Request) -> String {
         guard let specialist = ExpertAstrologerRegistry.specialist(id: request.specialistId) else {
             return "I could not load that specialist right now. Please try again."
@@ -60,60 +63,85 @@ nonisolated enum ExpertAstrologerReplyService {
         if specialist.id == "leyla-western",
            lowercasedQuestion.contains("rising"),
            !request.profileContext.birthTimeAvailable || !request.profileContext.birthPlaceAvailable {
-            return "Leyla - Western Astrologer\n\nI cannot name your Rising sign without birth time and birth location. From my Western lens, the Rising depends on the exact horizon at the moment and place of birth, so guessing would be misleading.\n\nPractical reflection: if you can add the time and place, I can speak about your Ascendant, chart ruler, and house pattern much more cleanly."
+            return "I cannot name your Rising sign without birth time and birth location. The Rising depends on the exact horizon at the moment and place of birth, so guessing would be misleading.\n\nPractical reflection: if you can add the time and place, I can speak about your Ascendant, chart ruler, and house pattern much more cleanly."
         }
         if specialist.id == "mateo-vedic", lowercasedQuestion.contains("mercury retrograde") {
-            return "Mateo - Vedic Astrologer\n\nFrom Jyotish, I would not treat Mercury retrograde as a generic pop-astrology lesson. Budha relates to speech, intellect, trade, discernment, and how the mind organizes information. A true reading would need the sidereal placement, house, dignity, and dasha context.\n\nPractical reflection: treat this as a time to refine speech and decisions rather than assume every delay has one fixed meaning."
+            return "From Jyotish, I would not treat Mercury retrograde as a generic pop-astrology lesson. Budha relates to speech, intellect, trade, discernment, and how the mind organizes information. A true reading would need the sidereal placement, house, dignity, and dasha context.\n\nPractical reflection: treat this as a time to refine speech and decisions rather than assume every delay has one fixed meaning."
         }
         if specialist.id == "naomi-chinese", lowercasedQuestion.contains("scorpio") {
-            return "Naomi - Chinese Astrologer\n\nI would not interpret Scorpio, because that belongs to Western astrology. From Chinese astrology, compatibility is better judged through BaZi: Day Masters, element balance, spouse palace interactions, branch combinations, and useful elements. With only a Western sign, I can only redirect the frame.\n\nPractical reflection: bring birth year, month, day, and hour for both people, and I can read the energetic balance more usefully."
+            return "I would not interpret Scorpio, because that belongs to Western astrology. In Chinese astrology, compatibility is judged through BaZi: Day Masters, element balance, spouse palace interactions, branch combinations, and useful elements. With only a Western sign, I can only redirect the frame.\n\nPractical reflection: bring birth year, month, day, and hour for both people, and I can read the energetic balance more usefully."
         }
         if specialist.id == "elias-ancient", lowercasedQuestion.contains("pluto") {
-            return "Soren - Ancient Astrologer\n\nBy the ancient method, Pluto is not a core traditional planet. I would judge partnership through the 7th place, its ruler, Venus, Mars, sect, and the condition of the planets involved. If timing is the question, I would also look for the active time lord, if supplied.\n\nPractical reflection: ask what condition surrounds the 7th place before giving Pluto the whole judgment."
+            return "By the ancient method, Pluto is not a core traditional planet. I would judge partnership through the 7th place, its ruler, Venus, Mars, sect, and the condition of the planets involved. If timing is the question, I would also look for the active time lord, if supplied.\n\nPractical reflection: ask what condition surrounds the 7th place before giving Pluto the whole judgment."
         }
         if specialist.id == "nadia-evolutionary",
            lowercasedQuestion.contains("trauma") || lowercasedQuestion.contains("traumatized") {
-            return "Nadia - Evolutionary Astrologer\n\nI cannot diagnose trauma from a chart. What I can do is read the symbolism as a reflective map: where emotional defenses, repeated patterns, sensitivity, and growth invitations may appear. If this question feels heavy or immediate, real support from a qualified professional matters.\n\nPractical reflection: ask gently, \"What pattern keeps asking for care?\" rather than using the chart to label yourself."
+            return "I cannot diagnose trauma from a chart. What I can do is read the symbolism as a reflective map: where emotional defenses, repeated patterns, sensitivity, and growth invitations may appear. If this question feels heavy or immediate, real support from a qualified professional matters.\n\nPractical reflection: ask gently, \"What pattern keeps asking for care?\" rather than using the chart to label yourself."
         }
 
-        let dataNote: String
+        let context = request.profileContext
         switch specialist.id {
-        case "naomi-chinese":
-            dataNote = request.profileContext.birthDateAvailable
-                ? "For a precise BaZi reading, birth time would sharpen the hour pillar."
-                : "With birth date and time, I could make this more specific through the Four Pillars."
-        case "mateo-vedic":
-            dataNote = request.profileContext.birthTimeAvailable && request.profileContext.birthPlaceAvailable
-                ? "Your available birth context helps with timing and chart emphasis."
-                : "Birth time and place would make the Jyotish timing more precise."
-        default:
-            dataNote = request.profileContext.birthTimeAvailable && request.profileContext.birthPlaceAvailable
-                ? "Your available chart context helps refine the interpretation."
-                : "Birth time and place would make this more precise."
-        }
-
-        let frame = switch specialist.id {
         case "leyla-western":
-            "Leyla - Western Astrologer\n\nFrom a Western tropical lens, I would look at love, identity, compatibility, and the current symbolic timing around this question."
+            let anchor = context.sunSign.map {
+                "Your Sun in \($0) is already on file, so the identity side has an anchor; your Moon and Rising would tell me how you process and how you open."
+            } ?? "I do not have your placements yet, so I will hold to the method rather than guess at your chart."
+            let note = context.birthTimeAvailable && context.birthPlaceAvailable
+                ? "With your birth details saved, the full reading can bring houses and real transit timing into this."
+                : "Add your birth time and place, and I can bring your Rising, houses, and real transit timing into this."
+            return """
+            Reading this the Western way, I would start with the natal chart: what the Sun wants here, what the Moon needs, and whether the current transits make this an opening or a waiting period. \(anchor)
+
+            Practical reflection: before you act on this, say the want underneath it in one plain sentence. Western work lands better once the need is named instead of implied.
+
+            \(note)
+            """
         case "mateo-vedic":
-            "Mateo - Vedic Astrologer\n\nFrom a Jyotish lens, I would read this through karma, dharma, graha condition, nakshatra emphasis, and timing cycles."
+            let note = context.birthDateAvailable && context.birthTimeAvailable
+                ? "Your saved birth details are a good start; a calculated sidereal chart, or placements you already know, would let me speak to dashas and timing properly."
+                : "Birth date, exact time, and place — or sidereal placements you already know — would let me speak to dashas and timing properly."
+            return """
+            In Jyotish, a question like this is weighed through karma and timing: which graha carries the theme, which bhava it falls in, and whether the running period supports it. None of that can be judged without a sidereal chart, and I will not invent one.
+
+            What I can give you now is the frame: treat this as a dharma question first. Ask which duty you have been serving and which one you have been avoiding, and let the answer sit uncomfortably for a moment before you move.
+
+            \(note)
+            """
         case "naomi-chinese":
-            "Naomi - Chinese Astrologer\n\nFrom a Chinese astrology lens, I would look for elemental balance, useful timing, and the pattern created by the year, month, day, and hour pillars."
+            let note = context.birthDateAvailable
+                ? "Your birth date gives me the year, month, and day context; the birth hour would complete the fourth pillar."
+                : "Bring the birth year, month, day, and hour — that is where every Four Pillars reading begins."
+            return """
+            From a BaZi standpoint, I would set this against your Four Pillars: the Day Master that describes how you move, and the element balance that says whether this is a season to push or to hold. Those are not calculated yet, so I will stay at the level of strategy.
+
+            Strategy for now: choose the smallest version of this that can be tested within a week, run it, and read the result before you commit anything larger.
+
+            \(note)
+            """
         case "elias-ancient":
-            "Soren - Ancient Astrologer\n\nFrom an ancient lens, I would judge planetary condition, sect, whole sign topics, and timing methods before giving a conclusion."
+            let note = context.birthTimeAvailable && context.birthPlaceAvailable
+                ? "Your saved birth details would support sect and house judgment in the full reading."
+                : "An exact birth time and place would let me judge sect, houses, and the year's profection honestly."
+            return """
+            An ancient astrologer takes this in order: first the house the matter belongs to, then the condition of its ruler, then whether the time lords support action at all. Without chart data, none of that can be judged, so I will hold to the order itself.
+
+            Classical counsel: decide what you would do if nothing about the situation changed, then let one night pass before you act on it. The old astrologers trusted judgment that survives a delay.
+
+            \(note)
+            """
         case "nadia-evolutionary":
-            "Nadia - Evolutionary Astrologer\n\nFrom an evolutionary lens, I would ask what growth pattern, emotional repetition, or soul lesson this situation is inviting you to work with."
+            let note = context.sunSign != nil || context.birthDateAvailable
+                ? "I have your basic chart anchors saved; your own pattern notes would take this deeper."
+                : "A birth date gives me your growth map's anchors; your own pattern notes make it personal."
+            return """
+            Evolutionary work starts a step before the answer: where has this exact question shown up in your life before, and what does keeping it unresolved protect you from feeling? The chart is a map of that pattern, not a verdict on it.
+
+            Try this: write the situation as one sentence that begins with "I keep…". Once the pattern has a name, the chart work gets much more precise — and so do your choices.
+
+            \(note)
+            """
         default:
-            "From this specialist's tradition, I would approach the question through its own methods."
+            return "From this specialist's tradition, I would approach the question through its own methods, using only the data you have actually supplied."
         }
-
-        return """
-        \(frame)
-
-        For “\(request.userQuestion)”, the cleanest first insight is to treat the question as a pattern rather than a verdict. Notice what keeps repeating, what timing is asking from you, and where a more conscious choice is available.
-
-        \(dataNote)
-        """
     }
 
 }

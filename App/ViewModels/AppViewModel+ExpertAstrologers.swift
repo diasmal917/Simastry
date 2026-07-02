@@ -1,5 +1,17 @@
 import Foundation
 
+/// Snapshot of a specialist send that failed, kept only in memory so the
+/// conversation can offer an inline retry without polluting the transcript.
+nonisolated struct FailedSpecialistSend: Equatable, Sendable {
+    let question: String
+    let context: UserAstrologyContext
+    let selectedPersonId: UUID?
+    let errorText: String
+    /// The partially streamed bubble, when the failure happened mid-stream —
+    /// a retry regenerates into this same message.
+    let streamingMessageId: UUID?
+}
+
 extension AppViewModel {
     func loadExpertAstrologerState() {
         let decoder = JSONDecoder()
@@ -35,6 +47,7 @@ extension AppViewModel {
         specialistMessages = []
         specialistConsultationResponses = []
         typingSpecialistIds = []
+        failedSpecialistSends = [:]
         runningEveryoneConsultationIds = []
         runningEveryoneResponseKeys = []
         expertManualAstrologyData = ExpertManualAstrologyData()
@@ -263,12 +276,7 @@ extension AppViewModel {
 
         let conversationId = specialistConversationId(for: specialistId)
         let context = explicitContext ?? currentAstrologyContext()
-        let readiness = ExpertReadinessBuilder.checklist(
-            for: specialist,
-            question: trimmed,
-            context: context,
-            manualData: expertManualAstrologyData
-        )
+        failedSpecialistSends[specialistId] = nil
         let outgoing = SpecialistMessage(
             conversationId: conversationId,
             specialistId: specialistId,
@@ -281,16 +289,72 @@ extension AppViewModel {
         saveExpertAstrologerState()
         syncExpertAstrologerMessagesIfPossible([outgoing])
 
+        return await runIndividualSpecialistGeneration(
+            specialist: specialist,
+            conversationId: conversationId,
+            question: trimmed,
+            context: context,
+            selectedPersonId: selectedPersonId,
+            reuseMessageId: nil,
+            isRetry: false
+        )
+    }
+
+    /// Regenerates the reply for a failed send. The user's question is already
+    /// in the transcript, so nothing is appended; an interrupted reply streams
+    /// back into its existing bubble.
+    @discardableResult
+    func retryIndividualSpecialistSend(specialistId: String) async -> Bool {
+        guard let failure = failedSpecialistSends[specialistId],
+              let specialist = ExpertAstrologerRegistry.specialist(id: specialistId),
+              !typingSpecialistIds.contains(specialistId) else {
+            return false
+        }
+        failedSpecialistSends[specialistId] = nil
+        return await runIndividualSpecialistGeneration(
+            specialist: specialist,
+            conversationId: specialistConversationId(for: specialistId),
+            question: failure.question,
+            context: failure.context,
+            selectedPersonId: failure.selectedPersonId,
+            reuseMessageId: failure.streamingMessageId,
+            isRetry: true
+        )
+    }
+
+    private func runIndividualSpecialistGeneration(
+        specialist: AstrologySpecialist,
+        conversationId: UUID,
+        question: String,
+        context: UserAstrologyContext,
+        selectedPersonId: UUID?,
+        reuseMessageId: UUID?,
+        isRetry: Bool
+    ) async -> Bool {
+        let specialistId = specialist.id
+        let readiness = ExpertReadinessBuilder.checklist(
+            for: specialist,
+            question: question,
+            context: context,
+            manualData: expertManualAstrologyData
+        )
+
         typingSpecialistIds.insert(specialistId)
         analytics.track(
             .specialistResponseStarted,
-            params: analyticsParams(specialistId: specialistId, mode: .individual, question: trimmed, context: context)
+            params: analyticsParams(
+                specialistId: specialistId,
+                mode: .individual,
+                question: question,
+                context: context,
+                extra: isRetry ? ["retry": "true"] : [:]
+            )
         )
 
         let request = ExpertAstrologerReplyService.Request(
             specialistId: specialistId,
             mode: .individual,
-            userQuestion: trimmed,
+            userQuestion: question,
             conversationId: conversationId,
             multiConsultationId: nil,
             selectedPersonId: selectedPersonId,
@@ -300,7 +364,7 @@ extension AppViewModel {
             manualData: expertManualAstrologyData
         )
 
-        var streamingMessageId: UUID?
+        var streamingMessageId: UUID? = reuseMessageId
         func applyPartial(_ text: String) {
             if let id = streamingMessageId,
                let index = specialistMessages.firstIndex(where: { $0.id == id }) {
@@ -322,50 +386,69 @@ extension AppViewModel {
             }
         }
 
-        let finalText: String
         do {
             let outcome = try await generateExpertAstrologerReply(request: request) { applyPartial($0) }
-            finalText = outcome.text
+            typingSpecialistIds.remove(specialistId)
+
+            let finalized: SpecialistMessage
+            if let id = streamingMessageId,
+               let index = specialistMessages.firstIndex(where: { $0.id == id }) {
+                specialistMessages[index].content = outcome.text
+                finalized = specialistMessages[index]
+            } else {
+                finalized = SpecialistMessage(
+                    conversationId: conversationId,
+                    specialistId: specialistId,
+                    role: .specialist,
+                    content: outcome.text,
+                    mode: .individual,
+                    profileContextSummary: context.summary
+                )
+                specialistMessages.append(finalized)
+            }
+            syncExpertAstrologerMessagesIfPossible([finalized])
+            saveExpertAstrologerState()
+
             await consumeMessage()
             analytics.track(
                 .specialistResponseCompleted,
                 params: analyticsParams(
                     specialistId: specialistId,
                     mode: .individual,
-                    question: trimmed,
+                    question: question,
                     context: context,
                     extra: usageEventParams(outcome.usageEventId)
                 )
             )
+            return true
         } catch {
-            finalText = Self.specialistFailureMessage(for: specialist, error: error)
+            typingSpecialistIds.remove(specialistId)
             analytics.track(
                 .specialistResponseFailed,
-                params: analyticsParams(specialistId: specialistId, mode: .individual, question: trimmed, context: context)
+                params: analyticsParams(specialistId: specialistId, mode: .individual, question: question, context: context)
             )
-        }
 
-        typingSpecialistIds.remove(specialistId)
-
-        let finalized: SpecialistMessage
-        if let id = streamingMessageId,
-           let index = specialistMessages.firstIndex(where: { $0.id == id }) {
-            specialistMessages[index].content = finalText
-            finalized = specialistMessages[index]
-        } else {
-            finalized = SpecialistMessage(
-                conversationId: conversationId,
-                specialistId: specialistId,
-                role: .specialist,
-                content: finalText,
-                mode: .individual,
-                profileContextSummary: context.summary
+            // Whatever streamed stays in the thread as genuine (possibly
+            // truncated) content. The failure itself is transient retry state —
+            // never a transcript row, never synced.
+            var wasInterrupted = false
+            if let id = streamingMessageId,
+               let index = specialistMessages.firstIndex(where: { $0.id == id }) {
+                wasInterrupted = true
+                syncExpertAstrologerMessagesIfPossible([specialistMessages[index]])
+                saveExpertAstrologerState()
+            }
+            failedSpecialistSends[specialistId] = FailedSpecialistSend(
+                question: question,
+                context: context,
+                selectedPersonId: selectedPersonId,
+                errorText: wasInterrupted
+                    ? "\(specialist.characterName)'s reply was interrupted before it finished."
+                    : Self.specialistFailureMessage(for: specialist, error: error),
+                streamingMessageId: streamingMessageId
             )
-            specialistMessages.append(finalized)
+            return false
         }
-        syncExpertAstrologerMessagesIfPossible([finalized])
-        saveExpertAstrologerState()
-        return true
     }
 
     func startEveryoneConsultation(

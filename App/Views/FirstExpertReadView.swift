@@ -66,7 +66,7 @@ struct FirstExpertReadView: View {
                 .foregroundStyle(SimastryColor.offWhite)
 
             Text(submitted
-                 ? "Here's how each expert reads your question. A first glimpse — sign up for full, personalized readings."
+                 ? "A preview of each expert's lens on your question. Save your chart to unlock the full, personalized readings."
                  : "Ask one thing. Hear how all five experts would read it through their own tradition.")
                 .font(SimastryFont.bodyMedium)
                 .foregroundStyle(SimastryColor.mutedSilver)
