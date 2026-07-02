@@ -49,10 +49,31 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(ask.waitForExistence(timeout: 6), "Expected the daily expert note card at the top of Today")
         ask.tap()
 
+        // The container identifier propagates to child elements whose exact
+        // types shift with the view tree, so match by identifier alone.
+        let conversation = app.descendants(matching: .any)
+            .matching(identifier: "expertAstrologers.conversation.leyla-western")
+            .firstMatch
         XCTAssertTrue(
-            app.otherElements["expertAstrologers.conversation.leyla-western"].waitForExistence(timeout: 8),
+            conversation.waitForExistence(timeout: 8),
             "Expected the note's Ask button to open the chosen expert's consultation"
         )
+    }
+
+    func testTodaySaveNoteLandsInJournal() throws {
+        launchSeededApp()
+
+        XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
+        let save = app.buttons["today.expertNoteSaveButton"]
+        XCTAssertTrue(save.waitForExistence(timeout: 6), "Expected the note card's save bookmark")
+        save.tap()
+
+        let journalPill = app.buttons["today.journalPill"]
+        XCTAssertTrue(reveal(journalPill, maxSwipes: 5), "Expected the Journal pill after saving a line")
+        journalPill.tap()
+
+        XCTAssertTrue(app.otherElements["journal.screen"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.otherElements["journal.entry"].firstMatch.waitForExistence(timeout: 4))
     }
 
     func testPeoplePredictDraftLandsInReplyFlow() throws {

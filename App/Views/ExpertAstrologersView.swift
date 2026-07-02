@@ -336,6 +336,14 @@ struct ExpertAstrologersView: View {
                                 manualData: viewModel.expertManualAstrologyData
                             )
                         },
+                        onSave: {
+                            guard let text = response.specialistResponse else { return }
+                            HapticManager.buttonPress()
+                            viewModel.todayStore.savePrompt(
+                                SavedDailyPrompt(text: text, guideId: response.specialistId)
+                            )
+                            viewModel.showToast("Saved to your journal", subtitle: "Keep the lines worth rereading", isError: false)
+                        },
                         onProfile: {
                             if let specialist = ExpertAstrologerRegistry.specialist(id: response.specialistId) {
                                 showingInfoForSpecialist = specialist
@@ -656,6 +664,7 @@ private struct EveryoneResponseCard: View {
     let specialist: AstrologySpecialist?
     let isLoading: Bool
     let readiness: ExpertReadinessChecklist?
+    let onSave: () -> Void
     let onProfile: () -> Void
     let onRetry: () -> Void
 
@@ -681,10 +690,15 @@ private struct EveryoneResponseCard: View {
                 Spacer()
 
                 if response.specialistResponse != nil {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.gold)
-                        .accessibilityLabel("Complete")
+                    Button(action: onSave) {
+                        Image(systemName: "bookmark")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.gold.opacity(0.86))
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Save this reading to your journal")
+                    .accessibilityIdentifier("expertAstrologers.save.\(response.specialistId)")
                 }
 
                 Button(action: onProfile) {
@@ -807,7 +821,13 @@ private struct SpecialistConversationView: View {
                         ForEach(messages) { message in
                             SpecialistMessageBubble(
                                 specialist: specialist,
-                                message: message
+                                message: message,
+                                onSave: message.role == .specialist ? {
+                                    viewModel.todayStore.savePrompt(
+                                        SavedDailyPrompt(text: message.content, guideId: specialist.id)
+                                    )
+                                    viewModel.showToast("Saved to your journal", subtitle: "Keep the lines worth rereading", isError: false)
+                                } : nil
                             )
                             .id(message.id)
 
@@ -1149,6 +1169,7 @@ private struct SpecialistProfileHero: View {
 private struct SpecialistMessageBubble: View {
     let specialist: AstrologySpecialist
     let message: SpecialistMessage
+    var onSave: (() -> Void)? = nil
 
     private var isUser: Bool {
         message.role == .user
@@ -1196,6 +1217,15 @@ private struct SpecialistMessageBubble: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+        .contextMenu {
+            if !isUser, let onSave {
+                Button {
+                    onSave()
+                } label: {
+                    Label("Save to journal", systemImage: "bookmark")
+                }
+            }
+        }
     }
 }
 
@@ -1568,7 +1598,8 @@ private struct ExpertReadinessChecklistCard: View {
     }
 }
 
-private struct AddMissingAstrologyInfoSheet: View {
+/// Internal (not private): also presented from ExpertKnowledgeView in Me.
+struct AddMissingAstrologyInfoSheet: View {
     @Bindable var viewModel: AppViewModel
     let specialist: AstrologySpecialist
     let preferredRoute: ExpertDataIntakeRoute?

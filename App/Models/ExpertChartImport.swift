@@ -350,18 +350,22 @@ nonisolated enum ExpertChartImageFormat: Sendable {
 }
 
 nonisolated enum ExpertChartUploadPreparer {
-    static let maxBytes = 10_485_760 // 10 MB
+    static let maxBytes = 10_485_760 // 10 MB validation ceiling
+    /// Above this size the image is re-encoded instead of passed through, so
+    /// cellular uploads stay small; a 2400px JPEG keeps chart text readable.
+    static let passthroughMaxBytes = 3_145_728 // 3 MB
 
-    /// Returns upload-ready data + format. Supported images within the size
-    /// limit pass through untouched (preserving detail for a future OCR pass);
-    /// oversized or unrecognized images are re-encoded to a JPEG that fits.
+    /// Returns upload-ready data + format. Supported images under the
+    /// pass-through limit upload untouched (preserving detail for a future
+    /// OCR pass); larger or unrecognized images are re-encoded to a JPEG.
     static func prepare(_ data: Data, maxBytes: Int = maxBytes) -> (data: Data, format: ExpertChartImageFormat)? {
-        if let format = ExpertChartImageFormat.detect(data), data.count <= maxBytes {
+        let passthroughLimit = min(passthroughMaxBytes, maxBytes)
+        if let format = ExpertChartImageFormat.detect(data), data.count <= passthroughLimit {
             return (data, format)
         }
         guard let image = UIImage(data: data) else { return nil }
         for maxDimension in [2400.0, 1800.0, 1400.0, 1024.0] as [CGFloat] {
-            if let jpeg = downscaledJPEG(image, maxDimension: maxDimension), jpeg.count <= maxBytes {
+            if let jpeg = downscaledJPEG(image, maxDimension: maxDimension), jpeg.count <= passthroughLimit {
                 return (jpeg, .jpeg)
             }
         }

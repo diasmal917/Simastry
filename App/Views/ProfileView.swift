@@ -16,6 +16,8 @@ nonisolated private enum ProfileSheet: Identifiable {
     case aura
     case careerRead
     case settings
+    case journal
+    case expertKnowledge
 
     var id: String {
         switch self {
@@ -45,6 +47,10 @@ nonisolated private enum ProfileSheet: Identifiable {
             "careerRead"
         case .settings:
             "settings"
+        case .journal:
+            "journal"
+        case .expertKnowledge:
+            "expertKnowledge"
         }
     }
 }
@@ -187,6 +193,10 @@ struct ProfileView: View {
                     CareerReadView(viewModel: viewModel)
                 case .settings:
                     SimastrySettingsView(viewModel: viewModel)
+                case .journal:
+                    SavedInsightsView(viewModel: viewModel)
+                case .expertKnowledge:
+                    ExpertKnowledgeView(viewModel: viewModel)
                 }
             }
             .onAppear {
@@ -886,6 +896,22 @@ struct ProfileView: View {
                 systemImage: "gearshape.fill"
             ) {
                 activeSheet = .settings
+            }
+
+            profileHubButton(
+                title: "Private journal",
+                subtitle: "Lines you saved from notes and readings. This device only.",
+                systemImage: "bookmark.fill"
+            ) {
+                activeSheet = .journal
+            }
+
+            profileHubButton(
+                title: "What the experts know",
+                subtitle: "Per-expert data on file, gaps, and where to edit it.",
+                systemImage: "lock.shield.fill"
+            ) {
+                activeSheet = .expertKnowledge
             }
 
             profileHubButton(

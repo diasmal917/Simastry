@@ -17,30 +17,33 @@ extension AppViewModel {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        if let data = UserDefaults.standard.data(forKey: Self.specialistMessagesKey),
-           let messages = try? decoder.decode([SpecialistMessage].self, from: data) {
+        if let messages = ExpertChatFileStore.loadMessages() {
             specialistMessages = messages.sorted { $0.timestamp < $1.timestamp }
+        } else if let data = UserDefaults.standard.data(forKey: Self.specialistMessagesKey),
+                  let messages = try? decoder.decode([SpecialistMessage].self, from: data) {
+            // One-time migration off the old unbounded UserDefaults blob.
+            specialistMessages = messages.sorted { $0.timestamp < $1.timestamp }
+            ExpertChatFileStore.saveMessages(specialistMessages)
+            UserDefaults.standard.removeObject(forKey: Self.specialistMessagesKey)
         } else {
             specialistMessages = []
         }
 
-        if let data = UserDefaults.standard.data(forKey: Self.specialistConsultationResponsesKey),
-           let responses = try? decoder.decode([SpecialistConsultationResponse].self, from: data) {
+        if let responses = ExpertChatFileStore.loadResponses() {
             specialistConsultationResponses = responses.sorted { $0.timestamp < $1.timestamp }
+        } else if let data = UserDefaults.standard.data(forKey: Self.specialistConsultationResponsesKey),
+                  let responses = try? decoder.decode([SpecialistConsultationResponse].self, from: data) {
+            specialistConsultationResponses = responses.sorted { $0.timestamp < $1.timestamp }
+            ExpertChatFileStore.saveResponses(specialistConsultationResponses)
+            UserDefaults.standard.removeObject(forKey: Self.specialistConsultationResponsesKey)
         } else {
             specialistConsultationResponses = []
         }
     }
 
     func saveExpertAstrologerState() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        if let data = try? encoder.encode(specialistMessages) {
-            UserDefaults.standard.set(data, forKey: Self.specialistMessagesKey)
-        }
-        if let data = try? encoder.encode(specialistConsultationResponses) {
-            UserDefaults.standard.set(data, forKey: Self.specialistConsultationResponsesKey)
-        }
+        ExpertChatFileStore.saveMessages(specialistMessages)
+        ExpertChatFileStore.saveResponses(specialistConsultationResponses)
     }
 
     func clearExpertAstrologerState() {
@@ -52,6 +55,7 @@ extension AppViewModel {
         runningEveryoneResponseKeys = []
         expertManualAstrologyData = ExpertManualAstrologyData()
         ExpertManualAstrologyData.clear()
+        ExpertChatFileStore.clear()
         UserDefaults.standard.removeObject(forKey: Self.specialistMessagesKey)
         UserDefaults.standard.removeObject(forKey: Self.specialistConsultationResponsesKey)
         UserDefaults.standard.removeObject(forKey: Self.specialistConversationIdsKey)

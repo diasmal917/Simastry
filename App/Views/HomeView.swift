@@ -326,6 +326,7 @@ struct HomeView: View {
     @State private var showingPredictionSourceInfo: Bool = false
     @State private var showingDailyDeciderInfo: Bool = false
     @State private var showMoreForToday: Bool = false
+    @State private var showJournal: Bool = false
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -416,6 +417,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showAuraSnapshotSheet) {
                 AuraSnapshotSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showJournal) {
+                SavedInsightsView(viewModel: viewModel)
             }
         }
     }
@@ -705,6 +709,8 @@ struct HomeView: View {
 
                 Spacer(minLength: 4)
 
+                expertNoteSaveButton(note)
+
                 expertNoteSwitcher
             }
 
@@ -765,6 +771,27 @@ struct HomeView: View {
             .frame(width: 48, height: 48)
             .accessibilityHidden(true)
         }
+    }
+
+    /// Keeps today's note in the private journal (local-only, inspectable
+    /// from Today's Journal pill and Me → Private journal).
+    private func expertNoteSaveButton(_ note: DailyExpertNote) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            viewModel.todayStore.savePrompt(
+                SavedDailyPrompt(text: "\(note.headline) \(note.move)", guideId: note.specialistId)
+            )
+            viewModel.showToast("Saved to your journal", subtitle: "Keep the lines worth rereading", isError: false)
+        } label: {
+            Image(systemName: "bookmark")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold.opacity(0.9))
+                .frame(width: 30, height: 30)
+                .background(.white.opacity(0.06), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Save today's note to your journal")
+        .accessibilityIdentifier("today.expertNoteSaveButton")
     }
 
     /// Lets the user choose which expert writes the daily note; the morning
@@ -1191,19 +1218,16 @@ struct HomeView: View {
                 .buttonStyle(SpringPressStyle())
             }
 
-            if let savedPrompt = viewModel.todayStore.savedDailyPrompts.first {
+            if !viewModel.todayStore.savedDailyPrompts.isEmpty {
                 Button {
                     HapticManager.buttonPress()
-                    viewModel.openPanelChatWithTip(
-                        lesson: savedPrompt.text,
-                        opener: "This is the one you saved. Want to work it through?",
-                        guideId: savedPrompt.guideId
-                    )
+                    showJournal = true
                 } label: {
-                    continuePill(title: "Open saved note", icon: "bookmark.fill")
+                    continuePill(title: "Journal", icon: "bookmark.fill")
                 }
                 .buttonStyle(SpringPressStyle())
-                .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens the saved Today prompt with expert astrologers" : "Opens the saved Today prompt with its guide")
+                .accessibilityHint("Opens the lines you saved")
+                .accessibilityIdentifier("today.journalPill")
             }
         }
     }
