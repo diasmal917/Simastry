@@ -153,6 +153,7 @@
         }
       },
       "settings": {
+        "CODE_SIGN_IDENTITY": "iPhone Developer",
         "CODE_SIGN_STYLE": "Automatic",
         "DEVELOPMENT_TEAM": "A6PP462J72",
         "MARKETING_VERSION": "1.0",

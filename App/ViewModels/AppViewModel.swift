@@ -1729,20 +1729,37 @@ class AppViewModel {
         )
     }
 
-    /// Schedules the single morning push in the chosen expert's voice. The
-    /// notification fires the next morning, so it is composed for tomorrow —
-    /// the same deterministic note the Today card will show that day.
+    /// Schedules the next week of morning pushes in the chosen expert's voice.
+    /// Each one-shot notification is composed for its own fire date, matching
+    /// the deterministic note the Today card will show that morning.
     func scheduleDailyMorningNoteNotification() {
         guard let specialist = dailyNoteSpecialist else { return }
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-        let body = DailyExpertNoteComposer.notificationBody(
-            for: specialist.id,
-            on: tomorrow,
-            sun: userSunSign,
-            moon: userMoonSign,
-            rising: userRisingSign
-        )
-        notificationService.scheduleDailyMorningNote(expertName: specialist.characterName, body: body)
+        let calendar = Calendar.current
+        let now = Date()
+        let requests = NotificationService.dailyMorningNoteIdentifiers.enumerated().compactMap { index, identifier -> NotificationService.DailyMorningNoteRequest? in
+            guard let day = calendar.date(byAdding: .day, value: index + 1, to: now) else { return nil }
+            var components = calendar.dateComponents([.year, .month, .day], from: day)
+            components.hour = 8
+            components.minute = 30
+            components.calendar = calendar
+            components.timeZone = calendar.timeZone
+            guard let fireDate = calendar.date(from: components), fireDate > now else { return nil }
+
+            let body = DailyExpertNoteComposer.notificationBody(
+                for: specialist.id,
+                on: fireDate,
+                sun: userSunSign,
+                moon: userMoonSign,
+                rising: userRisingSign
+            )
+            return NotificationService.DailyMorningNoteRequest(
+                identifier: identifier,
+                expertName: specialist.characterName,
+                body: body,
+                fireDate: fireDate
+            )
+        }
+        notificationService.scheduleDailyMorningNotes(requests)
     }
 
     func generateDailyDecision(

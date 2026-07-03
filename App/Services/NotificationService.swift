@@ -7,6 +7,16 @@ final class NotificationService {
     var isDenied: Bool = false
 
     private let permissionRequestedKey = "simastry_notification_permission_requested"
+    static let dailyMorningNoteScheduleDays = 7
+    static let legacyDailyMorningNoteIdentifier = "daily_morning_note"
+    static let dailyMorningNoteIdentifiers = (0..<dailyMorningNoteScheduleDays).map { "daily_morning_note_\($0)" }
+
+    struct DailyMorningNoteRequest {
+        let identifier: String
+        let expertName: String
+        let body: String
+        let fireDate: Date
+    }
 
     var hasRequestedFullPermission: Bool {
         get { UserDefaults.standard.bool(forKey: permissionRequestedKey) }
@@ -35,27 +45,32 @@ final class NotificationService {
         }
     }
 
-    /// The single daily push: one morning note at 8:30 in the user's chosen
-    /// expert's voice, composed from honestly derivable data (real transits,
-    /// planetary weekday, seasonal element) — never urgency, never
-    /// conversation content. Replaces the old transit/brief/decider trio.
-    func scheduleDailyMorningNote(expertName: String, body: String) {
+    /// A short queue of one-shot 8:30 morning notes in the user's chosen
+    /// expert's voice. Each body is composed for its exact fire date, so the
+    /// push keeps matching Today even when the app is not opened daily.
+    func scheduleDailyMorningNotes(_ notes: [DailyMorningNoteRequest]) {
         let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: ["daily_morning_note"])
+        center.removePendingNotificationRequests(
+            withIdentifiers: [Self.legacyDailyMorningNoteIdentifier] + Self.dailyMorningNoteIdentifiers
+        )
 
-        let content = UNMutableNotificationContent()
-        content.title = "\(expertName) · Morning note"
-        content.body = body
-        content.sound = .default
-        content.userInfo = ["deeplink": "simastry://home"]
+        let calendar = Calendar.current
+        for note in notes {
+            guard note.fireDate > Date() else { continue }
 
-        var dateComponents = DateComponents()
-        dateComponents.hour = 8
-        dateComponents.minute = 30
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+            let content = UNMutableNotificationContent()
+            content.title = "\(note.expertName) · Morning note"
+            content.body = note.body
+            content.sound = .default
+            content.userInfo = ["deeplink": "simastry://home"]
 
-        let request = UNNotificationRequest(identifier: "daily_morning_note", content: content, trigger: trigger)
-        center.add(request)
+            var dateComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: note.fireDate)
+            dateComponents.calendar = calendar
+            dateComponents.timeZone = calendar.timeZone
+            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
+            let request = UNNotificationRequest(identifier: note.identifier, content: content, trigger: trigger)
+            center.add(request)
+        }
     }
 
     /// One-shot follow-up after a prediction: come back and rate the outcome.
@@ -196,7 +211,7 @@ final class NotificationService {
         // stay listed so updating wipes anything an older build scheduled.
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [
-                "daily_morning_note",
+                Self.legacyDailyMorningNoteIdentifier,
                 "daily_transit",
                 "daily_brief",
                 "daily_decider",
@@ -207,7 +222,7 @@ final class NotificationService {
                 "panel_daily_starter",
                 "prediction_outcome_followup",
                 "sealed_draft_release"
-            ] + Self.guideTipIdentifiers
+            ] + Self.dailyMorningNoteIdentifiers + Self.guideTipIdentifiers
         )
     }
 }
