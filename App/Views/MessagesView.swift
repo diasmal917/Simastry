@@ -15,35 +15,41 @@ struct MessagesView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if selectedMessage == nil {
-                    if !hasInboxContent {
-                        VStack(spacing: 0) {
-                            talkActions
-                                .padding(.bottom, 6)
+                if !hasInboxContent {
+                    VStack(spacing: 0) {
+                        talkActions
+                            .padding(.bottom, 6)
 
-                            PanelInboxRow(viewModel: viewModel) {
-                                openPanelChat()
-                            }
-                            .padding(.horizontal, 16)
-
-                            Spacer()
-                            if viewModel.profileDiscoveryStore.connectionState == .loading {
-                                connectionLoadingState
-                            } else if case .failed(let message) = viewModel.profileDiscoveryStore.connectionState {
-                                connectionRetryState(message)
+                        Group {
+                            if AppConfig.expertAstrologersEnabled {
+                                ExpertAstrologerInboxRow(viewModel: viewModel) {
+                                    openExpertAstrologers()
+                                }
                             } else {
-                                emptyState
+                                PanelInboxRow(viewModel: viewModel) {
+                                    openPanelChat()
+                                }
                             }
-                            Spacer()
                         }
-                    } else {
-                        messageList
+                        .padding(.horizontal, 16)
+
+                        Spacer()
+                        if viewModel.profileDiscoveryStore.connectionState == .loading {
+                            connectionLoadingState
+                        } else if case .failed(let message) = viewModel.profileDiscoveryStore.connectionState {
+                            connectionRetryState(message)
+                        } else {
+                            emptyState
+                        }
+                        Spacer()
                     }
+                } else {
+                    messageList
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { CelestialBackground() }
-            .accessibilityHidden(selectedMessage != nil)
+            .accessibilityHidden(isPresentingModal)
             .navigationTitle("Talk")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -51,12 +57,17 @@ struct MessagesView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         HapticManager.buttonPress()
-                        showCreateRoom = true
+                        if AppConfig.expertAstrologersEnabled {
+                            openExpertAstrologers()
+                        } else {
+                            showCreateRoom = true
+                        }
                     } label: {
-                        toolbarActionIcon(systemName: "person.3.fill")
+                        toolbarActionIcon(systemName: AppConfig.expertAstrologersEnabled ? SimastryIcon.astrologers : "person.3.fill")
                     }
-                    .accessibilityLabel("New Room")
-                    .accessibilityHint("Create a private guided room with opted-in people")
+                    .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "New Room")
+                    .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Open the five expert astrologers" : "Create a private guided room with opted-in people")
+                    .accessibilityIdentifier(AppConfig.expertAstrologersEnabled ? "talk.toolbar.expertAstrologersButton" : "talk.toolbar.newRoomButton")
                     .buttonStyle(.plain)
                 }
 
@@ -67,8 +78,9 @@ struct MessagesView: View {
                     } label: {
                         toolbarActionIcon(systemName: "magnifyingglass")
                     }
-                    .accessibilityLabel("New Message")
-                    .accessibilityHint("Search public users and guides to start a conversation")
+                    .accessibilityLabel("Search experts and users")
+                    .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Search public users or open expert astrologers" : "Search public users and guides to start a conversation")
+                    .accessibilityIdentifier("talk.toolbar.newMessageButton")
                     .buttonStyle(.plain)
                 }
             }
@@ -90,10 +102,14 @@ struct MessagesView: View {
                 MessageDetailSheet(
                     message: message,
                     viewModel: viewModel
-                )
+                ) {
+                    selectedMessage = nil
+                }
             }
             .fullScreenCover(isPresented: $showPanelChat) {
-                PanelChatView(viewModel: viewModel)
+                PanelChatView(viewModel: viewModel) {
+                    showPanelChat = false
+                }
             }
             .sheet(isPresented: $showCreateRoom) {
                 GuidedRoomCreateView(viewModel: viewModel) { room in
@@ -123,7 +139,25 @@ struct MessagesView: View {
     }
 
     private var hasInboxContent: Bool {
-        !viewModel.inboxMessages.isEmpty || !viewModel.chatThreadSummaries.isEmpty || !viewModel.connectedProfiles.isEmpty
+        !displayedInboxMessages.isEmpty || !displayedThreadSummaries.isEmpty || !viewModel.connectedProfiles.isEmpty
+    }
+
+    private var displayedInboxMessages: [CompanionMessage] {
+        guard AppConfig.expertAstrologersEnabled else { return viewModel.inboxMessages }
+        return viewModel.inboxMessages.filter { $0.source == .discovery }
+    }
+
+    private var displayedThreadSummaries: [ChatThreadSummary] {
+        viewModel.chatThreadSummaries
+    }
+
+    private var isPresentingModal: Bool {
+        selectedMessage != nil
+            || selectedRoom != nil
+            || showPanelChat
+            || showCreateRoom
+            || showMessageSearch
+            || showDecode
     }
 
     private func toolbarActionIcon(systemName: String) -> some View {
@@ -170,8 +204,17 @@ struct MessagesView: View {
     }
 
     private func openPanelChat() {
+        guard !AppConfig.expertAstrologersEnabled else {
+            openExpertAstrologers()
+            return
+        }
         HapticManager.buttonPress()
         showPanelChat = true
+    }
+
+    private func openExpertAstrologers(question: String? = nil, autoRunEveryone: Bool = false) {
+        HapticManager.buttonPress()
+        viewModel.openAIAstrologists(question: question, autoRunEveryone: autoRunEveryone)
     }
 
     /// The Talk command surface — the four communication jobs that sit above the
@@ -182,7 +225,7 @@ struct MessagesView: View {
                 HapticManager.buttonPress()
                 viewModel.openPredict(with: PredictionDraft(category: .messageOutcome, targetSunSign: nil))
             } label: {
-                Label("What should I say?", systemImage: "text.bubble.fill")
+                Label("What should I reply back?", systemImage: "text.bubble.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
@@ -197,20 +240,38 @@ struct MessagesView: View {
                     showDecode = true
                 }
 
-                talkSecondaryAction(
-                    title: "Talk to a sign",
-                    systemImage: "person.2.fill",
-                    hint: "Open your saved people for approach tips"
-                ) {
-                    viewModel.selectedTab = .people
-                }
+                if AppConfig.expertAstrologersEnabled {
+                    talkSecondaryAction(
+                        title: "Ask an expert",
+                        systemImage: SimastryIcon.astrologers,
+                        hint: "Consult one of the five expert astrologers"
+                    ) {
+                        openExpertAstrologers()
+                    }
 
-                talkSecondaryAction(
-                    title: "Ask my guides",
-                    systemImage: "sparkles",
-                    hint: "Open your panel of chart guides"
-                ) {
-                    openPanelChat()
+                    talkSecondaryAction(
+                        title: "Compare all five",
+                        systemImage: "square.grid.2x2.fill",
+                        hint: "Open the five-tradition comparison flow"
+                    ) {
+                        openExpertAstrologers(question: "What should I reply back?", autoRunEveryone: true)
+                    }
+                } else {
+                    talkSecondaryAction(
+                        title: "Talk to a sign",
+                        systemImage: "person.2.fill",
+                        hint: "Open your saved people for approach tips"
+                    ) {
+                        viewModel.selectedTab = .people
+                    }
+
+                    talkSecondaryAction(
+                        title: "Ask my guides",
+                        systemImage: "sparkles",
+                        hint: "Open your panel of chart guides"
+                    ) {
+                        openPanelChat()
+                    }
                 }
             }
         }
@@ -247,9 +308,11 @@ struct MessagesView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(title)
         .accessibilityHint(hint)
+        .accessibilityIdentifier("talk.action.\(title.replacingOccurrences(of: " ", with: ""))")
     }
 
     private func presentPanelIfRequested() {
+        guard !AppConfig.expertAstrologersEnabled else { return }
         guard viewModel.panelChatRouteRequest > handledPanelRouteRequest else { return }
         handledPanelRouteRequest = viewModel.panelChatRouteRequest
         showPanelChat = true
@@ -259,12 +322,37 @@ struct MessagesView: View {
     /// Message button anywhere in the app".
     private func presentThreadIfRequested() {
         guard let companionId = viewModel.openThreadRequestCompanionId,
-              let message = viewModel.inboxMessages.first(where: { $0.companionId == companionId }) else {
+              let message = threadMessage(for: companionId) else {
             return
         }
         viewModel.openThreadRequestCompanionId = nil
         viewModel.markMessageRead(message)
         selectedMessage = message
+    }
+
+    private func threadMessage(for companionId: UUID) -> CompanionMessage? {
+        if let message = displayedInboxMessages.first(where: { $0.companionId == companionId }) {
+            return message
+        }
+
+        guard !AppConfig.expertAstrologersEnabled else { return nil }
+
+        if let message = viewModel.companionMessages
+            .filter({ $0.companionId == companionId })
+            .max(by: { $0.timestamp < $1.timestamp }) {
+            return message
+        }
+
+        guard let profile = viewModel.guideProfile(forThreadId: companionId) else { return nil }
+        return CompanionMessage(
+            companionId: companionId,
+            companionName: profile.name,
+            companionSign: profile.sign.rawValue,
+            content: "Hey — \(profile.name) here, your \(profile.sign.displayName) lens. \(profile.headline) What's the conversation on your mind?",
+            isRead: true,
+            source: .companion,
+            direction: .incoming
+        )
     }
 
     private var messageList: some View {
@@ -274,14 +362,22 @@ struct MessagesView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
 
-            PanelInboxRow(viewModel: viewModel) {
-                openPanelChat()
+            Group {
+                if AppConfig.expertAstrologersEnabled {
+                    ExpertAstrologerInboxRow(viewModel: viewModel) {
+                        openExpertAstrologers()
+                    }
+                } else {
+                    PanelInboxRow(viewModel: viewModel) {
+                        openPanelChat()
+                    }
+                }
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
 
-            ForEach(viewModel.inboxMessages) { message in
+            ForEach(displayedInboxMessages) { message in
                 MessageRow(message: message, publicProfile: viewModel.publicProfile(for: message.companionId))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -326,7 +422,7 @@ struct MessagesView: View {
                     }
             }
 
-            ForEach(viewModel.chatThreadSummaries) { room in
+            ForEach(displayedThreadSummaries) { room in
                 GuidedRoomInboxRow(
                     room: room,
                     currentUserId: viewModel.profile?.id
@@ -339,7 +435,7 @@ struct MessagesView: View {
                 .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
             }
 
-            Spacer().frame(height: SimastrySpacing.tabBarClearance)
+            Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
@@ -352,7 +448,7 @@ struct MessagesView: View {
     }
 
     private var connectedProfilesWithoutThreads: [SocialProfile] {
-        let threadIds = Set(viewModel.inboxMessages.filter { $0.source == .discovery }.map(\.companionId))
+        let threadIds = Set(displayedInboxMessages.filter { $0.source == .discovery }.map(\.companionId))
         return viewModel.connectedProfiles.filter { !threadIds.contains($0.id) }
     }
 
@@ -373,13 +469,13 @@ struct MessagesView: View {
             emptyStateCastStrip
 
             VStack(spacing: 8) {
-                Text("Your panel is ready to talk")
+                Text(AppConfig.expertAstrologersEnabled ? "Your expert astrologers are ready" : "Your panel is ready to talk")
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
                 Text(AppConfig.socialDiscoveryEnabled
-                     ? "Open a guide or send a private intro, and your conversations will gather here."
-                     : "Open a guide and every reply will read through their sign lens and your chart.")
+                     ? "Consult an expert astrologer or send a private intro, and your conversations will gather here."
+                     : "Consult an expert astrologer and every reply will stay grounded in their tradition.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)
@@ -394,7 +490,7 @@ struct MessagesView: View {
                 HStack(spacing: 8) {
                     Image(systemName: SimastryIcon.astrologers)
                         .font(.system(size: 15, weight: .semibold))
-                    Text("Open Guides")
+                    Text(AppConfig.expertAstrologersEnabled ? "Open Experts" : "Open Guides")
                         .font(SimastryFont.labelLarge)
                 }
                 .foregroundStyle(SimastryColor.offWhite)
@@ -403,7 +499,7 @@ struct MessagesView: View {
                 .goldGlassPill(interactive: true)
             }
             .buttonStyle(SpringPressStyle())
-            .accessibilityHint("Opens your guides to choose a message lens")
+            .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens expert astrologers to choose a tradition" : "Opens your guides to choose a message lens")
             .padding(.top, 4)
 
             InviteFriendsCard(viewModel: viewModel, style: .compact)
@@ -413,10 +509,12 @@ struct MessagesView: View {
         .padding(.bottom, 60)
     }
 
-    /// A fanned row of guide portraits so the empty inbox sells the cast
-    /// instead of showing a lone system glyph.
+    /// A fanned row of expert portraits so the empty inbox sells the five
+    /// named specialists instead of showing a lone system glyph.
     private var emptyStateCastStrip: some View {
-        let profiles = Array(FactoryCompanionCatalog.all.prefix(5))
+        let profiles = AppConfig.expertAstrologersEnabled
+            ? ExpertAstrologerRegistry.archivedProfiles
+            : Array(FactoryCompanionCatalog.all.prefix(5))
 
         return HStack(spacing: -14) {
             ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
@@ -436,6 +534,98 @@ struct MessagesView: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Expert Astrologer Inbox Row
+
+private struct ExpertAstrologerInboxRow: View {
+    @Bindable var viewModel: AppViewModel
+    let action: () -> Void
+
+    private var latestText: String {
+        guard let latest = viewModel.specialistMessages
+            .filter({ $0.role == .specialist })
+            .max(by: { $0.timestamp < $1.timestamp }) else {
+            return "Ask Leyla, Mateo, Naomi, Soren, or Nadia for a tradition-specific read."
+        }
+        let name = ExpertAstrologerRegistry.specialist(id: latest.specialistId)?.characterName ?? "Expert"
+        return "\(name): \(latest.content)"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                HStack(spacing: -16) {
+                    ForEach(Array(ExpertAstrologerRegistry.specialists.enumerated()), id: \.element.id) { index, specialist in
+                        expertAvatar(specialist)
+                            .zIndex(Double(ExpertAstrologerRegistry.specialists.count - index))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text("Expert Astrologers")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text("5 experts")
+                            .font(SimastryFont.captionSmall.weight(.semibold))
+                            .foregroundStyle(SimastryColor.goldLight)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(SimastryColor.gold.opacity(0.13), in: Capsule())
+
+                        Spacer()
+                    }
+
+                    Text(latestText)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.deepMuted)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+
+                // Disclosure chevron marks this as a premium consultation entry
+                // point — not an unread DM like the connection rows below it.
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold.opacity(0.7))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel("Expert Astrologers. Five specialist AI astrologers. \(latestText)")
+    }
+
+    @ViewBuilder
+    private func expertAvatar(_ specialist: AstrologySpecialist) -> some View {
+        if let profile = specialist.archivedProfile {
+            Image(profile.profileImageName)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 40, height: 40, alignment: .top)
+                .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder(SimastryColor.gold.opacity(0.58), lineWidth: 1.1)
+                }
+                .background {
+                    Circle().fill(SimastryColor.midnight)
+                        .frame(width: 44, height: 44)
+                }
+        } else {
+            Text(specialist.placeholderAvatar)
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 40, height: 40)
+                .background(SimastryColor.gold.opacity(0.12), in: Circle())
+                .overlay {
+                    Circle().strokeBorder(SimastryColor.gold.opacity(0.58), lineWidth: 1.1)
+                }
+        }
     }
 }
 
@@ -697,6 +887,7 @@ private struct MessageAvatarView: View {
 private struct MessageDetailSheet: View {
     let message: CompanionMessage
     @Bindable var viewModel: AppViewModel
+    var onClose: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var replyText: String = ""
     @State private var isSendingReply: Bool = false
@@ -869,6 +1060,7 @@ private struct MessageDetailSheet: View {
                 Task {
                     await viewModel.blockDiscoveryProfile(discoverySafetyProfile)
                     viewModel.deleteMessage(message)
+                    onClose()
                     dismiss()
                 }
             }
@@ -884,16 +1076,20 @@ private struct MessageDetailSheet: View {
                     .presentationDragIndicator(.visible)
             case .guide(let profile):
                 NavigationStack {
-                    GuideProfileView(viewModel: viewModel, profile: profile)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    selectedProfileDestination = nil
-                                }
-                                .font(SimastryFont.labelMedium)
-                                .foregroundStyle(SimastryColor.gold)
-                            }
+                    if AppConfig.expertAstrologersEnabled {
+                        ExpertAstrologersView(viewModel: viewModel, showsDoneButton: true)
+                    } else {
+                        GuideProfileView(viewModel: viewModel, profile: profile)
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            selectedProfileDestination = nil
                         }
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.gold)
+                    }
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -957,9 +1153,16 @@ private struct MessageDetailSheet: View {
             }
 
             headerIconButton("xmark", label: "Close messages") {
-                dismiss()
+                closeThread()
             }
         }
+    }
+
+    private func closeThread() {
+        HapticManager.buttonPress()
+        replyFocused = false
+        onClose()
+        dismiss()
     }
 
     @ViewBuilder
@@ -971,20 +1174,24 @@ private struct MessageDetailSheet: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            if #available(iOS 26.0, *) {
-                Image(systemName: systemName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 36, height: 36)
-                    .glassEffect(.regular.interactive(), in: .circle)
-                    .glassEffectID(systemName, in: headerGlass)
-            } else {
-                Image(systemName: systemName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.07), in: Circle())
+            ZStack {
+                if #available(iOS 26.0, *) {
+                    Image(systemName: systemName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .frame(width: 36, height: 36)
+                        .glassEffect(.regular.interactive(), in: .circle)
+                        .glassEffectID(systemName, in: headerGlass)
+                } else {
+                    Image(systemName: systemName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .frame(width: 36, height: 36)
+                        .background(.white.opacity(0.07), in: Circle())
+                }
             }
+            .frame(width: 56, height: 44)
+            .contentShape(.rect)
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel(label)
@@ -999,8 +1206,9 @@ private struct MessageDetailSheet: View {
 
             headerActions
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
+        .padding(.leading, 14)
+        .padding(.trailing, 64)
+        .padding(.top, 95)
         .padding(.bottom, 12)
         .simastryToolbarGlass()
         .overlay(alignment: .bottom) {

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "naomi_scorpio_compatibility",
+    "specialistId": "naomi-chinese",
+    "mode": "individual",
+    "userMessage": "I'm a Scorpio. Are we compatible?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "baziChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "mustMentionAny": ["Chinese astrology", "BaZi", "Four Pillars", "birth year"],
+      "mustNotMention": ["Scorpio means", "Pluto", "Mars", "7th house", "dasha", "nakshatra"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 4,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 5
+    }
+  },
+  {
+    "id": "naomi_business_timing",
+    "specialistId": "naomi-chinese",
+    "mode": "individual",
+    "userMessage": "Should I start a business this year?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "baziChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "shouldMentionAny": ["Five Elements", "Day Master", "Luck Pillar", "BaZi", "strategy"],
+      "mustNotMention": ["Scorpio", "Venus", "Mars", "dasha", "Annual Profection"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 5,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 5
+    }
+  }
+]

@@ -32,7 +32,7 @@ struct GuidesView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, SimastrySpacing.tabBarClearance)
+                    .padding(.bottom, SimastrySpacing.tabBarEndClearance)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -71,7 +71,8 @@ struct GuidesView: View {
             return focusSign
         }
 
-        if let companionSunSign = viewModel.primaryCompanion.flatMap({ ZodiacSign(rawValue: $0.sunSign) }) {
+        if !AppConfig.expertAstrologersEnabled,
+           let companionSunSign = viewModel.primaryCompanion.flatMap({ ZodiacSign(rawValue: $0.sunSign) }) {
             return companionSunSign
         }
 
@@ -173,8 +174,8 @@ struct GuidesView: View {
                     }
 
                     nextStepCard(
-                        title: "Open Companions",
-                        subtitle: "See how this sign plays out in your dynamic.",
+                        title: AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Open Companions",
+                        subtitle: AppConfig.expertAstrologersEnabled ? "Ask one specialist or compare all five traditions." : "See how this sign plays out in your dynamic.",
                         systemImage: "sparkles",
                         accent: SimastryColor.sunCoral
                     ) {
@@ -193,8 +194,8 @@ struct GuidesView: View {
                     }
 
                     nextStepCard(
-                        title: "Open Companions",
-                        subtitle: "See how this sign plays out in your dynamic.",
+                        title: AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Open Companions",
+                        subtitle: AppConfig.expertAstrologersEnabled ? "Ask one specialist or compare all five traditions." : "See how this sign plays out in your dynamic.",
                         systemImage: "sparkles",
                         accent: SimastryColor.sunCoral
                     ) {

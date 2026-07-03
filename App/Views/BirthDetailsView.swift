@@ -466,7 +466,8 @@ struct BirthDetailsView: View {
 
                 isCalculating = false
                 withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
-                    viewModel.currentScreen = .signUp
+                    // Deliver the five-expert first read before asking to sign up.
+                    viewModel.currentScreen = .firstExpertRead
                 }
             }
         }

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "mateo_mercury_retrograde",
+    "specialistId": "mateo-vedic",
+    "mode": "individual",
+    "userMessage": "What is my Mercury retrograde lesson?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "vedicChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "mustMentionAny": ["Budha", "Jyotish", "speech", "intellect", "discernment"],
+      "mustNotMention": ["Mercury retrograde is making your ex return", "Scorpio", "BaZi", "profection"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 4,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 5
+    }
+  },
+  {
+    "id": "mateo_karmic_relationship",
+    "specialistId": "mateo-vedic",
+    "mode": "individual",
+    "userMessage": "Is this relationship karmic?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "vedicChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "shouldMentionAny": ["karma", "dharma", "Rahu", "Ketu", "7th", "Venus", "dasha"],
+      "mustNotMention": ["BaZi", "Scorpio", "Pluto in the 7th", "Annual Profection"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 5,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 5
+    }
+  }
+]

@@ -22,7 +22,8 @@ struct PredictionTopUpView: View {
                 bonusBalanceSection
             }
             .padding(.horizontal, 20)
-            .padding(.top, 28)
+            // Clears the sheet drag indicator so the hero icon/title never crowds it.
+            .padding(.top, 36)
             .padding(.bottom, 40)
         }
         .presentationContentInteraction(.scrolls)

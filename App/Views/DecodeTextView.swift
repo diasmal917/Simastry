@@ -81,30 +81,28 @@ struct FirstReadChoiceView: View {
     private let arrowColumnWidth: CGFloat = 24
 
     var body: some View {
-        ZStack {
-            CelestialBackground()
+        ScrollView {
+            VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
+                Spacer().frame(height: SimastrySpacing.sm)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
-                    Spacer().frame(height: SimastrySpacing.sm)
+                header
 
-                    header
-
-                    VStack(spacing: SimastrySpacing.sm) {
-                        ForEach(firstReadEntryOptions) { option in
-                            entryCard(option)
-                        }
+                VStack(spacing: SimastrySpacing.sm) {
+                    ForEach(firstReadEntryOptions) { option in
+                        entryCard(option)
                     }
-
-                    privacyFooter
-
-                    Spacer().frame(height: 42)
                 }
-                .padding(.horizontal, SimastrySpacing.lg)
-                .padding(.bottom, 58)
+
+                privacyFooter
+
+                Spacer().frame(height: 42)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, SimastrySpacing.lg)
+            .padding(.bottom, 58)
         }
+        .scrollIndicators(.hidden)
+        // `.background` keeps the header below the nav bar (no ZStack clip).
+        .background { CelestialBackground() }
         .onAppear {
             guard !appeared else { return }
             if reduceMotion {
@@ -624,45 +622,44 @@ struct DecodeTextView: View {
     }
 
     var body: some View {
-        ZStack {
-            CelestialBackground()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                inputCard
+                signPicker
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    inputCard
-                    signPicker
+                GoldButton("Decode it", isEnabled: canDecode) {
+                    decode()
+                }
 
-                    GoldButton("Decode it", isEnabled: canDecode) {
-                        decode()
-                    }
-
-                    if let privacyBlockMessage {
-                        Text(privacyBlockMessage)
-                            .font(SimastryFont.bodySmall)
-                            .foregroundStyle(SimastryColor.amber)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if decoded, let theirSign {
-                        resultStack(sign: theirSign)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
-                    Text("Decoded on this iPhone — the message is never sent or stored.")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.textTertiary)
+                if let privacyBlockMessage {
+                    Text(privacyBlockMessage)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.amber)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, SimastrySpacing.tabBarClearance)
+
+                if decoded, let theirSign {
+                    resultStack(sign: theirSign)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                Text("Decoded on this iPhone — the message is never sent or stored.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, SimastrySpacing.tabBarEndClearance)
         }
+        .scrollIndicators(.hidden)
+        // `.background` keeps "What did they mean?" below the nav bar (no ghost).
+        .background { CelestialBackground() }
         .navigationTitle("Decode")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .accessibilityIdentifier("decode.screen")
         .animation(.spring(SimastrySpring.smooth), value: decoded)
         .onChange(of: messageText) { decoded = false; privacyBlockMessage = nil }
         .onChange(of: theirSign) { decoded = false }
@@ -743,7 +740,7 @@ struct DecodeTextView: View {
                                     theirSign = theirSign == sign ? nil : sign
                                 }
                             }
-                            .accessibilityLabel("Decode as a \(sign.displayName)")
+                            .accessibilityLabel("Decode as \(sign.displayName)")
 
                             Text(sign.displayName)
                                 .font(SimastryFont.captionSmall)

@@ -39,6 +39,7 @@ final class AnalyticsService {
         case firstReadFallbackUsed = "first_read_fallback_used"
         case firstReadSaved = "first_read_saved"
         case firstReadContinueGuidesTapped = "first_read_continue_guides_tapped"
+        case firstReadCompareExpertsTapped = "first_read_compare_experts_tapped"
         case panelSeededFromFirstRead = "panel_seeded_from_first_read"
         case replyOptionCopied = "reply_option_copied"
         case replyOptionTuned = "reply_option_tuned"
@@ -50,6 +51,16 @@ final class AnalyticsService {
         case guideSaved = "guide_saved"
         case guideShared = "guide_shared"
         case guideDeleted = "guide_deleted"
+
+        // Expert Astrologers
+        case expertAstrologersViewed = "expert_astrologers_viewed"
+        case guidanceQuestionSubmitted = "guidance_question_submitted"
+        case specialistSelected = "specialist_selected"
+        case everyoneModeSelected = "everyone_mode_selected"
+        case specialistResponseStarted = "specialist_response_started"
+        case specialistResponseCompleted = "specialist_response_completed"
+        case specialistResponseFailed = "specialist_response_failed"
+        case individualSpecialistConversationOpened = "individual_specialist_conversation_opened"
 
         // Engagement
         case didYouKnowViewed = "did_you_know_viewed"

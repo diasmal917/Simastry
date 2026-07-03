@@ -1,9 +1,8 @@
 import Foundation
 
 // MARK: - Moments
-// Private, on-device photo posts. The user's panel guides drip persona-voiced
-// template comments after a post — riffing on the caption and the user's
-// chart, never claiming to see the image (there is no vision model).
+// Private, on-device photo posts. Legacy guide comments remain available only
+// when the archived guide experience is restored.
 
 extension AppViewModel {
     func loadMoments() {
@@ -37,7 +36,9 @@ extension AppViewModel {
 
         moments.insert(moment, at: 0)
         saveMoments()
-        scheduleGuideEngagement(for: moment)
+        if !AppConfig.expertAstrologersEnabled {
+            scheduleGuideEngagement(for: moment)
+        }
         return moment
     }
 
@@ -74,8 +75,8 @@ extension AppViewModel {
         moments[index].comments.append(comment)
         saveMoments()
 
-        // Sometimes one guide answers the user's comment.
-        if moments[index].comments.count % 2 == 0 {
+        // Legacy mode sometimes has one guide answer the user's comment.
+        if !AppConfig.expertAstrologersEnabled && moments[index].comments.count % 2 == 0 {
             scheduleSingleGuideReply(momentId: momentId)
         }
     }
@@ -83,6 +84,7 @@ extension AppViewModel {
     /// 1–3 guides comment over roughly a minute, with typing indicators and a
     /// couple of reactions arriving alongside.
     private func scheduleGuideEngagement(for moment: Moment) {
+        guard !AppConfig.expertAstrologersEnabled else { return }
         let guides = panelGuideEntries
         guard !guides.isEmpty else { return }
 
@@ -103,6 +105,7 @@ extension AppViewModel {
     }
 
     private func scheduleSingleGuideReply(momentId: UUID) {
+        guard !AppConfig.expertAstrologersEnabled else { return }
         guard let moment = moments.first(where: { $0.id == momentId }),
               let entry = panelGuideEntries.randomElement() else { return }
         scheduleGuideComment(
@@ -119,6 +122,7 @@ extension AppViewModel {
         beatIndex: Int,
         landDelayMilliseconds: Int
     ) {
+        guard !AppConfig.expertAstrologersEnabled else { return }
         let typingKey = "\(momentId.uuidString):\(entry.profile.id)"
         guard !momentTypingKeys.contains(typingKey) else { return }
 
@@ -171,6 +175,7 @@ extension AppViewModel {
         momentId: UUID,
         entry: PanelMatcher.Entry
     ) async -> String? {
+        guard !AppConfig.expertAstrologersEnabled else { return nil }
         guard AppConfig.llmChatEnabled, supabase.canInvokeCompanionReply,
               let moment = moments.first(where: { $0.id == momentId }) else { return nil }
 

@@ -1,0 +1,48 @@
+[
+  {
+    "id": "everyone_text_ex",
+    "mode": "everyone",
+    "userMessage": "Should I text my ex?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "westernChartProvided": false,
+      "vedicChartProvided": false,
+      "baziChartProvided": false,
+      "ancientChartProvided": false,
+      "evolutionaryChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustCallAllFiveIndependently": true,
+      "mustReturnFiveResponses": true,
+      "mustKeepResponsesSeparate": true,
+      "mustHandlePartialFailure": true,
+      "mustNotMergeIntoSingleAnswer": true,
+      "mustNotInventChartData": true
+    }
+  },
+  {
+    "id": "everyone_unavailable_people",
+    "mode": "everyone",
+    "userMessage": "Why do I keep attracting emotionally unavailable people?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "westernChartProvided": false,
+      "vedicChartProvided": false,
+      "baziChartProvided": false,
+      "ancientChartProvided": false,
+      "evolutionaryChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustCallAllFiveIndependently": true,
+      "mustReturnFiveResponses": true,
+      "mustKeepResponsesSeparate": true,
+      "mustHandlePartialFailure": true,
+      "mustNotMergeIntoSingleAnswer": true,
+      "mustNotInventChartData": true
+    }
+  }
+]

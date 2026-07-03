@@ -1,12 +1,20 @@
 import SwiftUI
 import PhotosUI
+import ContactsUI
 import UIKit
 
-nonisolated private enum PeopleSheet: String, Identifiable {
+nonisolated private enum PeopleSheet: Identifiable {
     case addPerson
     case teamRead
 
-    var id: String { rawValue }
+    var id: String {
+        switch self {
+        case .addPerson:
+            return "addPerson"
+        case .teamRead:
+            return "teamRead"
+        }
+    }
 }
 
 /// Renders a `.searchable` field as a top-right toolbar button that expands on
@@ -29,6 +37,7 @@ struct PeopleView: View {
     @State private var activeSheet: PeopleSheet?
     @State private var navigationPath = NavigationPath()
     @State private var handledTeamReadRouteRequest: Int = 0
+    @State private var pendingChartUploadPerson: RelationshipPerson?
 
     private var filteredPeople: [RelationshipPerson] {
         viewModel.relationshipPeople.filter { person in
@@ -40,6 +49,14 @@ struct PeopleView: View {
             let matchesType = selectedType == nil || person.relationshipType == selectedType
             return matchesSearch && matchesType
         }
+    }
+
+    private var filteredPeopleIds: Set<UUID> {
+        Set(filteredPeople.map(\.id))
+    }
+
+    private var filteredRecentlyReflectedPeople: [RelationshipPerson] {
+        recentlyReflectedPeople.filter { filteredPeopleIds.contains($0.id) }
     }
 
     private var needsAttentionPerson: RelationshipPerson? {
@@ -68,7 +85,7 @@ struct PeopleView: View {
                             needsAttentionCard(needsAttentionPerson)
                         }
 
-                        if !recentlyReflectedPeople.isEmpty {
+                        if !filteredRecentlyReflectedPeople.isEmpty {
                             recentSection
                         }
 
@@ -78,13 +95,14 @@ struct PeopleView: View {
                             allPeopleSection
                         }
 
-                        Spacer().frame(height: SimastrySpacing.tabBarClearance + 32)
+                        Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
             }
             .scrollIndicators(.hidden)
             .background { CelestialBackground() }
+            .accessibilityHidden(activeSheet != nil)
             .navigationTitle("People")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -121,7 +139,10 @@ struct PeopleView: View {
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .addPerson:
-                    AddRelationshipPersonView(viewModel: viewModel)
+                    AddRelationshipPersonView(viewModel: viewModel) { person, shouldOpenChartUpload in
+                        guard shouldOpenChartUpload else { return }
+                        pendingChartUploadPerson = person
+                    }
                 case .teamRead:
                     TeamReadView(viewModel: viewModel)
                 }
@@ -145,6 +166,11 @@ struct PeopleView: View {
             }
             .onChange(of: viewModel.teamReadRouteRequest) {
                 presentRoutesIfRequested()
+            }
+            .onChange(of: activeSheet?.id) {
+                guard activeSheet == nil, let person = pendingChartUploadPerson else { return }
+                pendingChartUploadPerson = nil
+                navigationPath.append(person)
             }
         }
     }
@@ -199,6 +225,7 @@ struct PeopleView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Read this group. How this group communicates.")
+        .accessibilityIdentifier("people.teamReadEntryButton")
     }
 
     private var peopleSubtitle: String {
@@ -273,7 +300,7 @@ struct PeopleView: View {
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("Recent reads", systemImage: "bookmark.fill")
-            ForEach(recentlyReflectedPeople.prefix(2)) { person in
+            ForEach(filteredRecentlyReflectedPeople.prefix(2)) { person in
                 NavigationLink(value: person) {
                     relationshipPersonCard(person)
                 }
@@ -374,9 +401,11 @@ struct PeopleView: View {
             presentAddPerson()
         } label: {
             VStack(spacing: 16) {
-                Image(systemName: "person.crop.circle.badge.plus")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
+                Image("EmptyPeople")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 130, height: 130)
+                    .accessibilityHidden(true)
 
                 Text(viewModel.relationshipPeople.isEmpty ? "No people yet" : "No matching people")
                     .font(SimastryFont.titleMedium)
@@ -572,16 +601,14 @@ struct RelationshipPersonDetailView: View {
                 icon: SimastryIcon.predict,
                 tint: SimastryColor.celestialBlue
             ) {
-                viewModel.predictionDraft = PredictionDraft(
+                viewModel.openPredict(with: PredictionDraft(
                     targetName: currentPerson.displayName,
                     targetSunSign: currentPerson.sunSign,
                     targetMoonSign: currentPerson.moonSign,
                     targetRisingSign: currentPerson.risingSign,
                     question: "What will \(currentPerson.displayName) say next?",
                     conversationText: nil
-                )
-                viewModel.selectedTab = .today
-                viewModel.predictRouteRequest += 1
+                ))
             }
 
             simulationRoomRow(
@@ -649,6 +676,7 @@ struct RelationshipPersonDetailView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(title). \(subtitle)")
+        .accessibilityIdentifier("people.detail.simulationRoom.\(title.replacingOccurrences(of: " ", with: ""))")
     }
 
     // MARK: - Persona Context
@@ -918,6 +946,7 @@ struct RelationshipPersonDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header
+                ExpertChartImportSection(viewModel: viewModel, subject: .person(currentPerson))
                 howToTalkSection
                 predictReplyButton
                 situationSection
@@ -930,7 +959,7 @@ struct RelationshipPersonDetailView: View {
                 methodPanel
                 notesSection
                 privacySection
-                Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -1038,6 +1067,7 @@ struct RelationshipPersonDetailView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityHint("Opens Predict with \(currentPerson.displayName)'s chart signals filled in")
+        .accessibilityIdentifier("people.detail.predictReplyButton")
     }
 
     @ViewBuilder
@@ -1131,7 +1161,7 @@ struct RelationshipPersonDetailView: View {
             title: "Why this reading",
             summary: reading.methodSummary,
             signals: methodSignals,
-            footer: "Private notes and message context stay on device in this prototype.",
+            footer: "Private notes and message context stay on this device unless you choose to share them.",
             accent: SimastryColor.gold
         )
     }
@@ -1292,9 +1322,75 @@ private enum AddPersonFocusedField: Hashable {
     case privateLabel
 }
 
+private struct RelationshipContactImportPayload {
+    let displayName: String
+    let imageData: Data?
+    let birthday: Date?
+}
+
+private struct RelationshipContactPicker: UIViewControllerRepresentable {
+    let onSelect: (RelationshipContactImportPayload) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    func makeUIViewController(context: Context) -> CNContactPickerViewController {
+        let controller = CNContactPickerViewController()
+        controller.delegate = context.coordinator
+        controller.displayedPropertyKeys = [
+            CNContactGivenNameKey,
+            CNContactFamilyNameKey,
+            CNContactNicknameKey,
+            CNContactImageDataKey,
+            CNContactBirthdayKey
+        ]
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: CNContactPickerViewController, context: Context) {}
+
+    final class Coordinator: NSObject, CNContactPickerDelegate {
+        let onSelect: (RelationshipContactImportPayload) -> Void
+
+        init(onSelect: @escaping (RelationshipContactImportPayload) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            let formattedName = CNContactFormatter.string(from: contact, style: .fullName)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let nickname = contact.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayName = [formattedName, nickname, contact.organizationName]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .first { !$0.isEmpty } ?? "New person"
+
+            onSelect(
+                RelationshipContactImportPayload(
+                    displayName: displayName,
+                    imageData: contact.imageDataAvailable ? contact.imageData : nil,
+                    birthday: Self.birthday(from: contact.birthday)
+                )
+            )
+        }
+
+        private static func birthday(from components: DateComponents?) -> Date? {
+            guard var components,
+                  components.year != nil,
+                  components.month != nil,
+                  components.day != nil else {
+                return nil
+            }
+            components.calendar = components.calendar ?? Calendar(identifier: .gregorian)
+            return components.date
+        }
+    }
+}
+
 struct AddRelationshipPersonView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: AppViewModel
+    var onSaved: ((RelationshipPerson, Bool) -> Void)? = nil
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectionPath = NavigationPath()
     @State private var imageData: Data?
@@ -1309,6 +1405,8 @@ struct AddRelationshipPersonView: View {
     @State private var hasBirthDate: Bool = false
     @State private var birthDate: Date = .now
     @State private var notes: String = ""
+    @State private var showingContactPicker: Bool = false
+    @State private var openChartUploadAfterSave: Bool = false
     @FocusState private var focusedField: AddPersonFocusedField?
 
     private var canSave: Bool {
@@ -1342,9 +1440,11 @@ struct AddRelationshipPersonView: View {
                         Spacer().frame(height: 18)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
+                    .padding(.top, 72)
+                    .padding(.bottom, 18)
                 }
                 .tint(SimastryColor.gold)
+                .lockHorizontalScroll()
             }
             .navigationTitle("New person")
             .navigationBarTitleDisplayMode(.inline)
@@ -1381,6 +1481,11 @@ struct AddRelationshipPersonView: View {
                     await MainActor.run {
                         selectedPhotoItem = nil
                     }
+                }
+            }
+            .sheet(isPresented: $showingContactPicker) {
+                RelationshipContactPicker { payload in
+                    applyImportedContact(payload)
                 }
             }
         }
@@ -1421,7 +1526,7 @@ struct AddRelationshipPersonView: View {
                 .frame(width: 72, height: 72)
                 .clipShape(Circle())
                 .overlay {
-                    // Ring frames a real photo only; the zodiac-glyph placeholder stays borderless.
+                    // Ring frames a real photo only; the zodiac-glyph fallback stays borderless.
                     if imageData != nil {
                         Circle().stroke(SimastryColor.gold.opacity(0.24), lineWidth: 1)
                     }
@@ -1442,11 +1547,26 @@ struct AddRelationshipPersonView: View {
                 Text("Private relationship context")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
-                Text("Manual only. No contact import, public discovery, distance, or dating signals.")
+                Text("Import only name, photo, and birthday if you choose. No phone, email, discovery, distance, or dating signals.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    HapticManager.buttonPress()
+                    showingContactPicker = true
+                } label: {
+                    Label("Import from Contacts", systemImage: "person.crop.circle.badge.plus")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .simastryGlassPill(interactive: true)
+                }
+                .buttonStyle(SpringPressStyle())
+                .padding(.top, 5)
+                .accessibilityIdentifier("people.addPerson.importContactsButton")
             }
         }
         .padding(18)
@@ -1485,6 +1605,17 @@ struct AddRelationshipPersonView: View {
                     .accessibilityIdentifier("people.addPerson.privateLabelField")
 
                 relationshipChoiceGrid
+
+                Toggle("Upload birth chart after saving", isOn: $openChartUploadAfterSave)
+                    .font(SimastryFont.labelMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .tint(SimastryColor.gold)
+                    .accessibilityIdentifier("people.addPerson.openChartUploadToggle")
+
+                Text("Use this when you have their chart screenshot and want Simastry to keep those details attached to this person privately.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(SimastryFont.bodyMedium)
             .foregroundStyle(SimastryColor.offWhite)
@@ -1671,16 +1802,11 @@ struct AddRelationshipPersonView: View {
                     .tracking(0.7)
 
                 if allowsUnknown {
-                    Text("Unknown ok")
-                        .font(SimastryFont.captionSmall.weight(.semibold))
-                        .foregroundStyle(SimastryColor.deepMuted)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.white.opacity(0.055), in: Capsule())
+                    optionalChartSignalPill(title: title)
                 }
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 48), spacing: 12)], alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 10)], alignment: .leading, spacing: 14) {
                 if allowsUnknown {
                     unknownSignButton(
                         title: title,
@@ -1706,6 +1832,18 @@ struct AddRelationshipPersonView: View {
         .accessibilityIdentifier("people.addPerson.sign.\(title.lowercased())")
     }
 
+    private func optionalChartSignalPill(title: String) -> some View {
+        Label("Optional", systemImage: "info.circle")
+            .font(SimastryFont.captionSmall.weight(.semibold))
+            .foregroundStyle(SimastryColor.deepMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.white.opacity(0.055), in: Capsule())
+            .help("\(title) can be left blank. Adding it later improves relationship and timing accuracy.")
+            .accessibilityLabel("\(title) optional")
+            .accessibilityHint("You can skip this now, but adding it later improves accuracy.")
+    }
+
     private func zodiacSignButton(
         sign: ZodiacSign,
         title: String,
@@ -1718,12 +1856,22 @@ struct AddRelationshipPersonView: View {
             action()
         } label: {
             ZStack(alignment: .topTrailing) {
-                // Just the icon, no disc/ring behind it — selection is opacity + scale.
-                ZodiacIconView(sign: sign, size: 46, showsGlow: isSelected)
-                    .frame(width: 48, height: 48)
-                    .accessibilityHidden(true)
-                    .opacity(isSelected ? 1.0 : 0.6)
-                    .scaleEffect(isSelected ? 1.08 : 1.0)
+                VStack(spacing: 5) {
+                    // Just the icon, no disc/ring behind it — selection is opacity + scale.
+                    ZodiacIconView(sign: sign, size: 42, showsGlow: isSelected)
+                        .frame(width: 46, height: 46)
+                        .accessibilityHidden(true)
+                        .opacity(isSelected ? 1.0 : 0.6)
+                        .scaleEffect(isSelected ? 1.08 : 1.0)
+
+                    Text(sign.displayName)
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: 64, height: 70)
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -1734,8 +1882,8 @@ struct AddRelationshipPersonView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .frame(width: 52, height: 52)
-            .contentShape(.circle)
+            .frame(width: 64, height: 72)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .contentShape(.rect)
@@ -1756,13 +1904,23 @@ struct AddRelationshipPersonView: View {
             action()
         } label: {
             ZStack(alignment: .topTrailing) {
-                Image(systemName: "questionmark.circle.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
-                    .frame(width: 48, height: 48)
-                    .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Circle())
-                    .opacity(isSelected ? 1.0 : 0.72)
-                    .accessibilityHidden(true)
+                VStack(spacing: 5) {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.mutedSilver)
+                        .frame(width: 46, height: 46)
+                        .background(isSelected ? SimastryColor.gold : .white.opacity(0.075), in: Circle())
+                        .opacity(isSelected ? 1.0 : 0.72)
+                        .accessibilityHidden(true)
+
+                    Text("Not sure")
+                        .font(SimastryFont.captionSmall.weight(.semibold))
+                        .foregroundStyle(isSelected ? SimastryColor.offWhite : SimastryColor.mutedSilver)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: 64, height: 70)
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -1773,12 +1931,14 @@ struct AddRelationshipPersonView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .frame(width: 52, height: 52)
-            .contentShape(.circle)
+            .frame(width: 64, height: 72)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .contentShape(.rect)
-        .accessibilityLabel("\(title) unknown")
+        .help("\(title) can be skipped. Add it later for a more accurate read.")
+        .accessibilityLabel("\(title) not sure")
+        .accessibilityHint("Optional. Add it later for a more accurate read.")
         .accessibilityIdentifier(identifier)
         .accessibilityValue(isSelected ? "selected" : "not selected")
         .accessibilityAddTraits(.isButton)
@@ -2179,7 +2339,21 @@ struct AddRelationshipPersonView: View {
             personalityType: personalityType
         )
         viewModel.addRelationshipPerson(person)
+        onSaved?(person, openChartUploadAfterSave)
         dismiss()
+    }
+
+    private func applyImportedContact(_ payload: RelationshipContactImportPayload) {
+        HapticManager.buttonPress()
+        name = payload.displayName
+        if let imageData = payload.imageData,
+           let prepared = SimastryPersonPhoto.prepared(imageData) {
+            self.imageData = prepared
+        }
+        if let birthday = payload.birthday {
+            birthDate = birthday
+            hasBirthDate = true
+        }
     }
 }
 

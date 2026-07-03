@@ -75,10 +75,13 @@ struct OnboardingInsightView: View {
                         .padding(.horizontal, 8)
                         .opacity(buttonAppeared ? 1 : 0)
 
-                    GoldButton("Meet Your Panel") {
+                    GoldButton(AppConfig.expertAstrologersEnabled ? "Meet Your Experts" : "Meet Your Panel") {
                         Task {
                             await viewModel.saveUserSigns()
-                            viewModel.homeSetupPhase = .companionSetup
+                            viewModel.homeSetupPhase = AppConfig.expertAstrologersEnabled ? .complete : .companionSetup
+                            if AppConfig.expertAstrologersEnabled {
+                                viewModel.openAIAstrologists()
+                            }
                         }
                     }
                     .padding(.horizontal, 4)
@@ -327,22 +330,61 @@ struct OnboardingInsightView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
-                Text("YOUR PANEL IS FORMING")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.goldLight)
-                    .tracking(1.6)
+            Text(AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS ARE READY" : "YOUR PANEL IS FORMING")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.goldLight)
+                .tracking(1.6)
 
                 Spacer()
             }
 
-            Text("Three guides, trained in the Simastry Method, are matched to your placements.")
+            Text(AppConfig.expertAstrologersEnabled ? "Five AI astrology specialists can read your question through distinct traditions." : "Three guides, trained in the Simastry Method, are matched to your placements.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                ForEach(panelGuides) { entry in
+                if AppConfig.expertAstrologersEnabled {
+                    ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                        VStack(spacing: 7) {
+                            if let profile = specialist.archivedProfile {
+                                Image(profile.profileImageName)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 54, height: 54, alignment: .top)
+                                    .clipShape(Circle())
+                                    .overlay {
+                                        Circle().strokeBorder(SimastryColor.gold.opacity(0.65), lineWidth: 1.3)
+                                    }
+                                    .shadow(color: SimastryColor.gold.opacity(0.22), radius: 10, y: 4)
+                            } else {
+                                Text(specialist.placeholderAvatar)
+                                    .font(SimastryFont.titleSmall)
+                                    .foregroundStyle(SimastryColor.gold)
+                                    .frame(width: 54, height: 54)
+                                    .background(SimastryColor.gold.opacity(0.12), in: Circle())
+                            }
+
+                            VStack(spacing: 1) {
+                                Text(specialist.characterName)
+                                    .font(SimastryFont.labelSmall)
+                                    .foregroundStyle(SimastryColor.offWhite)
+                                    .lineLimit(1)
+
+                                Text(specialist.publicTitle.replacingOccurrences(of: " Astrologer", with: ""))
+                                    .font(SimastryFont.captionSmall)
+                                    .foregroundStyle(SimastryColor.goldLight)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(specialist.characterName), \(specialist.publicTitle)")
+                    }
+                } else {
+                    ForEach(panelGuides) { entry in
                     VStack(spacing: 7) {
                         Image(entry.profile.profileImageName)
                             .resizable()
@@ -369,6 +411,7 @@ struct OnboardingInsightView: View {
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(entry.profile.name), your \(entry.role.displayName) lens guide, \(entry.sign.displayName)")
+                    }
                 }
             }
         }

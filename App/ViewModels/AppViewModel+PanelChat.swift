@@ -141,6 +141,10 @@ extension AppViewModel {
     // MARK: Routing
 
     func openPanelChat() {
+        guard !AppConfig.expertAstrologersEnabled else {
+            openAIAstrologists()
+            return
+        }
         selectedTab = .messages
         panelChatRouteRequest += 1
     }
@@ -148,11 +152,23 @@ extension AppViewModel {
     /// Opens the panel with today's read posted as the daily starter, so the
     /// conversation literally begins from the Home daily-read card.
     func openPanelChatSeededWithDailyRead(line: String, role: CelestialRole) {
+        guard !AppConfig.expertAstrologersEnabled else {
+            openAIAstrologists(
+                question: "What should I understand about today's \(role.displayName.lowercased()) read? \(line)",
+                autoRunEveryone: true
+            )
+            return
+        }
         postPanelDailyStarterIfNeeded(line: line, role: role)
         openPanelChat()
     }
 
     func openPanelChatWithFirstRead(_ draft: FirstReadDraft) {
+        guard !AppConfig.expertAstrologersEnabled else {
+            let question = "What should I reply back? Message: \(draft.messageText). Current read: \(draft.likelyMeaning)"
+            openAIAstrologists(question: question, autoRunEveryone: true)
+            return
+        }
         guard let sign = draft.sign else {
             openPanelChat()
             return
@@ -220,6 +236,17 @@ extension AppViewModel {
     /// message, then routes to the panel. Re-taps on the same day just
     /// open the thread — the lesson is already there.
     func openMethodCourseLesson() {
+        guard !AppConfig.expertAstrologersEnabled else {
+            if let lesson = methodCourseState.currentLesson {
+                openAIAstrologists(
+                    question: "Teach me this Simastry lesson through the five traditions: \(lesson.title).",
+                    autoRunEveryone: true
+                )
+            } else {
+                openAIAstrologists()
+            }
+            return
+        }
         var state = methodCourseState
         let today = Self.panelDayStamp(for: Date())
 
@@ -247,6 +274,13 @@ extension AppViewModel {
     /// `panelGuideEntry` lets any of the 24 guides post, not just the
     /// user's three placement guides. Re-taps of the same tip are deduped.
     func openPanelChatWithTip(lesson: String, opener: String, guideId: String) {
+        guard !AppConfig.expertAstrologersEnabled else {
+            openAIAstrologists(
+                question: "Give me expert astrology guidance on this communication lesson: \(lesson) \(opener)",
+                autoRunEveryone: true
+            )
+            return
+        }
         if let entry = panelGuideEntry(forParticipantId: guideId) {
             let content = "\(lesson) \(opener)"
             let alreadyPosted = panelMessages.suffix(20).contains {

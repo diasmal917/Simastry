@@ -14,6 +14,40 @@ enum MessageProfileDestination: Identifiable {
     }
 }
 
+private struct MessageGuideSearchEntry: Identifiable {
+    let profile: FactoryCompanionProfile
+    let haystack: String
+
+    var id: String { profile.id }
+
+    init(profile: FactoryCompanionProfile) {
+        let specialist = ExpertAstrologerRegistry.specialist(for: profile)
+        self.profile = profile
+        haystack = [
+            specialist?.characterName,
+            specialist?.publicTitle,
+            specialist?.tradition,
+            specialist?.publicDescription,
+            specialist?.focusAreas.joined(separator: " "),
+            profile.name,
+            profile.handle,
+            profile.sign.displayName,
+            profile.sign.rawValue,
+            profile.headline,
+            profile.bio,
+            profile.personalityBio,
+            profile.tags.joined(separator: " ")
+        ]
+        .compactMap { $0 }
+        .joined(separator: " ")
+        .lowercased()
+    }
+
+    func matches(_ query: String) -> Bool {
+        haystack.contains(query)
+    }
+}
+
 struct MessageSearchSheet: View {
     @Bindable var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
@@ -22,6 +56,19 @@ struct MessageSearchSheet: View {
     @State private var searchText: String = ""
     @Namespace private var searchBarGlass
     @State private var selectedProfileDestination: MessageProfileDestination?
+
+    private static let allGuides = FactoryCompanionCatalog.all
+    private static let ardenFirst = allGuides.filter { $0.id == "gemini-arden" }
+
+    private var activeGuideProfiles: [FactoryCompanionProfile] {
+        AppConfig.expertAstrologersEnabled
+            ? ExpertAstrologerRegistry.archivedProfiles
+            : Self.allGuides
+    }
+
+    private var guideSearchEntries: [MessageGuideSearchEntry] {
+        activeGuideProfiles.map(MessageGuideSearchEntry.init)
+    }
 
     private var query: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -36,8 +83,10 @@ struct MessageSearchSheet: View {
     }
 
     private var guideResults: [FactoryCompanionProfile] {
-        let source = isSearching ? FactoryCompanionCatalog.all : suggestedGuides
-        return Array(source.filter(matchesGuide).prefix(isSearching ? 12 : 8))
+        guard isSearching else {
+            return Array(suggestedGuides.prefix(8))
+        }
+        return Array(guideSearchEntries.filter { $0.matches(query) }.prefix(12).map(\.profile))
     }
 
     private var userResults: [SocialProfile] {
@@ -50,13 +99,16 @@ struct MessageSearchSheet: View {
     }
 
     private var suggestedGuides: [FactoryCompanionProfile] {
+        if AppConfig.expertAstrologersEnabled {
+            return ExpertAstrologerRegistry.archivedProfiles
+        }
+
         var seen = Set<String>()
         // Lead the discovery surface with Arden, then the user's panel.
-        let ardenFirst = FactoryCompanionCatalog.all.filter { $0.id == "gemini-arden" }
-        let ordered = ardenFirst
+        let ordered = Self.ardenFirst
             + viewModel.panelGuideEntries.map(\.profile)
             + [FactoryCompanionCatalog.featured]
-            + FactoryCompanionCatalog.all
+            + Self.allGuides
         return ordered.filter { profile in
             seen.insert(profile.id).inserted
         }
@@ -64,27 +116,27 @@ struct MessageSearchSheet: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
+            // Content must inset below the nav bar / drag indicator, so the
+            // celestial backdrop comes from `.presentationBackground` (below) —
+            // NOT a full-bleed `ZStack` layer that would drag the scroll content
+            // up under the toolbar and clip the header.
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    header
+                    guideStrip
 
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        header
-                        guideStrip
-
-                        if isSearching {
-                            searchResults
-                        } else {
-                            guidePreviewFeed
-                        }
-
-                        Spacer().frame(height: 104)
+                    if isSearching {
+                        searchResults
+                    } else {
+                        guidePreviewFeed
                     }
-                    .padding(.top, 0)
-                    .padding(.bottom, 12)
+
+                    Spacer().frame(height: 104)
                 }
-                .scrollIndicators(.hidden)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
             }
+            .scrollIndicators(.hidden)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -120,16 +172,20 @@ struct MessageSearchSheet: View {
                     .presentationDragIndicator(.visible)
                 case .guide(let guide):
                     NavigationStack {
-                        GuideProfileView(viewModel: viewModel, profile: guide)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") {
-                                        selectedProfileDestination = nil
-                                    }
-                                    .font(SimastryFont.labelMedium)
-                                    .foregroundStyle(SimastryColor.gold)
-                                }
+                        if AppConfig.expertAstrologersEnabled {
+                            ExpertAstrologersView(viewModel: viewModel, showsDoneButton: true)
+                        } else {
+                            GuideProfileView(viewModel: viewModel, profile: guide)
+                        }
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                selectedProfileDestination = nil
                             }
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.gold)
+                        }
                     }
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
@@ -144,6 +200,7 @@ struct MessageSearchSheet: View {
         .presentationBackground {
             CelestialBackground()
         }
+        .accessibilityIdentifier("talk.messageSearchSheet")
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
@@ -152,14 +209,14 @@ struct MessageSearchSheet: View {
         VStack(alignment: .leading, spacing: 3) {
             SimastryWordmark()
 
-            Text("Your Guides")
+            Text(AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Your Guides")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.deepMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Simastry, your guides")
+        .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Simastry, expert astrologers" : "Simastry, your guides")
     }
 
     private var guideStrip: some View {
@@ -176,7 +233,7 @@ struct MessageSearchSheet: View {
             .padding(.vertical, 2)
         }
         .scrollIndicators(.hidden)
-        .accessibilityLabel("Guide shortcuts")
+        .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Expert astrologer shortcuts" : "Guide shortcuts")
     }
 
     private var guidePreviewFeed: some View {
@@ -195,7 +252,7 @@ struct MessageSearchSheet: View {
     private var searchResults: some View {
         VStack(alignment: .leading, spacing: 16) {
             if !guideResults.isEmpty {
-                resultSection(title: "Guides") {
+                resultSection(title: AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Guides") {
                     ForEach(guideResults) { guide in
                         Button {
                             HapticManager.buttonPress()
@@ -204,7 +261,8 @@ struct MessageSearchSheet: View {
                             MessageSearchGuideRow(profile: guide)
                         }
                         .buttonStyle(SpringPressStyle())
-                        .accessibilityHint("Opens \(guide.name)'s guide profile")
+                        .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens expert astrologers" : "Opens \(guide.name)'s guide profile")
+                        .accessibilityIdentifier("talk.messageSearch.guide.\(guide.id)")
                     }
                 }
             }
@@ -220,6 +278,7 @@ struct MessageSearchSheet: View {
                         }
                         .buttonStyle(SpringPressStyle())
                         .accessibilityHint("Opens \(profile.displayName)'s public profile")
+                        .accessibilityIdentifier("talk.messageSearch.user.\(profile.username ?? profile.id.uuidString)")
                     }
                 }
             } else if isLoadingUsers {
@@ -243,7 +302,9 @@ struct MessageSearchSheet: View {
                 MessageSearchStatusCard(
                     systemImage: "magnifyingglass",
                     title: "No matches yet",
-                    detail: "Try a username, guide name, zodiac sign, or guide handle.",
+                    detail: AppConfig.expertAstrologersEnabled
+                        ? "Try a username, expert name, tradition, or astrology topic."
+                        : "Try a username, guide name, zodiac sign, or guide handle.",
                     showsProgress: false
                 )
                 .padding(.horizontal, 20)
@@ -312,7 +373,7 @@ struct MessageSearchSheet: View {
 
             ZStack(alignment: .leading) {
                 if searchText.isEmpty {
-                    Text("Search guides or usernames")
+                    Text(AppConfig.expertAstrologersEnabled ? "Search experts or usernames" : "Search guides or usernames")
                         .font(SimastryFont.bodyMedium)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .accessibilityHidden(true)
@@ -326,7 +387,12 @@ struct MessageSearchSheet: View {
                     .font(SimastryFont.bodyMedium)
                     .foregroundStyle(SimastryColor.offWhite)
                     .tint(SimastryColor.gold)
-                    .accessibilityLabel("Search guides or usernames")
+                    .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Search experts or usernames" : "Search guides or usernames")
+                    .accessibilityIdentifier("talk.messageSearch.searchInput")
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                searchFocused = true
             }
 
             if !query.isEmpty {
@@ -370,23 +436,6 @@ struct MessageSearchSheet: View {
         .messageSearchSearchGlass()
     }
 
-    private func matchesGuide(_ profile: FactoryCompanionProfile) -> Bool {
-        guard isSearching else { return true }
-        let haystack = [
-            profile.name,
-            profile.handle,
-            profile.sign.displayName,
-            profile.sign.rawValue,
-            profile.headline,
-            profile.bio,
-            profile.personalityBio,
-            profile.tags.joined(separator: " ")
-        ]
-            .joined(separator: " ")
-            .lowercased()
-        return haystack.contains(query)
-    }
-
     private func matchesUser(_ profile: SocialProfile) -> Bool {
         guard isSearching else { return false }
         let haystack = [
@@ -407,6 +456,18 @@ struct MessageSearchSheet: View {
 private struct MessageGuideBubble: View {
     let profile: FactoryCompanionProfile
     let action: () -> Void
+
+    private var specialist: AstrologySpecialist? {
+        ExpertAstrologerRegistry.specialist(for: profile)
+    }
+
+    private var role: String {
+        specialist?.publicTitle ?? (AppConfig.expertAstrologersEnabled ? "Expert astrologer" : "\(profile.sign.displayName) guide")
+    }
+
+    private var displayName: String {
+        specialist?.characterName ?? profile.name
+    }
 
     var body: some View {
         Button(action: action) {
@@ -431,7 +492,7 @@ private struct MessageGuideBubble: View {
                             )
                     }
 
-                Text(profile.name)
+                Text(displayName)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.offWhite.opacity(0.86))
                     .lineLimit(1)
@@ -440,8 +501,8 @@ private struct MessageGuideBubble: View {
             .frame(width: 80)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(profile.name), \(profile.sign.displayName) guide")
-        .accessibilityHint("Opens guide profile")
+        .accessibilityLabel("\(displayName), \(role)")
+        .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens expert astrologers" : "Opens guide profile")
     }
 }
 
@@ -450,12 +511,31 @@ private struct MessageGuidePreviewCard: View {
     let action: () -> Void
 
     private var heroImageName: String {
-        profile.gridImageNames.first ?? profile.cardImageName
+        AppConfig.expertAstrologersEnabled ? profile.cardImageName : (profile.gridImageNames.first ?? profile.cardImageName)
+    }
+
+    private var specialist: AstrologySpecialist? {
+        ExpertAstrologerRegistry.specialist(for: profile)
     }
 
     private var quote: String {
+        if let specialist {
+            return specialist.longDescription
+        }
         let bio = profile.personalityBio.trimmingCharacters(in: .whitespacesAndNewlines)
         return bio.isEmpty ? profile.headline : bio
+    }
+
+    private var role: String {
+        specialist?.publicTitle ?? (AppConfig.expertAstrologersEnabled ? "Expert astrologer" : "\(profile.sign.displayName) guide")
+    }
+
+    private var displayName: String {
+        specialist?.characterName ?? profile.name
+    }
+
+    private var tags: [String] {
+        specialist?.focusAreas.prefix(3).map(\.self) ?? profile.tags.prefix(3).map(\.self)
     }
 
     var body: some View {
@@ -470,8 +550,8 @@ private struct MessageGuidePreviewCard: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(profile.name), \(profile.sign.displayName) guide. \(profile.headline)")
-        .accessibilityHint("Opens guide profile")
+        .accessibilityLabel("\(displayName), \(role). \(specialist?.publicDescription ?? profile.headline)")
+        .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens expert astrologers" : "Opens guide profile")
     }
 
     private var hero: some View {
@@ -529,7 +609,7 @@ private struct MessageGuidePreviewCard: View {
                 .overlay { Circle().stroke(.white.opacity(0.85), lineWidth: 1.5) }
                 .shadow(color: .black.opacity(0.40), radius: 5, y: 2)
 
-            Text(profile.name)
+            Text(displayName)
                 .font(SimastryFont.labelLarge)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -539,9 +619,19 @@ private struct MessageGuidePreviewCard: View {
     }
 
     private var zodiacBadge: some View {
-        ZodiacIconView(sign: profile.sign, size: 30, showsGlow: true)
-            .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
-            .accessibilityHidden(true)
+        Group {
+            if let specialist {
+                Image(systemName: specialist.symbol)
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(width: 34, height: 34)
+                    .background(.black.opacity(0.24), in: Circle())
+            } else {
+                ZodiacIconView(sign: profile.sign, size: 30, showsGlow: true)
+            }
+        }
+        .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
+        .accessibilityHidden(true)
     }
 
     private var caption: some View {
@@ -553,9 +643,9 @@ private struct MessageGuidePreviewCard: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if !profile.tags.isEmpty {
+            if !tags.isEmpty {
                 HStack(spacing: 7) {
-                    ForEach(profile.tags.prefix(3), id: \.self) { tag in
+                    ForEach(tags, id: \.self) { tag in
                         Text("#\(tag)")
                             .font(SimastryFont.captionSmall)
                             .foregroundStyle(SimastryColor.gold.opacity(0.92))
@@ -569,7 +659,7 @@ private struct MessageGuidePreviewCard: View {
             }
 
             HStack(spacing: 8) {
-                Text("@\(profile.handle)")
+                Text(specialist?.publicTitle ?? "@\(profile.handle)")
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
@@ -597,6 +687,22 @@ private struct MessageGuidePreviewCard: View {
 private struct MessageSearchGuideRow: View {
     let profile: FactoryCompanionProfile
 
+    private var specialist: AstrologySpecialist? {
+        ExpertAstrologerRegistry.specialist(for: profile)
+    }
+
+    private var role: String {
+        specialist?.publicTitle ?? (AppConfig.expertAstrologersEnabled ? "Expert Astrologer" : "\(profile.sign.displayName) Guide")
+    }
+
+    private var description: String {
+        specialist?.publicDescription ?? (AppConfig.expertAstrologersEnabled ? "One of the five Simastry astrology specialists." : GuideDirectoryCopy.specialty(for: profile))
+    }
+
+    private var displayName: String {
+        specialist?.characterName ?? profile.name
+    }
+
     var body: some View {
         HStack(spacing: 13) {
             Image(profile.profileImageName)
@@ -612,20 +718,26 @@ private struct MessageSearchGuideRow: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Text(profile.name)
+                    Text(displayName)
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                         .lineLimit(1)
 
-                    ZodiacIconView(sign: profile.sign, size: 17, showsGlow: false)
+                    if let specialist {
+                        Image(systemName: specialist.symbol)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+                    } else {
+                        ZodiacIconView(sign: profile.sign, size: 17, showsGlow: false)
+                    }
                 }
 
-                Text("@\(profile.handle) · \(profile.sign.displayName) Guide")
+                Text(role)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.gold.opacity(0.9))
                     .lineLimit(1)
 
-                Text(GuideDirectoryCopy.specialty(for: profile))
+                Text(description)
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(2)
@@ -641,7 +753,7 @@ private struct MessageSearchGuideRow: View {
         .padding(14)
         .simastryGlass(cornerRadius: 18)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(profile.name), \(profile.sign.displayName) guide. \(GuideDirectoryCopy.specialty(for: profile))")
+        .accessibilityLabel("\(displayName), \(role). \(description)")
     }
 }
 

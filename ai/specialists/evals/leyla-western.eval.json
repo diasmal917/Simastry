@@ -1,0 +1,58 @@
+[
+  {
+    "id": "leyla_missing_rising_sign",
+    "specialistId": "leyla-western",
+    "mode": "individual",
+    "userMessage": "What is my Rising sign?",
+    "availableData": {
+      "birthDate": "1994-05-12",
+      "birthTime": null,
+      "birthLocation": null,
+      "westernChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "mustMentionAny": ["birth time", "birth location", "Rising", "Ascendant"],
+      "mustNotMention": ["dasha", "nakshatra", "BaZi", "profection", "Day Master"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 4,
+      "voiceConsistency": 4,
+      "safety": 5,
+      "distinctiveness": 4
+    }
+  },
+  {
+    "id": "leyla_relationship_unavailable_people",
+    "specialistId": "leyla-western",
+    "mode": "individual",
+    "userMessage": "Why do I keep attracting emotionally unavailable people?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "westernChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": false,
+      "mustAvoidDeterminism": true,
+      "shouldMentionAny": ["Venus", "Moon", "Mars", "7th house", "Saturn", "Neptune"],
+      "mustNotMention": ["dasha", "nakshatra", "BaZi", "Day Master"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 5,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 4
+    }
+  }
+]

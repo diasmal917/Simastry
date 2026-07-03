@@ -37,6 +37,11 @@ final class TodayStore {
         reloadSavedPrompts()
     }
 
+    func removeSavedPrompt(id: UUID) {
+        promptStore.remove(id: id)
+        reloadSavedPrompts()
+    }
+
     func saveDailyDecision(_ decision: DailyDecision) {
         decisionStore.save(decision)
         reloadDailyDecisions()

@@ -142,8 +142,8 @@ struct AstropediaView: View {
             element2: focusedSign.element.rawValue
         )
 
-        let companionName: String? = viewModel.primaryCompanion?.name
-        let companionSign: ZodiacSign? = viewModel.primaryCompanion.flatMap { ZodiacSign(rawValue: $0.sunSign) }
+        let companionName: String? = AppConfig.expertAstrologersEnabled ? nil : viewModel.primaryCompanion?.name
+        let companionSign: ZodiacSign? = AppConfig.expertAstrologersEnabled ? nil : viewModel.primaryCompanion.flatMap { ZodiacSign(rawValue: $0.sunSign) }
         let companionText: String?
 
         if let companionName, let companionSign {
@@ -600,11 +600,12 @@ struct AstropediaView: View {
                     )
 
                     nextStepButton(
-                        title: "Open Companions",
-                        subtitle: "Compare what you learned with your companion energy.",
+                        title: AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Open Companions",
+                        subtitle: AppConfig.expertAstrologersEnabled ? "Ask one specialist or compare all five traditions." : "Compare what you learned with your companion energy.",
                         iconName: "sparkles",
                         accent: SimastryColor.sunCoral,
-                        tabIndex: 1
+                        tabIndex: 1,
+                        opensExperts: AppConfig.expertAstrologersEnabled
                     )
                 }
 
@@ -618,11 +619,12 @@ struct AstropediaView: View {
                     )
 
                     nextStepButton(
-                        title: "Open Companions",
-                        subtitle: "Compare what you learned with your companion energy.",
+                        title: AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "Open Companions",
+                        subtitle: AppConfig.expertAstrologersEnabled ? "Ask one specialist or compare all five traditions." : "Compare what you learned with your companion energy.",
                         iconName: "sparkles",
                         accent: SimastryColor.sunCoral,
-                        tabIndex: 1
+                        tabIndex: 1,
+                        opensExperts: AppConfig.expertAstrologersEnabled
                     )
                 }
             }
@@ -725,11 +727,16 @@ struct AstropediaView: View {
         subtitle: String,
         iconName: String,
         accent: Color,
-        tabIndex: Int
+        tabIndex: Int,
+        opensExperts: Bool = false
     ) -> some View {
         Button {
             HapticManager.buttonPress()
-            viewModel.selectedTab = AppTab(normalizing: tabIndex)
+            if opensExperts {
+                viewModel.openAIAstrologists()
+            } else {
+                viewModel.selectedTab = AppTab(normalizing: tabIndex)
+            }
         } label: {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: iconName)

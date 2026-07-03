@@ -28,7 +28,8 @@ struct UpsellModalView: View {
                 subscriptionDisclaimer
             }
             .padding(.horizontal, 20)
-            .padding(.top, 28)
+            // Clears the sheet drag indicator so the hero icon/title never crowds it.
+            .padding(.top, 36)
             .padding(.bottom, 40)
         }
         .presentationContentInteraction(.scrolls)
@@ -95,7 +96,7 @@ struct UpsellModalView: View {
 
             HStack(spacing: 16) {
                 freeChip("10 msgs/day")
-                freeChip("1 companion")
+                freeChip(AppConfig.expertAstrologersEnabled ? "5 AI experts" : "1 companion")
                 freeChip("Chart context")
             }
 
@@ -148,7 +149,7 @@ struct UpsellModalView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     featureRow("Unlimited messages", icon: "message.fill")
-                    featureRow("Up to 3 companions", icon: "person.3.fill")
+                    featureRow(AppConfig.expertAstrologersEnabled ? "Five expert astrologers" : "Up to 3 companions", icon: "person.3.fill")
                     featureRow("Chart-grounded replies", icon: "scope")
                     featureRow("Full communication guidance", icon: "bubble.left.and.bubble.right.fill")
                     featureRow("Daily transit readings", icon: "sun.horizon.fill")
@@ -215,7 +216,7 @@ struct UpsellModalView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     featureRow("Everything in Plus", icon: "checkmark.seal.fill")
-                    featureRow("Unlimited companions", icon: "person.crop.circle.badge.plus")
+                    featureRow(AppConfig.expertAstrologersEnabled ? "Unlimited expert consultations" : "Unlimited companions", icon: "person.crop.circle.badge.plus")
                     featureRow("Priority AI responses", icon: "bolt.fill")
                     featureRow("Advanced compatibility insights", icon: "chart.xyaxis.line")
                 }

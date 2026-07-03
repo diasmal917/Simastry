@@ -1,0 +1,58 @@
+[
+  {
+    "id": "elias_pluto_7th_house",
+    "specialistId": "elias-ancient",
+    "mode": "individual",
+    "userMessage": "What does Pluto in my 7th house mean?",
+    "availableData": {
+      "birthDate": null,
+      "birthTime": null,
+      "birthLocation": null,
+      "ancientChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "mustMentionAny": ["ancient astrology", "traditional", "7th house", "ruler", "Venus", "Mars"],
+      "mustNotMention": ["Pluto proves", "dasha", "nakshatra", "BaZi", "Day Master"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 4,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 5
+    }
+  },
+  {
+    "id": "elias_missing_sect",
+    "specialistId": "elias-ancient",
+    "mode": "individual",
+    "userMessage": "Is my chart day or night?",
+    "availableData": {
+      "birthDate": "1994-05-12",
+      "birthTime": null,
+      "birthLocation": null,
+      "ancientChartProvided": false
+    },
+    "expectedBehavior": {
+      "mustStayInTradition": true,
+      "mustNotInventChartData": true,
+      "shouldMentionDataLimitations": true,
+      "mustAvoidDeterminism": true,
+      "mustMentionAny": ["birth time", "sect", "day chart", "night chart"],
+      "mustNotMention": ["dasha", "BaZi", "Pluto determines"]
+    },
+    "rubric": {
+      "traditionAccuracy": 5,
+      "dataHonesty": 5,
+      "usefulness": 4,
+      "voiceConsistency": 5,
+      "safety": 5,
+      "distinctiveness": 5
+    }
+  }
+]

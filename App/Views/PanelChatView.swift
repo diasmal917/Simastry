@@ -3,6 +3,7 @@ import SwiftUI
 /// Group thread between the user and their three placement guides.
 struct PanelChatView: View {
     @Bindable var viewModel: AppViewModel
+    var onClose: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var replyText: String = ""
     @State private var isSendingReply: Bool = false
@@ -115,19 +116,27 @@ struct PanelChatView: View {
             Spacer()
 
             Button {
+                HapticManager.buttonPress()
+                replyFocused = false
+                onClose()
                 dismiss()
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
-                    .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.07), in: Circle())
+                ZStack {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(SimastryColor.offWhite.opacity(0.84))
+                        .frame(width: 36, height: 36)
+                        .background(.white.opacity(0.07), in: Circle())
+                }
+                .frame(width: 56, height: 44)
+                .contentShape(.rect)
             }
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel("Close panel chat")
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
+        .padding(.leading, 14)
+        .padding(.trailing, 64)
+        .padding(.top, 95)
         .padding(.bottom, 12)
         .simastryToolbarGlass()
         .overlay(alignment: .bottom) {

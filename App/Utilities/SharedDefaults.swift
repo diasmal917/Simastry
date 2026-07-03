@@ -64,13 +64,54 @@ enum SharedDefaults {
         readCompanionName() != nil
     }
 
+    // MARK: - Daily expert note (widget)
+
+    static let dailyNotesKey = "widgetDailyNotes"
+
+    /// The app pre-composes today's and tomorrow's notes; the widget only
+    /// renders them, so it always matches the Today card and the push.
+    static func writeDailyNotes(_ notes: [SharedDailyNote]) {
+        guard let defaults = shared, let data = try? JSONEncoder().encode(notes) else { return }
+        defaults.set(data, forKey: dailyNotesKey)
+    }
+
+    static func readDailyNotes() -> [SharedDailyNote] {
+        guard let defaults = shared,
+              let data = defaults.data(forKey: dailyNotesKey),
+              let notes = try? JSONDecoder().decode([SharedDailyNote].self, from: data) else {
+            return []
+        }
+        return notes
+    }
+
     // MARK: - Clear
 
     static func clearAll() {
         guard let defaults = shared else { return }
         for key in [Key.companionName, Key.companionSunSign, Key.companionGlyph,
-                    Key.userSunSign, Key.userGlyph, Key.compatibilityScore, Key.companionId] {
+                    Key.userSunSign, Key.userGlyph, Key.compatibilityScore, Key.companionId,
+                    dailyNotesKey] {
             defaults.removeObject(forKey: key)
         }
+    }
+}
+
+/// One day's expert note as shared with the widget extension.
+struct SharedDailyNote: Codable, Equatable {
+    /// Local-calendar day, "yyyy-MM-dd".
+    let dateKey: String
+    let expertName: String
+    let headline: String
+    let move: String
+
+    static func dateKey(for date: Date, calendar: Calendar = .current) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    func date(calendar: Calendar = .current) -> Date? {
+        let parts = dateKey.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }

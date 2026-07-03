@@ -166,7 +166,7 @@ struct SavedGuidesView: View {
                     categorySection(category: category, guides: guides)
                 }
 
-                Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
             }
             .padding(.horizontal, 20)
         }
@@ -532,7 +532,7 @@ private struct GuideDetailSheet: View {
                             .padding(.horizontal, 8)
                             .padding(.top, 4)
 
-                        Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                        Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                     }
                     .padding(.horizontal, 20)
                 }

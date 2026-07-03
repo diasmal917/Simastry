@@ -31,7 +31,7 @@ struct GuidedRoomInboxRow: View {
                             .foregroundStyle(isUnread ? SimastryColor.offWhite : SimastryColor.mutedSilver)
                             .lineLimit(1)
 
-                        if !room.guideMembers.isEmpty {
+                        if !AppConfig.expertAstrologersEnabled && !room.guideMembers.isEmpty {
                             Text("Guided")
                                 .font(SimastryFont.captionSmall.weight(.semibold))
                                 .foregroundStyle(SimastryColor.goldLight)
@@ -107,28 +107,28 @@ struct GuidedRoomCreateView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    introCard
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        introCard
-
-                        if AppConfig.socialDiscoveryEnabled {
-                            peopleSection
+                    if AppConfig.socialDiscoveryEnabled {
+                        peopleSection
+                        if !AppConfig.expertAstrologersEnabled {
                             guidesSection
-                            titleSection
-                            createButton
-                        } else {
-                            unavailableCard
                         }
+                        titleSection
+                        createButton
+                    } else {
+                        unavailableCard
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 36)
                 }
-                .scrollIndicators(.hidden)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 36)
             }
+            .scrollIndicators(.hidden)
+            // `.background` keeps the intro card below the nav bar (no clip).
+            .background { CelestialBackground() }
             .navigationTitle("New Room")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -142,12 +142,13 @@ struct GuidedRoomCreateView: View {
             }
             .task {
                 if !initializedGuideSelection {
-                    selectedGuideIds = Set(viewModel.panelGuideEntries.map { $0.profile.id })
+                    selectedGuideIds = AppConfig.expertAstrologersEnabled ? [] : Set(viewModel.panelGuideEntries.map { $0.profile.id })
                     initializedGuideSelection = true
                 }
                 await viewModel.fetchDiscoverableProfiles()
             }
         }
+        .accessibilityIdentifier("talk.newRoomSheet")
     }
 
     private var introCard: some View {
@@ -157,18 +158,18 @@ struct GuidedRoomCreateView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
-                Text("GUIDED ROOM")
+                Text(AppConfig.expertAstrologersEnabled ? "PRIVATE ROOM" : "GUIDED ROOM")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.goldLight)
                     .tracking(1.2)
             }
 
-            Text("Start a private room with opted-in people. Your guides can join as AI participants for reflection, repair, and clarity.")
+            Text(AppConfig.expertAstrologersEnabled ? "Start a private room with opted-in people. For astrology perspective, ask the five experts separately." : "Start a private room with opted-in people. Your guides can join as AI participants for reflection, repair, and clarity.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.78))
                 .lineSpacing(3)
 
-            Text("This is a guided conversation, not therapy.")
+            Text(AppConfig.expertAstrologersEnabled ? "Rooms are for human conversation, not therapy." : "This is a guided conversation, not therapy.")
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.mutedSilver)
         }
@@ -264,7 +265,7 @@ struct GuidedRoomCreateView: View {
             Text("Rooms are unavailable")
                 .font(SimastryFont.titleSmall)
                 .foregroundStyle(SimastryColor.offWhite)
-            Text("Guided Rooms use social discovery and Supabase. Enable the social environment before creating real rooms.")
+            Text("Rooms use social discovery and Supabase. Enable the social environment before creating real rooms.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineSpacing(3)
@@ -280,7 +281,7 @@ struct GuidedRoomCreateView: View {
         } else if selectedProfileIds.count < 4 {
             selectedProfileIds.insert(profile.id)
         } else {
-            viewModel.showToast("Room is full", subtitle: "Guided Rooms support up to 5 humans including you.", isError: true)
+            viewModel.showToast("Room is full", subtitle: "Rooms support up to 5 humans including you.", isError: true)
         }
     }
 
@@ -291,7 +292,7 @@ struct GuidedRoomCreateView: View {
 
         if let room = await viewModel.createGuidedRoom(
             with: selectedProfiles,
-            includedGuideProfileIds: selectedGuideIds,
+            includedGuideProfileIds: AppConfig.expertAstrologersEnabled ? [] : selectedGuideIds,
             title: roomTitle
         ) {
             dismiss()
@@ -324,7 +325,8 @@ struct GuidedRoomChatView: View {
     }
 
     private var typingGuides: [ChatThreadMember] {
-        summary.guideMembers.filter { member in
+        guard !AppConfig.expertAstrologersEnabled else { return [] }
+        return summary.guideMembers.filter { member in
             guard let guideProfileId = member.guideProfileId else { return false }
             return viewModel.isGuideTyping(in: summary.id, guideProfileId: guideProfileId)
         }
@@ -457,7 +459,7 @@ struct GuidedRoomChatView: View {
                     .foregroundStyle(SimastryColor.offWhite)
                     .lineLimit(1)
 
-                Text("\(summary.humanMembers.count) humans · \(summary.guideMembers.count) guides · not therapy")
+                Text(AppConfig.expertAstrologersEnabled ? "\(summary.humanMembers.count) humans · not therapy" : "\(summary.humanMembers.count) humans · \(summary.guideMembers.count) guides · not therapy")
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineLimit(1)
@@ -518,7 +520,7 @@ struct GuidedRoomChatView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
-                Text("GUIDED CONVERSATION")
+                Text(AppConfig.expertAstrologersEnabled ? "PRIVATE CONVERSATION" : "GUIDED CONVERSATION")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.goldLight)
                     .tracking(1.2)
@@ -526,12 +528,12 @@ struct GuidedRoomChatView: View {
                 Spacer()
             }
 
-            Text("Human messages are shared with room members. Guide replies use public profile signs, recent room messages, and activity cards only.")
+            Text(AppConfig.expertAstrologersEnabled ? "Human messages are shared with room members. Expert astrologers stay separate unless you open an expert consultation." : "Human messages are shared with room members. Guide replies use public profile signs, recent room messages, and activity cards only.")
                 .font(SimastryFont.caption)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.76))
                 .lineSpacing(2)
 
-            if !summary.guideMembers.isEmpty {
+            if !AppConfig.expertAstrologersEnabled && !summary.guideMembers.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(summary.guideMembers) { member in
@@ -862,7 +864,7 @@ private struct GuidedRoomAvatarStack: View {
 
     private var visibleMembers: [ChatThreadMember] {
         let humans = members.filter { $0.memberKind == .human && $0.humanUserId != currentUserId }
-        let guides = members.filter { $0.memberKind == .guide }
+        let guides = AppConfig.expertAstrologersEnabled ? [] : members.filter { $0.memberKind == .guide }
         let currentUser = members.first { $0.memberKind == .human && $0.humanUserId == currentUserId }
         return Array((humans + guides + [currentUser].compactMap { $0 }).prefix(4))
     }

@@ -54,11 +54,13 @@ struct SignSelectionView: View {
 
                 OnboardingProgressView(
                     eyebrow: "Discover",
-                    title: "Calculate your communication type",
-                    subtitle: "Your Sun, Moon, and Rising signs become the chart signals Simastry uses for message guidance.",
+                    title: AppConfig.expertAstrologersEnabled ? "Calculate your chart signals" : "Calculate your communication type",
+                    subtitle: AppConfig.expertAstrologersEnabled
+                        ? "Your Sun, Moon, and Rising signs help the expert astrologers personalize guidance without guessing."
+                        : "Your Sun, Moon, and Rising signs become the chart signals Simastry uses for message guidance.",
                     step: 2,
                     totalSteps: 3,
-                    labels: ["Path", "Signs", "Companion"]
+                    labels: AppConfig.expertAstrologersEnabled ? ["Path", "Chart", "Experts"] : ["Path", "Signs", "Companion"]
                 )
                 .padding(.horizontal, 20)
 

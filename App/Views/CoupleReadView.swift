@@ -17,38 +17,34 @@ struct CoupleReadView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        heroCard
-                        commitmentCard
-                        patternCard(
-                            title: "HOW YOU FIGHT",
-                            icon: "bolt.horizontal.fill",
-                            tint: SimastryColor.amber,
-                            body: read.fight
-                        )
-                        patternCard(
-                            title: "THE REPAIR MOVE",
-                            icon: "arrow.triangle.merge",
-                            tint: SimastryColor.celestialBlue,
-                            body: read.repair
-                        )
-                        patternCard(
-                            title: "MONEY TALK",
-                            icon: "creditcard.fill",
-                            tint: SimastryColor.gold,
-                            body: read.moneyTalk
-                        )
-                        honestyFooter
-                    }
-                    .padding(20)
-                    .padding(.bottom, 28)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    heroCard
+                    commitmentCard
+                    patternCard(
+                        title: "HOW YOU FIGHT",
+                        icon: "bolt.horizontal.fill",
+                        tint: SimastryColor.amber,
+                        body: read.fight
+                    )
+                    patternCard(
+                        title: "THE REPAIR MOVE",
+                        icon: "arrow.triangle.merge",
+                        tint: SimastryColor.celestialBlue,
+                        body: read.repair
+                    )
+                    patternCard(
+                        title: "MONEY TALK",
+                        icon: "creditcard.fill",
+                        tint: SimastryColor.gold,
+                        body: read.moneyTalk
+                    )
+                    honestyFooter
                 }
-                .scrollIndicators(.hidden)
+                .padding(20)
+                .padding(.bottom, 28)
             }
+            .scrollIndicators(.hidden)
             .navigationTitle("Couple Read")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)

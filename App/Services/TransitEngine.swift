@@ -66,9 +66,11 @@ nonisolated enum WholeSignAspect: String, Sendable, CaseIterable {
         }
     }
 
+    /// Sign-level phrasing on purpose: these contacts are judged sign-to-sign,
+    /// so "conjunct" (which implies a degree orb) would overstate precision.
     var displayName: String {
         switch self {
-        case .conjunction: "conjunct"
+        case .conjunction: "in the same sign as"
         case .sextile: "sextile"
         case .square: "square"
         case .trine: "trine"

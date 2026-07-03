@@ -31,6 +31,8 @@ struct SimulateView: View {
     @State private var showTopUpSheet = false
     @State private var showAuraSnapshotSheet = false
     @State private var hasAdvancedPastCategory: Bool = false
+    @State private var isApplyingPredictionDraft: Bool = false
+    @State private var draftScrollRequest: Int = 0
 
     // Section 3 "Who is this about?" — the reading is about *you* by default.
     @State private var aboutSubject: PredictSubject = .you
@@ -92,7 +94,8 @@ struct SimulateView: View {
 
     private var nextPredictActionSubtitle: String {
         if !hasAdvancedPastCategory {
-            return "Step 2 of 3"
+            // Matches the top step rail (Choose = step 1 of 3).
+            return "Step 1 of 3"
         }
         if selectedCategory.requiresTargetSign && selectedSunSign == nil {
             return "Required for reply predictions"
@@ -242,15 +245,20 @@ struct SimulateView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
-                .padding(.bottom, SimastrySpacing.tabBarClearance)
+                .padding(.bottom, SimastrySpacing.tabBarClearance + 24)
             }
             .scrollIndicators(.hidden)
             .onChange(of: selectedCategory) { _, _ in
                 guard hasAdvancedPastCategory else { return }
                 scrollToNextPredictStep(proxy)
             }
+            .onChange(of: draftScrollRequest) { _, _ in
+                guard hasAdvancedPastCategory else { return }
+                scrollToNextPredictStep(proxy)
+            }
         }
         .background { CelestialBackground() }
+        .accessibilityHidden(showTopUpSheet || showAuraSnapshotSheet || selectedResult != nil)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             predictBottomAction
         }
@@ -306,26 +314,10 @@ struct SimulateView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .bottomTrailing) {
-                PredictionOrbIcon(size: 58, animated: appeared, glow: selectedCategory.accentColor)
-
-                if let selectedSunSign {
-                    ZodiacIconView(sign: selectedSunSign, size: 26, showsGlow: true)
-                        .offset(x: 3, y: 2)
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .frame(width: 62, height: 62)
-            .accessibilityHidden(true)
-
-            Text("Ask the Future")
-                .font(SimastryFont.titleLarge)
+        VStack(spacing: 0) {
+            Text("Predict The Future")
+                .font(SimastryFont.displayMedium)
                 .foregroundStyle(SimastryColor.offWhite)
-
-            Text("Love, timing, money, career, replies.")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -452,6 +444,7 @@ struct SimulateView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Ask about \(category.title)")
+        .accessibilityIdentifier("predict.category.\(category.rawValue)")
     }
 
     private var guidedPredictionFlow: some View {
@@ -500,6 +493,8 @@ struct SimulateView: View {
                 .id("predict.conversation")
             }
 
+            signalsDisclosure
+
             guidedQuestionBlock(
                 number: selectedCategory.requiresConversation ? 5 : (selectedCategory.allowsTargetSign ? 4 : 3),
                 title: "Ready for the crystal ball?",
@@ -508,34 +503,36 @@ struct SimulateView: View {
                 actionSection
             }
             .id("predict.action")
-
-            DisclosureGroup {
-                VStack(spacing: 16) {
-                    AuraSnapshotCard(
-                        snapshot: viewModel.auraSnapshot,
-                        compact: true,
-                        onOpen: { showAuraSnapshotSheet = true },
-                        onClear: { viewModel.clearAuraSnapshot() }
-                    )
-                    methodLayerCard
-                }
-                .padding(.top, 10)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "scope")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold)
-                    Text("Signals used")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.offWhite)
-                }
-            }
-            .tint(SimastryColor.gold)
-            .padding(16)
-            .simastryGlass(cornerRadius: 18)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
+    }
+
+    private var signalsDisclosure: some View {
+        DisclosureGroup {
+            VStack(spacing: 16) {
+                AuraSnapshotCard(
+                    snapshot: viewModel.auraSnapshot,
+                    compact: true,
+                    onOpen: { showAuraSnapshotSheet = true },
+                    onClear: { viewModel.clearAuraSnapshot() }
+                )
+                methodLayerCard
+            }
+            .padding(.top, 10)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "scope")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                Text("Signals used")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
+        }
+        .tint(SimastryColor.gold)
+        .padding(16)
+        .simastryGlass(cornerRadius: 18)
     }
 
     private func guidedQuestionBlock<Content: View>(
@@ -570,56 +567,66 @@ struct SimulateView: View {
     }
 
     private var predictBottomAction: some View {
-        VStack(spacing: 0) {
-            Divider()
-                .overlay(Color.white.opacity(0.08))
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(selectedCategory.shortTitle)
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(selectedCategory.accentColor)
-                        .lineLimit(1)
-                    Text(nextPredictActionSubtitle)
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Spacer(minLength: 10)
-
-                Button {
-                    advancePredictionFlow()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(nextPredictActionTitle)
-                            .font(SimastryFont.labelLarge)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-                        Image(systemName: canGenerate ? "sparkles" : "arrow.down")
-                            .font(.system(size: 12, weight: .bold))
-                    }
-                    .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.offWhite)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
-                    .background(
-                        canGenerate
-                            ? AnyShapeStyle(SimastryGradient.gold)
-                            : AnyShapeStyle(Color.white.opacity(0.08)),
-                        in: Capsule()
-                    )
-                    .overlay {
-                        Capsule().stroke(canGenerate ? SimastryColor.goldLight.opacity(0.32) : Color.white.opacity(0.12), lineWidth: 0.7)
-                    }
-                }
-                .buttonStyle(SpringPressStyle())
-                .accessibilityIdentifier("predict.stickyAction")
+        // A light, non-invasive sticky action: the heavy full-width material band
+        // and divider are replaced by a soft top-fading scrim so the option cards
+        // dissolve gracefully behind it instead of hitting a hard bar. Bottom
+        // padding lifts the row clear of the floating Liquid Glass tab bar.
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(selectedCategory.shortTitle)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(selectedCategory.accentColor)
+                    .lineLimit(1)
+                Text(nextPredictActionSubtitle)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
-            .background(.ultraThinMaterial)
+
+            Spacer(minLength: 10)
+
+            Button {
+                advancePredictionFlow()
+            } label: {
+                HStack(spacing: 8) {
+                    Text(nextPredictActionTitle)
+                        .font(SimastryFont.labelLarge)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    Image(systemName: canGenerate ? "sparkles" : "arrow.down")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(canGenerate ? SimastryColor.midnight : SimastryColor.offWhite)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .background(
+                    canGenerate
+                        ? AnyShapeStyle(SimastryGradient.gold)
+                        : AnyShapeStyle(Color.white.opacity(0.08)),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().stroke(canGenerate ? SimastryColor.goldLight.opacity(0.32) : Color.white.opacity(0.12), lineWidth: 0.7)
+                }
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityIdentifier("predict.stickyAction")
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, SimastrySpacing.tabBarClearance)
+        .background {
+            LinearGradient(
+                colors: [
+                    SimastryColor.midnight.opacity(0),
+                    SimastryColor.midnight.opacity(0.86),
+                    SimastryColor.midnight.opacity(0.98)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
         }
     }
 
@@ -727,6 +734,7 @@ struct SimulateView: View {
                     .foregroundStyle(SimastryColor.offWhite)
                     .padding(12)
                     .background(.clear)
+                    .accessibilityIdentifier("predict.conversationInput")
 
                 if conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text("Paste the actual messages here.")
@@ -773,6 +781,7 @@ struct SimulateView: View {
             textingStyleTip
         }
         .onChange(of: selectedCategory) { _, newCategory in
+            guard !isApplyingPredictionDraft else { return }
             // Reset cleanly when the question type changes.
             selectedPersonId = nil
             usingNewPerson = false
@@ -948,6 +957,7 @@ struct SimulateView: View {
                 .padding(.vertical, 14)
                 .foregroundStyle(SimastryColor.offWhite)
                 .surfaceCard(cornerRadius: 18, accent: selectedCategory.accentColor.opacity(0.6))
+                .accessibilityIdentifier("predict.questionInput")
 
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
@@ -1529,17 +1539,31 @@ struct SimulateView: View {
     private func applyPredictionDraftIfNeeded() {
         guard let draft = viewModel.predictionDraft else { return }
 
+        isApplyingPredictionDraft = true
         selectedCategory = draft.category
         selectedSunSign = draft.targetSunSign
         selectedMoonSign = draft.targetMoonSign
         selectedRisingSign = draft.targetRisingSign
-        // A draft carrying a target sign is about someone else; surface the
-        // manual sign entry so the restored signs are visible/editable.
-        if draft.targetSunSign != nil {
+
+        hasAdvancedPastCategory = true
+        if draft.category.requiresTargetSign || draft.targetSunSign != nil {
             aboutSubject = .someoneElse
-            usingNewPerson = true
+            if let matchedPerson = personMatchingDraft(draft) {
+                selectedPersonId = matchedPerson.id
+                usingNewPerson = false
+                selectedSunSign = matchedPerson.sunSign
+                selectedMoonSign = matchedPerson.moonSign
+                selectedRisingSign = matchedPerson.risingSign
+            } else {
+                selectedPersonId = nil
+                usingNewPerson = draft.targetSunSign != nil || viewModel.relationshipPeople.isEmpty
+            }
+        } else {
+            aboutSubject = .you
             selectedPersonId = nil
+            usingNewPerson = false
         }
+
         if let draftConversation = draft.conversationText?.trimmingCharacters(in: .whitespacesAndNewlines),
            !draftConversation.isEmpty {
             conversationText = draftConversation
@@ -1548,7 +1572,23 @@ struct SimulateView: View {
            !question.isEmpty {
             questionText = question
         }
+        draftScrollRequest += 1
         viewModel.predictionDraft = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            isApplyingPredictionDraft = false
+        }
+    }
+
+    private func personMatchingDraft(_ draft: PredictionDraft) -> RelationshipPerson? {
+        let trimmedName = draft.targetName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmedName.isEmpty else { return nil }
+
+        return viewModel.relationshipPeople.first { person in
+            person.displayName.compare(trimmedName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+                && (draft.targetSunSign == nil || person.sunSign == draft.targetSunSign)
+        } ?? viewModel.relationshipPeople.first { person in
+            person.displayName.compare(trimmedName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
     }
 
     private func startProgressCycle() {

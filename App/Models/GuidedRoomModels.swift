@@ -175,9 +175,15 @@ nonisolated struct ChatThreadSummary: Identifiable, Equatable, Sendable {
 
     var previewText: String {
         guard let latestMessage else {
+            if AppConfig.expertAstrologersEnabled {
+                return "Private conversation"
+            }
             return guideMembers.isEmpty
                 ? "Private guided conversation"
                 : "Guides are ready when the room starts."
+        }
+        if AppConfig.expertAstrologersEnabled && latestMessage.senderKind == .guide {
+            return "Earlier room activity"
         }
         if latestMessage.senderKind == .activity {
             return "Activity: \(latestMessage.content)"
@@ -192,7 +198,7 @@ nonisolated struct ChatThreadSummary: Identifiable, Equatable, Sendable {
         let names = humanMembers
             .filter { $0.humanUserId != currentUserId }
             .map(\.displayName)
-        return names.isEmpty ? "Guided Room" : names.joined(separator: ", ")
+        return names.isEmpty ? (AppConfig.expertAstrologersEnabled ? "Room" : "Guided Room") : names.joined(separator: ", ")
     }
 }
 

@@ -16,6 +16,8 @@ nonisolated private enum ProfileSheet: Identifiable {
     case aura
     case careerRead
     case settings
+    case journal
+    case expertKnowledge
 
     var id: String {
         switch self {
@@ -45,6 +47,10 @@ nonisolated private enum ProfileSheet: Identifiable {
             "careerRead"
         case .settings:
             "settings"
+        case .journal:
+            "journal"
+        case .expertKnowledge:
+            "expertKnowledge"
         }
     }
 }
@@ -96,12 +102,16 @@ struct ProfileView: View {
                         }
 
                         profileRenderSection("companion") {
-                            if viewModel.hasCompletedSigns {
-                                if let companion = viewModel.companions.first {
-                                    companionSafeSection(companion)
-                                }
+                            if AppConfig.expertAstrologersEnabled {
+                                expertAstrologersProfileSection
                             } else {
-                                placeholderCompanionSection
+                                if viewModel.hasCompletedSigns {
+                                    if let companion = viewModel.companions.first {
+                                        companionSafeSection(companion)
+                                    }
+                                } else {
+                                    placeholderCompanionSection
+                                }
                             }
                         }
 
@@ -119,10 +129,11 @@ struct ProfileView: View {
                             deleteAccountSection
                         }
 
-                        Spacer().frame(height: SimastrySpacing.tabBarClearance)
+                        Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                     }
                     .padding(.horizontal, 20)
             }
+            .scrollIndicators(.hidden)
             .background { CelestialBackground() }
             .accessibilityHidden(activeSheet != nil)
             .navigationTitle("Me")
@@ -167,7 +178,7 @@ struct ProfileView: View {
                 case .about:
                     aboutSheet
                 case .privacy:
-                    legalSheet(title: "Privacy Policy", body: "Simastry collects minimal data to deliver your personalized astrology experience. Your sign placements, companion configurations, and interaction history are stored securely via Supabase and are never shared with third parties.\n\nWe use anonymous analytics to improve app performance. No personal data is sold or used for advertising.\n\nFor the full privacy policy, visit our website.")
+                    legalSheet(title: "Privacy Policy", body: "Simastry collects the data needed to deliver your personalized astrology experience: profile details you enter, sign placements, expert AI consultation history, People records, Aura settings, and optional read-only wallet context such as a public address and per-sign Zodiac counts.\n\nExpert AI requests are processed through Simastry's backend and may be sent to an AI provider to generate a response. Wallet checks use only public addresses and are routed through Simastry's backend before supported chain data is queried. Simastry cannot sign, approve, or move funds.\n\nWe use privacy-conscious analytics and crash logs to improve performance. No personal data is sold or used for advertising.\n\nFor the full privacy policy, visit our website.")
                 case .terms:
                     legalSheet(title: "Terms of Service", body: "By using Simastry, you agree to use the app for personal entertainment and self-reflection purposes. Astrology readings and predictions are for entertainment only and should not be used as a substitute for professional advice.\n\nSimastry subscriptions are managed through Apple and can be canceled at any time via your Apple ID settings. Refunds are handled by Apple per their refund policy.\n\nFor the full terms of service, visit our website.")
                 case .methodology:
@@ -182,6 +193,10 @@ struct ProfileView: View {
                     CareerReadView(viewModel: viewModel)
                 case .settings:
                     SimastrySettingsView(viewModel: viewModel)
+                case .journal:
+                    SavedInsightsView(viewModel: viewModel)
+                case .expertKnowledge:
+                    ExpertKnowledgeView(viewModel: viewModel)
                 }
             }
             .onAppear {
@@ -355,6 +370,77 @@ struct ProfileView: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
+    }
+
+    private var expertAstrologersProfileSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Expert Astrologers")
+                .font(SimastryFont.labelLarge)
+                .foregroundStyle(SimastryColor.mutedSilver)
+
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openAIAstrologists()
+            } label: {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: -8) {
+                        ForEach(Array(ExpertAstrologerRegistry.specialists.enumerated()), id: \.element.id) { index, specialist in
+                            expertAstrologerAvatar(specialist, size: 40)
+                                .zIndex(Double(ExpertAstrologerRegistry.specialists.count - index))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Leyla, Mateo, Naomi, Soren, and Nadia")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(2)
+                        Text("Five AI astrology specialists, each grounded in a distinct tradition.")
+                            .font(SimastryFont.caption)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(15)
+                .glossyCard(cornerRadius: 18)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Open Expert Astrologers")
+            .accessibilityHint("Consult Leyla, Mateo, Naomi, Soren, and Nadia")
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    private func expertAstrologerAvatar(_ specialist: AstrologySpecialist, size: CGFloat) -> some View {
+        ZStack {
+            if let profile = specialist.archivedProfile {
+                Image(profile.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size, alignment: .top)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(SimastryColor.gold.opacity(0.18))
+                    .overlay {
+                        Text(specialist.placeholderAvatar)
+                            .font(.system(size: size * 0.45))
+                    }
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay {
+            Circle().strokeBorder(SimastryColor.gold.opacity(0.42), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 5)
+        .accessibilityHidden(true)
     }
 
     // MARK: - Streak Section
@@ -813,6 +899,22 @@ struct ProfileView: View {
             }
 
             profileHubButton(
+                title: "Private journal",
+                subtitle: "Lines you saved from notes and readings. This device only.",
+                systemImage: "bookmark.fill"
+            ) {
+                activeSheet = .journal
+            }
+
+            profileHubButton(
+                title: "What the experts know",
+                subtitle: "Per-expert data on file, gaps, and where to edit it.",
+                systemImage: "lock.shield.fill"
+            ) {
+                activeSheet = .expertKnowledge
+            }
+
+            profileHubButton(
                 title: "How Simastry works",
                 subtitle: "Methodology, AI disclosure, and privacy.",
                 systemImage: "books.vertical.fill"
@@ -873,28 +975,27 @@ struct ProfileView: View {
 
     private var profileDetailsSheet: some View {
         NavigationStack {
-            ZStack {
-                CelestialBackground()
+            ScrollView {
+                VStack(spacing: 24) {
+                    MomentsSection(viewModel: viewModel)
+                    subscriptionSection
+                    aboutOurApproachSection
+                    astrologerSection
+                    InviteFriendsCard(viewModel: viewModel)
+                    referralCodeSection
+                    forAstrologersSection
+                    dataExportSection
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        MomentsSection(viewModel: viewModel)
-                        subscriptionSection
-                        aboutOurApproachSection
-                        astrologerSection
-                        InviteFriendsCard(viewModel: viewModel)
-                        referralCodeSection
-                        forAstrologersSection
-                        dataExportSection
-
-                        if viewModel.hasCompletedSigns {
-                            streakSection
-                        }
+                    if viewModel.hasCompletedSigns {
+                        streakSection
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 20)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 20)
             }
+            // `.background` (not a full-bleed ZStack layer) keeps the scroll
+            // content inset below the nav bar so the first card isn't clipped.
+            .background { CelestialBackground() }
             .navigationTitle("Profile details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -942,6 +1043,7 @@ struct ProfileView: View {
                 .buttonStyle(SpringPressStyle())
                 .accessibilityLabel("Find other Simastry users with compatible signs")
                 .accessibilityHint("Opens discovery to find people with similar or compatible signs")
+                .accessibilityIdentifier("profile.discoveryButton")
                 .fullScreenCover(isPresented: $showDiscoveryView) {
                     DiscoveryView(viewModel: viewModel)
                 }
@@ -1398,7 +1500,7 @@ struct ProfileView: View {
                 if isBetaAccess {
                     HStack(spacing: 10) {
                         unlimitedChip("Beta messages")
-                        unlimitedChip("Guide access")
+                        unlimitedChip(AppConfig.expertAstrologersEnabled ? "Expert access" : "Guide access")
                     }
                 } else if tier == "free" {
                     HStack(spacing: 16) {
@@ -1409,9 +1511,9 @@ struct ProfileView: View {
                             tint: SimastryColor.celestialBlue
                         )
                         usagePill(
-                            label: "Companions",
-                            value: "\(viewModel.companions.count)/\(viewModel.companionLimit)",
-                            subtitle: "slots",
+                            label: AppConfig.expertAstrologersEnabled ? "Experts" : "Companions",
+                            value: AppConfig.expertAstrologersEnabled ? "\(ExpertAstrologerRegistry.specialists.count)" : "\(viewModel.companions.count)/\(viewModel.companionLimit)",
+                            subtitle: AppConfig.expertAstrologersEnabled ? "available" : "slots",
                             tint: SimastryColor.gold
                         )
                     }
@@ -1419,7 +1521,7 @@ struct ProfileView: View {
                 } else {
                     HStack(spacing: 10) {
                         unlimitedChip("Unlimited messages")
-                        unlimitedChip("More companions")
+                        unlimitedChip(AppConfig.expertAstrologersEnabled ? "All five experts" : "More companions")
                     }
                 }
             }
@@ -2094,7 +2196,7 @@ struct ProfileView: View {
             }
             .padding(.top, 28)
 
-            Text("Simastry is your AI-powered astrology companion. Explore zodiac compatibility, simulate conversations through cosmic archetypes, and get practical communication guidance shaped by your signs.")
+            Text("Simastry is your AI-powered astrology consultation app. Ask five expert AI astrologers grounded in Western, Vedic, Chinese, Ancient, and Evolutionary traditions, then compare the perspectives that help you move with more clarity.")
                 .font(SimastryFont.bodyLarge)
                 .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
                 .multilineTextAlignment(.center)

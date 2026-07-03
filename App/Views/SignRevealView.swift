@@ -51,7 +51,7 @@ struct SignRevealView: View {
                 Spacer()
 
                 VStack(spacing: 12) {
-                    GoldButton("This Is Me") {
+                    GoldButton(AppConfig.expertAstrologersEnabled ? "Meet My Experts" : "This Is Me") {
                         viewModel.homeSetupPhase = .onboardingInsight
                     }
 

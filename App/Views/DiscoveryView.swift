@@ -57,6 +57,7 @@ struct DiscoveryView: View {
                     }
                 }
             }
+            .accessibilityIdentifier("discovery.screen")
             .navigationTitle("Find Others Like You")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search usernames")
@@ -76,7 +77,9 @@ struct DiscoveryView: View {
                 ProfileDetailSheet(
                     profile: profile,
                     viewModel: viewModel
-                )
+                ) {
+                    dismiss()
+                }
             }
             .onAppear {
                 if reduceMotion {
@@ -635,6 +638,7 @@ struct DiscoveryView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(profile.displayName), \(compatibility) percent match. \(profile.signSummary)")
         .accessibilityHint("Double tap to view full profile")
+        .accessibilityIdentifier("discovery.profile.\(profile.username ?? profile.id.uuidString)")
     }
 
     private func signPill(sign: ZodiacSign, label: String, color: Color) -> some View {
@@ -821,6 +825,7 @@ struct ProfileDetailSheet: View {
                 Text("This will create a companion with \(profile.displayName)'s signs so you can explore your compatibility.")
             }
         }
+        .accessibilityIdentifier("discovery.profileDetail.\(profile.username ?? profile.id.uuidString)")
     }
 
     // MARK: - Profile Header
@@ -1062,6 +1067,7 @@ struct ProfileDetailSheet: View {
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel(hasSentHi ? "Open your conversation with \(profile.displayName)" : "Start a chat with \(profile.displayName)")
             .accessibilityHint(hasSentHi ? "Opens your Messages inbox" : "Sends an intro to start a discovery conversation")
+            .accessibilityIdentifier("discovery.profileDetail.startChatButton")
 
             Button {
                 Task {
@@ -1096,16 +1102,19 @@ struct ProfileDetailSheet: View {
             .buttonStyle(SpringPressStyle())
             .accessibilityLabel(isConnected ? "Remove \(profile.displayName) from connections" : "Add \(profile.displayName) as a connection")
             .accessibilityHint(isConnected ? "Removes this public profile from your connected people" : "Saves this public profile to your connected people")
+            .accessibilityIdentifier("discovery.profileDetail.connectionButton")
 
-            Button {
-                showAddConfirmation = true
-            } label: {
-                Text("Create practice companion")
-                    .font(SimastryFont.labelMedium)
-                    .foregroundStyle(SimastryColor.gold)
+            if !AppConfig.expertAstrologersEnabled {
+                Button {
+                    showAddConfirmation = true
+                } label: {
+                    Text("Create practice companion")
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.gold)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Create a practice companion from \(profile.displayName)")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Create a practice companion from \(profile.displayName)")
         }
     }
 
