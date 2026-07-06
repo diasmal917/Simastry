@@ -1,3 +1,5 @@
+import type { ConversationRehearsalRequest } from "./rehearsalPrompt.ts";
+
 export type CompanionReplyPayload = {
   kind?: string;
   feature?: string;
@@ -6,6 +8,7 @@ export type CompanionReplyPayload = {
   maxTokens?: number;
   stream?: boolean;
   expertAstrologerRequest?: ExpertAstrologerRequest;
+  rehearsalRequest?: ConversationRehearsalRequest;
 };
 
 export type ExpertAstrologerRequest = {

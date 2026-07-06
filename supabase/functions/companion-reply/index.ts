@@ -5,6 +5,10 @@ import {
   mergeExpertAstrologyHydration,
 } from "./intake.ts";
 import { buildPrompt, type CompanionReplyPayload, normalizedSpecialistId } from "./specialistPrompt.ts";
+import {
+  buildConversationRehearsalPrompt,
+  rehearsalTurnLimitReached,
+} from "./rehearsalPrompt.ts";
 import { anthropicErrorFromSseBlock, anthropicTextDeltaFromSseBlock, encodeSseEvent, shouldStreamReply, streamHeaders } from "./streaming.ts";
 
 const corsHeaders = {
@@ -129,7 +133,10 @@ export async function handleCompanionReply(
       usageEventId: usageEvent.id,
     });
 
-    const prompt = buildPrompt(payload);
+    const prompt =
+      payload.feature === "conversation_rehearsal" && payload.rehearsalRequest
+        ? buildConversationRehearsalPrompt(payload.rehearsalRequest)
+        : buildPrompt(payload);
     if (streamingRequested) {
       return streamCompanionReply({
         prompt,
@@ -330,6 +337,77 @@ function validatePayload(payload: CompanionReplyPayload) {
     validateOptionalUuid("selectedPersonId", expert.selectedPersonId);
     if (expert.readinessSummary !== undefined) {
       validateText("readinessSummary", expert.readinessSummary, 1, 800);
+    }
+    return;
+  }
+
+  if (payload.feature === "conversation_rehearsal") {
+    const rehearsal = payload.rehearsalRequest;
+    if (!rehearsal) {
+      throw new CompanionReplyError(
+        "invalid_payload",
+        "The rehearsal request is missing.",
+        400,
+      );
+    }
+    if (rehearsal.mode !== "partner" && rehearsal.mode !== "coach") {
+      throw new CompanionReplyError(
+        "invalid_payload",
+        "The rehearsal mode is invalid.",
+        400,
+      );
+    }
+    if (
+      rehearsal.mode === "coach" &&
+      !normalizedSpecialistId(rehearsal.coachSpecialistId ?? "")
+    ) {
+      throw new CompanionReplyError(
+        "invalid_specialist",
+        "Unknown coaching specialist.",
+        400,
+      );
+    }
+    validateText("personaName", rehearsal.personaName, 1, 80);
+    validateText("goal", rehearsal.goal, 1, 300);
+    if (rehearsal.relationship !== undefined) {
+      validateText("relationship", rehearsal.relationship, 1, 60);
+    }
+    for (
+      const [field, value] of [
+        ["personaSunSign", rehearsal.personaSunSign],
+        ["personaMoonSign", rehearsal.personaMoonSign],
+        ["personaRisingSign", rehearsal.personaRisingSign],
+      ] as const
+    ) {
+      if (value !== undefined) validateText(field, value, 1, 30);
+    }
+    if (rehearsal.personaNotes !== undefined) {
+      validateText("personaNotes", rehearsal.personaNotes, 1, 600);
+    }
+    validateOptionalUuid("sessionId", rehearsal.sessionId);
+    if ((rehearsal.transcript ?? []).length > 32) {
+      throw new CompanionReplyError(
+        "payload_too_large",
+        "The rehearsal transcript is too long.",
+        413,
+      );
+    }
+    for (const message of rehearsal.transcript ?? []) {
+      if (message.role !== "user" && message.role !== "partner") {
+        throw new CompanionReplyError(
+          "invalid_payload",
+          "A rehearsal message role is invalid.",
+          400,
+        );
+      }
+      validateText("transcript.content", message.content, 1, 600);
+    }
+    if (rehearsal.mode === "partner" && rehearsalTurnLimitReached(rehearsal.transcript)) {
+      throw new CompanionReplyError(
+        "rehearsal_turn_limit",
+        "This rehearsal has reached its length. End it and take what worked into the real conversation.",
+        400,
+      );
     }
     return;
   }
@@ -1113,6 +1191,16 @@ function estimateRequestCharacters(payload: CompanionReplyPayload): number {
       (expert.calculatedTraditionData ? JSON.stringify(expert.calculatedTraditionData).length : 0) +
       (expert.readinessSummary?.length ?? 0) +
       (expert.dataLimitations ? JSON.stringify(expert.dataLimitations).length : 0);
+  }
+  if (payload.rehearsalRequest) {
+    const rehearsal = payload.rehearsalRequest;
+    return rehearsal.goal.length +
+      rehearsal.personaName.length +
+      (rehearsal.personaNotes?.length ?? 0) +
+      (rehearsal.transcript ?? []).reduce(
+        (total, message) => total + message.content.length,
+        0,
+      );
   }
   return (payload.system?.length ?? 0) + (payload.user?.length ?? 0);
 }
