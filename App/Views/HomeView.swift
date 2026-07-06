@@ -2220,64 +2220,76 @@ private struct BirthChartHomeSheet: View {
     }
 }
 
+/// Real iOS 26 Liquid Glass container (same material as the navigation bar,
+/// via `simastryGlass`) with the pastel zodiac medallion embedded, tilted, and
+/// bleeding off the right edge — the pastel-zodiac language rendered on glass.
 private struct HomeShortcutTileView: View {
     let item: HomeShortcutItem
 
+    private let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+
     var body: some View {
-        GeometryReader { proxy in
-            let cornerRadius = min(30, proxy.size.height * 0.24)
-            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
-            ZStack(alignment: .leading) {
-                // The tilted zodiac card artwork IS the container now.
-                Image("ZodiacTile_\(item.cardSign.rawValue)")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .zIndex(0)
-
-                // Legibility scrim under the text column only.
-                LinearGradient(
-                    colors: [.black.opacity(0.58), .black.opacity(0.16), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
+        ZStack(alignment: .leading) {
+            // The medallion and its Apple-glass sheen, masked so the pastel
+            // orb bleeds off the right edge like the reference set.
+            ZStack {
+                // Sign-tinted bloom — the medallion glows through the glass.
+                RadialGradient(
+                    colors: [item.cardSign.color.opacity(0.30), .clear],
+                    center: .trailing,
+                    startRadius: 4,
+                    endRadius: 128
                 )
-                .zIndex(1)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.title)
-                        .font(.system(size: 15.5, weight: .bold))
-                        .tracking(-0.25)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                        .foregroundStyle(.white.opacity(0.97))
-                        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+                HomeShortcutMedallion(sign: item.cardSign, size: 126)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .offset(x: 30, y: 2)
 
-                    Text(item.subtitle)
-                        .font(.system(size: 10.0, weight: .medium))
-                        .tracking(-0.08)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.84)
-                        .foregroundStyle(.white.opacity(0.72))
-                        .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
-                }
-                .frame(maxWidth: proxy.size.width * 0.6, alignment: .leading)
-                .padding(.leading, 14)
-                .padding(.trailing, 42)
-                .zIndex(2)
+                HomeShortcutGlassReflection(shape: shape)
+                HomeShortcutTopHighlight()
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipShape(shape)
-            .overlay {
-                shape.strokeBorder(.white.opacity(0.10), lineWidth: 0.8)
+            .mask(shape)
+            .allowsHitTesting(false)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.title)
+                    .font(.system(size: 15.5, weight: .bold))
+                    .tracking(-0.25)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+                    .foregroundStyle(.white.opacity(0.98))
+                    .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
+
+                Text(item.subtitle)
+                    .font(.system(size: 10.0, weight: .medium))
+                    .tracking(-0.08)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.84)
+                    .foregroundStyle(.white.opacity(0.76))
+                    .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
             }
-            .compositingGroup()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 16)
+            .padding(.trailing, 84)
         }
-            .frame(height: 120)
-            .shadow(color: .black.opacity(0.64), radius: 26, y: 14)
-            .shadow(color: item.cardSign.color.opacity(0.16), radius: 18, y: 4)
-            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .accessibilityHidden(true)
+        .frame(height: 120)
+        .frame(maxWidth: .infinity)
+        .simastryGlass(cornerRadius: 26)
+        .overlay {
+            // A faint sign-tinted rim over the neutral glass edge.
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [item.cardSign.color.opacity(0.32), .white.opacity(0.05), .clear],
+                    startPoint: .topTrailing,
+                    endPoint: .bottomLeading
+                ),
+                lineWidth: 0.8
+            )
+            .allowsHitTesting(false)
+        }
+        .shadow(color: item.cardSign.color.opacity(0.14), radius: 16, y: 5)
+        .contentShape(shape)
+        .accessibilityHidden(true)
     }
 }
 

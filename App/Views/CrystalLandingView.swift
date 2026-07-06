@@ -59,29 +59,36 @@ struct CrystalLandingView: View {
     private func welcomePage(compact: Bool) -> some View {
         VStack(spacing: 0) {
             SimastryWordmark(font: .system(size: compact ? 17 : 19, weight: .bold).italic())
-                .padding(.top, compact ? 10 : 22)
+                .padding(.top, compact ? 6 : 12)
 
             Text("Know what to say.\nTo anyone.")
-                .font(.system(size: compact ? 29 : 34, weight: .bold))
+                .font(.system(size: compact ? 29 : 33, weight: .bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .padding(.top, compact ? 10 : 14)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(.top, compact ? 8 : 12)
 
             Text("Five real astrologers read the people in your life — privately.")
                 .font(.system(size: 15))
                 .foregroundStyle(.white.opacity(0.62))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
 
-            CrystalBallView(diameter: compact ? 218 : 268)
-                .padding(.top, compact ? 2 : 8)
+            CrystalBallView(diameter: compact ? 196 : 224)
+                .padding(.top, compact ? 0 : 4)
+
+            Spacer(minLength: 8)
 
             VStack(alignment: .leading, spacing: 10) {
                 featureChip(icon: "lock.fill", text: "Your chart stays yours")
                 featureChip(icon: "sparkles", text: "Five real traditions, kept separate")
                 featureChip(icon: "sun.max.fill", text: "One honest note each morning")
             }
-            .padding(.top, compact ? 8 : 14)
+            .padding(.top, compact ? 6 : 10)
 
             Spacer(minLength: 0)
         }
@@ -397,6 +404,10 @@ struct CrystalLandingView: View {
             .font(.system(size: compact ? 28 : 33, weight: .bold))
             .foregroundStyle(.white)
             .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
             .padding(.top, compact ? 26 : 46)
     }
 

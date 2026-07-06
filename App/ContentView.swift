@@ -267,9 +267,7 @@ struct SimastryLaunchView: View {
         ZStack {
             SimastryColor.pureBlack.ignoresSafeArea()
 
-            Image("LoadingZodiacColumns")
-                .resizable()
-                .scaledToFill()
+            CosmicDriftImage(animated: !reduceMotion, imageName: "LoadingZodiacColumns")
                 .ignoresSafeArea()
                 .overlay {
                     LinearGradient(
@@ -283,6 +281,9 @@ struct SimastryLaunchView: View {
                     )
                     .ignoresSafeArea()
                 }
+
+            CosmicDustLayer(animated: !reduceMotion, moteCount: 22)
+                .ignoresSafeArea()
 
             VStack(spacing: 22) {
                 SimastryWordmark(font: .system(size: 28, weight: .bold).italic())

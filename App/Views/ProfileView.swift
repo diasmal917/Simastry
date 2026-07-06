@@ -975,7 +975,7 @@ struct ProfileView: View {
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
             .padding(15)
-            .glossyCard(cornerRadius: 18)
+            .simastryGlass(cornerRadius: 18)
             .contentShape(.rect)
         }
         .buttonStyle(SpringPressStyle())
