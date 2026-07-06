@@ -176,12 +176,7 @@ struct RehearsalRoomView: View {
                 .foregroundStyle(selectedPersonId == person.id ? SimastryColor.midnight : SimastryColor.offWhite)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(
-                    selectedPersonId == person.id
-                        ? AnyShapeStyle(SimastryGradient.gold)
-                        : AnyShapeStyle(.white.opacity(0.06)),
-                    in: Capsule()
-                )
+                .modifier(RehearsalChipBackground(isSelected: selectedPersonId == person.id))
         }
         .buttonStyle(.plain)
     }
@@ -196,12 +191,7 @@ struct RehearsalRoomView: View {
                 .foregroundStyle(selectedPersonId == nil ? SimastryColor.midnight : SimastryColor.offWhite)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(
-                    selectedPersonId == nil
-                        ? AnyShapeStyle(SimastryGradient.gold)
-                        : AnyShapeStyle(.white.opacity(0.06)),
-                    in: Capsule()
-                )
+                .modifier(RehearsalChipBackground(isSelected: selectedPersonId == nil))
         }
         .buttonStyle(.plain)
     }
@@ -225,12 +215,7 @@ struct RehearsalRoomView: View {
             .foregroundStyle(coachSpecialistId == specialist.id ? SimastryColor.midnight : SimastryColor.offWhite)
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
-            .background(
-                coachSpecialistId == specialist.id
-                    ? AnyShapeStyle(SimastryGradient.gold)
-                    : AnyShapeStyle(.white.opacity(0.06)),
-                in: Capsule()
-            )
+            .modifier(RehearsalChipBackground(isSelected: coachSpecialistId == specialist.id))
         }
         .buttonStyle(.plain)
     }
@@ -514,5 +499,19 @@ struct RehearsalRoomView: View {
         HapticManager.buttonPress()
         persist()
         dismiss()
+    }
+}
+
+/// Selected chips keep the gold gradient; unselected ones sit on the same
+/// Liquid Glass pill material as the rest of the app.
+private struct RehearsalChipBackground: ViewModifier {
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        if isSelected {
+            content.background(SimastryGradient.gold, in: Capsule())
+        } else {
+            content.simastryGlassPill()
+        }
     }
 }

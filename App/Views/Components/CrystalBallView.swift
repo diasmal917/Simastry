@@ -423,10 +423,12 @@ struct CrystalBallView: View {
     /// field rather than a mechanical ring — and always OUTSIDE the experts'
     /// orbit (0.62·d) so glyphs never collide with the portraits.
     private struct ZodiacOrbit {
-        let radius: Double     // 0.78–0.98 of diameter
-        let period: Double     // seconds per revolution, all different
+        let radius: Double      // 0.82–0.98 of diameter
+        let period: Double      // seconds per revolution, all different
         let startPhase: Double
-        let bobPeriod: Double  // secondary vertical wobble
+        let yAmplitude: Double  // how flat/tall this sign's own ellipse is
+        let yOffset: Double     // vertical band shift — some float high, some low
+        let bobPeriod: Double   // secondary vertical wobble
         let bobAmount: Double
         let size: Double
     }
@@ -445,6 +447,11 @@ struct CrystalBallView: View {
                 radius: 0.82 + random() * 0.16,
                 period: (86 + random() * 60) * (index.isMultiple(of: 3) ? -1 : 1),
                 startPhase: Double(index) * .pi * 2 / 12 + random() * 0.9,
+                // Each sign owns its own ellipse and altitude, so the twelve
+                // disperse across the whole area around the orb instead of
+                // sharing one ring.
+                yAmplitude: 0.14 + random() * 0.34,
+                yOffset: -0.12 + random() * 0.30,
                 bobPeriod: 9 + random() * 8,
                 bobAmount: 4 + random() * 7,
                 size: 24 + random() * 8
@@ -462,7 +469,8 @@ struct CrystalBallView: View {
                 zodiacBead(for: sign, depth: depth, baseSize: orbit.size)
                     .offset(
                         x: cos(phase) * diameter * orbit.radius,
-                        y: depth * diameter * 0.34
+                        y: depth * diameter * orbit.yAmplitude
+                            + diameter * orbit.yOffset
                             + sin(t * 2 * .pi / orbit.bobPeriod + orbit.startPhase) * orbit.bobAmount
                     )
             }

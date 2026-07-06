@@ -938,7 +938,7 @@ private struct ExpertAstrologerInboxRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 13)
-            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+            .simastryGlass(cornerRadius: 20)
             .contentShape(.rect)
         }
         .buttonStyle(SpringPressStyle())

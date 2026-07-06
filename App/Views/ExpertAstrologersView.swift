@@ -1172,6 +1172,15 @@ private struct SpecialistProfileHero: View {
                 }
 
                 Spacer(minLength: 0)
+
+                // The tradition's engraved emblem, quietly signing the header.
+                Image(specialist.emblemImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                    .overlay { Circle().strokeBorder(.white.opacity(0.16), lineWidth: 0.6) }
+                    .accessibilityHidden(true)
             }
             .padding(14)
         }
@@ -1388,8 +1397,9 @@ private struct ExpertReplyProgressView: View {
                 Image(specialist.emblemImageName)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 28, height: 28)
+                    .frame(width: 36, height: 36)
                     .clipShape(Circle())
+                    .overlay { Circle().strokeBorder(.white.opacity(0.14), lineWidth: 0.6) }
                     .accessibilityHidden(true)
             } else {
                 ProgressView()

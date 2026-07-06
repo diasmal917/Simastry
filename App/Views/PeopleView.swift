@@ -2371,8 +2371,7 @@ struct RelationshipAvatarView: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                ZodiacIconView(sign: person.sunSign, size: size, showsGlow: true)
-                    .padding(size * 0.08)
+                ZodiacSignToken(sign: person.sunSign, size: size)
             }
         }
         .frame(width: size, height: size)

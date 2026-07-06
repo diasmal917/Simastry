@@ -2114,7 +2114,7 @@ private struct HomeShortcutGridView: View {
                     } label: {
                         HomeShortcutTileView(item: item)
                     }
-                    .buttonStyle(SpringPressStyle())
+                    .buttonStyle(HomeTilePressStyle())
                     .accessibilityLabel(item.title)
                     .accessibilityIdentifier(item.identifier)
                 }
@@ -2272,296 +2272,26 @@ private struct HomeShortcutTileView: View {
     }
 }
 
+/// A press style tuned for the glass tiles: the surface scales in slightly
+/// and brightens, so the Liquid Glass reads as responding to touch.
+struct HomeTilePressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.965 : 1)
+            .brightness(configuration.isPressed ? 0.06 : 0)
+            .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
+    }
+}
+
 /// The pastel zodiac icon as a small, quiet token: a soft pastel disc with the
 /// glyph, gently tilted — sized like an app-icon accessory, not a hero.
+/// (Shared implementation: `ZodiacSignToken`.)
 private struct HomeShortcutSignToken: View {
     let sign: ZodiacSign
 
     var body: some View {
-        ZStack {
-            Circle().fill(
-                LinearGradient(
-                    colors: [sign.color.opacity(0.95), sign.color.opacity(0.72)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            // One restrained top sheen — enough to read as dimensional.
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.32), .clear],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                )
-
-            Text(sign.glyph)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color(red: 12/255, green: 11/255, blue: 18/255).opacity(0.82))
-
-            Circle().strokeBorder(.white.opacity(0.28), lineWidth: 0.7)
-        }
-        .frame(width: 52, height: 52)
-        .rotationEffect(.degrees(-8))
-        .shadow(color: sign.color.opacity(0.28), radius: 10, y: 3)
-        .allowsHitTesting(false)
-    }
-}
-
-private struct HomeShortcutGlassBase<S: InsettableShape>: View {
-    let sign: ZodiacSign
-    let shape: S
-
-    var body: some View {
-        shape
-            .fill(Color(red: 7/255, green: 7/255, blue: 13/255).opacity(0.80))
-            .overlay {
-                shape.fill(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(0.10),
-                            .white.opacity(0.025),
-                            .black.opacity(0.28)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            }
-            .overlay(alignment: .topLeading) {
-                RadialGradient(
-                    colors: [.white.opacity(0.12), .clear],
-                    center: .topLeading,
-                    startRadius: 0,
-                    endRadius: 68
-                )
-                .clipShape(shape)
-            }
-            .overlay(alignment: .trailing) {
-                RadialGradient(
-                    colors: [sign.color.opacity(0.18), .clear],
-                    center: .trailing,
-                    startRadius: 8,
-                    endRadius: 82
-                )
-                .clipShape(shape)
-            }
-            .overlay {
-                shape
-                    .strokeBorder(Color(red: 235/255, green: 225/255, blue: 255/255).opacity(0.38), lineWidth: 1)
-            }
-            .overlay {
-                shape
-                    .strokeBorder(.white.opacity(0.10), lineWidth: 0.6)
-                    .blur(radius: 0.2)
-            }
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(.white.opacity(0.22))
-                    .frame(height: 1)
-                    .blur(radius: 0.2)
-                    .padding(.horizontal, 18)
-                    .offset(y: 1)
-            }
-    }
-}
-
-private struct HomeShortcutCornerLight: View {
-    var body: some View {
-        Circle()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        .white.opacity(0.44),
-                        Color(red: 210/255, green: 190/255, blue: 255/255).opacity(0.16),
-                        .clear
-                    ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: 56
-                )
-            )
-            .frame(width: 106, height: 106)
-            .blur(radius: 10)
-            .offset(x: -22, y: -32)
+        ZodiacSignToken(sign: sign, size: 52, tilt: true)
             .allowsHitTesting(false)
-    }
-}
-
-private struct HomeShortcutGlassReflection<S: InsettableShape>: View {
-    let shape: S
-
-    var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0.00),
-                            .init(color: .clear, location: 0.26),
-                            .init(color: .white.opacity(0.13), location: 0.36),
-                            .init(color: .white.opacity(0.03), location: 0.48),
-                            .init(color: .clear, location: 0.62)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .rotationEffect(.degrees(-18))
-                .scaleEffect(x: 1.45, y: 1.15)
-
-            RadialGradient(
-                colors: [.white.opacity(0.26), .clear],
-                center: UnitPoint(x: 0.08, y: 0.08),
-                startRadius: 0,
-                endRadius: 36
-            )
-
-            RadialGradient(
-                colors: [Color(red: 210/255, green: 185/255, blue: 255/255).opacity(0.20), .clear],
-                center: UnitPoint(x: 0.98, y: 0.05),
-                startRadius: 0,
-                endRadius: 44
-            )
-        }
-        .blendMode(.screen)
-        .opacity(0.76)
-        .clipShape(shape)
-        .allowsHitTesting(false)
-    }
-}
-
-private struct HomeShortcutInnerBevel<S: InsettableShape>: View {
-    let shape: S
-    let sign: ZodiacSign
-
-    var body: some View {
-        shape
-            .inset(by: 1.2)
-            .strokeBorder(
-                LinearGradient(
-                    stops: [
-                        .init(color: .white.opacity(0.58), location: 0.00),
-                        .init(color: .white.opacity(0.18), location: 0.10),
-                        .init(color: .white.opacity(0.04), location: 0.30),
-                        .init(color: sign.color.opacity(0.13), location: 0.72),
-                        .init(color: .white.opacity(0.30), location: 1.00)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 2
-            )
-            .overlay {
-                shape
-                    .inset(by: 5)
-                    .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
-            }
-            .allowsHitTesting(false)
-    }
-}
-
-private struct HomeShortcutTopHighlight: View {
-    var body: some View {
-        Capsule()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        .clear,
-                        .white.opacity(0.78),
-                        Color(red: 218/255, green: 190/255, blue: 255/255).opacity(0.58),
-                        .clear
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(height: 2)
-            .blur(radius: 0.2)
-            .padding(.horizontal, 28)
-            .frame(maxHeight: .infinity, alignment: .top)
-            .offset(y: 1)
-            .allowsHitTesting(false)
-    }
-}
-
-private struct HomeShortcutMedallion: View {
-    let sign: ZodiacSign
-    let size: CGFloat
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            sign.color.opacity(0.98),
-                            sign.color.opacity(0.82),
-                            sign.color.opacity(0.66)
-                        ],
-                        center: UnitPoint(x: 0.50, y: 0.55),
-                        startRadius: 0,
-                        endRadius: size * 0.54
-                    )
-                )
-
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            .white.opacity(0.60),
-                            .white.opacity(0.12),
-                            .clear
-                        ],
-                        center: UnitPoint(x: 0.28, y: 0.22),
-                        startRadius: 0,
-                        endRadius: size * 0.32
-                    )
-                )
-                .blendMode(.screen)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.28), .white.opacity(0.08), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .center
-                    )
-                )
-                .blendMode(.screen)
-
-            Ellipse()
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.32), .white.opacity(0.10), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size * 0.58, height: size * 1.10)
-                .rotationEffect(.degrees(24))
-                .offset(x: size * 0.18, y: -size * 0.05)
-                .blur(radius: 0.8)
-                .blendMode(.screen)
-                .clipShape(Circle())
-
-            Text(sign.glyph)
-                .font(.system(size: size * 0.48, weight: .bold, design: .rounded))
-                .foregroundStyle(Color(red: 9/255, green: 8/255, blue: 14/255).opacity(0.88))
-                .rotationEffect(.degrees(6))
-                .shadow(color: .white.opacity(0.14), radius: 0, y: 1)
-
-            Circle()
-                .strokeBorder(.white.opacity(0.38), lineWidth: 1)
-                .shadow(color: sign.color.opacity(0.35), radius: 18)
-        }
-        .frame(width: size, height: size)
-        .rotationEffect(.degrees(-6))
-        .shadow(color: sign.color.opacity(0.36), radius: 26)
-        .shadow(color: .black.opacity(0.32), radius: 10, x: -4, y: 4)
-        .allowsHitTesting(false)
     }
 }
 
