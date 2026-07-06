@@ -92,8 +92,14 @@ struct MoodMeshBackground: View {
 struct CrystalBallView: View {
     var diameter: CGFloat = 290
     var showsOrbitingExperts: Bool = true
+    /// Drag to spin the glass, tap for a light ripple. Off for small
+    /// decorative instances.
+    var isInteractive: Bool = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var userSpin: Double = 0
+    @State private var lastDragX: CGFloat?
+    @State private var rippleStartedAt: TimeInterval?
 
     private var specialists: [AstrologySpecialist] {
         ExpertAstrologerRegistry.specialists
@@ -137,12 +143,22 @@ struct CrystalBallView: View {
             ZStack {
                 baseSphere
                 innerNebula(at: t)
+                    .rotationEffect(.radians(userSpin * 0.35))
                 engravedWheel(at: t)
                 starfield(at: t)
                 iridescence(at: t)
+                ripple(at: t)
                 speculars
             }
             .compositingGroup()
+            // The Metal lens: inner layers bulge and bend like real glass.
+            .distortionEffect(
+                ShaderLibrary.crystalLens(
+                    .float2(diameter, diameter),
+                    .float(0.22)
+                ),
+                maxSampleOffset: CGSize(width: diameter * 0.25, height: diameter * 0.25)
+            )
             .mask(Circle())
 
             // …while the rims sit on the boundary itself.
@@ -161,6 +177,49 @@ struct CrystalBallView: View {
                 .blur(radius: 3)
         }
         .frame(width: diameter, height: diameter)
+        .contentShape(Circle())
+        .gesture(isInteractive ? spinDrag : nil)
+        .onTapGesture {
+            guard isInteractive else { return }
+            HapticManager.buttonPress()
+            rippleStartedAt = Date().timeIntervalSinceReferenceDate
+        }
+    }
+
+    /// Horizontal drags spin the wheel and swirl the nebula; releasing with
+    /// velocity carries a decaying fling.
+    private var spinDrag: some Gesture {
+        DragGesture(minimumDistance: 2)
+            .onChanged { value in
+                let last = lastDragX ?? value.startLocation.x
+                userSpin += Double(value.location.x - last) / 90
+                lastDragX = value.location.x
+            }
+            .onEnded { value in
+                lastDragX = nil
+                let fling = Double(value.predictedEndTranslation.width - value.translation.width) / 240
+                withAnimation(.easeOut(duration: 1.4)) {
+                    userSpin += min(max(fling, -2.2), 2.2)
+                }
+            }
+    }
+
+    /// A light ring that blooms from a tap and fades — the glass answering.
+    @ViewBuilder
+    private func ripple(at t: TimeInterval) -> some View {
+        if !reduceMotion, let start = rippleStartedAt {
+            let progress = (t - start) / 0.65
+            if progress > 0, progress < 1 {
+                Circle()
+                    .strokeBorder(.white.opacity(0.5 * (1 - progress)), lineWidth: 1.6)
+                    .frame(
+                        width: diameter * (0.25 + 0.75 * progress),
+                        height: diameter * (0.25 + 0.75 * progress)
+                    )
+                    .blur(radius: 1.5)
+                    .blendMode(.plusLighter)
+            }
+        }
     }
 
     private var baseSphere: some View {
@@ -210,7 +269,7 @@ struct CrystalBallView: View {
             .resizable()
             .scaledToFill()
             .frame(width: diameter * 0.94, height: diameter * 0.94)
-            .rotationEffect(.radians(t * 2 * .pi / 70))
+            .rotationEffect(.radians(t * 2 * .pi / 70 + userSpin))
             .blendMode(.screen)
             .opacity(0.34)
     }

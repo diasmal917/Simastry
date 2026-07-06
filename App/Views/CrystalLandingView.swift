@@ -31,9 +31,9 @@ struct CrystalLandingView: View {
                 VStack(spacing: 0) {
                     TabView(selection: $page) {
                         welcomePage(compact: compact).tag(0)
-                        councilPage(compact: compact).tag(1)
-                        dailyNotePage(compact: compact).tag(2)
-                        beginPage(compact: compact).tag(3)
+                        commGuidePage(compact: compact).tag(1)
+                        simulateDemoPage(compact: compact).tag(2)
+                        councilPage(compact: compact).tag(3)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -47,7 +47,7 @@ struct CrystalLandingView: View {
             withAnimation(.easeOut(duration: reduceMotion ? 0.01 : 0.45)) { appeared = true }
         }
         .onChange(of: page) { _, newPage in
-            if newPage == 1 { startCouncilCycle() } else { stopCouncilCycle() }
+            if newPage == 3 { startCouncilCycle() } else { stopCouncilCycle() }
         }
         .onDisappear { stopCouncilCycle() }
         // No container-level accessibilityIdentifier here: it would propagate
@@ -61,14 +61,16 @@ struct CrystalLandingView: View {
             SimastryWordmark(font: .system(size: compact ? 17 : 19, weight: .bold).italic())
                 .padding(.top, compact ? 10 : 22)
 
-            Text("Welcome to Simastry")
+            Text("Know what to say.\nTo anyone.")
                 .font(.system(size: compact ? 29 : 34, weight: .bold))
                 .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
                 .padding(.top, compact ? 10 : 14)
 
-            Text("Five real astrologers. One private chart.")
+            Text("Five real astrologers read the people in your life — privately.")
                 .font(.system(size: 15))
                 .foregroundStyle(.white.opacity(0.62))
+                .multilineTextAlignment(.center)
                 .padding(.top, 6)
 
             CrystalBallView(diameter: compact ? 218 : 268)
@@ -150,11 +152,20 @@ struct CrystalLandingView: View {
             .landingGlass(cornerRadius: 22)
             .padding(.top, compact ? 22 : 34)
 
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text("Private by design — export or delete everything, anytime.")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(.white.opacity(0.55))
+            .padding(.top, 14)
+
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 26)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("landing.crystal.page.1")
+        .accessibilityIdentifier("landing.crystal.page.3")
     }
 
     private func councilAvatar(_ specialist: AstrologySpecialist, isSelected: Bool) -> some View {
@@ -213,93 +224,161 @@ struct CrystalLandingView: View {
         }
     }
 
-    // MARK: - Page 3 · The daily note
+    // MARK: - Page 2 · The communication guide, demoed live
 
-    /// A real note, composed right now. Pre-auth there is no chart on file, so
-    /// the preview rotates through the experts whose notes need none — the
-    /// vara/seasonal voices — keeping the honesty rule intact on day one.
-    private var previewNoteSpecialist: AstrologySpecialist? {
-        let chartFreeIds = ["mateo-vedic", "naomi-chinese", "elias-ancient"]
-        let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        return ExpertAstrologerRegistry.specialist(id: chartFreeIds[day % chartFreeIds.count])
+    private struct DemoPersona: Identifiable {
+        let id: String
+        let label: String
+        let icon: String
+        let read: String
     }
 
-    private func dailyNotePage(compact: Bool) -> some View {
-        let specialist = previewNoteSpecialist
-        let note = DailyExpertNoteComposer.note(
-            for: specialist?.id ?? "elias-ancient",
-            sun: nil,
-            moon: nil,
-            rising: nil
+    private let demoPersonas: [DemoPersona] = [
+        DemoPersona(
+            id: "mom",
+            label: "Mom",
+            icon: "heart.fill",
+            read: "Leads with worry, hears directness as care.\nOpen with the conclusion, then the reasons.\nDon't make her guess what you're asking for."
+        ),
+        DemoPersona(
+            id: "friend",
+            label: "Best friend",
+            icon: "person.2.fill",
+            read: "Matches your energy — mirrors your tone right back.\nVoice-note honesty lands better than a polished text.\nAsk the real question first, joke second."
+        ),
+        DemoPersona(
+            id: "situationship",
+            label: "The situationship",
+            icon: "moon.stars.fill",
+            read: "Reads pauses louder than words.\nOne clear sentence beats three clever ones.\nName the need — skip the test."
         )
+    ]
+
+    @State private var selectedPersonaId: String = "mom"
+
+    private func commGuidePage(compact: Bool) -> some View {
+        let persona = demoPersonas.first { $0.id == selectedPersonaId } ?? demoPersonas[0]
 
         return VStack(spacing: 0) {
-            pageTitle("One line\neach morning.", compact: compact)
+            pageTitle("How to talk\nto them.", compact: compact)
 
-            Text("Composed from the real sky — never invented data.")
+            Text("A communication guide for everyone you text.")
+                .font(.system(size: 15))
+                .foregroundStyle(.white.opacity(0.62))
+                .multilineTextAlignment(.center)
+                .padding(.top, 8)
+
+            HStack(spacing: 8) {
+                ForEach(demoPersonas) { candidate in
+                    Button {
+                        HapticManager.buttonPress()
+                        selectedPersonaId = candidate.id
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: candidate.icon)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(candidate.id == selectedPersonaId ? CrystalMood.gold : .white.opacity(0.55))
+                            Text(candidate.label)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.white.opacity(candidate.id == selectedPersonaId ? 0.95 : 0.65))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .landingGlassCapsule(emphasis: candidate.id == selectedPersonaId ? .card : .chip)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                }
+            }
+            .padding(.top, compact ? 18 : 28)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("HOW TO TALK TO \(persona.label.uppercased())")
+                    .font(.system(size: 10, weight: .bold))
+                    .kerning(1.2)
+                    .foregroundStyle(CrystalMood.gold)
+
+                TypewriterText(text: persona.read)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .lineSpacing(6)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .landingGlass(cornerRadius: 24)
+            .padding(.top, 16)
+
+            Text("A taste — real guides use their actual chart, privately.")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.45))
+                .padding(.top, 10)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 26)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("landing.crystal.page.1")
+    }
+
+    // MARK: - Page 3 · Simulate, demoed live
+
+    private func simulateDemoPage(compact: Bool) -> some View {
+        VStack(spacing: 0) {
+            pageTitle("Practice the\nconversation.", compact: compact)
+
+            Text("Rehearse with a practice partner shaped by their chart — before it counts.")
                 .font(.system(size: 15))
                 .foregroundStyle(.white.opacity(0.62))
                 .multilineTextAlignment(.center)
                 .padding(.top, 8)
 
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 11) {
-                    Group {
-                        if let profile = specialist?.archivedProfile {
-                            Image(profile.profileImageName)
-                                .resizable()
-                                .scaledToFill()
-                        } else {
-                            Circle().fill(CrystalMood.nearBlack)
-                        }
-                    }
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
-                    .overlay { Circle().strokeBorder(CrystalMood.gold.opacity(0.6), lineWidth: 1) }
+                Text("PRACTICE ANYONE")
+                    .font(.system(size: 10, weight: .bold))
+                    .kerning(1.2)
+                    .foregroundStyle(CrystalMood.gold)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("TODAY'S NOTE · \(specialist?.characterName.uppercased() ?? "")")
-                            .font(.system(size: 10, weight: .bold))
-                            .kerning(1.2)
-                            .foregroundStyle(CrystalMood.gold)
+                // Their message.
+                Text("So are we still on for Friday… or?")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Text(Date().formatted(date: .abbreviated, time: .omitted))
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.45))
-                    }
+                // The rehearsed reply, typing itself.
+                VStack(alignment: .trailing, spacing: 4) {
+                    TypewriterText(
+                        text: "Yes — and I owe you an answer about Saturday too. Give me till tonight?",
+                        startDelay: 0.7
+                    )
+                    .font(.system(size: 15))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(CrystalMood.gold.opacity(0.28), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                    Text("Drafted with you — you always hit send.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.42))
                 }
-
-                Text(note.headline)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.94))
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(CrystalMood.gold)
-                        .padding(.top, 3)
-
-                    Text(note.move)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(CrystalMood.gold.opacity(0.92))
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
             .landingGlass(cornerRadius: 24)
-            .padding(.top, compact ? 22 : 34)
+            .padding(.top, compact ? 18 : 30)
 
             HStack(spacing: 8) {
-                Image(systemName: "bell.badge")
+                Image(systemName: "theatermasks.fill")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(CrystalMood.gold)
-                Text("Delivered at 8:30 · Opt-in · You choose the voice")
+                Text("A rehearsal, not the real person — they'll still surprise you.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(2)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -311,35 +390,6 @@ struct CrystalLandingView: View {
         .padding(.horizontal, 26)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("landing.crystal.page.2")
-    }
-
-    // MARK: - Page 4 · Begin
-
-    private func beginPage(compact: Bool) -> some View {
-        VStack(spacing: 0) {
-            pageTitle("Your chart\nstays yours.", compact: compact)
-
-            Text("Everything the experts know is inspectable — and anything missing is never guessed.")
-                .font(.system(size: 15))
-                .foregroundStyle(.white.opacity(0.62))
-                .multilineTextAlignment(.center)
-                .padding(.top, 8)
-
-            VStack(alignment: .leading, spacing: 10) {
-                featureChip(icon: "square.and.arrow.up", text: "Export your data anytime")
-                featureChip(icon: "person.crop.circle.badge.xmark", text: "No contacts required")
-                featureChip(icon: "checkmark.seal", text: "You confirm every chart detail")
-            }
-            .padding(.top, compact ? 26 : 40)
-
-            CrystalBallView(diameter: compact ? 150 : 180, showsOrbitingExperts: false)
-                .padding(.top, compact ? 4 : 12)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 26)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("landing.crystal.page.3")
     }
 
     private func pageTitle(_ text: String, compact: Bool) -> some View {
@@ -471,6 +521,39 @@ struct CrystalLandingView: View {
         }
         #endif
         return 0
+    }
+}
+
+/// Character-by-character reveal for the live demos. Reserves the full text's
+/// space up front so nothing reflows while it types; instant under
+/// Reduce Motion.
+private struct TypewriterText: View {
+    let text: String
+    var speed: Double = 0.018
+    var startDelay: Double = 0.25
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var visibleCount = 0
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Text(text).hidden()
+            Text(String(text.prefix(visibleCount)))
+        }
+        .task(id: text) {
+            if reduceMotion {
+                visibleCount = text.count
+                return
+            }
+            visibleCount = 0
+            try? await Task.sleep(for: .seconds(startDelay))
+            if Task.isCancelled { return }
+            for index in 1...max(1, text.count) {
+                try? await Task.sleep(for: .seconds(speed))
+                if Task.isCancelled { return }
+                visibleCount = index
+            }
+        }
     }
 }
 
