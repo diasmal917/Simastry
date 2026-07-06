@@ -113,7 +113,7 @@ struct CrystalBallView: View {
                 }
             }
         }
-        .frame(width: diameter * 1.52, height: diameter * 1.28)
+        .frame(width: diameter * 1.78, height: diameter * 1.38)
         .accessibilityHidden(true)
     }
 
@@ -416,58 +416,99 @@ struct CrystalBallView: View {
         .shadow(color: .black.opacity(0.4), radius: 6, y: 3)
     }
 
-    // MARK: Floating zodiac ring
+    // MARK: Floating zodiac field
 
-    /// A wider, rounder ring of the twelve zodiac signs as small liquid-glass
-    /// discs, counter-rotating slowly behind and in front of the experts — the
-    /// same pastel-zodiac language as the Home tiles, orbiting the orb.
+    /// Per-sign orbit parameters, seeded once so the twelve pastel discs drift
+    /// on their own radii, speeds, and bobbing phases — a natural scattered
+    /// field rather than a mechanical ring — and always OUTSIDE the experts'
+    /// orbit (0.62·d) so glyphs never collide with the portraits.
+    private struct ZodiacOrbit {
+        let radius: Double     // 0.78–0.98 of diameter
+        let period: Double     // seconds per revolution, all different
+        let startPhase: Double
+        let bobPeriod: Double  // secondary vertical wobble
+        let bobAmount: Double
+        let size: Double
+    }
+
+    private static let zodiacOrbits: [ZodiacOrbit] = {
+        var seed: UInt64 = 0x0D1A_C5EE
+        func random() -> Double {
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            return Double(seed >> 33) / Double(UInt32.max)
+        }
+        return (0..<12).map { index in
+            ZodiacOrbit(
+                // Experts orbit at 0.62·d with ~27pt half-size; starting the
+                // zodiac band at 0.82·d keeps a clear gap even when both hit
+                // the same phase angle.
+                radius: 0.82 + random() * 0.16,
+                period: (86 + random() * 60) * (index.isMultiple(of: 3) ? -1 : 1),
+                startPhase: Double(index) * .pi * 2 / 12 + random() * 0.9,
+                bobPeriod: 9 + random() * 8,
+                bobAmount: 4 + random() * 7,
+                size: 24 + random() * 8
+            )
+        }
+    }()
+
     private func zodiacRing(at t: TimeInterval, front: Bool) -> some View {
         let signs = ZodiacSign.allCases
-        let orbit = -t * 2 * .pi / 96 // slower, opposite the experts
         return ForEach(Array(signs.enumerated()), id: \.offset) { index, sign in
-            let phase = orbit + Double(index) * 2 * .pi / Double(signs.count)
+            let orbit = Self.zodiacOrbits[index % Self.zodiacOrbits.count]
+            let phase = orbit.startPhase + t * 2 * .pi / orbit.period
             let depth = sin(phase)
             if (depth >= 0) == front {
-                zodiacBead(for: sign, depth: depth)
+                zodiacBead(for: sign, depth: depth, baseSize: orbit.size)
                     .offset(
-                        x: cos(phase) * diameter * 0.66,
-                        y: depth * diameter * 0.30 - diameter * 0.02
+                        x: cos(phase) * diameter * orbit.radius,
+                        y: depth * diameter * 0.34
+                            + sin(t * 2 * .pi / orbit.bobPeriod + orbit.startPhase) * orbit.bobAmount
                     )
             }
         }
     }
 
-    private func zodiacBead(for sign: ZodiacSign, depth: Double) -> some View {
-        let size = 28 + 7 * depth
+    /// The pastel medallion language from the Home set, miniaturized: a solid
+    /// pastel disc, dark glyph, soft key light — not a from-scratch glass chip.
+    private func zodiacBead(for sign: ZodiacSign, depth: Double, baseSize: Double) -> some View {
+        let size = baseSize + 6 * depth
         return ZStack {
-            Circle().fill(CrystalMood.nearBlack.opacity(0.5))
-
             Circle().fill(
                 RadialGradient(
-                    colors: [sign.color.opacity(0.6), sign.color.opacity(0.2), .clear],
-                    center: UnitPoint(x: 0.4, y: 0.34),
+                    colors: [
+                        sign.color.opacity(0.98),
+                        sign.color.opacity(0.84),
+                        sign.color.opacity(0.68)
+                    ],
+                    center: UnitPoint(x: 0.5, y: 0.55),
                     startRadius: 0,
-                    endRadius: size * 0.62
+                    endRadius: size * 0.54
                 )
             )
 
-            Text(sign.glyph)
-                .font(.system(size: size * 0.44, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.92))
-
-            Circle().strokeBorder(.white.opacity(0.32 + 0.28 * depth), lineWidth: 0.8)
-
-            // Tiny key-light catch so each disc reads as glass.
             Circle()
-                .fill(.white.opacity(0.55))
-                .frame(width: size * 0.14, height: size * 0.14)
-                .offset(x: -size * 0.22, y: -size * 0.24)
-                .blur(radius: 0.4)
+                .fill(
+                    RadialGradient(
+                        colors: [.white.opacity(0.55), .white.opacity(0.1), .clear],
+                        center: UnitPoint(x: 0.3, y: 0.22),
+                        startRadius: 0,
+                        endRadius: size * 0.34
+                    )
+                )
+                .blendMode(.screen)
+
+            Text(sign.glyph)
+                .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(red: 9/255, green: 8/255, blue: 14/255).opacity(0.85))
+
+            Circle().strokeBorder(.white.opacity(0.30 + 0.2 * depth), lineWidth: 0.8)
         }
         .frame(width: size, height: size)
-        .opacity(0.5 + 0.4 * max(0, depth) + 0.15 * min(0, depth))
-        .shadow(color: sign.color.opacity(0.3), radius: 6)
-        .shadow(color: .black.opacity(0.35), radius: 4, y: 2)
+        .rotationEffect(.degrees(-6))
+        .opacity(0.55 + 0.4 * max(0, depth) + 0.2 * min(0, depth))
+        .shadow(color: sign.color.opacity(0.35), radius: 8)
+        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
     }
 }
 

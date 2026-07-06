@@ -2229,57 +2229,37 @@ private struct HomeShortcutTileView: View {
     private let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            // The medallion and its Apple-glass sheen, masked so the pastel
-            // orb bleeds off the right edge like the reference set.
-            ZStack {
-                // Sign-tinted bloom — the medallion glows through the glass.
-                RadialGradient(
-                    colors: [item.cardSign.color.opacity(0.30), .clear],
-                    center: .trailing,
-                    startRadius: 4,
-                    endRadius: 128
-                )
-
-                HomeShortcutMedallion(sign: item.cardSign, size: 126)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .offset(x: 30, y: 2)
-
-                HomeShortcutGlassReflection(shape: shape)
-                HomeShortcutTopHighlight()
-            }
-            .mask(shape)
-            .allowsHitTesting(false)
-
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.title)
-                    .font(.system(size: 15.5, weight: .bold))
-                    .tracking(-0.25)
+                    .font(.system(size: 15.5, weight: .semibold))
+                    .tracking(-0.2)
                     .lineLimit(2)
                     .minimumScaleFactor(0.82)
-                    .foregroundStyle(.white.opacity(0.98))
-                    .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
+                    .foregroundStyle(.white.opacity(0.97))
 
                 Text(item.subtitle)
-                    .font(.system(size: 10.0, weight: .medium))
-                    .tracking(-0.08)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .tracking(-0.05)
                     .lineLimit(2)
                     .minimumScaleFactor(0.84)
-                    .foregroundStyle(.white.opacity(0.76))
-                    .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
+                    .foregroundStyle(.white.opacity(0.6))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 16)
-            .padding(.trailing, 84)
+
+            HomeShortcutSignToken(sign: item.cardSign)
         }
-        .frame(height: 120)
+        .padding(.leading, 16)
+        .padding(.trailing, 12)
+        .frame(height: 108)
         .frame(maxWidth: .infinity)
         .simastryGlass(cornerRadius: 26)
         .overlay {
-            // A faint sign-tinted rim over the neutral glass edge.
+            // The faintest sign tint on the top-trailing rim — color as a
+            // whisper, not a costume.
             shape.strokeBorder(
                 LinearGradient(
-                    colors: [item.cardSign.color.opacity(0.32), .white.opacity(0.05), .clear],
+                    colors: [item.cardSign.color.opacity(0.20), .clear, .clear],
                     startPoint: .topTrailing,
                     endPoint: .bottomLeading
                 ),
@@ -2287,9 +2267,46 @@ private struct HomeShortcutTileView: View {
             )
             .allowsHitTesting(false)
         }
-        .shadow(color: item.cardSign.color.opacity(0.14), radius: 16, y: 5)
         .contentShape(shape)
         .accessibilityHidden(true)
+    }
+}
+
+/// The pastel zodiac icon as a small, quiet token: a soft pastel disc with the
+/// glyph, gently tilted — sized like an app-icon accessory, not a hero.
+private struct HomeShortcutSignToken: View {
+    let sign: ZodiacSign
+
+    var body: some View {
+        ZStack {
+            Circle().fill(
+                LinearGradient(
+                    colors: [sign.color.opacity(0.95), sign.color.opacity(0.72)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+
+            // One restrained top sheen — enough to read as dimensional.
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.32), .clear],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                )
+
+            Text(sign.glyph)
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(red: 12/255, green: 11/255, blue: 18/255).opacity(0.82))
+
+            Circle().strokeBorder(.white.opacity(0.28), lineWidth: 0.7)
+        }
+        .frame(width: 52, height: 52)
+        .rotationEffect(.degrees(-8))
+        .shadow(color: sign.color.opacity(0.28), radius: 10, y: 3)
+        .allowsHitTesting(false)
     }
 }
 
