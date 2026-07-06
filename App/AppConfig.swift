@@ -47,6 +47,10 @@ nonisolated enum AppConfig {
     /// (rotating glass experts + value pillars). Flip to false to restore the
     /// legacy paged carousel, which remains intact for that reason.
     static let landingUsesCinematicHero = true
+    /// When true, landing is the crystal-ball onboarding pager (video-reference
+    /// redesign). Flip to false to fall back to the cinematic hero above; both
+    /// prior layouts remain intact.
+    static let landingUsesCrystalOnboarding = true
     static var expertAstrologersEnabled: Bool {
         !ProcessInfo.processInfo.arguments.contains("-SimastryLegacyGuides")
     }

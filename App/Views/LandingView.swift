@@ -329,6 +329,17 @@ struct LandingView: View {
     }
 
     var body: some View {
+        if AppConfig.landingUsesCrystalOnboarding {
+            CrystalLandingView(viewModel: viewModel)
+        } else {
+            legacyBody
+        }
+    }
+
+    /// The previous cinematic-hero / paged-carousel landing, kept intact so
+    /// `landingUsesCrystalOnboarding` can be flipped off without a rebuild
+    /// of this screen.
+    private var legacyBody: some View {
         GeometryReader { geo in
             ZStack {
                 landingBackground(size: geo.size)

@@ -3560,6 +3560,15 @@ extension AppViewModel {
         }
 
         // Pre-auth screens render without the seeded session.
+        if debugPreviewScreen(from: arguments) == "landing" {
+            isDebugPreviewStateActive = true
+            // Deterministic pre-auth start: a seeded run in the same container
+            // may have persisted age verification — the landing preview always
+            // begins before the age gate.
+            isAgeVerified = false
+            currentScreen = .landing
+            return true
+        }
         if debugPreviewScreen(from: arguments) == "birthDetails" {
             isDebugPreviewStateActive = true
             isAgeVerified = true

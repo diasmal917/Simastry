@@ -11,13 +11,37 @@ final class SimastrySmokeUITests: XCTestCase {
         app = nil
     }
 
+    func testCrystalLandingPagerReachesFirstRead() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "landing"])
+
+        let cta = app.buttons["landing.crystal.cta"]
+        XCTAssertTrue(cta.waitForExistence(timeout: 10), "Expected the crystal landing CTA")
+
+        cta.tap() // → council page
+        let back = app.buttons["landing.crystal.back"]
+        XCTAssertTrue(back.waitForExistence(timeout: 4), "Expected the back button from page 2 on")
+
+        back.tap() // ← welcome page
+        XCTAssertTrue(back.waitForNonExistence(timeout: 4), "Back button should hide on page 1")
+
+        cta.tap() // → council
+        cta.tap() // → daily note
+        cta.tap() // → begin
+        cta.tap() // → routes into the first-read flow (age gate first)
+
+        let ageGate = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "old enough")
+        ).firstMatch
+        XCTAssertTrue(ageGate.waitForExistence(timeout: 6), "Expected the age gate after the final CTA")
+    }
+
     func testTodayExpertAstrologersOpens() throws {
         launchSeededApp()
 
-        XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
 
         let openGuideChat = app.buttons["today.openGuideChatButton"]
-        XCTAssertTrue(reveal(openGuideChat), "Expected Today to expose Expert Astrologers")
+        XCTAssertTrue(reveal(openGuideChat), "Expected Home to expose Expert Astrologers")
         openGuideChat.tap()
 
         XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 6))
@@ -432,11 +456,14 @@ final class SimastrySmokeUITests: XCTestCase {
     func testDiscoveryProfileStartsLocalConversationAndOpensTalk() throws {
         launchSeededApp(arguments: ["-SimastryPreviewTab", "3"])
 
-        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
+        let profileButton = app.buttons["app.header.profileButton"]
+        XCTAssertTrue(profileButton.waitForExistence(timeout: 6), "Expected Home to expose the profile menu")
+        profileButton.tap()
 
-        let discoveryButton = app.buttons["profile.discoveryButton"]
-        XCTAssertTrue(reveal(discoveryButton, maxSwipes: 10), "Expected Me to expose Discovery")
-        discoveryButton.tap()
+        let discoveryEntry = app.buttons["Find Others Like You"]
+        XCTAssertTrue(discoveryEntry.waitForExistence(timeout: 4), "Expected the profile drawer to expose Discovery")
+        discoveryEntry.tap()
 
         XCTAssertTrue(app.navigationBars["Find Others Like You"].waitForExistence(timeout: 8))
 
