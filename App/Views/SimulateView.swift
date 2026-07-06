@@ -11,6 +11,7 @@ private enum PredictSubject: String, Hashable {
 
 struct SimulateView: View {
     @Bindable var viewModel: AppViewModel
+    private let showsTabHeader: Bool
 
     @State private var conversationText: String = ""
     @State private var questionText: String = ""
@@ -38,6 +39,11 @@ struct SimulateView: View {
     @State private var aboutSubject: PredictSubject = .you
     @State private var usingNewPerson: Bool = false
     @State private var selectedPersonId: UUID?
+
+    init(viewModel: AppViewModel, showsTabHeader: Bool = false) {
+        self.viewModel = viewModel
+        self.showsTabHeader = showsTabHeader
+    }
 
     /// Reply-style questions are inherently about the other person, so the
     /// subject is forced to "someone else" regardless of the toggle.
@@ -237,8 +243,10 @@ struct SimulateView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 24) {
-                    header
-                        .id("predict.header")
+                    if !showsTabHeader {
+                        header
+                            .id("predict.header")
+                    }
                     predictStepRail
                     guidedPredictionFlow
                     historySection
@@ -267,6 +275,11 @@ struct SimulateView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showsTabHeader {
+                AppTabFloatingHeader(viewModel: viewModel)
+            }
+        }
         .sheet(isPresented: $showTopUpSheet) {
             PredictionTopUpView(viewModel: viewModel)
         }
@@ -826,7 +839,7 @@ struct SimulateView: View {
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 } else {
-                    Text("Add your signs in the Me tab to sharpen this.")
+                    Text("Add your signs in Profile to sharpen this.")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }

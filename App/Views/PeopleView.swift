@@ -102,8 +102,11 @@ struct PeopleView: View {
             }
             .scrollIndicators(.hidden)
             .background { CelestialBackground() }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                AppTabFloatingHeader(viewModel: viewModel)
+            }
             .accessibilityHidden(activeSheet != nil)
-            .navigationTitle("People")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             // Native search. On iOS 26 `.searchToolbarBehavior(.minimize)` renders

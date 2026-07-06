@@ -244,6 +244,8 @@ class AppViewModel {
     }
     var aiAstrologistsRouteRequest: Int = 0
     var predictRouteRequest: Int = 0
+    /// Bumped to ask HomeView to open the profile drawer.
+    var profileDrawerRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the Aura sheet.
     var auraRouteRequest: Int = 0
     /// Bumped to ask ProfileView to present the consolidated share card.
@@ -284,6 +286,8 @@ class AppViewModel {
     var isPanelThreadOpen: Bool = false
     /// Bumped to ask MessagesView to present the panel chat.
     var panelChatRouteRequest: Int = 0
+    /// Bumped to ask MessagesView to present Quick Simulate.
+    var quickSimulateRouteRequest: Int = 0
     /// What the panel remembers — People mentioned in conversation (+PanelChat).
     var panelMemoryNotes: [MemoryNote] = []
 
@@ -652,6 +656,18 @@ class AppViewModel {
         // Predict is now a first-class tab; SimulateView consumes the draft on
         // appear / change, so we just select the tab.
         selectedTab = .predict
+    }
+
+    func openQuickSimulate() {
+        homeSetupPhase = .complete
+        selectedTab = .messages
+        quickSimulateRouteRequest += 1
+    }
+
+    func openProfileDrawer() {
+        homeSetupPhase = .complete
+        selectedTab = .today
+        profileDrawerRouteRequest += 1
     }
 
     func loadRelationshipPeople() {
@@ -1222,7 +1238,7 @@ class AppViewModel {
         case "panel":
             openPanelChat()
         case "simulate":
-            openPredict()
+            openQuickSimulate()
         case "guides":
             if AppConfig.expertAstrologersEnabled {
                 openAIAstrologists()
@@ -1234,7 +1250,7 @@ class AppViewModel {
             guideFocusSign = nil
             selectedTab = .today
         case "profile":
-            selectedTab = .me
+            openProfileDrawer()
         case "upsell":
             if isRevenueCatAvailable {
                 showUpsell = true
@@ -1298,6 +1314,9 @@ class AppViewModel {
         case .predict:
             openPredict()
 
+        case .simulate:
+            openQuickSimulate()
+
         case .home:
             selectedTab = .today
         }
@@ -1314,6 +1333,8 @@ class AppViewModel {
             navigateToDeepLink(.predict)
         case "messages":
             navigateToDeepLink(.messages)
+        case "simulate":
+            navigateToDeepLink(.simulate)
         case "expertAstrologers", "nadia":
             openAIAstrologists()
         default:
@@ -3761,9 +3782,9 @@ extension AppViewModel {
             }
         case "moments":
             seedDebugMoments(now: now)
-            selectedTab = .me
+            openProfileDrawer()
         case "invite":
-            selectedTab = .me
+            openProfileDrawer()
         case "profilePartial":
             profile = UserProfile.createDefault(id: userId)
             userSunSign = nil
@@ -3775,19 +3796,19 @@ extension AppViewModel {
             homeSetupPhase = .modeSelection
             selectedTab = .today
         case "aura":
-            selectedTab = .me
+            selectedTab = .today
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.auraRouteRequest += 1
             }
         case "shareCard":
-            selectedTab = .me
+            selectedTab = .today
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.shareCardRouteRequest += 1
             }
         case "careerRead":
-            selectedTab = .me
+            selectedTab = .today
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.careerReadRouteRequest += 1

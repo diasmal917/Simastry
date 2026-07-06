@@ -10,7 +10,7 @@ struct MainTabView: View {
         // Instagram-style "settle on scroll-up, minimize on scroll-down" motion
         // — all maintained by the OS. `Tab(_:systemImage:value:)` is iOS 18+.
         TabView(selection: $viewModel.selectedTab) {
-            Tab("Today", systemImage: "sun.max.fill", value: AppTab.today) {
+            Tab("Home", systemImage: "house.fill", value: AppTab.today) {
                 HomeView(viewModel: viewModel)
             }
 
@@ -26,10 +26,6 @@ struct MainTabView: View {
 
             Tab("People", systemImage: "person.2.fill", value: AppTab.people) {
                 PeopleView(viewModel: viewModel)
-            }
-
-            Tab("Me", systemImage: "person.crop.circle.fill", value: AppTab.me) {
-                ProfileView(viewModel: viewModel)
             }
         }
         .tint(SimastryColor.gold)
@@ -70,6 +66,96 @@ struct MainTabView: View {
     }
 }
 
+struct AppTabFloatingHeader: View {
+    @Bindable var viewModel: AppViewModel
+
+    var body: some View {
+        // Lives inside each tab's `.safeAreaInset(edge: .top)`, so it always
+        // reserves its own space — scrolled content can never collide with it.
+        HStack(alignment: .center, spacing: 12) {
+            Button {
+                HapticManager.buttonPress()
+                viewModel.openProfileDrawer()
+            } label: {
+                ProfileImageView(
+                    image: viewModel.profileImage,
+                    size: 48,
+                    sunSign: viewModel.userSunSign
+                )
+                .background(.white.opacity(0.08), in: Circle())
+                .overlay {
+                    Circle()
+                        .strokeBorder((viewModel.userSunSign?.color ?? SimastryColor.gold).opacity(0.5), lineWidth: 1.2)
+                }
+                .shadow(color: (viewModel.userSunSign?.color ?? SimastryColor.gold).opacity(0.22), radius: 12, y: 5)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open profile menu")
+            .accessibilityIdentifier("app.header.profileButton")
+
+            Text(viewModel.selectedTab.title)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .accessibilityIdentifier("app.header.tabTitle")
+
+            Spacer(minLength: 12)
+
+            if viewModel.selectedTab == .today {
+                HomeHeaderGreetingSummary()
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 2)
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            // Fades the wallpaper up through the status bar for legibility.
+            LinearGradient(
+                colors: [.black.opacity(0.55), .black.opacity(0.0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+struct HomeHeaderGreetingSummary: View {
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "Good morning" }
+        if hour < 17 { return "Good afternoon" }
+        return "Good evening"
+    }
+
+    private var formattedDate: String {
+        SimastryDateFormatter.summaryDate.string(from: Date())
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(formattedDate.uppercased())
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .tracking(1.4)
+
+            Text(greetingText)
+                .font(SimastryFont.displayMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.62)
+        }
+        .multilineTextAlignment(.trailing)
+        .frame(width: 154, alignment: .trailing)
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("home.header.greetingSummary")
+    }
+}
+
 /// First-class Predict surface. `SimulateView` already owns the full guided
 /// flow (question type, details, orb generation, result, outcome rating), so
 /// the tab just hosts it in its own navigation context.
@@ -78,7 +164,7 @@ struct PredictTabView: View {
 
     var body: some View {
         NavigationStack {
-            SimulateView(viewModel: viewModel)
+            SimulateView(viewModel: viewModel, showsTabHeader: true)
         }
     }
 }

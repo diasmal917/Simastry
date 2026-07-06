@@ -274,7 +274,7 @@ struct CareerReadView: View {
                 .font(SimastryFont.titleMedium)
                 .foregroundStyle(SimastryColor.offWhite)
 
-            Text("Your Career Read is built from your Sun, Moon, and Rising — add them on the Today tab to unlock it.")
+            Text("Your Career Read is built from your Sun, Moon, and Rising — add them in Profile to unlock it.")
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .multilineTextAlignment(.center)

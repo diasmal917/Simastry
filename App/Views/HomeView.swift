@@ -12,6 +12,55 @@ private struct AstrologerProfileRoute: Identifiable {
     let id: String
 }
 
+private enum HomeShortcutKind: String {
+    case askExperts
+    case decode
+    case simulate
+    case birthChart
+    case dailyDecider
+    case journal
+}
+
+private struct HomeShortcutItem: Identifiable {
+    let kind: HomeShortcutKind
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    let accent: Color
+    let cardSign: ZodiacSign
+    let identifier: String
+
+    var id: String { kind.rawValue }
+}
+
+private enum HomeProfileSheet: Identifiable {
+    case profile
+    case settings
+    case journal
+    case discovery
+    case expertKnowledge
+    case methodology
+    case aura
+    case careerRead
+    case shareCard
+    case birthChart
+
+    var id: String {
+        switch self {
+        case .profile: "profile"
+        case .settings: "settings"
+        case .journal: "journal"
+        case .discovery: "discovery"
+        case .expertKnowledge: "expertKnowledge"
+        case .methodology: "methodology"
+        case .aura: "aura"
+        case .careerRead: "careerRead"
+        case .shareCard: "shareCard"
+        case .birthChart: "birthChart"
+        }
+    }
+}
+
 private struct HiddenBottomScrollEdgeEffect: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
@@ -309,6 +358,7 @@ struct HomeView: View {
     @StateObject private var streakManager = StreakManager.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     @State private var navigationPath = NavigationPath()
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
@@ -317,6 +367,10 @@ struct HomeView: View {
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
     @State private var handledDecodeRouteRequest: Int = 0
+    @State private var handledProfileDrawerRouteRequest: Int = 0
+    @State private var handledAuraRouteRequest: Int = 0
+    @State private var handledShareCardRouteRequest: Int = 0
+    @State private var handledCareerReadRouteRequest: Int = 0
     @State private var sealedDrafts: [SealedDraft] = []
     @State private var showSealedDraftCompose: Bool = false
     @State private var rereadDraft: SealedDraft?
@@ -327,6 +381,9 @@ struct HomeView: View {
     @State private var showingDailyDeciderInfo: Bool = false
     @State private var showMoreForToday: Bool = false
     @State private var showJournal: Bool = false
+    @State private var showProfileDrawer: Bool = false
+    @State private var activeProfileSheet: HomeProfileSheet?
+    @State private var dailyDeciderScrollRequest: Int = 0
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -373,6 +430,12 @@ struct HomeView: View {
             .overlay(alignment: .top) {
                 streakMilestoneToast
             }
+            .overlay {
+                profileDrawerBackdrop
+            }
+            .overlay(alignment: .leading) {
+                profileDrawer
+            }
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .aiAstrologist(let profileId):
@@ -415,11 +478,47 @@ struct HomeView: View {
             .onChange(of: viewModel.decodeRouteRequest) {
                 presentRoutesIfRequested()
             }
+            .onChange(of: viewModel.profileDrawerRouteRequest) {
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.auraRouteRequest) {
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.shareCardRouteRequest) {
+                presentRoutesIfRequested()
+            }
+            .onChange(of: viewModel.careerReadRouteRequest) {
+                presentRoutesIfRequested()
+            }
             .sheet(isPresented: $showAuraSnapshotSheet) {
                 AuraSnapshotSheet(viewModel: viewModel)
             }
             .sheet(isPresented: $showJournal) {
                 SavedInsightsView(viewModel: viewModel)
+            }
+            .sheet(item: $activeProfileSheet) { sheet in
+                switch sheet {
+                case .profile:
+                    ProfileView(viewModel: viewModel)
+                case .settings:
+                    SimastrySettingsView(viewModel: viewModel)
+                case .journal:
+                    SavedInsightsView(viewModel: viewModel)
+                case .discovery:
+                    DiscoveryView(viewModel: viewModel)
+                case .expertKnowledge:
+                    ExpertKnowledgeView(viewModel: viewModel)
+                case .methodology:
+                    HomeMethodologySheet()
+                case .aura:
+                    AuraView(viewModel: viewModel)
+                case .careerRead:
+                    CareerReadView(viewModel: viewModel)
+                case .shareCard:
+                    ShareableCardView(viewModel: viewModel, cardType: .cosmicDNA)
+                case .birthChart:
+                    BirthChartHomeSheet(viewModel: viewModel)
+                }
             }
         }
     }
@@ -465,6 +564,24 @@ struct HomeView: View {
             handledDecodeRouteRequest = viewModel.decodeRouteRequest
             navigationPath.append(HomeRoute.decode)
         }
+        if viewModel.profileDrawerRouteRequest > handledProfileDrawerRouteRequest {
+            handledProfileDrawerRouteRequest = viewModel.profileDrawerRouteRequest
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                showProfileDrawer = true
+            }
+        }
+        if viewModel.auraRouteRequest > handledAuraRouteRequest {
+            handledAuraRouteRequest = viewModel.auraRouteRequest
+            activeProfileSheet = .aura
+        }
+        if viewModel.shareCardRouteRequest > handledShareCardRouteRequest {
+            handledShareCardRouteRequest = viewModel.shareCardRouteRequest
+            activeProfileSheet = .shareCard
+        }
+        if viewModel.careerReadRouteRequest > handledCareerReadRouteRequest {
+            handledCareerReadRouteRequest = viewModel.careerReadRouteRequest
+            activeProfileSheet = .careerRead
+        }
     }
 
     private var debugExpertsFirst: Bool {
@@ -476,75 +593,81 @@ struct HomeView: View {
     }
 
     private var homeContent: some View {
-        ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 14) {
-                Spacer().frame(height: 6)
-                if debugExpertsFirst { panelCard }
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 14) {
+                    // The floating header now reserves its own space via
+                    // safeAreaInset — only a small breathing gap is needed.
+                    Spacer().frame(height: 6)
 
-                // Today as a morning ritual: the chosen expert's note leads,
-                // then the daily read and one tiny action; Predict and the
-                // experts panel follow, and the longer-tail Aura/first-read/
-                // learn content sits behind the "More for today" disclosure.
-                todayHeader
+                    if debugExpertsFirst { homeSection { panelCard } }
 
-                dailyExpertNoteCard
+                    homeSection { homeShortcutGrid }
 
-                todaysReadCard
+                    homeSection { dailyExpertNoteCard }
 
-                dailyDeciderCard
+                    homeSection { todaysReadCard }
 
-                situationCard
+                    homeSection { dailyDeciderCard.id("home.dailyDecider") }
 
-                predictHeroCard
+                    homeSection { situationCard }
 
-                continueStrip
+                    homeSection { predictHeroCard }
 
-                if !debugExpertsFirst { panelCard }
+                    homeSection { continueStrip }
 
-                moreForTodaySection
+                    if !debugExpertsFirst { homeSection { panelCard } }
 
-                sealedDraftsRow
+                    homeSection { moreForTodaySection }
 
-                Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
-            }
-            .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
-            .containerRelativeFrame(.horizontal)
-            .onAppear {
-                streakManager.recordCheckIn()
-                AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
-                sealedDrafts = SealedDraftStore().load()
-                viewModel.todayStore.reloadSavedPrompts()
-                viewModel.todayStore.reloadDailyDecisions()
-                viewModel.reloadAuraSnapshot()
-                viewModel.publishDailyNotesForWidget()
-                #if DEBUG
-                if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
-                    profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
+                    homeSection { sealedDraftsRow }
+
+                    homeSection { Spacer().frame(height: SimastrySpacing.tabBarEndClearance) }
                 }
-                #endif
-                guard !appeared else { return }
-                if reduceMotion {
-                    appeared = true
-                } else {
-                    withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
-                        appeared = true
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
+                .containerRelativeFrame(.horizontal)
+                .onAppear {
+                    streakManager.recordCheckIn()
+                    AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
+                    sealedDrafts = SealedDraftStore().load()
+                    viewModel.todayStore.reloadSavedPrompts()
+                    viewModel.todayStore.reloadDailyDecisions()
+                    viewModel.reloadAuraSnapshot()
+                    viewModel.publishDailyNotesForWidget()
+                    #if DEBUG
+                    if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
+                        profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
                     }
-                }
-                // Show milestone toast after a brief delay
-                if streakManager.streakMessage != nil {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
-                            showStreakMilestone = true
+                    #endif
+                    guard !appeared else { return }
+                    if reduceMotion {
+                        appeared = true
+                    } else {
+                        withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
+                            appeared = true
                         }
-                        // Auto-dismiss after 4 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                showStreakMilestone = false
+                    }
+                    // Show milestone toast after a brief delay
+                    if streakManager.streakMessage != nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.spring(SimastrySpring.smooth)) {
+                                showStreakMilestone = true
+                            }
+                            // Auto-dismiss after 4 seconds
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    showStreakMilestone = false
+                                }
                             }
                         }
                     }
+                }
+            }
+            .onChange(of: dailyDeciderScrollRequest) {
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    proxy.scrollTo("home.dailyDecider", anchor: .center)
                 }
             }
         }
@@ -552,64 +675,16 @@ struct HomeView: View {
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .background { CelestialBackground() }
         .modifier(HiddenBottomScrollEdgeEffect())
-        .navigationTitle("Today")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .overlay {
             if isLoading {
-                ScrollView(.vertical) {
-                    VStack(spacing: 20) {
-                        Spacer().frame(height: 16)
-
-                        // Header skeleton
-                        HStack {
-                            VStack(alignment: .leading, spacing: 6) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(SimastryColor.surface)
-                                    .frame(width: 100, height: 14)
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(SimastryColor.surface)
-                                    .frame(width: 180, height: 30)
-                            }
-                            Spacer()
-                            Circle()
-                                .fill(SimastryColor.surface)
-                                .frame(width: 48, height: 48)
-                        }
-
-                        // Panel skeleton
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 340)
-
-                        // Predict hero skeleton
-                        RoundedRectangle(cornerRadius: 28)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 200)
-
-                        // Daily read skeleton
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(SimastryColor.surface)
-                            .frame(height: 150)
-
-                        // Grid skeleton
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                            ForEach(0..<4, id: \.self) { _ in
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(SimastryColor.surface)
-                                    .frame(height: 104)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .frame(maxWidth: .infinity)
-                    .skeletonShimmer()
-                }
-                .scrollIndicators(.hidden)
-                .frame(maxWidth: .infinity)
-                .clipped()
-                .transition(.opacity)
+                HomeLoadingSkeleton()
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            AppTabFloatingHeader(viewModel: viewModel)
         }
         .task {
             transitReading = TransitEngine.dailyReading(
@@ -623,6 +698,10 @@ struct HomeView: View {
                 isLoading = false
             }
         }
+    }
+
+    private func homeSection<Content: View>(@ViewBuilder _ content: () -> Content) -> AnyView {
+        AnyView(content())
     }
 
     @ViewBuilder
@@ -654,29 +733,155 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Header
-
-    private var todayHeader: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(formattedSummaryDate.uppercased())
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.textTertiary)
-                    .tracking(1.4)
-
-                Text(summaryGreeting)
-                    .font(SimastryFont.displayMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
-            }
-
-            Spacer()
-
-            if let sun = viewModel.userSunSign {
-                ZodiacIconView(sign: sun, size: 42, showsGlow: true)
-            }
+    @ViewBuilder
+    private var profileDrawerBackdrop: some View {
+        if showProfileDrawer {
+            Color.black.opacity(0.52)
+                .ignoresSafeArea()
+                .transition(.opacity)
+                .onTapGesture {
+                    closeProfileDrawer()
+                }
         }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 8)
+    }
+
+    @ViewBuilder
+    private var profileDrawer: some View {
+        if showProfileDrawer {
+            HomeProfileDrawer(
+                displayName: profileDisplayName,
+                subtitle: profileSubtitle,
+                profileImage: viewModel.profileImage,
+                sunSign: viewModel.userSunSign,
+                onClose: closeProfileDrawer,
+                onOpenProfile: { openProfileSheet(.profile) },
+                onSettings: { openProfileSheet(.settings) },
+                onJournal: { openProfileSheet(.journal) },
+                onDiscovery: { openProfileSheet(.discovery) },
+                onExpertKnowledge: { openProfileSheet(.expertKnowledge) },
+                onMethodology: { openProfileSheet(.methodology) },
+                onAstrologer: { openURL(AppConfig.astrologerDirectoryURL) }
+            )
+            .frame(width: min(UIScreen.main.bounds.width * 0.86, 342))
+            .frame(maxHeight: .infinity)
+            .transition(.move(edge: .leading).combined(with: .opacity))
+            .zIndex(60)
+        }
+    }
+
+    private var profileDisplayName: String {
+        let profileName = viewModel.profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !profileName.isEmpty { return profileName }
+
+        let socialName = viewModel.socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !socialName.isEmpty { return socialName }
+
+        return "Your profile"
+    }
+
+    private var profileSubtitle: String {
+        if let communicationType {
+            return communicationType.title
+        }
+        if let sun = viewModel.userSunSign {
+            return "\(sun.displayName) Sun"
+        }
+        return "View profile"
+    }
+
+    private func openProfileSheet(_ sheet: HomeProfileSheet) {
+        closeProfileDrawer()
+        activeProfileSheet = sheet
+    }
+
+    private func closeProfileDrawer() {
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            showProfileDrawer = false
+        }
+    }
+
+    private var homeShortcutGrid: some View {
+        HomeShortcutGridView(
+            items: homeShortcutItems,
+            appeared: appeared,
+            onSelect: handleHomeShortcut
+        )
+    }
+
+    private var homeShortcutItems: [HomeShortcutItem] {
+        [
+            HomeShortcutItem(
+                kind: .askExperts,
+                title: AppConfig.expertAstrologersEnabled ? "Ask experts" : "Ask guides",
+                subtitle: "Human-style reads",
+                systemImage: SimastryIcon.astrologers,
+                accent: Color(red: 112/255, green: 86/255, blue: 165/255),
+                cardSign: .leo,
+                identifier: "home.shortcut.askExperts"
+            ),
+            HomeShortcutItem(
+                kind: .simulate,
+                title: "Simulate",
+                subtitle: "Practice anyone",
+                systemImage: "theatermasks.fill",
+                accent: Color(red: 110/255, green: 80/255, blue: 174/255),
+                cardSign: .scorpio,
+                identifier: "home.shortcut.simulate"
+            ),
+            HomeShortcutItem(
+                kind: .birthChart,
+                title: "Birth chart",
+                subtitle: "Core placements",
+                systemImage: "chart.bar.doc.horizontal.fill",
+                accent: Color(red: 85/255, green: 122/255, blue: 72/255),
+                cardSign: .capricorn,
+                identifier: "home.shortcut.birthChart"
+            ),
+            HomeShortcutItem(
+                kind: .dailyDecider,
+                title: "Daily Decider",
+                subtitle: "One tiny next move",
+                systemImage: "wand.and.stars",
+                accent: SimastryColor.celestialBlue,
+                cardSign: .libra,
+                identifier: "home.shortcut.dailyDecider"
+            ),
+            HomeShortcutItem(
+                kind: .decode,
+                title: "Decode text",
+                subtitle: "Read between lines",
+                systemImage: "text.magnifyingglass",
+                accent: Color(red: 8/255, green: 126/255, blue: 104/255),
+                cardSign: .gemini,
+                identifier: "home.shortcut.decode"
+            ),
+            HomeShortcutItem(
+                kind: .journal,
+                title: "Journal",
+                subtitle: "Saved insights",
+                systemImage: "bookmark.fill",
+                accent: Color(red: 174/255, green: 72/255, blue: 161/255),
+                cardSign: .cancer,
+                identifier: "home.shortcut.journal"
+            )
+        ]
+    }
+
+    private func handleHomeShortcut(_ kind: HomeShortcutKind) {
+        switch kind {
+        case .askExperts:
+            viewModel.openAIAstrologists()
+        case .simulate:
+            viewModel.openQuickSimulate()
+        case .birthChart:
+            activeProfileSheet = .birthChart
+        case .dailyDecider:
+            dailyDeciderScrollRequest += 1
+        case .decode:
+            navigationPath.append(HomeRoute.decode)
+        case .journal:
+            showJournal = true
+        }
     }
 
     /// The daily ritual anchor: the chosen expert's short note for today,
@@ -775,7 +980,7 @@ struct HomeView: View {
     }
 
     /// Keeps today's note in the private journal (local-only, inspectable
-    /// from Today's Journal pill and Me → Private journal).
+    /// from Home's Journal pill and Profile → Private journal).
     private func expertNoteSaveButton(_ note: DailyExpertNote) -> some View {
         Button {
             HapticManager.buttonPress()
@@ -1882,5 +2087,690 @@ struct HomeView: View {
 
     private var remainingPredictionsBadge: String {
         viewModel.weeklyPredictionLimit == .max ? "Unlimited" : "\(viewModel.remainingWeeklyPredictions) left this week"
+    }
+}
+
+private struct HomeShortcutGridView: View {
+    let items: [HomeShortcutItem]
+    let appeared: Bool
+    let onSelect: (HomeShortcutKind) -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Browse all")
+                .font(SimastryFont.titleSmall)
+                .foregroundStyle(SimastryColor.offWhite)
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(items) { item in
+                    Button {
+                        HapticManager.buttonPress()
+                        onSelect(item.kind)
+                    } label: {
+                        HomeShortcutTileView(item: item)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel(item.title)
+                    .accessibilityIdentifier(item.identifier)
+                }
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
+    }
+}
+
+private struct BirthChartHomeSheet: View {
+    @Bindable var viewModel: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    private var signRows: [(String, ZodiacSign?, String)] {
+        [
+            ("Sun", viewModel.userSunSign, "Core drive"),
+            ("Moon", viewModel.userMoonSign, "Emotional reaction"),
+            ("Rising", viewModel.userRisingSign, "First impression")
+        ]
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                CelestialBackground()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Birth chart")
+                                .font(SimastryFont.displayMedium)
+                                .foregroundStyle(SimastryColor.offWhite)
+
+                            Text("Core placements and chart screenshots for deeper reads.")
+                                .font(SimastryFont.bodySmall)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.top, 8)
+
+                        VStack(spacing: 10) {
+                            ForEach(signRows, id: \.0) { row in
+                                birthChartSignRow(title: row.0, sign: row.1, subtitle: row.2)
+                            }
+                        }
+
+                        ExpertChartImportSection(viewModel: viewModel, subject: .userSelf)
+                    }
+                    .padding(20)
+                    .padding(.bottom, 28)
+                }
+                .scrollIndicators(.hidden)
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .tint(SimastryColor.gold)
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func birthChartSignRow(title: String, sign: ZodiacSign?, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            if let sign {
+                ZodiacIconView(sign: sign, size: 42, showsGlow: true)
+            } else {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .frame(width: 42, height: 42)
+                    .background(.white.opacity(0.06), in: Circle())
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .tracking(1.2)
+
+                Text(sign?.displayName ?? "Unknown")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
+
+            Spacer()
+
+            Text(subtitle)
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineLimit(1)
+        }
+        .padding(14)
+        .surfaceCard(cornerRadius: 18, accent: (sign?.color ?? SimastryColor.gold).opacity(0.45))
+    }
+}
+
+private struct HomeShortcutTileView: View {
+    let item: HomeShortcutItem
+
+    var body: some View {
+        GeometryReader { proxy in
+            let cornerRadius = min(30, proxy.size.height * 0.24)
+            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+            ZStack(alignment: .leading) {
+                // The tilted zodiac card artwork IS the container now.
+                Image("ZodiacTile_\(item.cardSign.rawValue)")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .zIndex(0)
+
+                // Legibility scrim under the text column only.
+                LinearGradient(
+                    colors: [.black.opacity(0.58), .black.opacity(0.16), .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .zIndex(1)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.title)
+                        .font(.system(size: 15.5, weight: .bold))
+                        .tracking(-0.25)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                        .foregroundStyle(.white.opacity(0.97))
+                        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+
+                    Text(item.subtitle)
+                        .font(.system(size: 10.0, weight: .medium))
+                        .tracking(-0.08)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.84)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
+                }
+                .frame(maxWidth: proxy.size.width * 0.6, alignment: .leading)
+                .padding(.leading, 14)
+                .padding(.trailing, 42)
+                .zIndex(2)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipShape(shape)
+            .overlay {
+                shape.strokeBorder(.white.opacity(0.10), lineWidth: 0.8)
+            }
+            .compositingGroup()
+        }
+            .frame(height: 120)
+            .shadow(color: .black.opacity(0.64), radius: 26, y: 14)
+            .shadow(color: item.cardSign.color.opacity(0.16), radius: 18, y: 4)
+            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
+private struct HomeShortcutGlassBase<S: InsettableShape>: View {
+    let sign: ZodiacSign
+    let shape: S
+
+    var body: some View {
+        shape
+            .fill(Color(red: 7/255, green: 7/255, blue: 13/255).opacity(0.80))
+            .overlay {
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.10),
+                            .white.opacity(0.025),
+                            .black.opacity(0.28)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            }
+            .overlay(alignment: .topLeading) {
+                RadialGradient(
+                    colors: [.white.opacity(0.12), .clear],
+                    center: .topLeading,
+                    startRadius: 0,
+                    endRadius: 68
+                )
+                .clipShape(shape)
+            }
+            .overlay(alignment: .trailing) {
+                RadialGradient(
+                    colors: [sign.color.opacity(0.18), .clear],
+                    center: .trailing,
+                    startRadius: 8,
+                    endRadius: 82
+                )
+                .clipShape(shape)
+            }
+            .overlay {
+                shape
+                    .strokeBorder(Color(red: 235/255, green: 225/255, blue: 255/255).opacity(0.38), lineWidth: 1)
+            }
+            .overlay {
+                shape
+                    .strokeBorder(.white.opacity(0.10), lineWidth: 0.6)
+                    .blur(radius: 0.2)
+            }
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(.white.opacity(0.22))
+                    .frame(height: 1)
+                    .blur(radius: 0.2)
+                    .padding(.horizontal, 18)
+                    .offset(y: 1)
+            }
+    }
+}
+
+private struct HomeShortcutCornerLight: View {
+    var body: some View {
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        .white.opacity(0.44),
+                        Color(red: 210/255, green: 190/255, blue: 255/255).opacity(0.16),
+                        .clear
+                    ],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: 56
+                )
+            )
+            .frame(width: 106, height: 106)
+            .blur(radius: 10)
+            .offset(x: -22, y: -32)
+            .allowsHitTesting(false)
+    }
+}
+
+private struct HomeShortcutGlassReflection<S: InsettableShape>: View {
+    let shape: S
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.00),
+                            .init(color: .clear, location: 0.26),
+                            .init(color: .white.opacity(0.13), location: 0.36),
+                            .init(color: .white.opacity(0.03), location: 0.48),
+                            .init(color: .clear, location: 0.62)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .rotationEffect(.degrees(-18))
+                .scaleEffect(x: 1.45, y: 1.15)
+
+            RadialGradient(
+                colors: [.white.opacity(0.26), .clear],
+                center: UnitPoint(x: 0.08, y: 0.08),
+                startRadius: 0,
+                endRadius: 36
+            )
+
+            RadialGradient(
+                colors: [Color(red: 210/255, green: 185/255, blue: 255/255).opacity(0.20), .clear],
+                center: UnitPoint(x: 0.98, y: 0.05),
+                startRadius: 0,
+                endRadius: 44
+            )
+        }
+        .blendMode(.screen)
+        .opacity(0.76)
+        .clipShape(shape)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct HomeShortcutInnerBevel<S: InsettableShape>: View {
+    let shape: S
+    let sign: ZodiacSign
+
+    var body: some View {
+        shape
+            .inset(by: 1.2)
+            .strokeBorder(
+                LinearGradient(
+                    stops: [
+                        .init(color: .white.opacity(0.58), location: 0.00),
+                        .init(color: .white.opacity(0.18), location: 0.10),
+                        .init(color: .white.opacity(0.04), location: 0.30),
+                        .init(color: sign.color.opacity(0.13), location: 0.72),
+                        .init(color: .white.opacity(0.30), location: 1.00)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 2
+            )
+            .overlay {
+                shape
+                    .inset(by: 5)
+                    .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
+            }
+            .allowsHitTesting(false)
+    }
+}
+
+private struct HomeShortcutTopHighlight: View {
+    var body: some View {
+        Capsule()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        .white.opacity(0.78),
+                        Color(red: 218/255, green: 190/255, blue: 255/255).opacity(0.58),
+                        .clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(height: 2)
+            .blur(radius: 0.2)
+            .padding(.horizontal, 28)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .offset(y: 1)
+            .allowsHitTesting(false)
+    }
+}
+
+private struct HomeShortcutMedallion: View {
+    let sign: ZodiacSign
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            sign.color.opacity(0.98),
+                            sign.color.opacity(0.82),
+                            sign.color.opacity(0.66)
+                        ],
+                        center: UnitPoint(x: 0.50, y: 0.55),
+                        startRadius: 0,
+                        endRadius: size * 0.54
+                    )
+                )
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(0.60),
+                            .white.opacity(0.12),
+                            .clear
+                        ],
+                        center: UnitPoint(x: 0.28, y: 0.22),
+                        startRadius: 0,
+                        endRadius: size * 0.32
+                    )
+                )
+                .blendMode(.screen)
+
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.28), .white.opacity(0.08), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .center
+                    )
+                )
+                .blendMode(.screen)
+
+            Ellipse()
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.32), .white.opacity(0.10), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size * 0.58, height: size * 1.10)
+                .rotationEffect(.degrees(24))
+                .offset(x: size * 0.18, y: -size * 0.05)
+                .blur(radius: 0.8)
+                .blendMode(.screen)
+                .clipShape(Circle())
+
+            Text(sign.glyph)
+                .font(.system(size: size * 0.48, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(red: 9/255, green: 8/255, blue: 14/255).opacity(0.88))
+                .rotationEffect(.degrees(6))
+                .shadow(color: .white.opacity(0.14), radius: 0, y: 1)
+
+            Circle()
+                .strokeBorder(.white.opacity(0.38), lineWidth: 1)
+                .shadow(color: sign.color.opacity(0.35), radius: 18)
+        }
+        .frame(width: size, height: size)
+        .rotationEffect(.degrees(-6))
+        .shadow(color: sign.color.opacity(0.36), radius: 26)
+        .shadow(color: .black.opacity(0.32), radius: 10, x: -4, y: 4)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct HomeLoadingSkeleton: View {
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        ScrollView(.vertical) {
+            VStack(spacing: 20) {
+                Spacer().frame(height: 16)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 6) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(SimastryColor.surface)
+                            .frame(width: 100, height: 14)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(SimastryColor.surface)
+                            .frame(width: 180, height: 30)
+                    }
+                    Spacer()
+                    Circle()
+                        .fill(SimastryColor.surface)
+                        .frame(width: 48, height: 48)
+                }
+
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(SimastryColor.surface)
+                    .frame(height: 340)
+
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(SimastryColor.surface)
+                    .frame(height: 200)
+
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(SimastryColor.surface)
+                    .frame(height: 150)
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(SimastryColor.surface)
+                            .frame(height: 104)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
+            .skeletonShimmer()
+        }
+        .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity)
+        .clipped()
+        .transition(.opacity)
+    }
+}
+
+private struct HomeProfileDrawer: View {
+    let displayName: String
+    let subtitle: String
+    let profileImage: UIImage?
+    let sunSign: ZodiacSign?
+    let onClose: () -> Void
+    let onOpenProfile: () -> Void
+    let onSettings: () -> Void
+    let onJournal: () -> Void
+    let onDiscovery: () -> Void
+    let onExpertKnowledge: () -> Void
+    let onMethodology: () -> Void
+    let onAstrologer: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .frame(width: 34, height: 34)
+                        .background(Color.black.opacity(0.34), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close profile menu")
+            }
+            .padding(.top, 14)
+            .padding(.horizontal, 18)
+
+            Button(action: onOpenProfile) {
+                HStack(spacing: 13) {
+                    ProfileImageView(image: profileImage, size: 58, sunSign: sunSign)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(displayName)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+
+                        Text(subtitle)
+                            .font(SimastryFont.bodySmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 6)
+                .padding(.bottom, 18)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("View profile")
+
+            Divider()
+                .overlay(Color.white.opacity(0.08))
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    drawerRow("Profile details", systemImage: "person.text.rectangle.fill", action: onOpenProfile)
+                    drawerRow("Settings and privacy", systemImage: "gearshape.fill", action: onSettings)
+                    drawerRow("Private journal", systemImage: "bookmark.fill", action: onJournal)
+                    drawerRow("Find Others Like You", systemImage: "person.2.wave.2.fill", action: onDiscovery)
+                    drawerRow("What the experts know", systemImage: "lock.shield.fill", action: onExpertKnowledge)
+                    drawerRow("How Simastry works", systemImage: "books.vertical.fill", action: onMethodology)
+                    drawerRow("Work with an astrologer", systemImage: "person.crop.circle.badge.checkmark", action: onAstrologer)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 14)
+            }
+            .scrollIndicators(.hidden)
+
+            Spacer(minLength: 0)
+        }
+        .background(SimastryColor.surface.opacity(0.98))
+        .overlay(alignment: .trailing) {
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 0.7)
+        }
+        .ignoresSafeArea(edges: .vertical)
+    }
+
+    private func drawerRow(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .frame(width: 28)
+
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 13)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+    }
+}
+
+private struct HomeMethodologySheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(SimastryColor.gold)
+
+                        Text("How Simastry Works")
+                            .font(SimastryFont.titleLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
+
+                        Text(AppConfig.astrologyTradition)
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
+                    .padding(.top, 24)
+
+                    ForEach(Array(AstrologyTemplates.methodology.enumerated()), id: \.offset) { _, section in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 10) {
+                                Image(systemName: section.icon)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(SimastryColor.gold)
+
+                                Text(section.title)
+                                    .font(SimastryFont.titleSmall)
+                                    .foregroundStyle(SimastryColor.offWhite)
+                            }
+
+                            Text(section.body)
+                                .font(SimastryFont.bodyLarge)
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.82))
+                                .lineSpacing(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .simastryGlass(cornerRadius: 16)
+                    }
+
+                    Spacer(minLength: 24)
+                }
+                .padding(.horizontal, 20)
+            }
+            .scrollIndicators(.hidden)
+            .background { CelestialBackground() }
+            .navigationTitle("How Simastry Works")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .tint(SimastryColor.gold)
+                }
+            }
+        }
+        .presentationBackground {
+            CelestialBackground()
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
     }
 }

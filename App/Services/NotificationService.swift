@@ -83,7 +83,7 @@ final class NotificationService {
         content.title = "How did it play out?"
         content.body = "Tap to log whether the read matched what happened."
         content.sound = .default
-        content.userInfo = ["deeplink": "simastry://simulate"]
+        content.userInfo = ["deeplink": "simastry://predict"]
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delayHours * 3600, repeats: false)
         let request = UNNotificationRequest(identifier: "prediction_outcome_followup", content: content, trigger: trigger)

@@ -78,6 +78,7 @@ struct ProfileView: View {
     @State private var handledAuraRouteRequest: Int = 0
     @State private var handledShareCardRouteRequest: Int = 0
     @State private var handledCareerReadRouteRequest: Int = 0
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -136,9 +137,16 @@ struct ProfileView: View {
             .scrollIndicators(.hidden)
             .background { CelestialBackground() }
             .accessibilityHidden(activeSheet != nil)
-            .navigationTitle("Me")
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .tint(SimastryColor.gold)
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         HapticManager.buttonPress()

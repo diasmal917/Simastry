@@ -15,16 +15,16 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
     /// Left-to-right order shown in the floating nav. Intentionally differs from
     /// the raw-value order so Predict can sit first-class beside Today without
     /// breaking persisted selections from older builds.
-    static let visualOrder: [AppTab] = [.today, .predict, .messages, .people, .me]
+    static let visualOrder: [AppTab] = [.today, .predict, .messages, .people]
 
     /// User-facing tab name (accessibility + any visible label).
     var title: String {
         switch self {
-        case .today: "Today"
+        case .today: "Home"
         case .predict: "Predict"
         case .messages: "Talk"
         case .people: "People"
-        case .me: "Me"
+        case .me: "Profile"
         }
     }
 
@@ -59,7 +59,7 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
         case Self.predict.rawValue:
             self = .predict
         case Self.me.rawValue, 5:
-            self = .me
+            self = .today
         default:
             self = .today
         }
@@ -591,6 +591,7 @@ nonisolated enum DeepLink: Equatable, Sendable {
     case messages
     case person(id: UUID)
     case predict
+    case simulate
     case home
 
     /// Attempts to parse a `DeepLink` from either a custom-scheme URL
@@ -624,8 +625,11 @@ nonisolated enum DeepLink: Equatable, Sendable {
         case "messages", "chat":
             return .messages
 
-        case "predict", "simulate":
+        case "predict":
             return .predict
+
+        case "simulate":
+            return .simulate
 
         case "person":
             guard pathComponents.count >= 2, let id = UUID(uuidString: pathComponents[1]) else { return nil }
@@ -684,6 +688,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return URL(string: "simastry://person/\(id.uuidString)")!
         case .predict:
             return URL(string: "simastry://predict")!
+        case .simulate:
+            return URL(string: "simastry://simulate")!
         case .home:
             return URL(string: "simastry://home")!
         }
@@ -706,6 +712,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return URL(string: "https://\(AppConfig.universalLinkHost)/person/\(id.uuidString)")!
         case .predict:
             return URL(string: "https://\(AppConfig.universalLinkHost)/predict")!
+        case .simulate:
+            return URL(string: "https://\(AppConfig.universalLinkHost)/simulate")!
         case .home:
             return AppConfig.websiteURL
         }
@@ -730,6 +738,8 @@ nonisolated enum DeepLink: Equatable, Sendable {
             return "Open this person in Simastry"
         case .predict:
             return "Predict the tone of a conversation on Simastry"
+        case .simulate:
+            return "Simulate a conversation persona on Simastry"
         case .home:
             return "Explore astrology-grounded communication on Simastry"
         }

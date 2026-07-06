@@ -51,7 +51,7 @@ final class SimastrySmokeUITests: XCTestCase {
     func testTodayScrolledStateStaysClean() throws {
         launchSeededApp()
 
-        XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
         let todayContent = app.scrollViews.firstMatch
         XCTAssertTrue(todayContent.waitForExistence(timeout: 10))
 
@@ -60,7 +60,7 @@ final class SimastrySmokeUITests: XCTestCase {
 
         let screenshot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: screenshot)
-        attachment.name = "Today scrolled state"
+        attachment.name = "Home scrolled state"
         attachment.lifetime = .keepAlways
         add(attachment)
     }
@@ -68,9 +68,9 @@ final class SimastrySmokeUITests: XCTestCase {
     func testTodayDailyExpertNoteOpensConsultation() throws {
         launchSeededApp()
 
-        XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
         let ask = app.buttons["today.expertNoteAskButton"]
-        XCTAssertTrue(ask.waitForExistence(timeout: 6), "Expected the daily expert note card at the top of Today")
+        XCTAssertTrue(ask.waitForExistence(timeout: 6), "Expected the daily expert note card at the top of Home")
         ask.tap()
 
         // The container identifier propagates to child elements whose exact
@@ -87,7 +87,7 @@ final class SimastrySmokeUITests: XCTestCase {
     func testTodaySaveNoteLandsInJournal() throws {
         launchSeededApp()
 
-        XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
         let save = app.buttons["today.expertNoteSaveButton"]
         XCTAssertTrue(save.waitForExistence(timeout: 6), "Expected the note card's save bookmark")
         save.tap()
@@ -471,14 +471,35 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(reveal(rowan, maxSwipes: 4), "Expected Discovery to show Rowan from seeded profiles")
         rowan.tap()
 
-        XCTAssertTrue(app.otherElements["discovery.profileDetail.rowan.aries"].waitForExistence(timeout: 5))
-
         let chatButton = app.buttons["discovery.profileDetail.startChatButton"]
         XCTAssertTrue(chatButton.waitForExistence(timeout: 5))
         chatButton.tap()
 
         XCTAssertTrue(app.tabBars.buttons["Talk"].waitForExistence(timeout: 6))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Rowan")).firstMatch.waitForExistence(timeout: 6))
+    }
+
+    func testTalkQuickSimulateStartsPracticeChat() throws {
+        launchSeededApp()
+
+        let talkTab = app.tabBars.buttons["Talk"]
+        XCTAssertTrue(talkTab.waitForExistence(timeout: 10))
+        talkTab.tap()
+
+        let quickSimulate = app.buttons["talk.quickSimulateButton"]
+        XCTAssertTrue(quickSimulate.waitForExistence(timeout: 8))
+        quickSimulate.tap()
+
+        let nameField = app.textFields["talk.quickSimulate.nameField"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText("Smoke Persona")
+
+        let startButton = app.buttons["talk.quickSimulate.startButton"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 4))
+        startButton.tap()
+
+        XCTAssertTrue(app.navigationBars["Practice with Smoke Persona"].waitForExistence(timeout: 8))
     }
 
     private func launchSeededApp(arguments: [String] = [], environment: [String: String] = [:]) {

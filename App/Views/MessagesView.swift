@@ -1,6 +1,20 @@
 import SwiftUI
 import Combine
 
+private enum TalkSheet: Identifiable {
+    case quickSimulate
+    case practice(RelationshipPerson)
+
+    var id: String {
+        switch self {
+        case .quickSimulate:
+            "quickSimulate"
+        case .practice(let person):
+            "practice-\(person.id.uuidString)"
+        }
+    }
+}
+
 struct MessagesView: View {
     @Bindable var viewModel: AppViewModel
     @State private var selectedMessage: CompanionMessage?
@@ -10,7 +24,9 @@ struct MessagesView: View {
     @State private var showCreateRoom: Bool = false
     @State private var showMessageSearch: Bool = false
     @State private var showDecode: Bool = false
+    @State private var activeTalkSheet: TalkSheet?
     @State private var handledPanelRouteRequest: Int = 0
+    @State private var handledQuickSimulateRouteRequest: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -49,12 +65,15 @@ struct MessagesView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { CelestialBackground() }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                AppTabFloatingHeader(viewModel: viewModel)
+            }
             .accessibilityHidden(isPresentingModal)
-            .navigationTitle("Talk")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         HapticManager.buttonPress()
                         if AppConfig.expertAstrologersEnabled {
@@ -69,9 +88,7 @@ struct MessagesView: View {
                     .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Open the five expert astrologers" : "Create a private guided room with opted-in people")
                     .accessibilityIdentifier(AppConfig.expertAstrologersEnabled ? "talk.toolbar.expertAstrologersButton" : "talk.toolbar.newRoomButton")
                     .buttonStyle(.plain)
-                }
 
-                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         HapticManager.buttonPress()
                         showMessageSearch = true
@@ -91,9 +108,13 @@ struct MessagesView: View {
             .onAppear {
                 presentPanelIfRequested()
                 presentThreadIfRequested()
+                presentQuickSimulateIfRequested()
             }
             .onChange(of: viewModel.panelChatRouteRequest) {
                 presentPanelIfRequested()
+            }
+            .onChange(of: viewModel.quickSimulateRouteRequest) {
+                presentQuickSimulateIfRequested()
             }
             .onChange(of: viewModel.openThreadRequestCompanionId) {
                 presentThreadIfRequested()
@@ -120,6 +141,16 @@ struct MessagesView: View {
             }
             .sheet(isPresented: $showMessageSearch) {
                 MessageSearchSheet(viewModel: viewModel)
+            }
+            .sheet(item: $activeTalkSheet) { sheet in
+                switch sheet {
+                case .quickSimulate:
+                    QuickSimulateSheet(viewModel: viewModel) { person in
+                        activeTalkSheet = .practice(person)
+                    }
+                case .practice(let person):
+                    PracticeChatView(viewModel: viewModel, person: person)
+                }
             }
             .fullScreenCover(isPresented: $showDecode) {
                 NavigationStack {
@@ -158,6 +189,7 @@ struct MessagesView: View {
             || showCreateRoom
             || showMessageSearch
             || showDecode
+            || activeTalkSheet != nil
     }
 
     private func toolbarActionIcon(systemName: String) -> some View {
@@ -221,6 +253,17 @@ struct MessagesView: View {
     /// inbox. Each routes into an existing flow so nothing is duplicated.
     private var talkActions: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Button {
+                HapticManager.buttonPress()
+                activeTalkSheet = .quickSimulate
+            } label: {
+                Label("Quick Simulate", systemImage: "theatermasks.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
+            .accessibilityHint("Create a simulated persona from signs and personality type")
+            .accessibilityIdentifier("talk.quickSimulateButton")
+
             Button {
                 HapticManager.buttonPress()
                 viewModel.openPredict(with: PredictionDraft(category: .messageOutcome, targetSunSign: nil))
@@ -309,6 +352,12 @@ struct MessagesView: View {
         .accessibilityLabel(title)
         .accessibilityHint(hint)
         .accessibilityIdentifier("talk.action.\(title.replacingOccurrences(of: " ", with: ""))")
+    }
+
+    private func presentQuickSimulateIfRequested() {
+        guard viewModel.quickSimulateRouteRequest > handledQuickSimulateRouteRequest else { return }
+        handledQuickSimulateRouteRequest = viewModel.quickSimulateRouteRequest
+        activeTalkSheet = .quickSimulate
     }
 
     private func presentPanelIfRequested() {
@@ -534,6 +583,301 @@ struct MessagesView: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Quick Simulate
+
+private struct QuickSimulateSheet: View {
+    @Bindable var viewModel: AppViewModel
+    let onStart: (RelationshipPerson) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String = ""
+    @State private var sunSign: ZodiacSign = .libra
+    @State private var moonSign: ZodiacSign?
+    @State private var risingSign: ZodiacSign?
+    @State private var personalityType: MBTIPersonalityType?
+    @State private var notes: String = ""
+    @State private var textingStyles: Set<String> = []
+    @FocusState private var nameFocused: Bool
+
+    private let styleOptions = ["dry", "slow replier", "warm", "flirty"]
+
+    private var canStart: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                CelestialBackground()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        header
+                        identitySection
+                        signsSection
+                        personalitySection
+                        notesSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 28)
+                }
+                .scrollIndicators(.hidden)
+            }
+            .navigationTitle("Quick Simulate")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .tint(SimastryColor.gold)
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Start") {
+                        startSimulation()
+                    }
+                    .disabled(!canStart)
+                    .tint(SimastryColor.gold)
+                    .accessibilityIdentifier("talk.quickSimulate.startButton")
+                }
+            }
+            .onAppear {
+                nameFocused = true
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: "theatermasks.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(SimastryColor.risingViolet)
+                    .frame(width: 36, height: 36)
+                    .background(SimastryColor.risingViolet.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Simulated from signs and notes")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text("Not the real person.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+            }
+
+            Text("Start with a name and Sun sign. Personality type and notes make the rehearsal sharper.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.6))
+    }
+
+    private var identitySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Who are you simulating?")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.3)
+
+            TextField("Name or nickname", text: $name)
+                .focused($nameFocused)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.done)
+                .font(SimastryFont.bodyMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .padding(.horizontal, 13)
+                .frame(minHeight: 48)
+                .background(Color.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .accessibilityIdentifier("talk.quickSimulate.nameField")
+        }
+    }
+
+    private var signsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Signs")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.3)
+
+            VStack(spacing: 9) {
+                signSelector(title: "Sun", sign: sunSign, required: true) { selected in
+                    if let selected { sunSign = selected }
+                }
+                signSelector(title: "Moon", sign: moonSign, required: false) { selected in
+                    moonSign = selected
+                }
+                signSelector(title: "Rising", sign: risingSign, required: false) { selected in
+                    risingSign = selected
+                }
+            }
+        }
+    }
+
+    private var personalitySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Personality")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.3)
+
+            Menu {
+                Button("Unknown") { personalityType = nil }
+                ForEach(MBTIPersonalityType.allCases) { type in
+                    Button(type.rawValue) {
+                        personalityType = type == .notSure ? nil : type
+                    }
+                }
+            } label: {
+                selectorRow(
+                    title: "Personality type",
+                    value: personalityType?.rawValue ?? "Unknown",
+                    systemImage: "person.crop.circle.badge.checkmark",
+                    tint: SimastryColor.gold
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("How they text")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(styleOptions, id: \.self) { style in
+                        styleChip(style)
+                    }
+                }
+            }
+        }
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Notes")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .tracking(1.3)
+
+            TextField("Optional context, e.g. guarded, jokes when nervous, hates pressure", text: $notes, axis: .vertical)
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.offWhite)
+                .lineLimit(3...6)
+                .padding(13)
+                .background(Color.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .accessibilityIdentifier("talk.quickSimulate.notesField")
+        }
+    }
+
+    private func signSelector(
+        title: String,
+        sign: ZodiacSign?,
+        required: Bool,
+        onSelect: @escaping (ZodiacSign?) -> Void
+    ) -> some View {
+        Menu {
+            if !required {
+                Button("Unknown") { onSelect(nil) }
+            }
+            ForEach(ZodiacSign.allCases) { option in
+                Button(option.displayName) {
+                    onSelect(option)
+                }
+            }
+        } label: {
+            selectorRow(
+                title: title,
+                value: sign?.displayName ?? "Unknown",
+                systemImage: title == "Sun" ? "sun.max.fill" : (title == "Moon" ? "moon.stars.fill" : "sparkles"),
+                tint: sign?.color ?? SimastryColor.deepMuted
+            )
+        }
+    }
+
+    private func selectorRow(title: String, value: String, systemImage: String, tint: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                Text(value)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SimastryColor.mutedSilver)
+        }
+        .padding(13)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func styleChip(_ style: String) -> some View {
+        let selected = textingStyles.contains(style)
+
+        return Button {
+            HapticManager.buttonPress()
+            if selected {
+                textingStyles.remove(style)
+            } else {
+                textingStyles.insert(style)
+            }
+        } label: {
+            Text(style.capitalized)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(selected ? SimastryColor.midnight : SimastryColor.offWhite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(selected ? SimastryColor.gold : Color.white.opacity(0.07), in: Capsule())
+        }
+        .buttonStyle(SpringPressStyle())
+    }
+
+    private func startSimulation() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let person = RelationshipPerson(
+            id: UUID(),
+            name: trimmedName,
+            privateLabel: nil,
+            relationshipType: .other,
+            birthDate: nil,
+            birthTime: nil,
+            birthPlace: nil,
+            sunSign: sunSign,
+            moonSign: moonSign,
+            risingSign: risingSign,
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+            imageData: nil,
+            isChartCalculated: false,
+            updatedAt: .now,
+            personalityType: personalityType,
+            textingStyles: textingStyles.isEmpty ? nil : Array(textingStyles).sorted()
+        )
+
+        viewModel.addRelationshipPerson(person)
+        onStart(person)
     }
 }
 
