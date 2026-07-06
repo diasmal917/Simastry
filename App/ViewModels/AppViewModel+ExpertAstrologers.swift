@@ -56,6 +56,7 @@ extension AppViewModel {
         expertManualAstrologyData = ExpertManualAstrologyData()
         ExpertManualAstrologyData.clear()
         ExpertChatFileStore.clear()
+        RehearsalSessionStore.clear()
         UserDefaults.standard.removeObject(forKey: Self.specialistMessagesKey)
         UserDefaults.standard.removeObject(forKey: Self.specialistConsultationResponsesKey)
         UserDefaults.standard.removeObject(forKey: Self.specialistConversationIdsKey)

@@ -119,7 +119,8 @@ nonisolated final class SupabaseService {
         system: String?,
         user: String?,
         maxTokens: Int = 1024,
-        expertAstrologerRequest: ExpertAstrologerReplyService.Request? = nil
+        expertAstrologerRequest: ExpertAstrologerReplyService.Request? = nil,
+        rehearsalRequest: RehearsalRequestBody? = nil
     ) async throws -> CompanionReplyResult {
         let client = try configuredClient()
         guard let session = client.auth.currentSession else {
@@ -136,6 +137,7 @@ nonisolated final class SupabaseService {
             user: user,
             maxTokens: maxTokens,
             expertAstrologerRequest: expertAstrologerRequest,
+            rehearsalRequest: rehearsalRequest,
             stream: nil
         )
         var request = URLRequest(url: url)
@@ -237,6 +239,22 @@ nonisolated final class SupabaseService {
             user: nil,
             maxTokens: maxTokens,
             expertAstrologerRequest: expertRequest
+        ).text
+    }
+
+    /// One Rehearsal Room turn: the practice partner's next reply
+    /// (mode "partner") or the coaching specialist's note (mode "coach").
+    func invokeConversationRehearsal(
+        request rehearsalRequest: RehearsalRequestBody,
+        maxTokens: Int = 260
+    ) async throws -> String {
+        try await invokeCompanionReplyResult(
+            kind: .chat,
+            feature: .conversationRehearsal,
+            system: nil,
+            user: nil,
+            maxTokens: maxTokens,
+            rehearsalRequest: rehearsalRequest
         ).text
     }
 
@@ -1216,6 +1234,7 @@ nonisolated enum CompanionReplyFeature: String, CaseIterable, Encodable, Sendabl
     case momentComment = "moment_comment"
     case dailyDecision = "daily_decision"
     case expertAstrologer = "expert_astrologer"
+    case conversationRehearsal = "conversation_rehearsal"
 }
 
 nonisolated struct CompanionReplyPayload: Encodable, Sendable {
@@ -1225,6 +1244,7 @@ nonisolated struct CompanionReplyPayload: Encodable, Sendable {
     let user: String?
     let maxTokens: Int
     let expertAstrologerRequest: ExpertAstrologerReplyService.Request?
+    var rehearsalRequest: RehearsalRequestBody? = nil
     /// Opts the request into SSE streaming. Omitted (nil) for plain JSON calls,
     /// so existing non-streaming payloads encode exactly as before.
     let stream: Bool?

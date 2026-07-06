@@ -35,6 +35,43 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(ageGate.waitForExistence(timeout: 6), "Expected the age gate after the final CTA")
     }
 
+    func testRehearsalRoomRunsAPracticeTurn() throws {
+        launchSeededApp()
+
+        XCTAssertTrue(app.tabBars.buttons["Predict"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["Predict"].tap()
+
+        let entry = app.buttons["predict.rehearsalRoomButton"]
+        XCTAssertTrue(reveal(entry, maxSwipes: 4), "Expected the Rehearsal Room card on Predict")
+        entry.tap()
+
+        let nameField = app.textFields["rehearsal.nameField"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 6))
+        nameField.tap()
+        nameField.typeText("Dad")
+
+        let goalField = app.textFields["rehearsal.goalField"]
+        XCTAssertTrue(goalField.waitForExistence(timeout: 4))
+        goalField.tap()
+        goalField.typeText("Ask for space without a fight")
+
+        let start = app.buttons["rehearsal.start"]
+        XCTAssertTrue(reveal(start, maxSwipes: 3), "Expected the start button")
+        start.tap()
+
+        let input = app.textFields["rehearsal.input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 6), "Expected the rehearsal composer")
+        input.tap()
+        input.typeText("Hey — can we talk about the weekend?")
+        app.buttons["rehearsal.send"].tap()
+
+        // Debug preview returns the canned partner turn.
+        let partnerReply = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "what's going on")
+        ).firstMatch
+        XCTAssertTrue(partnerReply.waitForExistence(timeout: 8), "Expected the practice partner to reply")
+    }
+
     func testTodayExpertAstrologersOpens() throws {
         launchSeededApp()
 
