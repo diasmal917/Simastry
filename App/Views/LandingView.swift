@@ -397,11 +397,10 @@ struct LandingView: View {
         ZStack {
             Color.black
 
-            // The engraved constellation-map background (hairline gold on
-            // midnight), with a very slow Ken Burns drift. No clip: the view's
-            // built-in overscan absorbs both the drift pan and the parallax
-            // offset below, so no black edge is ever exposed.
-            CosmicDriftImage(animated: !reduceMotion, imageName: "LandingConstellations")
+            // Pastel zodiac wallpaper with a very slow Ken Burns drift. No clip:
+            // the view's built-in overscan absorbs both the drift pan and the
+            // parallax offset below, so no black edge is ever exposed.
+            CosmicDriftImage(animated: !reduceMotion, imageName: "ZodiacWallpaper")
                 .frame(width: size.width, height: size.height)
                 .offset(x: motionOffset.width * 0.40, y: motionOffset.height * 0.40)
 
