@@ -192,7 +192,7 @@ private struct TodayExpertsPanelCard: View {
         } label: {
             ZStack(alignment: .bottomLeading) {
                 if let profile = specialist.archivedProfile {
-                    Image(profile.gridImageNames.first ?? profile.profileImageName)
+                    Image(profile.profileImageName)
                         .resizable()
                         .scaledToFill()
                 } else {

@@ -511,7 +511,7 @@ private struct MessageGuidePreviewCard: View {
     let action: () -> Void
 
     private var heroImageName: String {
-        AppConfig.expertAstrologersEnabled ? profile.cardImageName : (profile.gridImageNames.first ?? profile.cardImageName)
+        AppConfig.expertAstrologersEnabled ? profile.profileImageName : (profile.gridImageNames.first ?? profile.cardImageName)
     }
 
     private var specialist: AstrologySpecialist? {

@@ -89,20 +89,11 @@ private struct AstrologerProfilePage: View {
     /// carousel card, so tapping a face opens onto that same face.
     private var heroImageName: String? {
         guard let profile else { return nil }
-        return profile.gridImageNames.first ?? profile.profileImageName
+        return profile.profileImageName
     }
 
     private var galleryImages: [String] {
-        guard let profile else { return [] }
-        var names = profile.gridImageNames
-        if names.isEmpty { names = [profile.profileImageName] }
-        // The hero already shows the first photo — show the remaining ones here.
-        if names.count > 1, names.first == heroImageName {
-            names = Array(names.dropFirst())
-        }
-        // Keep the order stable and de-duplicated.
-        var seen = Set<String>()
-        return names.filter { seen.insert($0).inserted }
+        []
     }
 
     var body: some View {
