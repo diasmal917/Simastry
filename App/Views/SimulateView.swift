@@ -309,7 +309,9 @@ struct SimulateView: View {
         .background { CelestialBackground() }
         .accessibilityHidden(showTopUpSheet || showAuraSnapshotSheet || selectedResult != nil)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            predictBottomAction
+            if hasAdvancedPastCategory {
+                predictBottomAction
+            }
         }
         // The centered orb hero below already titles this screen, so the nav bar
         // stays untitled to avoid showing "Ask the Future" twice.

@@ -114,11 +114,11 @@ struct DiscoveryView: View {
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
 
-                Text("Discovery is coming soon")
+                Text("Private discovery is paused")
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("We're still finishing the secure backend for public profiles and cross-user messaging. You can keep exploring the rest of Simastry while we lock this down.")
+                Text("Public profiles are off while the secure matching layer is being finalized. Your saved people, messages, and expert reads still work normally.")
                     .font(SimastryFont.bodyMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .multilineTextAlignment(.center)

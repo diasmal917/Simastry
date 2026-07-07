@@ -1086,12 +1086,12 @@ struct ProfileView: View {
                         Image(systemName: "person.2.wave.2.fill")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(SimastryColor.gold)
-                        Text("Discovery Unavailable")
+                        Text("Discovery Paused")
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                     }
 
-                    Text("Discovery profiles are temporarily unavailable in this build. You can still manage your profile and messages.")
+                    Text("Public discovery is off for now. You can still manage your private profile, saved people, and messages.")
                         .font(SimastryFont.caption)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1099,7 +1099,7 @@ struct ProfileView: View {
                 .padding(16)
                 .glossyCard()
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Discovery unavailable. Discovery profiles are temporarily unavailable in this build.")
+                .accessibilityLabel("Discovery paused. Public discovery is off for now.")
             }
         }
         .opacity(appeared ? 1 : 0)

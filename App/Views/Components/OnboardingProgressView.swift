@@ -19,35 +19,35 @@ struct OnboardingProgressView: View {
                 Text(eyebrow.uppercased())
                     .font(SimastryFont.overline)
                     .tracking(1.4)
-                    .foregroundStyle(SimastryColor.midnight.opacity(0.72))
+                    .foregroundStyle(SimastryColor.goldLight)
 
                 Spacer()
 
                 Text("Step \(step) of \(totalSteps)")
                     .font(SimastryFont.labelSmall)
-                    .foregroundStyle(SimastryColor.midnight.opacity(0.62))
+                    .foregroundStyle(SimastryColor.mutedSilver)
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
                     .font(SimastryFont.titleLarge)
-                    .foregroundStyle(SimastryColor.midnight)
+                    .foregroundStyle(SimastryColor.offWhite)
 
                 Text(subtitle)
                     .font(SimastryFont.bodySmall)
-                    .foregroundStyle(SimastryColor.midnight.opacity(0.70))
+                    .foregroundStyle(SimastryColor.mutedSilver)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(SimastryColor.midnight.opacity(0.10))
+                        .fill(Color.white.opacity(0.10))
 
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [SimastryColor.midnight.opacity(0.62), SimastryColor.midnight.opacity(0.42)],
+                                colors: [SimastryColor.goldLight, SimastryColor.gold],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -61,11 +61,11 @@ struct OnboardingProgressView: View {
                 ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
                     Text(label)
                         .font(SimastryFont.labelSmall)
-                        .foregroundStyle(SimastryColor.midnight.opacity(index + 1 <= step ? 0.86 : 0.62))
+                        .foregroundStyle(index + 1 <= step ? SimastryColor.midnight : SimastryColor.offWhite.opacity(0.72))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(index + 1 <= step ? .white.opacity(0.35) : .white.opacity(0.14), in: .capsule)
+                        .background(index + 1 <= step ? SimastryColor.gold.opacity(0.92) : .white.opacity(0.10), in: .capsule)
                 }
             }
         }

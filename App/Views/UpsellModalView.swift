@@ -254,7 +254,7 @@ struct UpsellModalView: View {
     private func subscribeAction(tier: String) -> some View {
         if selectedTier == tier {
             if !isRevenueCatAvailable {
-                GoldButton("Plans coming soon", isEnabled: false) {}
+                GoldButton("Plans unavailable right now", isEnabled: false) {}
             } else if let pkg = package(for: tier) {
                 GoldButton("Subscribe", isEnabled: !isPurchasing) {
                     Task { await purchasePackage(pkg, type: tier) }
