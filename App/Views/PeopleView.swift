@@ -68,7 +68,11 @@ struct PeopleView: View {
                         searchAndFilterSection
                             .id("people.searchSection")
 
-                        if let needsAttentionPerson {
+                        // The hero is a home-state element (it reads the
+                        // unfiltered roster), so hide it while a search or
+                        // filter narrows the list — it must never sit above
+                        // "No matching people".
+                        if searchText.isEmpty, selectedType == nil, let needsAttentionPerson {
                             needsAttentionCard(needsAttentionPerson)
                         }
 
@@ -277,14 +281,16 @@ struct PeopleView: View {
     }
 
     /// Single merged list: the "Recent reads" ordering source (people with a
-    /// reflection, newest `updatedAt` first) leads, then everyone else in
-    /// their existing order. Each person appears exactly once — the old
-    /// split (a capped recent strip stacked above the full roster) could
-    /// show the same person twice.
+    /// reflection, newest `updatedAt` first) leads, then everyone else
+    /// alphabetically. Each person appears exactly once — the old split (a
+    /// capped recent strip stacked above the full roster) could show the
+    /// same person twice.
     private var orderedPeople: [RelationshipPerson] {
         let recent = filteredRecentlyReflectedPeople
         let recentIds = Set(recent.map(\.id))
-        let rest = filteredPeople.filter { !recentIds.contains($0.id) }
+        let rest = filteredPeople
+            .filter { !recentIds.contains($0.id) }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
         return recent + rest
     }
 
@@ -313,8 +319,10 @@ struct PeopleView: View {
         }
     }
 
+    /// Counts the rows actually below it: equals the roster total when
+    /// unfiltered, and never lies while a search/filter narrows the list.
     private var peopleListCaption: String {
-        "People · \(viewModel.relationshipPeople.count) · private"
+        "People · \(filteredPeople.count) · private"
     }
 
     private func needsAttentionCard(_ person: RelationshipPerson) -> some View {
