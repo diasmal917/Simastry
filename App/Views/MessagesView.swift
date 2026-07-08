@@ -21,7 +21,7 @@ struct MessagesView: View {
     @State private var selectedRoom: ChatThreadSummary?
     @State private var appeared: Bool = false
     @State private var showPanelChat: Bool = false
-    // TODO(Task 4): showCreateRoom is unreachable since the toolbar button was removed; Talk restructure decides its fate.
+    // TODO(Task 5): showCreateRoom is unreachable since the toolbar button was removed; Talk restructure decides its fate.
     @State private var showCreateRoom: Bool = false
     @State private var showMessageSearch: Bool = false
     @State private var showDecode: Bool = false
@@ -33,32 +33,28 @@ struct MessagesView: View {
         NavigationStack {
             Group {
                 if !hasInboxContent {
-                    VStack(spacing: 0) {
-                        talkActions
-                            .padding(.bottom, 6)
+                    if AppConfig.expertAstrologersEnabled {
+                        expertsEmptyContent
+                    } else {
+                        VStack(spacing: 0) {
+                            legacyTalkActions
+                                .padding(.bottom, 6)
 
-                        Group {
-                            if AppConfig.expertAstrologersEnabled {
-                                ExpertAstrologerInboxRow(viewModel: viewModel) {
-                                    openExpertAstrologers()
-                                }
-                            } else {
-                                PanelInboxRow(viewModel: viewModel) {
-                                    openPanelChat()
-                                }
+                            PanelInboxRow(viewModel: viewModel) {
+                                openPanelChat()
                             }
-                        }
-                        .padding(.horizontal, 16)
+                            .padding(.horizontal, 16)
 
-                        Spacer()
-                        if viewModel.profileDiscoveryStore.connectionState == .loading {
-                            connectionLoadingState
-                        } else if case .failed(let message) = viewModel.profileDiscoveryStore.connectionState {
-                            connectionRetryState(message)
-                        } else {
-                            emptyState
+                            Spacer()
+                            if viewModel.profileDiscoveryStore.connectionState == .loading {
+                                connectionLoadingState
+                            } else if case .failed(let message) = viewModel.profileDiscoveryStore.connectionState {
+                                connectionRetryState(message)
+                            } else {
+                                legacyEmptyState
+                            }
+                            Spacer()
                         }
-                        Spacer()
                     }
                 } else {
                     messageList
@@ -225,9 +221,94 @@ struct MessagesView: View {
         viewModel.openAIAstrologists(question: question, autoRunEveryone: autoRunEveryone)
     }
 
-    /// The Talk command surface — the four communication jobs that sit above the
-    /// inbox. Each routes into an existing flow so nothing is duplicated.
-    private var talkActions: some View {
+    /// Talk's empty-inbox composition for the experts path: the same hero +
+    /// pinned Expert Astrologers row + Practice row that `messageList` shows
+    /// once there is content, just with a quiet "no conversations" line and
+    /// the Invite Friends card standing in for the (nonexistent) threads.
+    private var expertsEmptyContent: some View {
+        VStack(spacing: 0) {
+            TalkExpertsHeroCard(onAsk: { openExpertAstrologers() })
+                .padding(.horizontal, 16)
+
+            conversationsOverline
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 8)
+
+            ExpertAstrologerInboxRow(viewModel: viewModel) {
+                openExpertAstrologers()
+            }
+            .padding(.horizontal, 16)
+
+            Spacer(minLength: 12)
+            if viewModel.profileDiscoveryStore.connectionState == .loading {
+                connectionLoadingState
+            } else if case .failed(let message) = viewModel.profileDiscoveryStore.connectionState {
+                connectionRetryState(message)
+            } else {
+                emptyState
+            }
+            Spacer(minLength: 12)
+
+            practiceRow
+                .padding(.horizontal, 16)
+
+            InviteFriendsCard(viewModel: viewModel, style: .compact)
+                .padding(.horizontal, 32)
+                .padding(.top, 14)
+        }
+        .padding(.bottom, SimastrySpacing.tabBarEndClearance)
+    }
+
+    /// Section header above the pinned Expert Astrologers row and the
+    /// person/discovery threads — shared by the empty branch and `messageList`.
+    private var conversationsOverline: some View {
+        Text("CONVERSATIONS")
+            .font(SimastryFont.overline)
+            .foregroundStyle(SimastryColor.textTertiary)
+            .tracking(1.4)
+    }
+
+    /// Quiet bottom-of-inbox row that opens Practice — the sole surviving
+    /// entry point for "Quick Simulate" on the experts path (the other four
+    /// legacy Talk buttons are retired; see `legacyTalkActions` below).
+    private var practiceRow: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeTalkSheet = .quickSimulate // Task 5 rewires to Practice
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "theatermasks.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Practice a conversation")
+                        .font(SimastryFont.titleSmall)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text("Rehearse with a stand-in.")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+                Spacer(minLength: 6)
+                Image(systemName: "chevron.right")
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .simastryGlass(cornerRadius: 16)
+            .contentShape(.rect)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityIdentifier("talk.practiceButton")
+    }
+
+    /// The legacy Talk command surface — the four communication jobs that sit
+    /// above the panel inbox. Experts-path builds use `TalkExpertsHeroCard` +
+    /// `practiceRow` instead (see above); this stays only for
+    /// `!AppConfig.expertAstrologersEnabled` and is otherwise unchanged.
+    private var legacyTalkActions: some View {
         VStack(alignment: .leading, spacing: 10) {
             Button {
                 HapticManager.buttonPress()
@@ -382,25 +463,36 @@ struct MessagesView: View {
 
     private var messageList: some View {
         List {
-            talkActions
+            if AppConfig.expertAstrologersEnabled {
+                TalkExpertsHeroCard(onAsk: { openExpertAstrologers() })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 10, trailing: 16))
+
+                conversationsOverline
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 6, trailing: 16))
+
+                ExpertAstrologerInboxRow(viewModel: viewModel) {
+                    openExpertAstrologers()
+                }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
+            } else {
+                legacyTalkActions
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
 
-            Group {
-                if AppConfig.expertAstrologersEnabled {
-                    ExpertAstrologerInboxRow(viewModel: viewModel) {
-                        openExpertAstrologers()
-                    }
-                } else {
-                    PanelInboxRow(viewModel: viewModel) {
-                        openPanelChat()
-                    }
+                PanelInboxRow(viewModel: viewModel) {
+                    openPanelChat()
                 }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
             }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 10, trailing: 16))
 
             ForEach(displayedInboxMessages) { message in
                 MessageRow(message: message, publicProfile: viewModel.publicProfile(for: message.companionId))
@@ -460,6 +552,13 @@ struct MessagesView: View {
                 .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
             }
 
+            if AppConfig.expertAstrologersEnabled {
+                practiceRow
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
+            }
+
             Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -489,12 +588,26 @@ struct MessagesView: View {
         )
     }
 
+    /// Experts-path empty state: the hero above already carries the cast +
+    /// the CTA, so this is deliberately one quiet line — no duplicate expert
+    /// strip, no headline, no competing CTA (spec §2 removals).
     private var emptyState: some View {
+        Text("No conversations yet.")
+            .font(SimastryFont.bodySmall)
+            .foregroundStyle(SimastryColor.mutedSilver)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
+    }
+
+    /// Legacy panel build's empty state — unchanged from the pre-Task-4
+    /// layout (cast strip, headline, "Open Guides" CTA, Invite Friends).
+    /// Only reachable when `!AppConfig.expertAstrologersEnabled`.
+    private var legacyEmptyState: some View {
         VStack(spacing: 22) {
             emptyStateCastStrip
 
             VStack(spacing: 8) {
-                Text(AppConfig.expertAstrologersEnabled ? "Your expert astrologers are ready" : "Your panel is ready to talk")
+                Text("Your panel is ready to talk")
                     .font(SimastryFont.titleMedium)
                     .foregroundStyle(SimastryColor.offWhite)
 
@@ -515,7 +628,7 @@ struct MessagesView: View {
                 HStack(spacing: 8) {
                     Image(systemName: SimastryIcon.astrologers)
                         .font(.system(size: 15, weight: .semibold))
-                    Text(AppConfig.expertAstrologersEnabled ? "Open Experts" : "Open Guides")
+                    Text("Open Guides")
                         .font(SimastryFont.labelLarge)
                 }
                 .foregroundStyle(SimastryColor.offWhite)
@@ -524,7 +637,7 @@ struct MessagesView: View {
                 .goldGlassPill(interactive: true)
             }
             .buttonStyle(SpringPressStyle())
-            .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Opens expert astrologers to choose a tradition" : "Opens your guides to choose a message lens")
+            .accessibilityHint("Opens your guides to choose a message lens")
             .padding(.top, 4)
 
             InviteFriendsCard(viewModel: viewModel, style: .compact)
@@ -535,11 +648,11 @@ struct MessagesView: View {
     }
 
     /// A fanned row of expert portraits so the empty inbox sells the five
-    /// named specialists instead of showing a lone system glyph.
+    /// named specialists instead of showing a lone system glyph. Only used by
+    /// `legacyEmptyState` now — the experts path shows the council hero and
+    /// the pinned Expert Astrologers row instead of a second cast strip.
     private var emptyStateCastStrip: some View {
-        let profiles = AppConfig.expertAstrologersEnabled
-            ? ExpertAstrologerRegistry.archivedProfiles
-            : Array(FactoryCompanionCatalog.all.prefix(5))
+        let profiles = Array(FactoryCompanionCatalog.all.prefix(5))
 
         return HStack(spacing: -14) {
             ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
@@ -559,6 +672,48 @@ struct MessagesView: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Talk Experts Hero
+
+/// Talk's single primary action for the experts path: the approved council
+/// group portrait on top, one line of framing, one gold CTA below. Anchors
+/// both the empty inbox and the top of `messageList` so Talk always reads as
+/// "ask the experts" first, inbox second.
+private struct TalkExpertsHeroCard: View {
+    let onAsk: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Image("CouncilKeyArt")
+                .resizable()
+                .scaledToFill()
+                .frame(height: 150)
+                .clipped()
+            VStack(spacing: 4) {
+                Text("Five experts, one question")
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Text("Each tradition reads it separately.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                Button {
+                    HapticManager.buttonPress()
+                    onAsk()
+                } label: {
+                    Label("Ask the experts", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(SimastryPrimaryButtonStyle())
+                .padding(.top, 8)
+                .accessibilityIdentifier("talk.askExpertsButton")
+            }
+            .padding(14)
+        }
+        .background(SimastryColor.surfaceElevated.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .simastryGlass(cornerRadius: 22)
     }
 }
 

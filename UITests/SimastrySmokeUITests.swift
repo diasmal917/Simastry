@@ -379,11 +379,21 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Talk"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Talk"].tap()
 
-        let compare = app.buttons.containing(NSPredicate(format: "label CONTAINS[c] %@", "Compare all five")).firstMatch
-        XCTAssertTrue(compare.waitForExistence(timeout: 6))
-        compare.tap()
+        let askExperts = app.buttons["talk.askExpertsButton"]
+        XCTAssertTrue(askExperts.waitForExistence(timeout: 6))
+        askExperts.tap()
 
         XCTAssertTrue(app.navigationBars["Expert Astrologers"].waitForExistence(timeout: 6))
+
+        let replyBack = app.buttons["experts.suggestion.replyBack"]
+        XCTAssertTrue(replyBack.waitForExistence(timeout: 6), "Expected the reply-back suggestion chip in the intake")
+        replyBack.tap()
+        app.buttons["expertAstrologers.submitQuestionButton"].tap()
+
+        // Everyone/compare mode is the flow's default next step after Continue.
+        XCTAssertTrue(app.staticTexts["Who would you like to hear from?"].waitForExistence(timeout: 4))
+        app.buttons["expertAstrologers.everyoneButton"].tap()
+
         XCTAssertTrue(element("expertAstrologers.response.leyla-western").waitForExistence(timeout: 6))
         XCTAssertTrue(element("expertAstrologers.response.mateo-vedic").waitForExistence(timeout: 6))
         XCTAssertTrue(element("expertAstrologers.response.naomi-chinese").waitForExistence(timeout: 6))
@@ -398,15 +408,20 @@ final class SimastrySmokeUITests: XCTestCase {
         app.tabBars.buttons["Talk"].tap()
 
         XCTAssertTrue(app.staticTexts["Talk"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.staticTexts["What should I reply back?"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.staticTexts["Ask an expert"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.staticTexts["Compare all five"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["talk.askExpertsButton"].waitForExistence(timeout: 4))
         XCTAssertTrue(app.staticTexts["Expert Astrologers"].waitForExistence(timeout: 4))
 
+        // The five retired Talk buttons must not exist on the experts path.
+        XCTAssertFalse(app.staticTexts["What should I reply back?"].exists)
+        XCTAssertFalse(app.staticTexts["Ask an expert"].exists)
+        XCTAssertFalse(app.staticTexts["Compare all five"].exists)
         XCTAssertFalse(app.staticTexts["Your Panel"].exists)
         XCTAssertFalse(app.staticTexts["Ask my guides"].exists)
         XCTAssertFalse(app.staticTexts["Talk to a sign"].exists)
         XCTAssertFalse(app.staticTexts["What should I say?"].exists)
+
+        let practiceButton = app.buttons["talk.practiceButton"]
+        XCTAssertTrue(reveal(practiceButton, maxSwipes: 6), "Expected the Practice row at the bottom of the inbox")
     }
 
     func testLegacyGuidesDirectoryStillRestorable() throws {
@@ -464,12 +479,6 @@ final class SimastrySmokeUITests: XCTestCase {
         app.navigationBars["Expert Astrologers"].buttons["Done"].tap()
         XCTAssertTrue(app.otherElements["talk.messageSearchSheet"].waitForExistence(timeout: 4))
         app.otherElements["talk.messageSearchSheet"].buttons["Done"].tap()
-
-        let readMessage = app.buttons["Read a message"]
-        XCTAssertTrue(readMessage.waitForExistence(timeout: 4))
-        readMessage.tap()
-        XCTAssertTrue(app.navigationBars["Decode"].waitForExistence(timeout: 4))
-        app.buttons["Close"].tap()
     }
 
     func testAddPersonCanRouteToChartUploadAfterSave() throws {

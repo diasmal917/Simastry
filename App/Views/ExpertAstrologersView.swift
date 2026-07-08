@@ -170,6 +170,15 @@ struct ExpertAstrologersView: View {
                 )
                 .accessibilityIdentifier("expertAstrologers.questionInput")
 
+            // Preserves the intent of the two Talk buttons that Talk's inbox
+            // redesign retired ("What should I reply back?", "Read a message")
+            // — pre-fill the question instead of a separate destination;
+            // compare-all-five is already this flow's default next step.
+            HStack(spacing: 8) {
+                suggestionChip(title: "What should I reply back?", identifier: "experts.suggestion.replyBack")
+                suggestionChip(title: "Help me read a message I got", identifier: "experts.suggestion.readMessage")
+            }
+
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(suggestedQuestions, id: \.self) { chip in
                     Button {
@@ -207,6 +216,29 @@ struct ExpertAstrologersView: View {
         }
         .padding(16)
         .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.6))
+    }
+
+    /// Pre-fills `question` without submitting — unlike the topic chips below,
+    /// which submit immediately, these two are starting points a person may
+    /// still want to edit before tapping Continue.
+    private func suggestionChip(title: String, identifier: String) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            question = title
+        } label: {
+            Text(title)
+                .font(SimastryFont.labelMedium)
+                .foregroundStyle(SimastryColor.offWhite)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 10)
+                .simastryGlassPill(interactive: true)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityIdentifier(identifier)
     }
 
     private var contextSelector: some View {
