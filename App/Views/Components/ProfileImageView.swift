@@ -37,13 +37,11 @@ struct ProfileImageView: View {
                             )
                     )
             } else {
-                let cornerRadius = min(size * 0.24, 24)
-
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                Circle()
                     .fill(Color.white.opacity(0.04))
                     .frame(width: size, height: size)
                     .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        Circle()
                             .stroke(
                                 LinearGradient(
                                     colors: [
@@ -53,7 +51,7 @@ struct ProfileImageView: View {
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                                style: StrokeStyle(lineWidth: 1.2)
                             )
                     )
                     .overlay(

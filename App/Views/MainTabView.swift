@@ -66,8 +66,14 @@ struct MainTabView: View {
     }
 }
 
-struct AppTabFloatingHeader: View {
+struct AppTabFloatingHeader<Trailing: View>: View {
     @Bindable var viewModel: AppViewModel
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(viewModel: AppViewModel, @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }) {
+        self.viewModel = viewModel
+        self.trailing = trailing
+    }
 
     var body: some View {
         // Lives inside each tab's `.safeAreaInset(edge: .top)`, so it always
@@ -105,6 +111,8 @@ struct AppTabFloatingHeader: View {
             if viewModel.selectedTab == .today {
                 HomeHeaderGreetingSummary()
             }
+
+            trailing()
         }
         .padding(.horizontal, 20)
         .padding(.top, 2)
@@ -143,14 +151,13 @@ struct HomeHeaderGreetingSummary: View {
                 .tracking(1.4)
 
             Text(greetingText)
-                .font(SimastryFont.displayMedium)
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(SimastryColor.offWhite)
                 .lineLimit(1)
                 .minimumScaleFactor(0.62)
         }
         .multilineTextAlignment(.trailing)
-        .frame(width: 154, alignment: .trailing)
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize()
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("home.header.greetingSummary")
     }

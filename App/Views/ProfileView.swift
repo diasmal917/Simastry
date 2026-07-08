@@ -310,7 +310,7 @@ struct ProfileView: View {
                 Circle()
                     .strokeBorder(
                         SimastryColor.gold.opacity(0.3),
-                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 4])
+                        style: StrokeStyle(lineWidth: 1.2)
                     )
                     .frame(width: 48, height: 48)
 
