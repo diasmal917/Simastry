@@ -659,10 +659,11 @@ struct RelationshipPersonDetailView: View {
             }
 
             simulationRoomRow(
-                title: "Practice the conversation",
+                title: "Practice a conversation",
                 subtitle: "Rehearse the sensitive topic with a simulation of \(currentPerson.displayName) — before the real one.",
-                icon: "bubble.left.and.bubble.right.fill",
-                tint: SimastryColor.risingViolet
+                icon: "theatermasks.fill",
+                tint: SimastryColor.risingViolet,
+                identifier: "people.detail.practiceButton"
             ) {
                 showPracticeChat = true
             }
@@ -707,6 +708,7 @@ struct RelationshipPersonDetailView: View {
         subtitle: String,
         icon: String,
         tint: Color,
+        identifier: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button {
@@ -748,7 +750,7 @@ struct RelationshipPersonDetailView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("\(title). \(subtitle)")
-        .accessibilityIdentifier("people.detail.simulationRoom.\(title.replacingOccurrences(of: " ", with: ""))")
+        .accessibilityIdentifier(identifier ?? "people.detail.simulationRoom.\(title.replacingOccurrences(of: " ", with: ""))")
     }
 
     // MARK: - Persona Context

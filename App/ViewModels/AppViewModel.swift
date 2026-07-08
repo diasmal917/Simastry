@@ -286,8 +286,8 @@ class AppViewModel {
     var isPanelThreadOpen: Bool = false
     /// Bumped to ask MessagesView to present the panel chat.
     var panelChatRouteRequest: Int = 0
-    /// Bumped to ask MessagesView to present Quick Simulate.
-    var quickSimulateRouteRequest: Int = 0
+    /// Bumped to ask MessagesView to present Practice.
+    var practiceRouteRequest: Int = 0
     /// What the panel remembers — People mentioned in conversation (+PanelChat).
     var panelMemoryNotes: [MemoryNote] = []
 
@@ -658,10 +658,15 @@ class AppViewModel {
         selectedTab = .predict
     }
 
-    func openQuickSimulate() {
+    func openPractice() {
         homeSetupPhase = .complete
         selectedTab = .messages
-        quickSimulateRouteRequest += 1
+        practiceRouteRequest += 1
+    }
+
+    /// Back-compat alias — Home's shortcut grid still spells this the old way.
+    func openQuickSimulate() {
+        openPractice()
     }
 
     func openProfileDrawer() {
@@ -1238,7 +1243,7 @@ class AppViewModel {
         case "panel":
             openPanelChat()
         case "simulate":
-            openQuickSimulate()
+            openPractice()
         case "guides":
             if AppConfig.expertAstrologersEnabled {
                 openAIAstrologists()
@@ -1315,7 +1320,7 @@ class AppViewModel {
             openPredict()
 
         case .simulate:
-            openQuickSimulate()
+            openPractice()
 
         case .home:
             selectedTab = .today

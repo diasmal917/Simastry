@@ -13,7 +13,6 @@ struct SimulateView: View {
     @Bindable var viewModel: AppViewModel
     private let showsTabHeader: Bool
 
-    @State private var showRehearsalRoom: Bool = false
     @State private var conversationText: String = ""
     @State private var questionText: String = ""
     @State private var selectedCategory: FutureQuestionCategory = .messageOutcome
@@ -240,45 +239,6 @@ struct SimulateView: View {
     // NOTE: no inner NavigationStack — this view is always pushed into an
     // existing stack (Home routes, directory), and a nested stack makes the
     // value-based push silently fail.
-    /// Entry to the Rehearsal Room: multi-turn practice with a stand-in plus
-    /// an expert coaching your side — the deep path next to one-shot Predict.
-    private var rehearsalRoomCard: some View {
-        Button {
-            HapticManager.buttonPress()
-            showRehearsalRoom = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "theatermasks.fill")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .frame(width: 42, height: 42)
-                    .background(SimastryColor.gold.opacity(0.12), in: Circle())
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Rehearsal Room")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-                    Text("Practice the conversation with a stand-in — an expert coaches your side.")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 6)
-
-                Image(systemName: "chevron.right")
-                    .font(SimastryFont.caption)
-                    .foregroundStyle(SimastryColor.gold)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.5))
-            .contentShape(.rect)
-        }
-        .buttonStyle(SpringPressStyle())
-        .accessibilityIdentifier("predict.rehearsalRoomButton")
-    }
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -287,7 +247,6 @@ struct SimulateView: View {
                         header
                             .id("predict.header")
                     }
-                    rehearsalRoomCard
                     predictStepRail
                     guidedPredictionFlow
                     historySection
@@ -322,9 +281,6 @@ struct SimulateView: View {
             if showsTabHeader {
                 AppTabFloatingHeader(viewModel: viewModel)
             }
-        }
-        .sheet(isPresented: $showRehearsalRoom) {
-            RehearsalRoomView(viewModel: viewModel)
         }
         .sheet(isPresented: $showTopUpSheet) {
             PredictionTopUpView(viewModel: viewModel)

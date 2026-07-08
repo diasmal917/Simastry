@@ -38,11 +38,11 @@ final class SimastrySmokeUITests: XCTestCase {
     func testRehearsalRoomRunsAPracticeTurn() throws {
         launchSeededApp()
 
-        XCTAssertTrue(app.tabBars.buttons["Predict"].waitForExistence(timeout: 10))
-        app.tabBars.buttons["Predict"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Talk"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["Talk"].tap()
 
-        let entry = app.buttons["predict.rehearsalRoomButton"]
-        XCTAssertTrue(reveal(entry, maxSwipes: 4), "Expected the Rehearsal Room card on Predict")
+        let entry = app.buttons["talk.practiceButton"]
+        XCTAssertTrue(reveal(entry, maxSwipes: 6), "Expected the Practice row on Talk")
         entry.tap()
 
         let nameField = app.textFields["rehearsal.nameField"]
@@ -534,15 +534,19 @@ final class SimastrySmokeUITests: XCTestCase {
 
         // Entry point moved to the practice row in Task 4; Task 5 renames the flow.
         let quickSimulate = app.buttons["talk.practiceButton"]
-        XCTAssertTrue(quickSimulate.waitForExistence(timeout: 8))
+        XCTAssertTrue(reveal(quickSimulate, maxSwipes: 6), "Expected the Practice row at the bottom of the inbox")
         quickSimulate.tap()
 
-        let nameField = app.textFields["talk.quickSimulate.nameField"]
+        let someoneNew = app.buttons["practice.someoneNewButton"]
+        XCTAssertTrue(someoneNew.waitForExistence(timeout: 6))
+        someoneNew.tap()
+
+        let nameField = app.textFields["practice.new.nameField"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 5))
         nameField.tap()
         nameField.typeText("Smoke Persona")
 
-        let startButton = app.buttons["talk.quickSimulate.startButton"]
+        let startButton = app.buttons["practice.new.startButton"]
         XCTAssertTrue(startButton.waitForExistence(timeout: 4))
         startButton.tap()
 
