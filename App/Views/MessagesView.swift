@@ -66,41 +66,21 @@ struct MessagesView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { CelestialBackground() }
             .safeAreaInset(edge: .top, spacing: 0) {
-                AppTabFloatingHeader(viewModel: viewModel)
-            }
-            .accessibilityHidden(isPresentingModal)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        HapticManager.buttonPress()
-                        if AppConfig.expertAstrologersEnabled {
-                            openExpertAstrologers()
-                        } else {
-                            showCreateRoom = true
-                        }
-                    } label: {
-                        toolbarActionIcon(systemName: AppConfig.expertAstrologersEnabled ? SimastryIcon.astrologers : "person.3.fill")
-                    }
-                    .accessibilityLabel(AppConfig.expertAstrologersEnabled ? "Expert Astrologers" : "New Room")
-                    .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Open the five expert astrologers" : "Create a private guided room with opted-in people")
-                    .accessibilityIdentifier(AppConfig.expertAstrologersEnabled ? "talk.toolbar.expertAstrologersButton" : "talk.toolbar.newRoomButton")
-                    .buttonStyle(.plain)
-
+                AppTabFloatingHeader(viewModel: viewModel) {
                     Button {
                         HapticManager.buttonPress()
                         showMessageSearch = true
                     } label: {
-                        toolbarActionIcon(systemName: "magnifyingglass")
+                        HeaderActionIcon(systemName: "magnifyingglass")
                     }
                     .accessibilityLabel("Search experts and users")
-                    .accessibilityHint(AppConfig.expertAstrologersEnabled ? "Search public users or open expert astrologers" : "Search public users and guides to start a conversation")
                     .accessibilityIdentifier("talk.toolbar.newMessageButton")
                     .buttonStyle(.plain)
                 }
             }
+            .accessibilityHidden(isPresentingModal)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .task {
                 await viewModel.refreshInbox(showErrors: false)
                 await viewModel.fetchConnectedProfiles()
@@ -190,12 +170,6 @@ struct MessagesView: View {
             || showMessageSearch
             || showDecode
             || activeTalkSheet != nil
-    }
-
-    private func toolbarActionIcon(systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(SimastryColor.gold)
     }
 
     private var connectionLoadingState: some View {

@@ -127,6 +127,21 @@ struct AppTabFloatingHeader<Trailing: View>: View {
     }
 }
 
+/// Shared trailing-slot icon for `AppTabFloatingHeader` — a gold glyph on a
+/// glass circle sized to a full 44pt tap target. Used by Talk (search) and
+/// People (search, add) so both tabs share one implementation.
+struct HeaderActionIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(SimastryColor.gold)
+            .frame(width: 44, height: 44)
+            .simastryGlassPill(interactive: true)
+    }
+}
+
 struct HomeHeaderGreetingSummary: View {
     private var greetingText: String {
         let hour = Calendar.current.component(.hour, from: Date())

@@ -17,23 +17,11 @@ nonisolated private enum PeopleSheet: Identifiable {
     }
 }
 
-/// Renders a `.searchable` field as a top-right toolbar button that expands on
-/// tap (official iOS 26 `.searchToolbarBehavior(.minimize)`); on iOS 18 the
-/// standard search bar is used unchanged.
-private struct MinimizedSearchToolbar: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.searchToolbarBehavior(.minimize)
-        } else {
-            content
-        }
-    }
-}
-
 struct PeopleView: View {
     @Bindable var viewModel: AppViewModel
     @State private var searchText: String = ""
     @State private var selectedType: RelationshipType?
+    @State private var isSearchExpanded = false
     @State private var activeSheet: PeopleSheet?
     @State private var navigationPath = NavigationPath()
     @State private var handledTeamReadRouteRequest: Int = 0
@@ -75,6 +63,8 @@ struct PeopleView: View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
+                        searchAndFilterSection
+
                         peopleContextStrip
 
                         if viewModel.relationshipPeople.count >= 2 {
@@ -103,42 +93,25 @@ struct PeopleView: View {
             .scrollIndicators(.hidden)
             .background { CelestialBackground() }
             .safeAreaInset(edge: .top, spacing: 0) {
-                AppTabFloatingHeader(viewModel: viewModel)
+                AppTabFloatingHeader(viewModel: viewModel) {
+                    Button {
+                        withAnimation(.spring(SimastrySpring.snappy)) { isSearchExpanded.toggle() }
+                    } label: { HeaderActionIcon(systemName: "magnifyingglass") }
+                    .accessibilityLabel("Search people")
+                    .buttonStyle(.plain)
+
+                    Button {
+                        presentAddPerson()
+                    } label: { HeaderActionIcon(systemName: "plus") }
+                    .accessibilityLabel("Add person")
+                    .accessibilityIdentifier("people.toolbar.addPersonButton")
+                    .buttonStyle(.plain)
+                }
             }
             .accessibilityHidden(activeSheet != nil)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            // Native search. On iOS 26 `.searchToolbarBehavior(.minimize)` renders
-            // it as a top-right button that expands on tap; iOS 18 shows a bar.
-            .searchable(text: $searchText, prompt: "Search people or signs")
-            .modifier(MinimizedSearchToolbar())
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("Filter by relationship", selection: $selectedType) {
-                            Text("All people").tag(RelationshipType?.none)
-                            ForEach(RelationshipType.allCases) { type in
-                                Label(type.rawValue, systemImage: type.systemImage)
-                                    .tag(Optional(type))
-                            }
-                        }
-                    } label: {
-                        Label("Filter", systemImage: "line.3.horizontal.decrease")
-                    }
-                    .tint(selectedType == nil ? SimastryColor.mutedSilver : SimastryColor.gold)
-                }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        presentAddPerson()
-                    } label: {
-                        Label("Add person", systemImage: "plus")
-                    }
-                    .tint(SimastryColor.gold)
-                    .accessibilityIdentifier("people.toolbar.addPersonButton")
-                }
-            }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .addPerson:
@@ -189,6 +162,58 @@ struct PeopleView: View {
             handledTeamReadRouteRequest = viewModel.teamReadRouteRequest
             activeSheet = .teamRead
         }
+    }
+
+    /// Replaces the old nav-bar search field and filter menu: an expandable
+    /// search field plus a horizontal row of relationship-type chips, both
+    /// bound to the same `searchText`/`selectedType` filtering already used
+    /// by `filteredPeople`.
+    @ViewBuilder
+    private var searchAndFilterSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if isSearchExpanded {
+                TextField("Search people or signs", text: $searchText)
+                    .font(SimastryFont.bodyMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .simastryGlassPill()
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .accessibilityIdentifier("people.searchField")
+            }
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    filterChip(title: "All", isSelected: selectedType == nil) {
+                        selectedType = nil
+                    }
+                    ForEach(RelationshipType.allCases) { type in
+                        filterChip(title: type.rawValue, isSelected: selectedType == type) {
+                            selectedType = type
+                        }
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .animation(.spring(SimastrySpring.snappy), value: isSearchExpanded)
+    }
+
+    private func filterChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            HapticManager.buttonPress()
+            action()
+        } label: {
+            Text(title)
+                .font(SimastryFont.labelSmall)
+                .foregroundStyle(isSelected ? SimastryColor.gold : SimastryColor.offWhite.opacity(0.82))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .simastryGlassPill(interactive: true)
+        }
+        .buttonStyle(SpringPressStyle())
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// Entry to the group communication read — shown once 2+ people exist.
