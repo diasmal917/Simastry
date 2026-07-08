@@ -6,7 +6,7 @@
 #   scripts/dev/redesign-verify.sh shoot <name> <wait-seconds> [launch-args...]
 #   scripts/dev/redesign-verify.sh landing <name>       # fresh-install, signed-out
 set -u
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO="$(cd "$(dirname "$0")/../.." && pwd)" || exit 1
 WORK="${SIMASTRY_VERIFY_DIR:-$HOME/.cache/simastry-verify}"
 MIRROR="$WORK/mirror"; DD="$WORK/DerivedData"; OUT="$WORK/shots"
 BUNDLE="app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819"
@@ -47,8 +47,8 @@ shoot)
 landing)
   name=$2
   xcrun simctl terminate "$SIM" "$BUNDLE" 2>/dev/null
-  xcrun simctl uninstall "$SIM" "$BUNDLE"; xcrun simctl install "$SIM" "$APP"
-  xcrun simctl launch "$SIM" "$BUNDLE" >/dev/null
+  xcrun simctl uninstall "$SIM" "$BUNDLE"; xcrun simctl install "$SIM" "$APP" || { echo "INSTALL FAIL"; exit 1; }
+  xcrun simctl launch "$SIM" "$BUNDLE" >/dev/null || { echo "LAUNCH FAIL"; exit 1; }
   python3 -c "import time; time.sleep(8)"
   xcrun simctl io "$SIM" screenshot "$OUT/$name.png" >/dev/null 2>&1 && echo "$OUT/$name.png"
   ;;
