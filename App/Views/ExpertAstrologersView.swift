@@ -81,6 +81,7 @@ struct ExpertAstrologersView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                councilBanner
                 header
                 contextSelector
                 questionComposer
@@ -135,21 +136,32 @@ struct ExpertAstrologersView: View {
         .accessibilityIdentifier("expertAstrologers.screen")
     }
 
+    /// The council photograph opens the intake so "all five" is literal before
+    /// the form asks anything — it's the only place this art appears on this
+    /// screen; `EveryoneHeroCard` below no longer repeats it (see its comment).
+    private var councilBanner: some View {
+        Image("CouncilKeyArt")
+            .resizable()
+            .scaledToFill()
+            .frame(height: 140)
+            .frame(maxWidth: .infinity)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(.white.opacity(0.12), lineWidth: 0.8)
+            }
+            .accessibilityHidden(true)
+    }
+
     private var header: some View {
         // Title lives in the nav bar ("Expert Astrologers"); the in-content header
         // leads with the value proposition so the two don't duplicate.
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Consult one expert — or hear perspectives from all five.")
-                .font(SimastryFont.titleMedium)
-                .foregroundStyle(SimastryColor.offWhite)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Ask once. Hear five traditions. Choose the insight that resonates.")
-                .font(SimastryFont.labelMedium)
-                .foregroundStyle(SimastryColor.gold.opacity(0.9))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.top, 4)
+        Text("Ask once. Five traditions answer.")
+            .font(SimastryFont.titleMedium)
+            .foregroundStyle(SimastryColor.offWhite)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, 4)
     }
 
     private var questionComposer: some View {
@@ -295,6 +307,14 @@ struct ExpertAstrologersView: View {
                     }
                 }
                 .padding(.vertical, 1)
+            }
+            // Trailing fade hints there's more to scroll to; mask only affects
+            // rendering, so the chips underneath stay fully tappable.
+            .mask {
+                LinearGradient(
+                    stops: [.init(color: .black, location: 0.86), .init(color: .clear, location: 1)],
+                    startPoint: .leading, endPoint: .trailing
+                )
             }
 
             Text(contextHelperText)
@@ -541,64 +561,47 @@ private enum ExpertContextSelection: Hashable {
     }
 }
 
-/// The council photograph makes "all five" literal: one cinematic frame of
-/// the specialists around the chart table, with the CTA anchored on a scrim.
+/// "All five" is now made literal once, by `councilBanner` at the top of the
+/// intake — this card no longer repeats the council photograph (that would
+/// put it on screen twice at once whenever a question is submitted). It
+/// keeps the same gold-accented CTA chrome the rest of the picker uses.
 private struct EveryoneHeroCard: View {
     let isRunning: Bool
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("CouncilKeyArt")
-                .resizable()
-                .scaledToFill()
-                .frame(height: 170)
-                .frame(maxWidth: .infinity)
-                .clipped()
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.42), .black.opacity(0.88)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Everyone")
-                        .font(SimastryFont.titleMedium)
-                        .foregroundStyle(.white)
-
-                    Text("Compare all five traditions side by side.")
-                        .font(SimastryFont.bodySmall)
-                        .foregroundStyle(.white.opacity(0.82))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-
-                if isRunning {
-                    ProgressView()
-                        .tint(SimastryColor.gold)
-                } else {
-                    Image(systemName: "chevron.right")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.gold)
-                }
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                Circle().fill(SimastryGradient.gold)
+                Image(systemName: SimastryIcon.astrologers)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(SimastryColor.midnight)
             }
-            .padding(15)
+            .frame(width: 46, height: 46)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Everyone")
+                    .font(SimastryFont.titleMedium)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Text("Compare all five traditions side by side.")
+                    .font(SimastryFont.bodySmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            if isRunning {
+                ProgressView()
+                    .tint(SimastryColor.gold)
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.gold)
+            }
         }
-        .frame(height: 170)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [SimastryColor.gold.opacity(0.5), .white.opacity(0.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
-        }
+        .padding(15)
+        .surfaceCard(cornerRadius: 22, accent: SimastryColor.gold.opacity(0.6))
         .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
