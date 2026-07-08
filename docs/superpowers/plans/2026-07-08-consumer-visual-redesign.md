@@ -145,7 +145,7 @@ struct AppTabFloatingHeader<Trailing: View>: View {
 Existing call sites (`AppTabFloatingHeader(viewModel: viewModel)`) keep compiling via the default argument.
 
 - [ ] **Step 2:** Shrink the greeting (`HomeHeaderGreetingSummary`, MainTabView.swift:126-157): date line stays `SimastryFont.overline`; greeting line changes from `SimastryFont.displayMedium` to `.font(.system(size: 15, weight: .medium))`. Keep the `frame(width: 154)`? No — drop the fixed width, use `.fixedSize()`; the smaller type no longer needs reserved width.
-- [ ] **Step 3:** Solid avatar ring: in `ProfileImageView.swift:56` replace `StrokeStyle(lineWidth: 1.5, dash: [6, 4])` with `StrokeStyle(lineWidth: 1.5)`. In `ProfileView.swift:313` replace `StrokeStyle(lineWidth: 1.5, dash: [4, 4])` with `StrokeStyle(lineWidth: 1.5)`, and make the drawer avatar container a `Circle()` if it is currently a `RoundedRectangle` (check the shape at ProfileView.swift:300-320 and swap both the clip shape and the stroke shape to `Circle()`).
+- [ ] **Step 3:** Solid avatar ring — the dashed rounded-square is the **no-photo branch of `ProfileImageView`** (`App/Views/Components/ProfileImageView.swift:40-58`): change that branch's shape from `RoundedRectangle` to `Circle()` (both fill/clip and stroke) and replace `StrokeStyle(lineWidth: 1.5, dash: [6, 4])` with a solid `StrokeStyle(lineWidth: 1.2)`. This automatically fixes the profile drawer's avatar, which is `ProfileImageView(image:size:sunSign:)` at `App/Views/HomeView.swift:2388` inside `HomeProfileDrawer` (HomeView.swift:2355) — the drawer is NOT in ProfileView.swift. Also solidify `ProfileView.swift:313` (`dash: [4, 4]` → solid 1.2) — that's the unrelated signs-placeholder decoration, already circular. Use **1.2pt** everywhere (the header overlay at MainTabView.swift:88 already is).
 - [ ] **Step 4:** Build + verify: `scripts/dev/redesign-verify.sh build && scripts/dev/redesign-verify.sh shoot t1-home 7 -SimastryPreviewSeeded && scripts/dev/redesign-verify.sh shoot t1-drawer 8 -SimastryPreviewSeeded -SimastryPreviewScreen invite`
   Expected in the PNGs: solid (not dashed) ring on the header avatar; drawer avatar circular with solid ring; greeting visibly smaller than the "Home" title.
 - [ ] **Step 5: Commit** — `git add -A App/ && git commit -m "Unify the tab header API and solidify the avatar ring"`
@@ -200,15 +200,16 @@ Add `@State private var isSearchExpanded = false`. Add a `headerActionIcon(_:)` 
 - [ ] **Step 3:** PeopleView — above the list content, add (a) when `isSearchExpanded`, a `TextField("Search people or signs", text: $searchText)` styled with `.simastryGlassPill()`, and (b) a horizontal chip row replacing the filter menu: an "All" chip plus one chip per `RelationshipType.allCases` binding `selectedType` (chip = `simastryGlassPill(interactive: true)`, gold text when selected). The existing `searchText`/`selectedType` filtering logic is already wired — only the controls move.
 - [ ] **Step 4:** Build + verify: `scripts/dev/redesign-verify.sh build && scripts/dev/redesign-verify.sh shoot t2-talk 7 -SimastryPreviewSeeded -SimastryPreviewScreen panelInbox && scripts/dev/redesign-verify.sh shoot t2-people 7 -SimastryPreviewSeeded -SimastryPreviewTab 1 && scripts/dev/redesign-verify.sh shoot t2-home 7 -SimastryPreviewSeeded`
   Expected: **"Talk", "People", "Home" titles at the identical Y position** (compare the three PNGs side by side — this is the headline fix); search/add icons inside the title row; filter chips above the People list.
-- [ ] **Step 5:** Run the two affected smoke tests (`testMessageSearchSheet…` covering `talk.toolbar.newMessageButton`, and the add-person flow covering `people.toolbar.addPersonButton`) per the harness note. Expected: PASS.
+- [ ] **Step 5:** Run the two affected smoke tests — `testHighRiskSheetsOpenAndDismiss` (UITests :437; taps `talk.toolbar.newMessageButton` at :456 and `people.toolbar.addPersonButton` at :442) and `testAddPersonCanRouteToChartUploadAfterSave` (:479) — per the harness note. Expected: PASS.
 - [ ] **Step 6: Commit** — `"Move tab actions into the shared header; align all tab titles"`
 
 ### Task 3: Casing + drawer labels
 
 **Files:**
-- Modify: `App/Views/ProfileView.swift:1040` ("Find Others Like You" → "Find others like you"; scan the drawer menu at :894-940 for any other Title Case)
+- Modify: `App/Views/HomeView.swift:2421` (the drawer row `drawerRow("Find Others Like You", …)` — the user-visible menu item lives in `HomeProfileDrawer` in HomeView.swift, not ProfileView.swift)
+- Modify: `App/Views/ProfileView.swift:1040` (the pushed screen's title "Find Others Like You")
 
-- [ ] **Step 1:** Fix the strings. `grep -n "Find Others Like You" App/Views/ProfileView.swift` → replace both occurrences (menu row ~574 area and title ~1040) with "Find others like you".
+- [ ] **Step 1:** Fix the strings: `grep -rn "Find Others Like You" App/Views/` → replace every occurrence (HomeView.swift:2421 drawer row, ProfileView.swift:1040 title, any others the grep finds) with "Find others like you". Scan `HomeProfileDrawer`'s other rows (HomeView.swift:2400-2450) for stray Title Case.
 - [ ] **Step 2:** Build + shoot the drawer (`t3-drawer`, args as Task 1) — confirm sentence case.
 - [ ] **Step 3: Commit** — `"Sentence-case the drawer menu"`
 
@@ -265,7 +266,7 @@ private struct TalkExpertsHeroCard: View {
 (If `SimastryPrimaryButtonStyle` is not gold-filled, check `SimastryDesign.swift:676` and use the gold-filled style the landing "Get Started" uses.)
 
 - [ ] **Step 2:** Restructure `talkActions` → rename to `legacyTalkActions` and keep ONLY for `!AppConfig.expertAstrologersEnabled` (the legacy panel build). For the experts path, both branches of `body` compose:
-  - empty branch: `TalkExpertsHeroCard(onAsk: { openExpertAstrologers() })` → `CONVERSATIONS` overline header → `ExpertAstrologerInboxRow` → (existing empty/loading states) → practice row (Step 3).
+  - empty branch: `TalkExpertsHeroCard(onAsk: { openExpertAstrologers() })` → `CONVERSATIONS` overline header → `ExpertAstrologerInboxRow` → reduced empty state → practice row (Step 3). **Strip `emptyState` (MessagesView.swift:516-559)**: keep `connectionLoadingState` / `connectionRetryState` untouched, but delete `emptyStateCastStrip` (the duplicate expert strip), the "Your expert astrologers are ready" headline block, and the "Open Experts" CTA (:542 — the last occurrence of that retired name); what remains is one neutral no-conversations line. A competing CTA under the hero is a spec violation (§2 removals).
   - `messageList`: replace the leading `talkActions` row with the hero card row; add a `Text("CONVERSATIONS")` overline (font `SimastryFont.overline`, color `SimastryColor.textTertiary`, tracking 1.4) as a list row above `ExpertAstrologerInboxRow`; append the practice row after the `ForEach`.
   - Delete the "Quick Simulate", "What should I reply back?", "Read a message", "Ask an expert", "Compare all five" buttons from the experts path entirely.
 - [ ] **Step 3:** Practice row (bottom of both branches, experts path):
@@ -303,9 +304,12 @@ private var practiceRow: some View {
 }
 ```
 `.practiceHub` is added to `TalkSheet` in Task 5 — for THIS task, wire it to the existing `.quickSimulate` case so the build stays green, with a `// Task 5 rewires to Practice` comment.
-- [ ] **Step 4:** Suggestion chips inside the ask flow: in `App/Views/ExpertAstrologersView.swift`, above the topic chips in the question card, add a two-chip suggestions row that pre-fills the question `TextField`/`TextEditor` binding: "What should I reply back?" and "Help me read a message I got". Style: `simastryGlassPill(interactive: true)`. (This preserves the two deleted Talk buttons' intent; compare-all-five is already the flow's default.)
+- [ ] **Step 4:** Suggestion chips inside the ask flow: in `App/Views/ExpertAstrologersView.swift`, above the topic chips in the question card, add a two-chip suggestions row that pre-fills the question `TextField`/`TextEditor` binding: "What should I reply back?" (identifier `experts.suggestion.replyBack`) and "Help me read a message I got" (identifier `experts.suggestion.readMessage`). Style: `simastryGlassPill(interactive: true)`. (This preserves the two deleted Talk buttons' intent; compare-all-five is already the flow's default.)
 - [ ] **Step 5:** Build + verify: shoot `t4-talk-empty` (fresh seed shows threads; for the empty state also shoot after `xcrun simctl uninstall`+reinstall+seeded launch — the seeded state includes threads, so verify the list branch primarily) and `t4-talk` (panelInbox args). Expected: council group photo hero with single gold CTA; overline CONVERSATIONS; inbox rows; practice row at the bottom; none of the five old buttons.
-- [ ] **Step 6:** Run smoke test for the expert flow (the test tapping `talk.toolbar.expertAstrologersButton` — if a test references that deleted identifier, update it to `talk.askExpertsButton` now). `grep -n "talk.toolbar.expertAstrologersButton" UITests/SimastrySmokeUITests.swift` → update taps. Run those tests. Expected: PASS.
+- [ ] **Step 6:** Retarget the two smoke tests broken by the deleted buttons (do this in the SAME task; no test references `talk.toolbar.expertAstrologersButton`, so skip that):
+  - `testCompareAllFiveStartsEveryoneModeFromTalk` (UITests :376): the deleted "Compare all five" button was the only Talk caller of `openExpertAstrologers(question:autoRunEveryone:)`. New path: tap `talk.askExpertsButton` → in the intake, tap `experts.suggestion.replyBack` (pre-fills the question) → continue; everyone/compare mode is the flow's default, so assert the everyone-mode result the old test asserted from there.
+  - `testTalkExpertModeDoesNotShowLegacyPanelOverhangs` (:394): invert the stale positive assertions — "What should I reply back?", "Ask an expert", "Compare all five" must NOT exist on Talk; assert `talk.askExpertsButton` and `talk.practiceButton` DO exist.
+  Run both. Expected: PASS.
 - [ ] **Step 7: Commit** — `"Rebuild Talk as an inbox with one Ask-the-experts hero"`
 
 ---
@@ -355,11 +359,11 @@ homeSection { situationCard }
 // …rest unchanged
 ```
 - [ ] **Step 2:** `homeShortcutItems` → exactly 4 items, kinds `.askExperts`, `.practice` (rename `.simulate` in `HomeShortcutKind`), `.decode`, `.birthChart`:
-  - askExperts: title "Ask the experts", subtitle "Five traditions"
+  - askExperts: title `AppConfig.expertAstrologersEnabled ? "Ask the experts" : "Ask guides"` (keep the existing legacy conditional), subtitle "Five traditions"
   - practice: title "Practice", subtitle "Rehearse a conversation", systemImage "theatermasks.fill", identifier "home.shortcut.practice", handler `viewModel.openPractice()`
   - decode: title "Decode a text", subtitle "Read between lines"
   - birthChart: unchanged
-  Delete the `.dailyDecider` and `.journal` items and their `handleHomeShortcut` cases (journal remains reachable via the drawer "Private journal"; the decider via its own section row).
+  Delete the `.dailyDecider` and `.journal` items and their `handleHomeShortcut` cases (journal remains reachable via the drawer "Private journal"; the decider via its own section row). Deleting the `.dailyDecider` case orphans `dailyDeciderScrollRequest` — remove that state var and its `.onChange`/`scrollTo` plumbing too.
 - [ ] **Step 3:** Tile visuals: in the tile view, remove the `cardSign` pastel zodiac disc; render the `systemImage` as a gold glyph in a gold-tinted glass circle (match `rehearsalRoomCard`'s old icon treatment: `.foregroundStyle(SimastryColor.gold)`, 42pt circle, `SimastryColor.gold.opacity(0.12)` fill). Remove `cardSign`/`accent` from `HomeShortcutItem` if now unused. Keep the black glass container material untouched.
 - [ ] **Step 4:** `Text("Browse all")` (:2105) → `Text("Explore")` — check the surrounding view to see whether this is the grid's section title; if it is a different "browse" surface, instead retitle the shortcut grid's `homeSection` header and leave :2105 alone. The grid section header must read "Explore" in the overline style used by other sections.
 - [ ] **Step 5:** `dailyDeciderCard` → compact row: header row = wand icon (gold) + "Daily Decider" + "One tiny next move" caption + chevron; tapping expands/opens the existing decider content exactly as the card did (if the card body is inline content, wrap it in a tap-to-expand `DisclosureGroup`-style state; if it navigates, keep navigation). Do not change the decider feature itself.
@@ -515,7 +519,7 @@ struct CategoryTokenChip: View {
 
 ## Execution notes
 
-- **Never** edit `Simastry.xcodeproj/` or `App/Info.plist` (generated; gitignored). New files (`CategoryToken.swift`, `scripts/dev/redesign-verify.sh`) are picked up by `xcodegen generate` via `Project.json`'s source globs — verify `CategoryToken.swift` appears in the generated project on first build.
+- **Never** edit `Simastry.xcodeproj/` or `App/Info.plist` (generated; gitignored). `CategoryToken.swift` is picked up automatically by `xcodegen generate` (Project.json sources include the whole `App` path) — verify it compiles into the target on first build. `scripts/dev/redesign-verify.sh` is a repo tool, not part of any target.
 - **Every commit message**: imperative summary + body + `Verified:` line (what was built/screenshotted/tested).
 - **If a repo-root build is ever attempted and hangs**: that's the Codex contention — kill it, use the harness script.
 - Screens are seeded via `AppViewModel.applyDebugPreviewStateIfRequested` (AppViewModel.swift:3578) — if a task needs a state with no preview arg, prefer adding a small DEBUG-only arg there over manual tapping, and note it in the commit.
