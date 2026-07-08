@@ -47,7 +47,7 @@ nonisolated enum RehearsalError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .signedOut:
-            "Sign in to use the Rehearsal Room."
+            "Sign in to use Practice."
         case .messageLimit(let limit):
             "You've used all \(limit) messages today. Upgrade for unlimited rehearsals."
         }
