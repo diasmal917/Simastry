@@ -509,15 +509,27 @@ struct CrystalBallView: View {
     /// Pushes a disc's raw position radially away from any coplanar expert
     /// bead nearer than 46pt — roughly the sum of the largest bead's radius
     /// (27pt, at full front depth) and the largest disc's radius (19pt) — so
-    /// the dispersed zodiac field never visibly overlaps a portrait. A pure
-    /// function of `t` (via the already-computed positions passed in), so it
-    /// stays deterministic and stateless like the rest of the orbit math:
-    /// nothing here can desync from one frame to the next or stutter.
+    /// the dispersed zodiac field never visibly overlaps a portrait. The
+    /// push is scaled by the bead's `abs(depth)`, ramping to zero right at
+    /// the depth-0 crossing where a bead silently swaps between the
+    /// front-pass and back-pass coplanar lists — without that ramp the push
+    /// could jump discontinuously from one frame to the next; with it, the
+    /// push is weakest exactly when the bead is edge-on at the rim, the
+    /// least visible moment. A pure function of `t` (via the
+    /// already-computed positions passed in), so it stays deterministic and
+    /// stateless like the rest of the orbit math: nothing here can desync
+    /// from one frame to the next or stutter.
     private func keepOut(x: Double, y: Double, from beads: [ExpertBeadPosition]) -> (x: Double, y: Double) {
         var x = x
         var y = y
-        let minDistance: Double = 46
+        let maxKeepOut: Double = 46
+        // Single pass, never re-checking earlier beads: safe only because
+        // coplanar beads are always ≥~135pt apart (orbit constants
+        // 0.62/0.20, 5 beads), so a push away from one bead can't land
+        // inside another's keep-out radius.
         for bead in beads {
+            let minDistance = maxKeepOut * abs(bead.depth)
+            guard minDistance > 0 else { continue }
             let dx = x - bead.x
             let dy = y - bead.y
             let distance = hypot(dx, dy)

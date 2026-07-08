@@ -188,7 +188,7 @@ struct MessagesView: View {
                     await viewModel.fetchConnectedProfiles()
                 }
             } label: {
-                Label("Try Again", systemImage: "arrow.clockwise")
+                Label("Try again", systemImage: "arrow.clockwise")
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
         }
