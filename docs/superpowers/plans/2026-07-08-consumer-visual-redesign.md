@@ -120,8 +120,8 @@ xcodebuild test -project Simastry.xcodeproj -scheme Simastry \
 
 **Files:**
 - Modify: `App/Views/MainTabView.swift:68-157` (`AppTabFloatingHeader`, `HomeHeaderGreetingSummary`)
-- Modify: `App/Views/Components/ProfileImageView.swift:56` (dashed stroke)
-- Modify: `App/Views/ProfileView.swift:313` (drawer avatar dash + shape)
+- Modify: `App/Views/Components/ProfileImageView.swift:40-58` (no-photo branch: shape + dashed stroke; also fixes the drawer avatar at HomeView.swift:2388)
+- Modify: `App/Views/ProfileView.swift:313` (unrelated signs-placeholder dash → solid)
 
 - [ ] **Step 1:** In `MainTabView.swift`, give `AppTabFloatingHeader` a generic trailing slot. Replace the struct declaration and body plumbing:
 
@@ -222,7 +222,7 @@ Add `@State private var isSearchExpanded = false`. Add a `headerActionIcon(_:)` 
 **Files:**
 - Modify: `App/Views/MessagesView.swift` — `body` (:32-64 empty/list branches), `talkActions` (:254-326), `messageList` (:407-440)
 - Create (in-file): `TalkExpertsHeroCard` view struct in MessagesView.swift
-- Test: `UITests/SimastrySmokeUITests.swift:526-535` (quick-simulate flow — updated in Task 6)
+- Test: `UITests/SimastrySmokeUITests.swift:376` (`testCompareAllFiveStartsEveryoneModeFromTalk`) and `:394` (`testTalkExpertModeDoesNotShowLegacyPanelOverhangs`) — retargeted in Step 6 of THIS task; the quick-simulate flow test (:526-535) is updated in Task 5
 
 - [ ] **Step 1:** Add the hero (uses the approved council group image — do not crop/replace the asset):
 
@@ -266,7 +266,7 @@ private struct TalkExpertsHeroCard: View {
 (If `SimastryPrimaryButtonStyle` is not gold-filled, check `SimastryDesign.swift:676` and use the gold-filled style the landing "Get Started" uses.)
 
 - [ ] **Step 2:** Restructure `talkActions` → rename to `legacyTalkActions` and keep ONLY for `!AppConfig.expertAstrologersEnabled` (the legacy panel build). For the experts path, both branches of `body` compose:
-  - empty branch: `TalkExpertsHeroCard(onAsk: { openExpertAstrologers() })` → `CONVERSATIONS` overline header → `ExpertAstrologerInboxRow` → reduced empty state → practice row (Step 3). **Strip `emptyState` (MessagesView.swift:516-559)**: keep `connectionLoadingState` / `connectionRetryState` untouched, but delete `emptyStateCastStrip` (the duplicate expert strip), the "Your expert astrologers are ready" headline block, and the "Open Experts" CTA (:542 — the last occurrence of that retired name); what remains is one neutral no-conversations line. A competing CTA under the hero is a spec violation (§2 removals).
+  - empty branch: `TalkExpertsHeroCard(onAsk: { openExpertAstrologers() })` → `CONVERSATIONS` overline header → `ExpertAstrologerInboxRow` → reduced empty state → practice row (Step 3). **Strip `emptyState` (MessagesView.swift:516-559)**: keep `connectionLoadingState` / `connectionRetryState` untouched, but delete `emptyStateCastStrip` (the duplicate expert strip), the "Your expert astrologers are ready" headline block, and the "Open Experts" CTA (:542 — the last occurrence of that retired name); what remains is one neutral no-conversations line, and `InviteFriendsCard` (:554-556) stays as the quiet LAST element of the empty state, below the practice row (existing viral surface — the spec does not retire it). A competing CTA under the hero is a spec violation (§2 removals).
   - `messageList`: replace the leading `talkActions` row with the hero card row; add a `Text("CONVERSATIONS")` overline (font `SimastryFont.overline`, color `SimastryColor.textTertiary`, tracking 1.4) as a list row above `ExpertAstrologerInboxRow`; append the practice row after the `ForEach`.
   - Delete the "Quick Simulate", "What should I reply back?", "Read a message", "Ask an expert", "Compare all five" buttons from the experts path entirely.
 - [ ] **Step 3:** Practice row (bottom of both branches, experts path):
