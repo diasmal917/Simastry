@@ -181,17 +181,29 @@ struct ExpertAstrologersView: View {
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(suggestedQuestions, id: \.self) { chip in
+                    let style = topicChipStyle(chip)
+
                     Button {
                         HapticManager.buttonPress()
                         question = chip
                         submitQuestion(chip)
                     } label: {
-                        Text(chip)
-                            .font(SimastryFont.labelMedium)
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .simastryGlassPill(interactive: true)
+                        HStack(spacing: 6) {
+                            Image(systemName: style.icon)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(style.color)
+                            // Unconstrained: "Relationships" is one unbroken
+                            // word that doesn't fit this column at full size —
+                            // let it wrap rather than truncate the label text
+                            // the intake screen is required to keep verbatim.
+                            Text(chip)
+                                .font(SimastryFont.labelMedium)
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .simastryGlassPill(interactive: true)
                     }
                     .buttonStyle(SpringPressStyle())
                     .accessibilityIdentifier("expertAstrologers.chip.\(chip.replacingOccurrences(of: " ", with: ""))")
@@ -239,6 +251,32 @@ struct ExpertAstrologersView: View {
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityIdentifier(identifier)
+    }
+
+    /// Restyles the six intake topics onto Predict's shared token language
+    /// (`SimastryCategoryToken`) without renaming them: where a label
+    /// matches a token by name (Love, Career, Family) it borrows that
+    /// token's icon and color directly. The other three names don't exist
+    /// as tokens, so they borrow the closest semantic token's color with a
+    /// bespoke icon — Relationships reads as a Love-family topic, Timing as
+    /// gold, Life Direction as the personal/rising violet.
+    private func topicChipStyle(_ label: String) -> (icon: String, color: Color) {
+        switch label {
+        case "Love":
+            (SimastryCategoryToken.love.systemImage, SimastryCategoryToken.love.color)
+        case "Relationships":
+            ("person.2.fill", SimastryCategoryToken.love.color)
+        case "Career":
+            (SimastryCategoryToken.career.systemImage, SimastryCategoryToken.career.color)
+        case "Family":
+            (SimastryCategoryToken.family.systemImage, SimastryCategoryToken.family.color)
+        case "Timing":
+            ("clock.fill", SimastryColor.gold)
+        case "Life Direction":
+            ("location.north.line.fill", SimastryColor.risingViolet)
+        default:
+            ("sparkles", SimastryColor.gold)
+        }
     }
 
     private var contextSelector: some View {

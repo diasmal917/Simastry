@@ -42,13 +42,27 @@ enum SimastryCategoryToken: String, CaseIterable, Identifiable {
 }
 
 struct CategoryTokenChip: View {
-    let token: SimastryCategoryToken
+    private let systemImage: String
+    private let color: Color
+
+    init(token: SimastryCategoryToken) {
+        self.systemImage = token.systemImage
+        self.color = token.color
+    }
+
+    /// For categories with no one-to-one token match (e.g. Predict's
+    /// "message outcome" reply type) — same chip shape and size, borrowing
+    /// the closest semantic token's color instead of a token identity.
+    init(systemImage: String, color: Color) {
+        self.systemImage = systemImage
+        self.color = color
+    }
 
     var body: some View {
-        Image(systemName: token.systemImage)
+        Image(systemName: systemImage)
             .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(token.color)
+            .foregroundStyle(color)
             .frame(width: 38, height: 38)
-            .background(token.color.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }

@@ -76,12 +76,12 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
 
     var defaultQuestion: String {
         switch self {
-        case .loveTiming: "When will I meet someone?"
-        case .commitment: "What pattern is opening around commitment?"
-        case .familyPath: "What should I understand about family timing?"
-        case .careerSuccess: "What career signal should I watch next?"
-        case .moneyDirection: "What money pattern should I pay attention to?"
-        case .privateQuestion: "What should I know about the private thing on my mind?"
+        case .loveTiming: "Will I meet someone?"
+        case .commitment: "Is this serious?"
+        case .familyPath: "What's ahead here?"
+        case .careerSuccess: "Where should I focus?"
+        case .moneyDirection: "What should I watch for?"
+        case .privateQuestion: "What's on my mind?"
         case .messageOutcome: "Will they text back?"
         }
     }

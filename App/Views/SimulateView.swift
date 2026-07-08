@@ -100,8 +100,7 @@ struct SimulateView: View {
 
     private var nextPredictActionSubtitle: String {
         if !hasAdvancedPastCategory {
-            // Matches the top step rail (Choose = step 1 of 3).
-            return "Step 1 of 3"
+            return "Add a few details first"
         }
         if selectedCategory.requiresTargetSign && selectedSunSign == nil {
             return "Required for reply predictions"
@@ -110,7 +109,7 @@ struct SimulateView: View {
            conversationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return "Add the thread before asking"
         }
-        return "Ready for step 3"
+        return "Ready to ask"
     }
 
     private var currentPhaseText: String {
@@ -247,7 +246,6 @@ struct SimulateView: View {
                         header
                             .id("predict.header")
                     }
-                    predictStepRail
                     guidedPredictionFlow
                     historySection
                 }
@@ -341,48 +339,6 @@ struct SimulateView: View {
         .offset(y: appeared ? 0 : 10)
     }
 
-    private var predictStepRail: some View {
-        HStack(spacing: 8) {
-            predictStepPill(number: 1, title: "Choose", isActive: true, isDone: hasAdvancedPastCategory)
-            predictStepConnector(isDone: hasAdvancedPastCategory)
-            predictStepPill(number: 2, title: "Details", isActive: hasAdvancedPastCategory && !canGenerate, isDone: canGenerate)
-            predictStepConnector(isDone: canGenerate)
-            predictStepPill(number: 3, title: "Answer", isActive: canGenerate, isDone: false)
-        }
-        .padding(10)
-        .background(Color.white.opacity(0.045), in: Capsule())
-        .overlay {
-            Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.7)
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 10)
-        .accessibilityIdentifier("predict.stepFlow")
-    }
-
-    private func predictStepPill(number: Int, title: String, isActive: Bool, isDone: Bool) -> some View {
-        HStack(spacing: 6) {
-            Text("\(number)")
-                .font(SimastryFont.microBold)
-                .foregroundStyle(isActive || isDone ? SimastryColor.midnight : SimastryColor.mutedSilver)
-                .frame(width: 18, height: 18)
-                .background(isActive || isDone ? SimastryColor.gold : Color.white.opacity(0.08), in: Circle())
-
-            Text(title)
-                .font(SimastryFont.labelSmall)
-                .foregroundStyle(isActive || isDone ? SimastryColor.offWhite : SimastryColor.mutedSilver)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func predictStepConnector(isDone: Bool) -> some View {
-        Capsule()
-            .fill(isDone ? SimastryColor.gold.opacity(0.55) : Color.white.opacity(0.12))
-            .frame(width: 16, height: 2)
-            .accessibilityHidden(true)
-    }
-
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionLabel("Choose a question type")
@@ -413,16 +369,13 @@ struct SimulateView: View {
         } label: {
             VStack(alignment: .leading, spacing: 9) {
                 HStack {
-                    Image(systemName: category.systemImage)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(isSelected ? SimastryColor.midnight : category.accentColor)
-                        .frame(width: 30, height: 30)
-                        .background(
-                            isSelected
-                                ? SimastryGradient.gold
-                                : LinearGradient(colors: [category.accentColor.opacity(0.18)], startPoint: .top, endPoint: .bottom),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        )
+                    if let token = category.categoryToken {
+                        CategoryTokenChip(token: token)
+                    } else {
+                        // No one-to-one token for this category (e.g. reply
+                        // predictions) — same chip shape, closest semantic color.
+                        CategoryTokenChip(systemImage: category.systemImage, color: SimastryCategoryToken.love.color)
+                    }
 
                     Spacer()
 
@@ -465,9 +418,8 @@ struct SimulateView: View {
     private var guidedPredictionFlow: some View {
         VStack(alignment: .leading, spacing: 18) {
             guidedQuestionBlock(
-                number: 1,
                 title: "What are we reading?",
-                subtitle: "Pick the shape of the question first."
+                subtitle: "Pick the shape of the question."
             ) {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(FutureQuestionCategory.allCases) { category in
@@ -478,7 +430,6 @@ struct SimulateView: View {
             .id("predict.category")
 
             guidedQuestionBlock(
-                number: 2,
                 title: "What do you want to know?",
                 subtitle: selectedCategory.defaultQuestion
             ) {
@@ -488,7 +439,6 @@ struct SimulateView: View {
 
             if selectedCategory.allowsTargetSign {
                 guidedQuestionBlock(
-                    number: 3,
                     title: selectedCategory.requiresTargetSign ? "Who is this about?" : "Any other person involved?",
                     subtitle: selectedCategory.requiresTargetSign ? "Add their Sun sign. Moon and Rising make it sharper." : "Optional, but it gives the reading a person to hold onto."
                 ) {
@@ -499,7 +449,6 @@ struct SimulateView: View {
 
             if selectedCategory.requiresConversation {
                 guidedQuestionBlock(
-                    number: 4,
                     title: "What happened in the thread?",
                     subtitle: "Paste the conversation or import a screenshot."
                 ) {
@@ -511,7 +460,6 @@ struct SimulateView: View {
             signalsDisclosure
 
             guidedQuestionBlock(
-                number: selectedCategory.requiresConversation ? 5 : (selectedCategory.allowsTargetSign ? 4 : 3),
                 title: "Ready for the crystal ball?",
                 subtitle: "Simastry turns the chart signals into an answer, a likely window, and one next move."
             ) {
@@ -551,28 +499,19 @@ struct SimulateView: View {
     }
 
     private func guidedQuestionBlock<Content: View>(
-        number: Int,
         title: String,
         subtitle: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                Text("\(number)")
-                    .font(SimastryFont.labelLarge)
-                    .foregroundStyle(SimastryColor.midnight)
-                    .frame(width: 28, height: 28)
-                    .background(SimastryColor.gold, in: Circle())
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-                    Text(subtitle)
-                        .font(SimastryFont.caption)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
+                Text(subtitle)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             content()
@@ -1806,6 +1745,26 @@ struct SimulateView: View {
 }
 
 extension FutureQuestionCategory {
+    /// Maps each Predict category onto the shared six-token visual system
+    /// (`SimastryCategoryToken`) that also drives the expert-intake topic
+    /// chips. `shortTitle` already names five of these identically to a
+    /// token ("Love", "Marriage", "Family", "Career", "Money"), and
+    /// `.privateQuestion` ("Private") maps onto `.personal`. `.messageOutcome`
+    /// ("Replies") has no one-to-one token — its tile keeps its own SF
+    /// Symbol and falls back to the Love token's color at the call site,
+    /// since reply predictions are fundamentally about romantic interest.
+    var categoryToken: SimastryCategoryToken? {
+        switch self {
+        case .loveTiming: .love
+        case .commitment: .marriage
+        case .familyPath: .family
+        case .careerSuccess: .career
+        case .moneyDirection: .money
+        case .privateQuestion: .personal
+        case .messageOutcome: nil
+        }
+    }
+
     var accentColor: Color {
         switch self {
         case .loveTiming:
