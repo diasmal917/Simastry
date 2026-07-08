@@ -540,7 +540,7 @@ struct RelationshipPersonDetailView: View {
     @State private var hasSeededEditableFields: Bool = false
     @State private var showDeleteConfirmation: Bool = false
     @State private var showCoupleRead: Bool = false
-    @State private var showPracticeChat: Bool = false
+    @State private var showPracticeHub: Bool = false
 
     private var currentPerson: RelationshipPerson {
         viewModel.relationshipPeople.first { $0.id == person.id } ?? person
@@ -665,7 +665,7 @@ struct RelationshipPersonDetailView: View {
                 tint: SimastryColor.risingViolet,
                 identifier: "people.detail.practiceButton"
             ) {
-                showPracticeChat = true
+                showPracticeHub = true
             }
 
             simulationRoomRow(
@@ -698,8 +698,10 @@ struct RelationshipPersonDetailView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.6))
-        .sheet(isPresented: $showPracticeChat) {
-            PracticeChatView(viewModel: viewModel, person: currentPerson)
+        .sheet(isPresented: $showPracticeHub) {
+            // The coached Practice hub, pre-targeted at this person — the
+            // same experience the Talk practice row opens (spec §5).
+            RehearsalRoomView(viewModel: viewModel, prefilledPerson: currentPerson)
         }
     }
 

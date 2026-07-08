@@ -665,6 +665,7 @@ class AppViewModel {
     }
 
     /// Back-compat alias — Home's shortcut grid still spells this the old way.
+    // TODO(Task 6): remove once Home's grid calls openPractice()
     func openQuickSimulate() {
         openPractice()
     }

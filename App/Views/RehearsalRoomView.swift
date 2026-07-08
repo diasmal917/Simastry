@@ -198,39 +198,55 @@ struct RehearsalRoomView: View {
     /// Leading option: build a fuller persona (signs, MBTI, texting style) and
     /// jump straight into an uncoached practice chat — the old Quick Simulate
     /// flow, now folded into this hub. Distinct from `manualChip` below, which
-    /// stays a lightweight inline name for a goal-and-coach rehearsal.
+    /// stays a lightweight inline name for a goal-and-coach rehearsal. The
+    /// pill has no subtitle slot, so the destination hint rides inline in
+    /// quiet caption type.
     private var someoneNewChip: some View {
         Button {
             HapticManager.buttonPress()
             practiceRoomModal = .newPerson
         } label: {
-            Label("Someone new", systemImage: "person.crop.circle.badge.plus")
-                .font(SimastryFont.labelMedium)
-                .foregroundStyle(SimastryColor.offWhite)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .modifier(RehearsalChipBackground(isSelected: false))
+            HStack(spacing: 6) {
+                Label("Someone new", systemImage: "person.crop.circle.badge.plus")
+                    .font(SimastryFont.labelMedium)
+                Text("Quick chat")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            .foregroundStyle(SimastryColor.offWhite)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .modifier(RehearsalChipBackground(isSelected: false))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Someone new. Quick chat.")
         .accessibilityIdentifier("practice.someoneNewButton")
     }
 
     /// Quick inline entry — just a name (and optional Sun) typed straight
     /// into this screen, for a goal-and-coach rehearsal. Kept separate from
-    /// `someoneNewChip`'s richer describe-someone form above.
+    /// `someoneNewChip`'s richer describe-someone form above. The inline hint
+    /// flips to midnight when selected so it stays legible on the gold pill.
     private var manualChip: some View {
-        Button {
+        let isSelected = selectedPersonId == nil
+        return Button {
             HapticManager.buttonPress()
             selectedPersonId = nil
         } label: {
-            Label("Type a name", systemImage: "plus")
-                .font(SimastryFont.labelMedium)
-                .foregroundStyle(selectedPersonId == nil ? SimastryColor.midnight : SimastryColor.offWhite)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .modifier(RehearsalChipBackground(isSelected: selectedPersonId == nil))
+            HStack(spacing: 6) {
+                Label("Type a name", systemImage: "plus")
+                    .font(SimastryFont.labelMedium)
+                Text("With a coach")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(isSelected ? SimastryColor.midnight.opacity(0.72) : SimastryColor.mutedSilver)
+            }
+            .foregroundStyle(isSelected ? SimastryColor.midnight : SimastryColor.offWhite)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .modifier(RehearsalChipBackground(isSelected: isSelected))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Type a name. With a coach.")
     }
 
     private func coachChip(_ specialist: AstrologySpecialist) -> some View {
@@ -591,11 +607,10 @@ private struct PracticeNewPersonForm: View {
     @State private var personalityType: MBTIPersonalityType?
     @State private var notes: String = ""
     @State private var textingStyles: Set<String> = []
-    // Intentionally not auto-focused on appear: this form is a sheet nested
-    // inside RehearsalRoomView's own sheet, and forcing focus while the
-    // second presentation is still settling makes the field briefly
-    // untappable (reproduced consistently in UI tests). Users tap in.
-    @FocusState private var nameFocused: Bool
+    // Deliberately no name-field autofocus: this form is a sheet nested in
+    // the hub's own sheet, and a focused field here computes an invalid hit
+    // point (untappable) — reproduced in UI tests at zero delay AND with the
+    // house 0.25s asyncAfter idiom. Users tap in.
 
     private let styleOptions = ["dry", "slow replier", "warm", "flirty"]
 
@@ -682,7 +697,6 @@ private struct PracticeNewPersonForm: View {
                 .tracking(1.3)
 
             TextField("Name or nickname", text: $name)
-                .focused($nameFocused)
                 .textInputAutocapitalization(.words)
                 .submitLabel(.done)
                 .font(SimastryFont.bodyMedium)
