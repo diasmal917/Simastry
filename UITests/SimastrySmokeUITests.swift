@@ -498,11 +498,11 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(profileButton.waitForExistence(timeout: 6), "Expected Home to expose the profile menu")
         profileButton.tap()
 
-        let discoveryEntry = app.buttons["Find Others Like You"]
+        let discoveryEntry = app.buttons["Find others like you"]
         XCTAssertTrue(discoveryEntry.waitForExistence(timeout: 4), "Expected the profile drawer to expose Discovery")
         discoveryEntry.tap()
 
-        XCTAssertTrue(app.navigationBars["Find Others Like You"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.navigationBars["Find others like you"].waitForExistence(timeout: 8))
 
         let rowan = app.buttons["discovery.profile.rowan.aries"]
         XCTAssertTrue(reveal(rowan, maxSwipes: 4), "Expected Discovery to show Rowan from seeded profiles")

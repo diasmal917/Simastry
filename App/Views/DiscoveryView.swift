@@ -58,7 +58,7 @@ struct DiscoveryView: View {
                 }
             }
             .accessibilityIdentifier("discovery.screen")
-            .navigationTitle("Find Others Like You")
+            .navigationTitle("Find others like you")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search usernames")
             .toolbar {

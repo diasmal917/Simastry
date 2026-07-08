@@ -2420,7 +2420,7 @@ private struct HomeProfileDrawer: View {
                     drawerRow("Profile details", systemImage: "person.text.rectangle.fill", action: onOpenProfile)
                     drawerRow("Settings and privacy", systemImage: "gearshape.fill", action: onSettings)
                     drawerRow("Private journal", systemImage: "bookmark.fill", action: onJournal)
-                    drawerRow("Find Others Like You", systemImage: "person.2.wave.2.fill", action: onDiscovery)
+                    drawerRow("Find others like you", systemImage: "person.2.wave.2.fill", action: onDiscovery)
                     drawerRow("What the experts know", systemImage: "lock.shield.fill", action: onExpertKnowledge)
                     drawerRow("How Simastry works", systemImage: "books.vertical.fill", action: onMethodology)
                     drawerRow("Work with an astrologer", systemImage: "person.crop.circle.badge.checkmark", action: onAstrologer)

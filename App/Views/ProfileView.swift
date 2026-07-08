@@ -1037,7 +1037,7 @@ struct ProfileView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                        Text("Find Others Like You")
+                        Text("Find others like you")
                             .font(SimastryFont.labelLarge)
                             .foregroundStyle(SimastryColor.offWhite)
                         Spacer()
