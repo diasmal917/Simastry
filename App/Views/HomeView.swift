@@ -380,6 +380,7 @@ struct HomeView: View {
     @State private var showProfileDrawer: Bool = false
     @State private var activeProfileSheet: HomeProfileSheet?
     @State private var showDailyDeciderExpanded: Bool = false
+    @State private var didSeedDeciderExpansion: Bool = false
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -589,73 +590,71 @@ struct HomeView: View {
     }
 
     private var homeContent: some View {
-        ScrollViewReader { _ in
-            ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 14) {
-                    // The floating header now reserves its own space via
-                    // safeAreaInset — only a small breathing gap is needed.
-                    Spacer().frame(height: 6)
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 14) {
+                // The floating header now reserves its own space via
+                // safeAreaInset — only a small breathing gap is needed.
+                Spacer().frame(height: 6)
 
-                    if debugExpertsFirst { homeSection { panelCard } }
+                if debugExpertsFirst { homeSection { panelCard } }
 
-                    homeSection { dailyExpertNoteCard }
+                homeSection { dailyExpertNoteCard }
 
-                    homeSection { todaysReadCard }
+                homeSection { todaysReadCard }
 
-                    homeSection { dailyDeciderCard.id("home.dailyDecider") }
+                homeSection { dailyDeciderCard }
 
-                    homeSection { homeShortcutGrid }
+                homeSection { homeShortcutGrid }
 
-                    homeSection { situationCard }
+                homeSection { situationCard }
 
-                    homeSection { predictHeroCard }
+                homeSection { predictHeroCard }
 
-                    homeSection { continueStrip }
+                homeSection { continueStrip }
 
-                    if !debugExpertsFirst { homeSection { panelCard } }
+                if !debugExpertsFirst { homeSection { panelCard } }
 
-                    homeSection { moreForTodaySection }
+                homeSection { moreForTodaySection }
 
-                    homeSection { sealedDraftsRow }
+                homeSection { sealedDraftsRow }
 
-                    homeSection { Spacer().frame(height: SimastrySpacing.tabBarEndClearance) }
+                homeSection { Spacer().frame(height: SimastrySpacing.tabBarEndClearance) }
+            }
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
+            .containerRelativeFrame(.horizontal)
+            .onAppear {
+                streakManager.recordCheckIn()
+                AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
+                sealedDrafts = SealedDraftStore().load()
+                viewModel.todayStore.reloadSavedPrompts()
+                viewModel.todayStore.reloadDailyDecisions()
+                viewModel.reloadAuraSnapshot()
+                viewModel.publishDailyNotesForWidget()
+                #if DEBUG
+                if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
+                    profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
                 }
-                .padding(.horizontal, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
-                .containerRelativeFrame(.horizontal)
-                .onAppear {
-                    streakManager.recordCheckIn()
-                    AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
-                    sealedDrafts = SealedDraftStore().load()
-                    viewModel.todayStore.reloadSavedPrompts()
-                    viewModel.todayStore.reloadDailyDecisions()
-                    viewModel.reloadAuraSnapshot()
-                    viewModel.publishDailyNotesForWidget()
-                    #if DEBUG
-                    if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
-                        profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
-                    }
-                    #endif
-                    guard !appeared else { return }
-                    if reduceMotion {
+                #endif
+                guard !appeared else { return }
+                if reduceMotion {
+                    appeared = true
+                } else {
+                    withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
                         appeared = true
-                    } else {
-                        withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
-                            appeared = true
-                        }
                     }
-                    // Show milestone toast after a brief delay
-                    if streakManager.streakMessage != nil {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            withAnimation(.spring(SimastrySpring.smooth)) {
-                                showStreakMilestone = true
-                            }
-                            // Auto-dismiss after 4 seconds
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                                withAnimation(.easeOut(duration: 0.3)) {
-                                    showStreakMilestone = false
-                                }
+                }
+                // Show milestone toast after a brief delay
+                if streakManager.streakMessage != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        withAnimation(.spring(SimastrySpring.smooth)) {
+                            showStreakMilestone = true
+                        }
+                        // Auto-dismiss after 4 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                showStreakMilestone = false
                             }
                         }
                     }
@@ -1112,6 +1111,16 @@ struct HomeView: View {
         .surfaceCard(cornerRadius: 22, accent: SimastryColor.celestialBlue.opacity(0.7))
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
+        .onAppear {
+            // A pick already made today is the card's payoff — surface it
+            // instead of hiding it behind the chevron. Seed once so the
+            // user's manual toggle survives later re-appearances.
+            if !didSeedDeciderExpansion {
+                didSeedDeciderExpansion = true
+                showDailyDeciderExpanded = viewModel.todayStore.dailyDecisions
+                    .contains { Calendar.current.isDateInToday($0.createdAt) }
+            }
+        }
     }
 
     private var dailyDeciderMethodHint: some View {
@@ -2087,10 +2096,16 @@ private struct HomeShortcutGridView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("EXPLORE")
-                .font(SimastryFont.overline)
-                .foregroundStyle(SimastryColor.textSecondary)
-                .tracking(1.5)
+            HStack(spacing: 8) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+
+                Text("EXPLORE")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.5)
+            }
 
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(items) { item in

@@ -553,6 +553,20 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Practice with Smoke Persona"].waitForExistence(timeout: 8))
     }
 
+    func testHomePracticeTileOpensPracticeHub() throws {
+        launchSeededApp()
+
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
+
+        // Task 6 rewired the Explore tile from openQuickSimulate to openPractice.
+        let practiceTile = app.buttons["home.shortcut.practice"]
+        XCTAssertTrue(reveal(practiceTile, maxSwipes: 6), "Expected the Practice tile in Home's Explore grid")
+        practiceTile.tap()
+
+        XCTAssertTrue(app.navigationBars["Practice"].waitForExistence(timeout: 8),
+                      "Expected the Practice tile to open the Practice hub")
+    }
+
     private func launchSeededApp(arguments: [String] = [], environment: [String: String] = [:]) {
         app = XCUIApplication()
         app.launchArguments = ["-SimastryPreviewSeeded"] + arguments
