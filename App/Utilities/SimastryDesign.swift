@@ -54,6 +54,8 @@ struct SimastryColor {
     static let celestialBlue = Color(red: 96/255, green: 156/255, blue: 245/255)
     static let sunCoral = Color(red: 255/255, green: 138/255, blue: 101/255)
     static let risingViolet = Color(red: 178/255, green: 140/255, blue: 255/255)
+    static let orchidPink = Color(red: 214/255, green: 130/255, blue: 172/255)
+    static let sageGreen = Color(red: 126/255, green: 168/255, blue: 120/255)
 
     // Text hierarchy
     static let offWhite = Color(red: 242/255, green: 244/255, blue: 248/255)
