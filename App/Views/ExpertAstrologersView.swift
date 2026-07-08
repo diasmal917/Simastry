@@ -145,7 +145,6 @@ struct ExpertAstrologersView: View {
             .scaledToFill()
             .frame(height: 140)
             .frame(maxWidth: .infinity)
-            .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)

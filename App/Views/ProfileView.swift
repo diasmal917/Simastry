@@ -571,7 +571,7 @@ struct ProfileView: View {
             }
 
             if AppConfig.socialDiscoveryEnabled {
-                // MARK: Find Others Like You
+                // MARK: Find others like you
                 discoverySection
             }
         }

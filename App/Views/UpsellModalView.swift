@@ -69,7 +69,7 @@ struct UpsellModalView: View {
                 )
                 .symbolEffect(.variableColor.iterative, isActive: appeared)
 
-            Text("Unlock the Full Cosmos")
+            Text("Unlock the full cosmos")
                 .font(SimastryFont.titleLarge)
                 .foregroundStyle(
                     LinearGradient(
@@ -289,7 +289,7 @@ struct UpsellModalView: View {
             Button(action: {
                 Task { await viewModel.restorePurchases() }
             }) {
-                Text("Restore Purchases")
+                Text("Restore purchases")
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
@@ -304,7 +304,7 @@ struct UpsellModalView: View {
             .foregroundStyle(SimastryColor.offWhite.opacity(0.8))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(.white.opacity(0.06), in: .capsule)
+            .simastryGlassPill()
     }
 
     private func featureRow(_ text: String, icon: String) -> some View {

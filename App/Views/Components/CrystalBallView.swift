@@ -372,21 +372,41 @@ struct CrystalBallView: View {
 
     // MARK: Orbiting expert beads
 
+    /// A single expert bead's on-screen offset and depth at time `t` — the
+    /// one source of truth both `beadLayer` and the zodiac field's keep-out
+    /// read from, so the two layers can never disagree about where a
+    /// portrait actually is.
+    private struct ExpertBeadPosition {
+        let x: Double
+        let y: Double
+        let depth: Double
+    }
+
     /// The five experts circle the ball on a flattened ellipse. `sin(phase)`
     /// is the depth: positive is in front of the glass (larger, brighter),
     /// negative passes behind it, so the split front/back layers around the
-    /// ball give a real sense of orbit. Static pentagon under Reduce Motion.
-    private func beadLayer(at t: TimeInterval, front: Bool) -> some View {
+    /// ball give a real sense of orbit.
+    private func expertBeadPositions(at t: TimeInterval) -> [ExpertBeadPosition] {
         let orbit = t * 2 * .pi / 48
-        return ForEach(Array(specialists.enumerated()), id: \.element.id) { index, specialist in
+        return (0..<specialists.count).map { index in
             let phase = orbit + Double(index) * 2 * .pi / 5
             let depth = sin(phase)
-            if (depth >= 0) == front {
-                bead(for: specialist, depth: depth)
-                    .offset(
-                        x: cos(phase) * diameter * 0.62,
-                        y: depth * diameter * 0.20
-                    )
+            return ExpertBeadPosition(
+                x: cos(phase) * diameter * 0.62,
+                y: depth * diameter * 0.20,
+                depth: depth
+            )
+        }
+    }
+
+    /// Static pentagon under Reduce Motion.
+    private func beadLayer(at t: TimeInterval, front: Bool) -> some View {
+        let positions = expertBeadPositions(at: t)
+        return ForEach(Array(specialists.enumerated()), id: \.element.id) { index, specialist in
+            let position = positions[index]
+            if (position.depth >= 0) == front {
+                bead(for: specialist, depth: position.depth)
+                    .offset(x: position.x, y: position.y)
             }
         }
     }
@@ -461,20 +481,60 @@ struct CrystalBallView: View {
 
     private func zodiacRing(at t: TimeInterval, front: Bool) -> some View {
         let signs = ZodiacSign.allCases
+        // Only beads on the same side of the glass as this pass's discs can
+        // ever visibly collide with them: `front` discs are drawn after
+        // `front` beads (so an overlap would show a disc sitting on a
+        // portrait), and `back` discs sit behind the opaque ball alongside
+        // `back` beads. A disc that's behind the ball while a bead floats in
+        // front (or vice versa) already reads as two separate depth planes —
+        // excluding those pairs up front keeps the push from ever nudging a
+        // disc away from a portrait it was never going to overlap.
+        let coplanarBeads = expertBeadPositions(at: t).filter { ($0.depth >= 0) == front }
         return ForEach(Array(signs.enumerated()), id: \.offset) { index, sign in
             let orbit = Self.zodiacOrbits[index % Self.zodiacOrbits.count]
             let phase = orbit.startPhase + t * 2 * .pi / orbit.period
             let depth = sin(phase)
             if (depth >= 0) == front {
+                let rawX = cos(phase) * diameter * orbit.radius
+                let rawY = depth * diameter * orbit.yAmplitude
+                    + diameter * orbit.yOffset
+                    + sin(t * 2 * .pi / orbit.bobPeriod + orbit.startPhase) * orbit.bobAmount
+                let clear = keepOut(x: rawX, y: rawY, from: coplanarBeads)
                 zodiacBead(for: sign, depth: depth, baseSize: orbit.size)
-                    .offset(
-                        x: cos(phase) * diameter * orbit.radius,
-                        y: depth * diameter * orbit.yAmplitude
-                            + diameter * orbit.yOffset
-                            + sin(t * 2 * .pi / orbit.bobPeriod + orbit.startPhase) * orbit.bobAmount
-                    )
+                    .offset(x: clear.x, y: clear.y)
             }
         }
+    }
+
+    /// Pushes a disc's raw position radially away from any coplanar expert
+    /// bead nearer than 46pt — roughly the sum of the largest bead's radius
+    /// (27pt, at full front depth) and the largest disc's radius (19pt) — so
+    /// the dispersed zodiac field never visibly overlaps a portrait. A pure
+    /// function of `t` (via the already-computed positions passed in), so it
+    /// stays deterministic and stateless like the rest of the orbit math:
+    /// nothing here can desync from one frame to the next or stutter.
+    private func keepOut(x: Double, y: Double, from beads: [ExpertBeadPosition]) -> (x: Double, y: Double) {
+        var x = x
+        var y = y
+        let minDistance: Double = 46
+        for bead in beads {
+            let dx = x - bead.x
+            let dy = y - bead.y
+            let distance = hypot(dx, dy)
+            guard distance < minDistance else { continue }
+            if distance < 0.001 {
+                // Degenerate: centers coincide, so there's no direction to
+                // push along. Fall back to a fixed axis rather than dividing
+                // by zero — vanishingly rare given the layers' unrelated,
+                // mostly-irrational periods.
+                y -= minDistance
+            } else {
+                let scale = minDistance / distance
+                x = bead.x + dx * scale
+                y = bead.y + dy * scale
+            }
+        }
+        return (x, y)
     }
 
     /// The pastel medallion language from the Home set, miniaturized: a solid

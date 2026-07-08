@@ -1020,7 +1020,7 @@ struct LandingView: View {
 
     private func heroHeadline(compact: Bool) -> some View {
         VStack(spacing: 5) {
-            Text("Ask once. Hear five traditions.")
+            Text("Ask once. Five traditions answer.")
                 .font(.system(size: compact ? 21 : 24, weight: .bold))
                 .foregroundStyle(SimastryColor.offWhite)
                 .multilineTextAlignment(.center)

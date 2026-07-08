@@ -112,10 +112,7 @@ struct ModeSelectionView: View {
             .minimumScaleFactor(0.8)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(.white.opacity(0.06), in: .capsule)
-            .overlay {
-                Capsule().strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
-            }
+            .simastryGlassPill()
     }
 
     private var isProUser: Bool {

@@ -6,8 +6,8 @@ import UIKit
 
 private enum DiscoveryFilter: String, CaseIterable, Identifiable {
     case compatible = "Compatible"
-    case sameSun = "Same Sun"
-    case sameMoon = "Same Moon"
+    case sameSun = "Same sun"
+    case sameMoon = "Same moon"
     case all = "All"
 
     var id: String { rawValue }
@@ -179,7 +179,7 @@ struct DiscoveryView: View {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(SimastryColor.gold)
-                Text("Your Discovery Profile")
+                Text("Your discovery profile")
                     .font(SimastryFont.titleSmall)
                     .foregroundStyle(SimastryColor.offWhite)
             }
@@ -496,7 +496,7 @@ struct DiscoveryView: View {
                     await viewModel.searchPublicProfiles(query: searchText)
                 }
             } label: {
-                Label("Try Again", systemImage: "arrow.clockwise")
+                Label("Try again", systemImage: "arrow.clockwise")
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.gold))
             .accessibilityLabel("Try loading public profiles again")
@@ -787,7 +787,7 @@ struct ProfileDetailSheet: View {
                     .foregroundStyle(SimastryColor.gold)
                 }
             }
-            .confirmationDialog("Report or Block", isPresented: $showSafetyOptions, titleVisibility: .visible) {
+            .confirmationDialog("Report or block", isPresented: $showSafetyOptions, titleVisibility: .visible) {
                 ForEach(DiscoveryReportReason.allCases) { reason in
                     Button("Report \(reason.displayName)") {
                         Task {
@@ -803,7 +803,7 @@ struct ProfileDetailSheet: View {
                 Button("Cancel", role: .cancel) {}
             }
             .alert("Block \(profile.displayName)?", isPresented: $showBlockConfirmation) {
-                Button("Block Profile", role: .destructive) {
+                Button("Block profile", role: .destructive) {
                     Task {
                         await viewModel.blockDiscoveryProfile(profile)
                         dismiss()
@@ -813,8 +813,8 @@ struct ProfileDetailSheet: View {
             } message: {
                 Text("You won't see each other in Simastry anymore. This can't be undone.")
             }
-            .alert("Add as Companion?", isPresented: $showAddConfirmation) {
-                Button("Add Companion") {
+            .alert("Add as companion?", isPresented: $showAddConfirmation) {
+                Button("Add companion") {
                     Task {
                         await viewModel.addCompanionFromDiscovery(profile)
                         dismiss()
@@ -1056,7 +1056,7 @@ struct ProfileDetailSheet: View {
                 HStack(spacing: 10) {
                     Image(systemName: hasSentHi ? "bubble.left.and.bubble.right.fill" : "hand.wave.fill")
                         .font(.system(size: 16, weight: .semibold))
-                    Text(hasSentHi ? "Open Messages" : "Start Chat")
+                    Text(hasSentHi ? "Open messages" : "Start chat")
                         .font(SimastryFont.labelLarge)
                 }
                 .foregroundStyle(hasSentHi ? SimastryColor.mutedSilver : SimastryColor.offWhite)
@@ -1082,7 +1082,7 @@ struct ProfileDetailSheet: View {
                 HStack(spacing: 10) {
                     Image(systemName: isConnected ? "person.crop.circle.badge.minus" : "person.crop.circle.badge.plus")
                         .font(.system(size: 16, weight: .semibold))
-                    Text(isConnected ? "Remove Connection" : "Add Connection")
+                    Text(isConnected ? "Remove connection" : "Add connection")
                         .font(SimastryFont.labelLarge)
                 }
                 .foregroundStyle(isConnected ? SimastryColor.mutedSilver : SimastryColor.midnight)

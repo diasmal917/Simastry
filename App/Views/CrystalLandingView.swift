@@ -119,7 +119,7 @@ struct CrystalLandingView: View {
         let selected = specialists[min(councilIndex, specialists.count - 1)]
 
         return VStack(spacing: 0) {
-            pageTitle("Ask once.\nHear five traditions.", compact: compact)
+            pageTitle("Ask once.\nFive traditions answer.", compact: compact)
 
             Text("Each expert answers only from their own school — never blended.")
                 .font(.system(size: 15))

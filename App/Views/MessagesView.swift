@@ -303,7 +303,7 @@ struct MessagesView: View {
                 HapticManager.buttonPress()
                 activeTalkSheet = .practiceHub
             } label: {
-                Label("Quick Simulate", systemImage: "theatermasks.fill")
+                Label("Practice", systemImage: "theatermasks.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
