@@ -481,6 +481,36 @@ final class SimastrySmokeUITests: XCTestCase {
         app.otherElements["talk.messageSearchSheet"].buttons["Done"].tap()
     }
 
+    func testPeopleSearchExpandFocusesAndCollapseClears() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewTab", "1"])
+
+        XCTAssertTrue(app.tabBars.buttons["People"].waitForExistence(timeout: 10))
+        app.swipeUp()
+
+        let searchButton = app.buttons["people.toolbar.searchButton"]
+        XCTAssertTrue(reveal(searchButton), "Expected the People header search button")
+        searchButton.tap()
+
+        let searchField = app.textFields["people.searchField"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 4), "Expected the search field to expand")
+
+        // Focus lands a beat after mount (see toggleSearch's asyncAfter), so
+        // poll rather than asserting immediately.
+        let focused = expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: searchField, handler: nil)
+        wait(for: [focused], timeout: 4)
+
+        searchField.typeText("Ar")
+
+        let clearButton = app.buttons["people.search.clearButton"]
+        XCTAssertTrue(clearButton.waitForExistence(timeout: 4))
+        clearButton.tap()
+        // XCUITest reports an empty text field's value as its placeholder.
+        XCTAssertEqual(searchField.value as? String, "Search people or signs", "Expected the field to be empty after clearing")
+
+        searchButton.tap()
+        XCTAssertTrue(searchField.waitForNonExistence(timeout: 4), "Expected the search field to collapse")
+    }
+
     func testAddPersonCanRouteToChartUploadAfterSave() throws {
         launchSeededApp(arguments: ["-SimastryPreviewTab", "1"])
 

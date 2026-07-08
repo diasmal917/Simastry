@@ -68,24 +68,14 @@ struct PeopleView: View {
                         searchAndFilterSection
                             .id("people.searchSection")
 
-                        peopleContextStrip
-
-                        if viewModel.relationshipPeople.count >= 2 {
-                            teamReadEntryCard
-                        }
-
                         if let needsAttentionPerson {
                             needsAttentionCard(needsAttentionPerson)
-                        }
-
-                        if !filteredRecentlyReflectedPeople.isEmpty {
-                            recentSection
                         }
 
                         if filteredPeople.isEmpty {
                             emptyState
                         } else {
-                            allPeopleSection
+                            peopleListSection
                         }
 
                         Spacer().frame(height: SimastrySpacing.tabBarEndClearance)
@@ -214,6 +204,8 @@ struct PeopleView: View {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(SimastryColor.mutedSilver)
+                                .frame(width: 32, height: 32)
+                                .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Clear search")
@@ -260,107 +252,46 @@ struct PeopleView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    /// Entry to the group communication read — shown once 2+ people exist.
-    private var teamReadEntryCard: some View {
+    /// Entry to the group communication read — shown once 2+ people exist, as
+    /// a compact pill trailing the list header (was a standalone hero card
+    /// pre-merge; the header's caption absorbed the old stat card's facts).
+    private var teamReadPill: some View {
         Button {
             HapticManager.buttonPress()
             activeSheet = .teamRead
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 6) {
                 Image(systemName: "person.3.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold)
-                    .frame(width: 42, height: 42)
-                    .background(SimastryColor.gold.opacity(0.13), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Read this group")
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-
-                    Text("How this group communicates — roles, friction, and the play.")
-                        .font(SimastryFont.caption)
-                        .foregroundStyle(SimastryColor.mutedSilver)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SimastryColor.gold.opacity(0.7))
+                    .font(.system(size: 11, weight: .semibold))
+                Text("Read this group")
+                    .font(SimastryFont.labelSmall)
             }
-            .padding(13)
-            .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.7))
-            .contentShape(.rect)
+            .foregroundStyle(SimastryColor.gold)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .goldGlassPill(interactive: true)
         }
         .buttonStyle(SpringPressStyle())
         .accessibilityLabel("Read this group. How this group communicates.")
         .accessibilityIdentifier("people.teamReadEntryButton")
     }
 
-    private var peopleSubtitle: String {
-        if let selectedType {
-            return selectedType.rawValue
-        }
-        let count = viewModel.relationshipPeople.count
-        return count == 1 ? "1 person" : "\(count) people"
+    /// Single merged list: the "Recent reads" ordering source (people with a
+    /// reflection, newest `updatedAt` first) leads, then everyone else in
+    /// their existing order. Each person appears exactly once — the old
+    /// split (a capped recent strip stacked above the full roster) could
+    /// show the same person twice.
+    private var orderedPeople: [RelationshipPerson] {
+        let recent = filteredRecentlyReflectedPeople
+        let recentIds = Set(recent.map(\.id))
+        let rest = filteredPeople.filter { !recentIds.contains($0.id) }
+        return recent + rest
     }
 
-    private var peopleContextStrip: some View {
-        HStack(spacing: 13) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(SimastryColor.gold)
-                .frame(width: 42, height: 42)
-                .background(SimastryColor.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .stroke(SimastryColor.gold.opacity(0.16), lineWidth: 0.6)
-                }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("RELATIONSHIP MEMORY")
-                    .font(SimastryFont.overline)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .tracking(1.4)
-
-                Text(peopleSubtitle)
-                    .font(SimastryFont.titleSmall)
-                    .foregroundStyle(SimastryColor.offWhite)
-
-                Text(peopleContextSubtitle)
-                    .font(SimastryFont.captionSmall)
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(14)
-        .background(SimastryColor.surface.opacity(0.88), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(.white.opacity(0.08), lineWidth: 0.7)
-        }
-    }
-
-    private var peopleContextSubtitle: String {
-        if let type = CommunicationTypeProfile.make(
-            sun: viewModel.userSunSign,
-            moon: viewModel.userMoonSign,
-            rising: viewModel.userRisingSign
-        ) {
-            return "\(type.title) • private relationship memory"
-        }
-        return "Private, manual relationship memory"
-    }
-
-    private var allPeopleSection: some View {
+    private var peopleListSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("All people", systemImage: "person.2.fill")
-            ForEach(filteredPeople) { person in
+            peopleListHeader
+            ForEach(orderedPeople) { person in
                 NavigationLink(value: person) {
                     relationshipPersonCard(person)
                 }
@@ -369,16 +300,21 @@ struct PeopleView: View {
         }
     }
 
-    private var recentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("Recent reads", systemImage: "bookmark.fill")
-            ForEach(filteredRecentlyReflectedPeople.prefix(2)) { person in
-                NavigationLink(value: person) {
-                    relationshipPersonCard(person)
-                }
-                .buttonStyle(SpringPressStyle())
+    /// Replaces the old RELATIONSHIP MEMORY stat card: its facts (people
+    /// count, privacy) compress into this overline caption, and "Read this
+    /// group" becomes the trailing pill on the same row.
+    private var peopleListHeader: some View {
+        HStack(alignment: .center, spacing: 10) {
+            sectionTitle(peopleListCaption, systemImage: "lock.fill")
+            Spacer(minLength: 8)
+            if viewModel.relationshipPeople.count >= 2 {
+                teamReadPill
             }
         }
+    }
+
+    private var peopleListCaption: String {
+        "People · \(viewModel.relationshipPeople.count) · private"
     }
 
     private func needsAttentionCard(_ person: RelationshipPerson) -> some View {
@@ -423,20 +359,19 @@ struct PeopleView: View {
         .buttonStyle(SpringPressStyle())
     }
 
+    /// Exactly one sign indicator: the leading pastel `ZodiacSignToken` disc
+    /// inside `RelationshipAvatarView`. No trailing sign chip, no
+    /// relationship-type glyph after the name — the type is already spelled
+    /// out in the context line below.
     private func relationshipPersonCard(_ person: RelationshipPerson) -> some View {
         let reading = viewModel.relationshipReading(for: person)
         return HStack(spacing: 14) {
             RelationshipAvatarView(person: person, size: 56)
 
             VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 7) {
-                    Text(person.displayName)
-                        .font(SimastryFont.titleSmall)
-                        .foregroundStyle(SimastryColor.offWhite)
-                    Image(systemName: person.relationshipType.systemImage)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(SimastryColor.gold.opacity(0.82))
-                }
+                Text(person.displayName)
+                    .font(SimastryFont.titleSmall)
+                    .foregroundStyle(SimastryColor.offWhite)
 
                 Text(personCardContextLine(for: person))
                     .font(SimastryFont.labelMedium)
@@ -448,9 +383,7 @@ struct PeopleView: View {
                     .lineLimit(1)
             }
 
-            Spacer(minLength: 10)
-
-            ZodiacIconView(sign: person.sunSign, size: 34, showsGlow: false)
+            Spacer(minLength: 0)
         }
         .padding(16)
         .glossyCard(cornerRadius: 18)
