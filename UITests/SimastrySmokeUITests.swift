@@ -532,7 +532,8 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(talkTab.waitForExistence(timeout: 10))
         talkTab.tap()
 
-        let quickSimulate = app.buttons["talk.quickSimulateButton"]
+        // Entry point moved to the practice row in Task 4; Task 5 renames the flow.
+        let quickSimulate = app.buttons["talk.practiceButton"]
         XCTAssertTrue(quickSimulate.waitForExistence(timeout: 8))
         quickSimulate.tap()
 
