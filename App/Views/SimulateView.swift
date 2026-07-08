@@ -251,7 +251,17 @@ struct SimulateView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
-                .padding(.bottom, SimastrySpacing.tabBarClearance + 24)
+                // Shared bottom inset (§1.5): before a category is picked,
+                // `predictBottomAction`'s safeAreaInset isn't showing yet, so
+                // this padding is the only thing that can clear the true end
+                // of the scroll content from the floating tab bar. The old
+                // tabBarClearance(12)+24 = 36pt was a one-off value found
+                // nowhere else in the app; every other tab root/pushed flow
+                // (Home, People, ModeSelection, expert intake) uses this
+                // same 108pt constant. Confirmed via a scrolled-to-end
+                // screenshot in the Task 12 QA sweep that 108pt leaves
+                // generous clearance here too.
+                .padding(.bottom, SimastrySpacing.tabBarEndClearance)
             }
             .scrollIndicators(.hidden)
             .onChange(of: selectedCategory) { _, _ in

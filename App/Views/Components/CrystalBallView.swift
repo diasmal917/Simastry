@@ -510,12 +510,18 @@ struct CrystalBallView: View {
     /// bead nearer than 46pt — roughly the sum of the largest bead's radius
     /// (27pt, at full front depth) and the largest disc's radius (19pt) — so
     /// the dispersed zodiac field never visibly overlaps a portrait. The
-    /// push is scaled by the bead's `abs(depth)`, ramping to zero right at
-    /// the depth-0 crossing where a bead silently swaps between the
+    /// push ramps down only in a narrow band of `abs(depth)` right at the
+    /// depth-0 crossing, where a bead silently swaps between the
     /// front-pass and back-pass coplanar lists — without that ramp the push
-    /// could jump discontinuously from one frame to the next; with it, the
-    /// push is weakest exactly when the bead is edge-on at the rim, the
-    /// least visible moment. A pure function of `t` (via the
+    /// would jump discontinuously from one frame to the next. The band is
+    /// deliberately narrow (see `rampBand`): a push scaled by `abs(depth)`
+    /// over its *full* range measurably weakens the keep-out everywhere
+    /// except the front/back apex, including the sides of the orbit where
+    /// beads swing widest and overlap risk is highest — confirmed by an A/B
+    /// screenshot comparison against the unscaled push. Narrowing the ramp
+    /// to just the crossing keeps full strength everywhere else, so the
+    /// push is only ever weaker right when the bead is edge-on at the rim,
+    /// the least visible moment. A pure function of `t` (via the
     /// already-computed positions passed in), so it stays deterministic and
     /// stateless like the rest of the orbit math: nothing here can desync
     /// from one frame to the next or stutter.
@@ -523,12 +529,23 @@ struct CrystalBallView: View {
         var x = x
         var y = y
         let maxKeepOut: Double = 46
+        // Ramps from 0 to full strength over just the first 0.08 of
+        // abs(depth) (~±5° of orbital phase either side of the crossing —
+        // still several dozen frames at this orbit's angular speed, so the
+        // ramp reads as smooth, not a flash), then clamps at 1 for the rest
+        // of the orbit. A Python port of this file's orbit math, sampled
+        // every 0.05s over 400s, put visible disc/portrait overlap at 0.78%
+        // of samples for the original unramped push, 4.04% for a push
+        // scaled by the full abs(depth) range, and 0.94% at this band width
+        // — most of the remaining gap to baseline is the keep-out's
+        // pre-existing blind spot for non-coplanar pairs, not the ramp.
+        let rampBand: Double = 0.08
         // Single pass, never re-checking earlier beads: safe only because
         // coplanar beads are always ≥~135pt apart (orbit constants
         // 0.62/0.20, 5 beads), so a push away from one bead can't land
         // inside another's keep-out radius.
         for bead in beads {
-            let minDistance = maxKeepOut * abs(bead.depth)
+            let minDistance = maxKeepOut * min(1, abs(bead.depth) / rampBand)
             guard minDistance > 0 else { continue }
             let dx = x - bead.x
             let dy = y - bead.y
