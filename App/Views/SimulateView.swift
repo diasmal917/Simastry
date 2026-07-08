@@ -355,6 +355,10 @@ struct SimulateView: View {
 
     private func categoryCard(_ category: FutureQuestionCategory) -> some View {
         let isSelected = selectedCategory == category
+        // Selected chrome matches the tile's token chip, not the legacy
+        // accentColor (they disagree for 5 of 7 categories). Same love-color
+        // fallback as the tokenless chip below.
+        let tokenColor = category.categoryToken?.color ?? SimastryCategoryToken.love.color
 
         return Button {
             HapticManager.buttonPress()
@@ -401,13 +405,13 @@ struct SimulateView: View {
             .padding(13)
             .background(
                 isSelected
-                    ? category.accentColor.opacity(0.18)
+                    ? tokenColor.opacity(0.18)
                     : Color.white.opacity(0.045),
                 in: RoundedRectangle(cornerRadius: 18, style: .continuous)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? category.accentColor.opacity(0.58) : Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(isSelected ? tokenColor.opacity(0.58) : Color.white.opacity(0.08), lineWidth: 1)
             }
         }
         .buttonStyle(SpringPressStyle())

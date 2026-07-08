@@ -78,7 +78,7 @@ nonisolated enum FutureQuestionCategory: String, Codable, CaseIterable, Identifi
         switch self {
         case .loveTiming: "Will I meet someone?"
         case .commitment: "Is this serious?"
-        case .familyPath: "What's ahead here?"
+        case .familyPath: "Where's home headed?"
         case .careerSuccess: "Where should I focus?"
         case .moneyDirection: "What should I watch for?"
         case .privateQuestion: "What's on my mind?"
