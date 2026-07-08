@@ -664,12 +664,6 @@ class AppViewModel {
         practiceRouteRequest += 1
     }
 
-    /// Back-compat alias — Home's shortcut grid still spells this the old way.
-    // TODO(Task 6): remove once Home's grid calls openPractice()
-    func openQuickSimulate() {
-        openPractice()
-    }
-
     func openProfileDrawer() {
         homeSetupPhase = .complete
         selectedTab = .today

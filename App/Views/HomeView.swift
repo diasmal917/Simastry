@@ -14,11 +14,9 @@ private struct AstrologerProfileRoute: Identifiable {
 
 private enum HomeShortcutKind: String {
     case askExperts
+    case practice
     case decode
-    case simulate
     case birthChart
-    case dailyDecider
-    case journal
 }
 
 private struct HomeShortcutItem: Identifiable {
@@ -26,8 +24,6 @@ private struct HomeShortcutItem: Identifiable {
     let title: String
     let subtitle: String
     let systemImage: String
-    let accent: Color
-    let cardSign: ZodiacSign
     let identifier: String
 
     var id: String { kind.rawValue }
@@ -383,7 +379,7 @@ struct HomeView: View {
     @State private var showJournal: Bool = false
     @State private var showProfileDrawer: Bool = false
     @State private var activeProfileSheet: HomeProfileSheet?
-    @State private var dailyDeciderScrollRequest: Int = 0
+    @State private var showDailyDeciderExpanded: Bool = false
     @Namespace private var panelHeroNamespace
 
     private var communicationType: CommunicationTypeProfile? {
@@ -593,7 +589,7 @@ struct HomeView: View {
     }
 
     private var homeContent: some View {
-        ScrollViewReader { proxy in
+        ScrollViewReader { _ in
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 14) {
                     // The floating header now reserves its own space via
@@ -602,13 +598,13 @@ struct HomeView: View {
 
                     if debugExpertsFirst { homeSection { panelCard } }
 
-                    homeSection { homeShortcutGrid }
-
                     homeSection { dailyExpertNoteCard }
 
                     homeSection { todaysReadCard }
 
                     homeSection { dailyDeciderCard.id("home.dailyDecider") }
+
+                    homeSection { homeShortcutGrid }
 
                     homeSection { situationCard }
 
@@ -663,11 +659,6 @@ struct HomeView: View {
                             }
                         }
                     }
-                }
-            }
-            .onChange(of: dailyDeciderScrollRequest) {
-                withAnimation(.spring(SimastrySpring.smooth)) {
-                    proxy.scrollTo("home.dailyDecider", anchor: .center)
                 }
             }
         }
@@ -814,57 +805,31 @@ struct HomeView: View {
         [
             HomeShortcutItem(
                 kind: .askExperts,
-                title: AppConfig.expertAstrologersEnabled ? "Ask experts" : "Ask guides",
-                subtitle: "Human-style reads",
+                title: AppConfig.expertAstrologersEnabled ? "Ask the experts" : "Ask guides",
+                subtitle: "Five traditions",
                 systemImage: SimastryIcon.astrologers,
-                accent: Color(red: 112/255, green: 86/255, blue: 165/255),
-                cardSign: .leo,
                 identifier: "home.shortcut.askExperts"
             ),
             HomeShortcutItem(
-                kind: .simulate,
-                title: "Simulate",
-                subtitle: "Practice anyone",
+                kind: .practice,
+                title: "Practice",
+                subtitle: "Rehearse a conversation",
                 systemImage: "theatermasks.fill",
-                accent: Color(red: 110/255, green: 80/255, blue: 174/255),
-                cardSign: .scorpio,
-                identifier: "home.shortcut.simulate"
+                identifier: "home.shortcut.practice"
+            ),
+            HomeShortcutItem(
+                kind: .decode,
+                title: "Decode a text",
+                subtitle: "Read between lines",
+                systemImage: "text.magnifyingglass",
+                identifier: "home.shortcut.decode"
             ),
             HomeShortcutItem(
                 kind: .birthChart,
                 title: "Birth chart",
                 subtitle: "Core placements",
                 systemImage: "chart.bar.doc.horizontal.fill",
-                accent: Color(red: 85/255, green: 122/255, blue: 72/255),
-                cardSign: .capricorn,
                 identifier: "home.shortcut.birthChart"
-            ),
-            HomeShortcutItem(
-                kind: .dailyDecider,
-                title: "Daily Decider",
-                subtitle: "One tiny next move",
-                systemImage: "wand.and.stars",
-                accent: SimastryColor.celestialBlue,
-                cardSign: .libra,
-                identifier: "home.shortcut.dailyDecider"
-            ),
-            HomeShortcutItem(
-                kind: .decode,
-                title: "Decode text",
-                subtitle: "Read between lines",
-                systemImage: "text.magnifyingglass",
-                accent: Color(red: 8/255, green: 126/255, blue: 104/255),
-                cardSign: .gemini,
-                identifier: "home.shortcut.decode"
-            ),
-            HomeShortcutItem(
-                kind: .journal,
-                title: "Journal",
-                subtitle: "Saved insights",
-                systemImage: "bookmark.fill",
-                accent: Color(red: 174/255, green: 72/255, blue: 161/255),
-                cardSign: .cancer,
-                identifier: "home.shortcut.journal"
             )
         ]
     }
@@ -873,16 +838,12 @@ struct HomeView: View {
         switch kind {
         case .askExperts:
             viewModel.openAIAstrologists()
-        case .simulate:
-            viewModel.openQuickSimulate()
+        case .practice:
+            viewModel.openPractice()
         case .birthChart:
             activeProfileSheet = .birthChart
-        case .dailyDecider:
-            dailyDeciderScrollRequest += 1
         case .decode:
             navigationPath.append(HomeRoute.decode)
-        case .journal:
-            showJournal = true
         }
     }
 
@@ -1081,49 +1042,71 @@ struct HomeView: View {
         .offset(y: appeared ? 0 : 10)
     }
 
+    /// Compact by default (a single header row) so it doesn't compete with
+    /// the top-of-fold value stack; tapping expands the same inline content
+    /// the full card used to show unconditionally (method hint, today's
+    /// pick if any, and the category chips that drive `chooseDailyDecision`).
     private var dailyDeciderCard: some View {
         let latest = viewModel.todayStore.latestDailyDecision
 
         return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 10) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(SimastryColor.celestialBlue)
-                    .frame(width: 32, height: 32)
-                    .background(SimastryColor.celestialBlue.opacity(0.14), in: Circle())
+            Button {
+                HapticManager.buttonPress()
+                withAnimation(.spring(SimastrySpring.smooth)) {
+                    showDailyDeciderExpanded.toggle()
+                }
+            } label: {
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(SimastryColor.gold)
+                        .frame(width: 32, height: 32)
+                        .background(SimastryColor.gold.opacity(0.14), in: Circle())
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("DAILY DECIDER")
-                        .font(SimastryFont.overline)
-                        .foregroundStyle(SimastryColor.celestialBlue)
-                        .tracking(1.4)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Daily Decider")
+                            .font(SimastryFont.labelLarge)
+                            .foregroundStyle(SimastryColor.offWhite)
 
-                    if latest == nil {
-                        Text("Can't decide? Tap one below.")
+                        Text("One tiny next move")
                             .font(SimastryFont.captionSmall)
                             .foregroundStyle(SimastryColor.mutedSilver)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .rotationEffect(.degrees(showDailyDeciderExpanded ? 180 : 0))
                 }
-
-                Spacer()
+                .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(showDailyDeciderExpanded ? "Hide Daily Decider" : "Show Daily Decider")
+            .accessibilityHint("One tiny next move, picked from today's transit read")
+            .accessibilityIdentifier("today.dailyDeciderToggle")
 
-            dailyDeciderMethodHint
+            if showDailyDeciderExpanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    dailyDeciderMethodHint
 
-            if let latest {
-                dailyDecisionResult(latest)
-            }
-
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(DailyDecisionCategory.allCases) { category in
-                        dailyDecisionChip(category)
+                    if let latest {
+                        dailyDecisionResult(latest)
                     }
+
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(DailyDecisionCategory.allCases) { category in
+                                dailyDecisionChip(category)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .scrollIndicators(.hidden)
                 }
-                .padding(.vertical, 2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            .scrollIndicators(.hidden)
         }
         .padding(16)
         .surfaceCard(cornerRadius: 22, accent: SimastryColor.celestialBlue.opacity(0.7))
@@ -2104,9 +2087,10 @@ private struct HomeShortcutGridView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Browse all")
-                .font(SimastryFont.titleSmall)
-                .foregroundStyle(SimastryColor.offWhite)
+            Text("EXPLORE")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.textSecondary)
+                .tracking(1.5)
 
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(items) { item in
@@ -2223,8 +2207,8 @@ private struct BirthChartHomeSheet: View {
 }
 
 /// Real iOS 26 Liquid Glass container (same material as the navigation bar,
-/// via `simastryGlass`) with the pastel zodiac medallion embedded, tilted, and
-/// bleeding off the right edge — the pastel-zodiac language rendered on glass.
+/// via `simastryGlass`) with the shortcut's glyph in a gold-tinted circle —
+/// zodiac discs are reserved for people/signs, not utility tiles.
 private struct HomeShortcutTileView: View {
     let item: HomeShortcutItem
 
@@ -2249,26 +2233,17 @@ private struct HomeShortcutTileView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            HomeShortcutSignToken(sign: item.cardSign)
+            Image(systemName: item.systemImage)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+                .frame(width: 42, height: 42)
+                .background(SimastryColor.gold.opacity(0.12), in: Circle())
         }
         .padding(.leading, 16)
         .padding(.trailing, 12)
         .frame(height: 108)
         .frame(maxWidth: .infinity)
         .simastryGlass(cornerRadius: 26)
-        .overlay {
-            // The faintest sign tint on the top-trailing rim — color as a
-            // whisper, not a costume.
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [item.cardSign.color.opacity(0.20), .clear, .clear],
-                    startPoint: .topTrailing,
-                    endPoint: .bottomLeading
-                ),
-                lineWidth: 0.8
-            )
-            .allowsHitTesting(false)
-        }
         .contentShape(shape)
         .accessibilityHidden(true)
     }
@@ -2282,18 +2257,6 @@ struct HomeTilePressStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.965 : 1)
             .brightness(configuration.isPressed ? 0.06 : 0)
             .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
-    }
-}
-
-/// The pastel zodiac icon as a small, quiet token: a soft pastel disc with the
-/// glyph, gently tilted — sized like an app-icon accessory, not a hero.
-/// (Shared implementation: `ZodiacSignToken`.)
-private struct HomeShortcutSignToken: View {
-    let sign: ZodiacSign
-
-    var body: some View {
-        ZodiacSignToken(sign: sign, size: 52, tilt: true)
-            .allowsHitTesting(false)
     }
 }
 
