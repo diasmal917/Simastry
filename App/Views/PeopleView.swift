@@ -22,6 +22,7 @@ struct PeopleView: View {
     @State private var searchText: String = ""
     @State private var selectedType: RelationshipType?
     @State private var isSearchExpanded = false
+    @FocusState private var searchFieldFocused: Bool
     @State private var activeSheet: PeopleSheet?
     @State private var navigationPath = NavigationPath()
     @State private var handledTeamReadRouteRequest: Int = 0
@@ -61,9 +62,11 @@ struct PeopleView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 18) {
                         searchAndFilterSection
+                            .id("people.searchSection")
 
                         peopleContextStrip
 
@@ -89,65 +92,90 @@ struct PeopleView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
-            }
-            .scrollIndicators(.hidden)
-            .background { CelestialBackground() }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                AppTabFloatingHeader(viewModel: viewModel) {
-                    Button {
-                        withAnimation(.spring(SimastrySpring.snappy)) { isSearchExpanded.toggle() }
-                    } label: { HeaderActionIcon(systemName: "magnifyingglass") }
-                    .accessibilityLabel("Search people")
-                    .buttonStyle(.plain)
+                }
+                .scrollIndicators(.hidden)
+                .background { CelestialBackground() }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    AppTabFloatingHeader(viewModel: viewModel) {
+                        Button {
+                            toggleSearch(using: proxy)
+                        } label: { HeaderActionIcon(systemName: "magnifyingglass") }
+                        .accessibilityLabel("Search people")
+                        .accessibilityHint("Shows the search field")
+                        .accessibilityIdentifier("people.toolbar.searchButton")
+                        .buttonStyle(.plain)
 
-                    Button {
-                        presentAddPerson()
-                    } label: { HeaderActionIcon(systemName: "plus") }
-                    .accessibilityLabel("Add person")
-                    .accessibilityIdentifier("people.toolbar.addPersonButton")
-                    .buttonStyle(.plain)
-                }
-            }
-            .accessibilityHidden(activeSheet != nil)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .sheet(item: $activeSheet) { sheet in
-                switch sheet {
-                case .addPerson:
-                    AddRelationshipPersonView(viewModel: viewModel) { person, shouldOpenChartUpload in
-                        guard shouldOpenChartUpload else { return }
-                        pendingChartUploadPerson = person
+                        Button {
+                            presentAddPerson()
+                        } label: { HeaderActionIcon(systemName: "plus") }
+                        .accessibilityLabel("Add person")
+                        .accessibilityHint("Add a person to read")
+                        .accessibilityIdentifier("people.toolbar.addPersonButton")
+                        .buttonStyle(.plain)
                     }
-                case .teamRead:
-                    TeamReadView(viewModel: viewModel)
+                }
+                .accessibilityHidden(activeSheet != nil)
+                .navigationTitle("")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarColorScheme(.dark, for: .navigationBar)
+                .sheet(item: $activeSheet) { sheet in
+                    switch sheet {
+                    case .addPerson:
+                        AddRelationshipPersonView(viewModel: viewModel) { person, shouldOpenChartUpload in
+                            guard shouldOpenChartUpload else { return }
+                            pendingChartUploadPerson = person
+                        }
+                    case .teamRead:
+                        TeamReadView(viewModel: viewModel)
+                    }
+                }
+                .navigationDestination(for: RelationshipPerson.self) { person in
+                    RelationshipPersonDetailView(viewModel: viewModel, person: person)
+                }
+                .onAppear {
+                    viewModel.loadRelationshipPeople()
+                    #if DEBUG
+                    if viewModel.isDebugPreviewStateActive,
+                       !viewModel.keepsDebugRelationshipPeopleEmpty,
+                       viewModel.relationshipPeople.isEmpty {
+                        viewModel.relationshipPeople = RelationshipPeopleStore.previewPeople()
+                    }
+                    #endif
+                    presentRoutesIfRequested()
+                }
+                .onChange(of: viewModel.peopleDetailRequestPersonId) {
+                    presentRoutesIfRequested()
+                }
+                .onChange(of: viewModel.teamReadRouteRequest) {
+                    presentRoutesIfRequested()
+                }
+                .onChange(of: activeSheet?.id) {
+                    guard activeSheet == nil, let person = pendingChartUploadPerson else { return }
+                    pendingChartUploadPerson = nil
+                    navigationPath.append(person)
                 }
             }
-            .navigationDestination(for: RelationshipPerson.self) { person in
-                RelationshipPersonDetailView(viewModel: viewModel, person: person)
+        }
+    }
+
+    /// Expands or collapses the inline search field. Expanding scrolls the
+    /// section into view and focuses the field; collapsing clears the query so
+    /// a hidden filter can never keep narrowing the list. The expand/collapse
+    /// itself is animated by `searchAndFilterSection`'s `.animation` driver.
+    private func toggleSearch(using proxy: ScrollViewProxy) {
+        isSearchExpanded.toggle()
+        if isSearchExpanded {
+            withAnimation(.spring(SimastrySpring.snappy)) {
+                proxy.scrollTo("people.searchSection", anchor: .top)
             }
-            .onAppear {
-                viewModel.loadRelationshipPeople()
-                #if DEBUG
-                if viewModel.isDebugPreviewStateActive,
-                   !viewModel.keepsDebugRelationshipPeopleEmpty,
-                   viewModel.relationshipPeople.isEmpty {
-                    viewModel.relationshipPeople = RelationshipPeopleStore.previewPeople()
-                }
-                #endif
-                presentRoutesIfRequested()
+            // Focus once the field has mounted — focusing in the same
+            // transaction as the insertion is unreliable.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                searchFieldFocused = true
             }
-            .onChange(of: viewModel.peopleDetailRequestPersonId) {
-                presentRoutesIfRequested()
-            }
-            .onChange(of: viewModel.teamReadRouteRequest) {
-                presentRoutesIfRequested()
-            }
-            .onChange(of: activeSheet?.id) {
-                guard activeSheet == nil, let person = pendingChartUploadPerson else { return }
-                pendingChartUploadPerson = nil
-                navigationPath.append(person)
-            }
+        } else {
+            searchText = ""
+            searchFieldFocused = false
         }
     }
 
@@ -172,14 +200,30 @@ struct PeopleView: View {
     private var searchAndFilterSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             if isSearchExpanded {
-                TextField("Search people or signs", text: $searchText)
-                    .font(SimastryFont.bodyMedium)
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .simastryGlassPill()
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .accessibilityIdentifier("people.searchField")
+                HStack(spacing: 8) {
+                    TextField("Search people or signs", text: $searchText)
+                        .focused($searchFieldFocused)
+                        .font(SimastryFont.bodyMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .accessibilityIdentifier("people.searchField")
+
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Clear search")
+                        .accessibilityIdentifier("people.search.clearButton")
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .simastryGlassPill()
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             ScrollView(.horizontal) {

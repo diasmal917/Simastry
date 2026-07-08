@@ -21,6 +21,7 @@ struct MessagesView: View {
     @State private var selectedRoom: ChatThreadSummary?
     @State private var appeared: Bool = false
     @State private var showPanelChat: Bool = false
+    // TODO(Task 4): showCreateRoom is unreachable since the toolbar button was removed; Talk restructure decides its fate.
     @State private var showCreateRoom: Bool = false
     @State private var showMessageSearch: Bool = false
     @State private var showDecode: Bool = false
@@ -74,6 +75,7 @@ struct MessagesView: View {
                         HeaderActionIcon(systemName: "magnifyingglass")
                     }
                     .accessibilityLabel("Search experts and users")
+                    .accessibilityHint("Search public users or open expert astrologers")
                     .accessibilityIdentifier("talk.toolbar.newMessageButton")
                     .buttonStyle(.plain)
                 }
