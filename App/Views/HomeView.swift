@@ -684,7 +684,9 @@ struct HomeView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            AppTabFloatingHeader(viewModel: viewModel)
+            AppTabFloatingHeader(viewModel: viewModel) {
+                HomeHeaderGreetingSummary()
+            }
         }
         .task {
             transitReading = TransitEngine.dailyReading(

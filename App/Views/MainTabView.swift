@@ -108,10 +108,6 @@ struct AppTabFloatingHeader<Trailing: View>: View {
 
             Spacer(minLength: 12)
 
-            if viewModel.selectedTab == .today {
-                HomeHeaderGreetingSummary()
-            }
-
             trailing()
         }
         .padding(.horizontal, 20)
@@ -153,8 +149,6 @@ struct HomeHeaderGreetingSummary: View {
             Text(greetingText)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(SimastryColor.offWhite)
-                .lineLimit(1)
-                .minimumScaleFactor(0.62)
         }
         .multilineTextAlignment(.trailing)
         .fixedSize()
