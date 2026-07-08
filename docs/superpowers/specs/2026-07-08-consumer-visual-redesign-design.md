@@ -25,7 +25,7 @@ Make Simastry feel like Apple built a Liquid Glass iOS 27 astrology app: simple,
 
 - Anatomy: avatar button (44pt target) · 24pt bold title · `Spacer` · up to **two** 44pt trailing action buttons, all in **one row**, inside each tab's `.safeAreaInset(edge: .top)`.
 - Tab roots must NOT add navigation-bar `.toolbar` items (MessagesView.swift:75, PeopleView.swift:116 currently do — their actions move into the header's trailing slot). Pushed/detail screens keep normal nav bars.
-- Per-tab trailing slots: Home = compact greeting block (overline date + 15pt "Good evening"; replaces the current oversized `HomeHeaderGreetingSummary`); Predict = none; Talk = search, compose; People = search, add-person. People's filter control moves inline above the list as chips.
+- Per-tab trailing slots: Home = compact greeting block (overline date + 15pt "Good evening"; replaces the current oversized `HomeHeaderGreetingSummary`); Predict = none; Talk = search only (the existing message-search sheet, which already doubles as the start-a-conversation people search — no separate compose button, no new surface); People = search, add-person. People's filter control moves inline above the list as chips.
 - Result: title Y identical on all tabs by construction.
 
 ### 1.2 Avatar spec
@@ -34,7 +34,7 @@ Solid 1.2pt ring in the user's sun-sign color (fallback gold) — **no dashed st
 ### 1.3 Icon language — one meaning per symbol
 - Pastel zodiac discs (`ZodiacSignToken`, App/Views/Components/ZodiacIconView.swift) = **people/sign identity only** (People rows, sign chips). Never feature decoration.
 - Feature tiles/rows use SF Symbols in gold on black glass.
-- Six shared **category tokens** (icon + stable color), used identically in Predict tiles and expert-intake topic chips: Love `heart.fill`/coral · Marriage `link`/pink · Family `house.fill`/green · Career `chart.line.uptrend.xyaxis`/blue · Money `dollarsign.circle.fill`/gold · Private `lock.fill`/violet.
+- Six shared **category tokens** (icon + stable color), used identically in Predict tiles and expert-intake topic chips: Love `heart.fill`/coral · Marriage `link`/pink · Family `house.fill`/green · Career `chart.line.uptrend.xyaxis`/blue · Money `dollarsign.circle.fill`/gold · Private `lock.fill`/violet. Colors map to existing `SimastryColor` tokens where they exist (`sunCoral`, `celestialBlue`, `gold`, `risingViolet`); add named pink and green members to `SimastryColor` (muted, in-palette) for the two gaps — a token addition, not a new palette.
 - `theatermasks.fill` belongs to exactly one feature: Practice.
 
 ### 1.4 Naming
@@ -43,7 +43,7 @@ Solid 1.2pt ring in the user's sun-sign color (fallback gold) — **no dashed st
 - Sentence case everywhere except proper nouns (fix "Find Others Like You" → "Find others like you", etc.).
 
 ### 1.5 Layout constants
-- One shared bottom content inset (tab-bar height + breathing room) applied on every tab root scroll view — content never hides under the floating tab bar (currently broken on Home, People, expert intake).
+- One shared bottom content inset (tab-bar height + breathing room) applied on every scroll surface that sits above the floating tab bar (tab roots and in-tab flows like the expert intake) — content never hides under the bar (currently broken on Home, People, expert intake).
 - Copy budgets: tile subtitles ≤3 words; list previews 1 line; sample questions on category tiles one line, no truncation.
 - Section headers: one overline style (existing `SimastryFont.overline` treatment) across all tabs.
 
@@ -54,12 +54,12 @@ Exactly three levels: hero card (`simastryGlass`, large radius) · row/tile (`si
 
 Job: conversations, one primary action.
 
-Top-to-bottom: header (search, compose trailing) → **hero card**: `CouncilKeyArt` group image (not stacked avatars), title "Five experts, one question", one-line sub, single gold CTA **"Ask the experts"** → `CONVERSATIONS` section: pinned "Expert Astrologers" thread row, then person/discovery threads → quiet bordered row **"Practice a conversation"** (masks icon) at the bottom.
+Top-to-bottom: header (search trailing) → **hero card**: `CouncilKeyArt` group image (not stacked avatars), title "Five experts, one question", one-line sub, single gold CTA **"Ask the experts"** → `CONVERSATIONS` section: pinned "Expert Astrologers" thread row, then person/discovery threads → quiet bordered row **"Practice a conversation"** (masks icon) at the bottom.
 
 Removals/moves:
 - "Quick Simulate" button → merges into Practice.
-- "What should I reply back?", "Read a message", "Compare all five" buttons → suggestion chips **inside** the ask flow (pre-fill the question box; compare-all-five is the flow's default mode).
-- The sparkle/search toolbar pill → header trailing slot.
+- "What should I reply back?", "Read a message", "Compare all five" buttons → suggestion chips **inside** the ask flow (pre-fill the question box; compare-all-five is the flow's default mode). To be explicit: the "Read a message" chip pre-fills an expert-flow question; it does **not** deep-link to `DecodeTextView` — decode's dedicated entry point is the Home "Decode a text" tile (already wired at HomeView).
+- The sparkle/search toolbar pill → header trailing slot (search only, per §1.1).
 - Empty state (no threads): same hero + Practice row; no duplicate expert strip, no "Your expert astrologers are ready" block, no "Open Experts" CTA.
 
 ## 3. Home — "today's value"
