@@ -17,6 +17,10 @@ nonisolated struct DailyExpertNote: Equatable, Sendable {
 /// are ever claimed. Deterministic per day so the Today card and the morning
 /// notification always say the same thing.
 nonisolated enum DailyExpertNoteComposer {
+    /// Main-actor pinned: Leyla's and Nadia's notes read the real transit sky
+    /// through `TransitEngine`, and all raw ephemeris access shares the main
+    /// executor as its single serialization domain (see EphemerisActor.swift).
+    @MainActor
     static func note(
         for specialistId: String,
         on date: Date = Date(),
@@ -40,6 +44,7 @@ nonisolated enum DailyExpertNoteComposer {
     }
 
     /// The push body for the same note — headline plus move, matching the card.
+    @MainActor
     static func notificationBody(
         for specialistId: String,
         on date: Date,
@@ -53,6 +58,7 @@ nonisolated enum DailyExpertNoteComposer {
 
     // MARK: - Leyla (Western tropical: real whole-sign transit)
 
+    @MainActor
     private static func leyla(day: Int, date: Date, sun: ZodiacSign?, moon: ZodiacSign?, rising: ZodiacSign?) -> DailyExpertNote {
         let askPrompt = "How should I use today's sky in how I show up with people?"
         guard let reading = TransitEngine.dailyReading(sun: sun, moon: moon, rising: rising, on: date) else {
@@ -208,6 +214,7 @@ nonisolated enum DailyExpertNoteComposer {
 
     // MARK: - Nadia (Evolutionary: pattern reflection; transit used symbolically)
 
+    @MainActor
     private static func nadia(day: Int, date: Date, sun: ZodiacSign?, moon: ZodiacSign?, rising: ZodiacSign?) -> DailyExpertNote {
         let reading = TransitEngine.dailyReading(sun: sun, moon: moon, rising: rising, on: date)
         let headline: String

@@ -11,6 +11,9 @@ import SwissEphemeris
 /// - Deterministic: no `Date()`, `Calendar.current`, or `TimeZone.current`
 ///   anywhere in the engine. Identical `Inputs` produce identical output;
 ///   copy picks are keyed by day-of-year.
+/// - Serialized: every function that touches the ephemeris is isolated to
+///   `EphemerisActor`, because the underlying C library mutates
+///   process-global state on every call (see EphemerisActor.swift).
 /// - Void-of-course uses the modern planet set (Moon aspects to Sun through
 ///   Pluto), the common contemporary convention: the Moon is void from its
 ///   last exact Ptolemaic aspect (0/60/90/120/180°) to any of the nine other
@@ -132,7 +135,8 @@ nonisolated enum DayWindowsEngine {
     /// fabricate boundaries), plus the provenance-gated all-day natal context.
     /// `inputs.location` is accepted for API completeness; planetary hours do
     /// not join the strip in v1 (UI-dormant until location permission ships).
-    static func windows(for inputs: Inputs) -> DayWindowsResult {
+    @EphemerisActor
+    static func windows(for inputs: Inputs) async -> DayWindowsResult {
         let timeZone = inputs.timeZone
         let day = localDayInterval(containing: inputs.date, timeZone: timeZone)
         let dayOfYear = dayOfYear(for: day.start, timeZone: timeZone)
@@ -177,7 +181,11 @@ nonisolated enum DayWindowsEngine {
                 )
             ]
         } else {
-            let sign = ingressNext?.fromSign ?? moonSign(at: day.start)
+            guard let sign = ingressNext?.fromSign ?? moonSign(at: day.start) else {
+                // Non-finite ephemeris output (corrupt or missing data files):
+                // emit an honest empty day rather than fabricate a sign.
+                return DayWindowsResult(dayInterval: day, windows: [], allDayContext: nil)
+            }
             pieces = [StripPiece(interval: day, payload: .moonSign(sign: sign, endingIngress: nil))]
         }
         pieces = pieces.filter { $0.interval.duration >= minimumPieceDuration }
@@ -282,7 +290,7 @@ nonisolated enum DayWindowsEngine {
             // Read the transit at local midday so every instant of the same
             // local day produces the same context line.
             let midday = day.start.addingTimeInterval(day.duration / 2)
-            if let reading = TransitEngine.dailyReading(
+            if let reading = await TransitEngine.dailyReading(
                 sun: inputs.natalSun,
                 moon: inputs.natalMoon,
                 rising: inputs.natalRising,
@@ -318,6 +326,7 @@ nonisolated enum DayWindowsEngine {
 
     /// The Moon's ingress within the local day containing `date`, if any.
     /// Accurate to ≤60 s (predict on `speedLongitude`, then bisect).
+    @EphemerisActor
     static func moonIngress(dayContaining date: Date, timeZone: TimeZone) -> MoonIngress? {
         let day = localDayInterval(containing: date, timeZone: timeZone)
         guard let ingress = nextMoonIngress(after: day.start), ingress.date < day.end else { return nil }
@@ -326,9 +335,11 @@ nonisolated enum DayWindowsEngine {
 
     /// The first Moon ingress at or after `date`. The Moon needs ≥2.1 days
     /// per sign, so consecutive calls step through every ingress.
+    @EphemerisActor
     static func nextMoonIngress(after date: Date) -> MoonIngress? {
         let start = Coordinate<Planet>(body: .moon, date: date)
         let startLongitude = normalizedDegrees(start.longitude)
+        guard startLongitude.isFinite else { return nil }
         let fromIndex = min(Int(startLongitude / 30), 11)
         let boundary = normalizedDegrees(Double(fromIndex + 1) * 30)
 
@@ -369,6 +380,7 @@ nonisolated enum DayWindowsEngine {
     /// midpoint (linear model; the Moon outruns them 6–14× so roots are
     /// bracketed reliably), then every root is polished against real
     /// positions for both bodies.
+    @EphemerisActor
     static func moonExactAspects(in interval: DateInterval) -> [MoonAspectEvent] {
         guard interval.duration > 0 else { return [] }
         var events: [MoonAspectEvent] = []
@@ -420,6 +432,7 @@ nonisolated enum DayWindowsEngine {
     /// search walks backward from the ingress in 12 h chunks up to 60 h; if
     /// no aspect exists in that span (vanishingly rare) we return nil rather
     /// than claim a void we did not compute.
+    @EphemerisActor
     static func voidOfCourse(before ingress: MoonIngress) -> VoidOfCourse? {
         let chunk: TimeInterval = 12 * 3600
         for step in 0..<5 {
@@ -442,6 +455,7 @@ nonisolated enum DayWindowsEngine {
     /// whenever a rise/set result fails the ±48 h clamp or sane ordering —
     /// the SwissEphemeris wrapper ignores swe_rise_trans failures, so polar
     /// days produce garbage dates that must never become windows.
+    @EphemerisActor
     static func planetaryHours(
         dayContaining date: Date,
         timeZone: TimeZone,
@@ -580,6 +594,7 @@ nonisolated enum DayWindowsEngine {
         return result.sorted { $0.interval.start < $1.interval.start }
     }
 
+    @EphemerisActor
     private static func makeWindow(
         for piece: StripPiece,
         day: DateInterval,
@@ -685,6 +700,7 @@ nonisolated enum DayWindowsEngine {
         sample.longitude + sample.speedLongitude * date.timeIntervalSince(sampleDate) / 86_400
     }
 
+    @EphemerisActor
     private static func solveAspect(
         dayPlanet: DayPlanet,
         targetUnwrapped: Double,
@@ -741,6 +757,7 @@ nonisolated enum DayWindowsEngine {
     /// Brackets a sign change of `delta` around `center` (widening ±10 min up
     /// to ±160 min), then bisects to ≤60 s. `delta` must be locally
     /// increasing through zero, which Moon-relative motion guarantees.
+    @EphemerisActor
     private static func bisectRoot(around center: Date, delta: (Date) -> Double) -> Date? {
         var half: TimeInterval = 600
         var low = center.addingTimeInterval(-half)
@@ -795,11 +812,15 @@ nonisolated enum DayWindowsEngine {
     }
 
     private static func degreeInSign(_ longitude: Double) -> Int {
-        Int(normalizedDegrees(longitude).truncatingRemainder(dividingBy: 30))
+        let normalized = normalizedDegrees(longitude)
+        guard normalized.isFinite else { return 0 }
+        return Int(normalized.truncatingRemainder(dividingBy: 30))
     }
 
-    private static func moonSign(at date: Date) -> ZodiacSign {
+    @EphemerisActor
+    private static func moonSign(at date: Date) -> ZodiacSign? {
         let longitude = normalizedDegrees(Coordinate<Planet>(body: .moon, date: date).longitude)
+        guard longitude.isFinite else { return nil }
         return ZodiacSign.allCases[min(Int(longitude / 30), 11)]
     }
 

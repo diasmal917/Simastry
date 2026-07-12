@@ -5,7 +5,9 @@ import SwissEphemeris
 /// Trust-grade tests for the deterministic day-windows engine. Fixed dates,
 /// fixed time zones — the engine must produce identical output for identical
 /// inputs, honest clock-bounded intervals, and language that never claims
-/// outcomes.
+/// outcomes. The raw `Coordinate`/`Aspect` probes below run from this
+/// `@MainActor` class, which shares the executor with `EphemerisActor` — the
+/// app's single ephemeris serialization domain.
 @MainActor
 final class DayWindowsEngineTests: XCTestCase {
     private let bangkok = TimeZone(identifier: "Asia/Bangkok")!
@@ -21,10 +23,10 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 1. Stability
 
-    func testFixedDateProducesStableWindows() throws {
+    func testFixedDateProducesStableWindows() async throws {
         let anchor = makeDate(2026, 3, 14, 9, 30, in: bangkok)
-        let first = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
-        let second = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
+        let first = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
+        let second = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
 
         XCTAssertEqual(first, second)
         XCTAssertTrue((3...5).contains(first.windows.count), "expected 3–5 windows, got \(first.windows.count)")
@@ -40,11 +42,11 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 2. Time-of-day invariance
 
-    func testDeterministicAcrossTimeOfDaySameDay() {
-        let morning = DayWindowsEngine.windows(
+    func testDeterministicAcrossTimeOfDaySameDay() async {
+        let morning = await DayWindowsEngine.windows(
             for: makeInputs(makeDate(2026, 3, 14, 9, 0, in: bangkok), timeZone: bangkok)
         )
-        let evening = DayWindowsEngine.windows(
+        let evening = await DayWindowsEngine.windows(
             for: makeInputs(makeDate(2026, 3, 14, 21, 0, in: bangkok), timeZone: bangkok)
         )
         XCTAssertEqual(morning, evening)
@@ -52,12 +54,14 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 3. Ingress accuracy
 
-    func testMoonIngressAccurateToOneMinute() throws {
+    func testMoonIngressAccurateToOneMinute() async throws {
         // 2026-03-14 has a Moon ingress inside the Bangkok local day
         // (verified against the ephemeris: 22:13 local).
-        let ingress = try XCTUnwrap(
-            DayWindowsEngine.moonIngress(dayContaining: makeDate(2026, 3, 14, in: bangkok), timeZone: bangkok)
+        let maybeIngress = await DayWindowsEngine.moonIngress(
+            dayContaining: makeDate(2026, 3, 14, in: bangkok),
+            timeZone: bangkok
         )
+        let ingress = try XCTUnwrap(maybeIngress)
         let boundary = Double(ZodiacSign.allCases.firstIndex(of: ingress.toSign)!) * 30
         let before = Coordinate<Planet>(body: .moon, date: ingress.date.addingTimeInterval(-60))
         let after = Coordinate<Planet>(body: .moon, date: ingress.date.addingTimeInterval(60))
@@ -73,11 +77,11 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 4. Void of course is anchored to a real exact aspect
 
-    func testVoidOfCourseEndsAtIngressAndStartsAtAnExactAspect() throws {
-        let ingress = try XCTUnwrap(
-            DayWindowsEngine.nextMoonIngress(after: makeDate(2026, 3, 14, 0, 0, in: bangkok))
-        )
-        let voc = try XCTUnwrap(DayWindowsEngine.voidOfCourse(before: ingress))
+    func testVoidOfCourseEndsAtIngressAndStartsAtAnExactAspect() async throws {
+        let maybeIngress = await DayWindowsEngine.nextMoonIngress(after: makeDate(2026, 3, 14, 0, 0, in: bangkok))
+        let ingress = try XCTUnwrap(maybeIngress)
+        let maybeVoc = await DayWindowsEngine.voidOfCourse(before: ingress)
+        let voc = try XCTUnwrap(maybeVoc)
 
         XCTAssertEqual(voc.end, ingress.date)
         XCTAssertLessThan(voc.start, voc.end)
@@ -89,7 +93,7 @@ final class DayWindowsEngineTests: XCTestCase {
             "the void start must be an exact Ptolemaic aspect within 0.05°"
         )
 
-        let laterAspects = DayWindowsEngine.moonExactAspects(
+        let laterAspects = await DayWindowsEngine.moonExactAspects(
             in: DateInterval(start: voc.start.addingTimeInterval(120), end: ingress.date.addingTimeInterval(-1))
         )
         XCTAssertTrue(laterAspects.isEmpty, "no exact aspect may exist between the void start and the ingress")
@@ -97,15 +101,17 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 5. Midnight-spanning void clamps the interval, keeps the true start
 
-    func testVoidOfCourseSpanningLocalMidnightClampsIntervalButDerivationKeepsTrueStart() throws {
+    func testVoidOfCourseSpanningLocalMidnightClampsIntervalButDerivationKeepsTrueStart() async throws {
         // 2026-03-12 Bangkok begins void: the Moon's last exact aspect lands
         // 2026-03-11 16:38 local and the ingress follows 2026-03-12 11:06
         // local (verified against the ephemeris).
         let anchor = makeDate(2026, 3, 12, in: bangkok)
-        let result = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
+        let result = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
 
-        let ingress = try XCTUnwrap(DayWindowsEngine.nextMoonIngress(after: result.dayInterval.start))
-        let voc = try XCTUnwrap(DayWindowsEngine.voidOfCourse(before: ingress))
+        let maybeIngress = await DayWindowsEngine.nextMoonIngress(after: result.dayInterval.start)
+        let ingress = try XCTUnwrap(maybeIngress)
+        let maybeVoc = await DayWindowsEngine.voidOfCourse(before: ingress)
+        let voc = try XCTUnwrap(maybeVoc)
         XCTAssertLessThan(voc.start, result.dayInterval.start, "premise: the void must begin before local midnight")
 
         let vocWindow = try XCTUnwrap(result.windows.first { $0.kind == .voidOfCourse })
@@ -124,16 +130,16 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 6/7. DST days are fully covered
 
-    func testSpringForwardDayIsFullyCovered() {
-        let result = DayWindowsEngine.windows(
+    func testSpringForwardDayIsFullyCovered() async {
+        let result = await DayWindowsEngine.windows(
             for: makeInputs(makeDate(2026, 3, 8, 12, 0, in: newYork), timeZone: newYork)
         )
         XCTAssertEqual(result.dayInterval.duration, 23 * 3600, accuracy: 1)
         assertStripIsSortedNonOverlappingAndTilesTheDay(result)
     }
 
-    func testFallBackDayIsFullyCovered() {
-        let result = DayWindowsEngine.windows(
+    func testFallBackDayIsFullyCovered() async {
+        let result = await DayWindowsEngine.windows(
             for: makeInputs(makeDate(2026, 11, 1, 12, 0, in: newYork), timeZone: newYork)
         )
         XCTAssertEqual(result.dayInterval.duration, 25 * 3600, accuracy: 1)
@@ -142,21 +148,19 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 8. Polar days: no planetary hours, moon windows intact
 
-    func testPolarSummerAndWinterSkipPlanetaryHoursButKeepMoonWindows() {
+    func testPolarSummerAndWinterSkipPlanetaryHoursButKeepMoonWindows() async {
         let anchors = [
             makeDate(2026, 6, 20, in: longyearbyen),
             makeDate(2026, 12, 21, in: longyearbyen)
         ]
         for anchor in anchors {
-            XCTAssertNil(
-                DayWindowsEngine.planetaryHours(
-                    dayContaining: anchor,
-                    timeZone: longyearbyen,
-                    location: longyearbyenLocation
-                ),
-                "circumpolar rise/set must clamp to nil"
+            let hours = await DayWindowsEngine.planetaryHours(
+                dayContaining: anchor,
+                timeZone: longyearbyen,
+                location: longyearbyenLocation
             )
-            let result = DayWindowsEngine.windows(
+            XCTAssertNil(hours, "circumpolar rise/set must clamp to nil")
+            let result = await DayWindowsEngine.windows(
                 for: makeInputs(anchor, timeZone: longyearbyen, location: longyearbyenLocation)
             )
             XCTAssertTrue(
@@ -169,11 +173,14 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 9. Planetary hours structure
 
-    func testPlanetaryHoursTwelveDayTwelveNightContiguous() throws {
+    func testPlanetaryHoursTwelveDayTwelveNightContiguous() async throws {
         let anchor = makeDate(2026, 3, 14, in: bangkok)
-        let hours = try XCTUnwrap(
-            DayWindowsEngine.planetaryHours(dayContaining: anchor, timeZone: bangkok, location: bangkokLocation)
+        let maybeHours = await DayWindowsEngine.planetaryHours(
+            dayContaining: anchor,
+            timeZone: bangkok,
+            location: bangkokLocation
         )
+        let hours = try XCTUnwrap(maybeHours)
 
         XCTAssertEqual(hours.count, 24)
         XCTAssertEqual(hours.filter(\.isDaytime).count, 12)
@@ -201,12 +208,12 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 10. Provenance gating of the all-day context
 
-    func testProvenanceGatingOfDailyTransitContext() {
+    func testProvenanceGatingOfDailyTransitContext() async {
         let anchor = makeDate(2026, 3, 14, in: bangkok)
-        let without = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
+        let without = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok))
         XCTAssertNil(without.allDayContext, "no natal signs ⇒ no natal context line")
 
-        let with = DayWindowsEngine.windows(
+        let with = await DayWindowsEngine.windows(
             for: makeInputs(anchor, timeZone: bangkok, sun: .leo, moon: .scorpio, rising: .virgo)
         )
         XCTAssertNotNil(with.allDayContext)
@@ -259,9 +266,9 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 12. Evidence shape
 
-    func testEveryWindowEvidenceIsCalculatedAndSupportsTiming() {
+    func testEveryWindowEvidenceIsCalculatedAndSupportsTiming() async {
         let anchor = makeDate(2026, 3, 14, in: bangkok)
-        let result = DayWindowsEngine.windows(
+        let result = await DayWindowsEngine.windows(
             for: makeInputs(anchor, timeZone: bangkok, sun: .leo, moon: .scorpio, rising: .virgo)
         )
         var allWindows = result.windows
@@ -279,11 +286,11 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 13. Style changes wording, never intervals
 
-    func testGuidanceStyleChangesWordingNotIntervals() {
+    func testGuidanceStyleChangesWordingNotIntervals() async {
         let anchor = makeDate(2026, 3, 14, in: bangkok)
-        let practical = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok, style: .practical))
-        let balanced = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok, style: .balanced))
-        let rich = DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok, style: .astrologyRich))
+        let practical = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok, style: .practical))
+        let balanced = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok, style: .balanced))
+        let rich = await DayWindowsEngine.windows(for: makeInputs(anchor, timeZone: bangkok, style: .astrologyRich))
 
         XCTAssertEqual(practical.windows.map(\.interval), rich.windows.map(\.interval))
         XCTAssertEqual(practical.windows.map(\.interval), balanced.windows.map(\.interval))
@@ -294,22 +301,114 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // MARK: - 14. Performance budget
 
+    // Synchronous on purpose: XCTest forbids `wait(for:)` inside async test
+    // methods, and `measure {}` has no async variant, so the async engine is
+    // driven through expectations while the main run loop pumps the shared
+    // ephemeris executor.
     func testPerformanceBudget() {
         let engineInputs = makeInputs(
             makeDate(2026, 3, 14, in: bangkok),
             timeZone: bangkok,
             sun: .leo, moon: .scorpio, rising: .virgo
         )
-        _ = DayWindowsEngine.windows(for: engineInputs) // warm the ephemeris file cache
 
-        let start = CFAbsoluteTimeGetCurrent()
-        _ = DayWindowsEngine.windows(for: engineInputs)
-        let elapsed = CFAbsoluteTimeGetCurrent() - start
-        XCTAssertLessThan(elapsed, 2.0, "one full windows(for:) computation must stay well under two seconds")
+        func computeOnce() -> TimeInterval {
+            let done = expectation(description: "windows computation")
+            let start = CFAbsoluteTimeGetCurrent()
+            Task {
+                _ = await DayWindowsEngine.windows(for: engineInputs)
+                done.fulfill()
+            }
+            wait(for: [done], timeout: 10)
+            return CFAbsoluteTimeGetCurrent() - start
+        }
+
+        _ = computeOnce() // warm the ephemeris file cache
+        let elapsed = computeOnce()
+        XCTAssertLessThan(elapsed, 0.2, "one full windows(for:) computation must stay under 200 ms")
 
         measure {
-            _ = DayWindowsEngine.windows(for: engineInputs)
+            _ = computeOnce()
         }
+    }
+
+    // MARK: - 15. Concurrency: hammered engine + chart service match serial baselines
+
+    /// Regression guard for the single ephemeris serialization domain. Runs
+    /// sanitizer-free: it guards via determinism-equality (plus the executor
+    /// identity assertion), not TSan. If `EphemerisActor` ever stops sharing
+    /// the main executor while the `@MainActor` facades stay behind, or the
+    /// engine loses its actor isolation, this test goes red.
+    func testConcurrentEngineAndChartAccessMatchesSerialBaselines() async {
+        await Task.detached {
+            await Self.assertEphemerisDomainRunsOnMainThread()
+        }.value
+
+        let cases: [DayWindowsEngine.Inputs] = [
+            makeInputs(makeDate(2026, 3, 12, in: bangkok), timeZone: bangkok),
+            makeInputs(makeDate(2026, 3, 14, in: bangkok), timeZone: bangkok, sun: .leo, moon: .scorpio, rising: .virgo),
+            makeInputs(makeDate(2026, 3, 8, in: newYork), timeZone: newYork),
+            makeInputs(makeDate(2026, 11, 1, in: newYork), timeZone: newYork),
+            makeInputs(makeDate(2026, 12, 21, in: longyearbyen), timeZone: longyearbyen)
+        ]
+
+        var baselines: [DayWindowsResult] = []
+        for engineInputs in cases {
+            baselines.append(await DayWindowsEngine.windows(for: engineInputs))
+        }
+        let frozenBaselines = baselines
+
+        let service = BirthChartService()
+        let birthday = makeDate(1995, 8, 12, in: bangkok)
+        let birthTime = makeDate(2026, 1, 1, 9, 42, in: bangkok)
+        func computeChart() -> BirthChartService.BirthChart {
+            service.calculate(
+                birthday: birthday,
+                birthTime: birthTime,
+                precision: .exact,
+                uncertaintyMinutes: nil,
+                latitude: bangkokLocation.latitude,
+                longitude: bangkokLocation.longitude,
+                timeZone: bangkok
+            )
+        }
+        let chartBaseline = computeChart()
+
+        await withTaskGroup(of: (Int, DayWindowsResult).self) { group in
+            for _ in 0..<4 {
+                for (index, engineInputs) in cases.enumerated() {
+                    group.addTask {
+                        (index, await DayWindowsEngine.windows(for: engineInputs))
+                    }
+                }
+            }
+
+            // Interleave main-actor chart computations with the hammering
+            // detached tasks; yields let queued engine jobs run in between.
+            for _ in 0..<3 {
+                let chart = computeChart()
+                XCTAssertEqual(chart.sun, chartBaseline.sun)
+                XCTAssertEqual(chart.moon, chartBaseline.moon)
+                XCTAssertEqual(chart.rising, chartBaseline.rising)
+                XCTAssertEqual(chart.houseCusps, chartBaseline.houseCusps)
+                await Task.yield()
+            }
+
+            for await (index, result) in group {
+                XCTAssertEqual(
+                    result, frozenBaselines[index],
+                    "concurrent invocation for case \(index) must equal the serial baseline"
+                )
+            }
+        }
+    }
+
+    @EphemerisActor
+    private static func assertEphemerisDomainRunsOnMainThread() {
+        XCTAssertTrue(
+            Thread.isMainThread,
+            "EphemerisActor must share the main executor; if you rebind it, migrate the @MainActor ephemeris facades onto it in the same change"
+        )
     }
 
     // MARK: - Shared assertions & helpers
