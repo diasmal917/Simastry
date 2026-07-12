@@ -64,18 +64,25 @@ struct LandingGlass<S: Shape & InsettableShape>: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .background(SimastryColor.surfaceSunken.opacity(0.30), in: shape)
-                .background(SimastryColor.surface.opacity(0.18), in: shape)
-                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.085)).interactive(emphasis.isInteractive), in: shape)
-                .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
-                .overlay(innerHighlight)
-                .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
+        if emphasis.isInteractive {
+            if #available(iOS 26.0, *) {
+                content
+                    .background(SimastryColor.surfaceSunken.opacity(0.30), in: shape)
+                    .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.085)).interactive(), in: shape)
+                    .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
+                    .overlay(innerHighlight)
+                    .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
+            } else {
+                content
+                    .background(SimastryColor.surface.opacity(0.72), in: shape)
+                    .background(.ultraThinMaterial, in: shape)
+                    .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
+                    .overlay(innerHighlight)
+                    .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
+            }
         } else {
             content
-                .background(SimastryColor.surface.opacity(0.72), in: shape)
-                .background(.ultraThinMaterial, in: shape)
+                .background(SimastryColor.surfaceElevated, in: shape)
                 .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
                 .overlay(innerHighlight)
                 .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)

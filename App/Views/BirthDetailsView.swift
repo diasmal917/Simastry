@@ -15,7 +15,8 @@ struct BirthDetailsView: View {
         return Calendar.current.date(from: components) ?? Date()
     }()
     @State private var birthplace: String = ""
-    @State private var birthTimeUnknown: Bool = false
+    @State private var birthTimePrecision: BirthTimePrecision = .exact
+    @State private var approximateUncertaintyMinutes: Int = 60
     @State private var showSuggestions: Bool = false
     @State private var selectedFromSuggestion: Bool = false
     @StateObject private var locationCompleter = LocationSearchCompleter()
@@ -34,6 +35,19 @@ struct BirthDetailsView: View {
         trimmedName.components(separatedBy: " ").first ?? trimmedName
     }
 
+    private var stateAnimation: Animation {
+        reduceMotion ? .easeOut(duration: 0.16) : SimastryMotion.stateChange
+    }
+
+    private var stepTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+    }
+
     var body: some View {
         ZStack {
             CelestialBackground()
@@ -46,26 +60,23 @@ struct BirthDetailsView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 12)
 
-                Spacer()
-
-                Group {
-                    switch currentStep {
-                    case 0: nameStep
-                    case 1: birthdayStep
-                    case 2: birthTimeStep
-                    case 3: birthplaceStep
-                    default: EmptyView()
+                ScrollView {
+                    Group {
+                        switch currentStep {
+                        case 0: nameStep
+                        case 1: birthdayStep
+                        case 2: birthTimeStep
+                        case 3: birthplaceStep
+                        default: EmptyView()
+                        }
                     }
+                    .transition(stepTransition)
+                    .id(currentStep)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
                 }
-                .transition(
-                    .asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    )
-                )
-                .id(currentStep)
-
-                Spacer()
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
 
                 privacyNote
                     .padding(.bottom, 12)
@@ -119,11 +130,11 @@ struct BirthDetailsView: View {
                 Button {
                     HapticManager.buttonPress()
                     if currentStep > 0 {
-                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                        withAnimation(stateAnimation) {
                             currentStep -= 1
                         }
                     } else {
-                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                        withAnimation(stateAnimation) {
                             viewModel.currentScreen = .landing
                         }
                     }
@@ -155,7 +166,7 @@ struct BirthDetailsView: View {
                 Capsule()
                     .fill(step <= currentStep ? AnyShapeStyle(SimastryGradient.gold) : AnyShapeStyle(Color.white.opacity(0.12)))
                     .frame(height: 4)
-                    .animation(.spring(SimastrySpring.snappy), value: currentStep)
+                    .animation(stateAnimation, value: currentStep)
             }
         }
         .accessibilityHidden(true)
@@ -191,6 +202,7 @@ struct BirthDetailsView: View {
 
             TextField(localization.string("birth.name.placeholder"), text: $displayName)
                 .focused($nameFocused)
+                .accessibilityIdentifier("birth.name")
                 .textContentType(.givenName)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
@@ -264,40 +276,73 @@ struct BirthDetailsView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
 
-            if !birthTimeUnknown {
+            VStack(spacing: 8) {
+                ForEach(BirthTimePrecision.allCases) { precision in
+                    BirthTimePrecisionRow(
+                        precision: precision,
+                        isSelected: birthTimePrecision == precision
+                    ) {
+                        selectBirthTimePrecision(precision)
+                    }
+                }
+            }
+
+            if birthTimePrecision.requiresBirthTime {
                 DatePicker(localization.string("birth.time"), selection: $birthTime, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .colorScheme(.dark)
-                    .frame(maxHeight: 170)
+                    .frame(maxHeight: 150)
             }
 
-            Button {
-                withAnimation(.spring(SimastrySpring.snappy)) {
-                    birthTimeUnknown.toggle()
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: birthTimeUnknown ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(birthTimeUnknown ? SimastryColor.gold : SimastryColor.mutedSilver)
-                    Text(localization.string("birth.unknownTime"))
-                        .font(SimastryFont.labelMedium)
-                        .foregroundStyle(birthTimeUnknown ? SimastryColor.offWhite : SimastryColor.mutedSilver)
-                }
-                .frame(minHeight: 44)
-            }
-            .buttonStyle(.plain)
+            if birthTimePrecision == .approximate {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Uncertainty range")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Text("We sample the full range")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                    }
 
-            if birthTimeUnknown {
+                    Spacer(minLength: 8)
+
+                    Picker("Uncertainty range", selection: $approximateUncertaintyMinutes) {
+                        Text("±30 minutes").tag(30)
+                        Text("±1 hour").tag(60)
+                        Text("±2 hours").tag(120)
+                    }
+                    .pickerStyle(.menu)
+                    .tint(SimastryColor.gold)
+                    .frame(minHeight: 44)
+                    .accessibilityHint("Simastry samples the full selected range before showing a Rising sign.")
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.white.opacity(0.045), in: .rect(cornerRadius: 14))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.1), lineWidth: 1)
+                }
+                .transition(.opacity)
+            }
+
+            if birthTimePrecision == .unknown {
                 Text(localization.string("birth.unknownTimeNote"))
                     .font(SimastryFont.caption)
                     .foregroundStyle(SimastryColor.mutedSilver.opacity(0.85))
                     .multilineTextAlignment(.center)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             }
         }
         .padding(.horizontal, 24)
+        .animation(stateAnimation, value: birthTimePrecision)
+    }
+
+    private func selectBirthTimePrecision(_ precision: BirthTimePrecision) {
+        HapticManager.zodiacSelection()
+        birthTimePrecision = precision
     }
 
     private var birthplaceStep: some View {
@@ -334,7 +379,7 @@ struct BirthDetailsView: View {
                         selectedFromSuggestion = false
                         locationCompleter.search(query: newValue)
                         let hasSuggestions = newValue.count >= 2
-                        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.snappy)) {
+                        withAnimation(stateAnimation) {
                             showSuggestions = hasSuggestions
                         }
                     }
@@ -373,7 +418,11 @@ struct BirthDetailsView: View {
                         }
                     }
                     .simastryGlass(cornerRadius: SimastryRadius.small)
-                    .transition(.opacity.combined(with: .move(edge: .top)).combined(with: .scale(scale: 0.98, anchor: .top)))
+                    .transition(
+                        reduceMotion
+                            ? .opacity
+                            : .opacity.combined(with: .move(edge: .top)).combined(with: .scale(scale: 0.98, anchor: .top))
+                    )
                 }
 
                 if !showSuggestions || locationCompleter.suggestions.isEmpty {
@@ -392,7 +441,7 @@ struct BirthDetailsView: View {
         birthplace = subtitle.isEmpty ? title : "\(title), \(subtitle)"
         selectedFromSuggestion = true
         locationCompleter.clear()
-        withAnimation(reduceMotion ? .default : .spring(SimastrySpring.snappy)) {
+        withAnimation(stateAnimation) {
             showSuggestions = false
         }
         birthplaceFocused = false
@@ -418,12 +467,12 @@ struct BirthDetailsView: View {
             guard !trimmedName.isEmpty else { return }
             viewModel.onboardingDisplayName = trimmedName
             nameFocused = false
-            withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+            withAnimation(stateAnimation) {
                 currentStep = 1
             }
         } else if currentStep < totalSteps - 1 {
             birthplaceFocused = false
-            withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+            withAnimation(stateAnimation) {
                 currentStep += 1
             }
         } else {
@@ -436,9 +485,16 @@ struct BirthDetailsView: View {
             birthplaceFocused = false
             isCalculating = true
 
+            let confirmedBirthTime = birthTimePrecision.requiresBirthTime ? birthTime : nil
+            let uncertaintyMinutes = birthTimePrecision == .approximate
+                ? approximateUncertaintyMinutes
+                : nil
+
             viewModel.onboardingBirthday = birthday
-            viewModel.onboardingBirthTime = birthTime
+            viewModel.onboardingBirthTime = confirmedBirthTime
             viewModel.onboardingBirthplace = trimmedBirthplace
+            viewModel.onboardingBirthTimePrecision = birthTimePrecision
+            viewModel.onboardingBirthTimeUncertaintyMinutes = uncertaintyMinutes
 
             Task {
                 guard let location = await birthplaceGeocodingService.resolve(trimmedBirthplace) else {
@@ -450,26 +506,81 @@ struct BirthDetailsView: View {
                 let chartService = BirthChartService()
                 let chart = chartService.calculate(
                     birthday: birthday,
-                    birthTime: birthTime,
+                    birthTime: confirmedBirthTime,
+                    precision: birthTimePrecision,
+                    uncertaintyMinutes: uncertaintyMinutes,
                     latitude: location.latitude,
                     longitude: location.longitude,
                     timeZone: location.timeZone
                 )
 
-                guard chart.risingSign != nil else {
+                guard birthTimePrecision != .exact || chart.rising != nil else {
                     isCalculating = false
                     viewModel.showToast(localization.string("birth.risingFailedTitle"), subtitle: localization.string("birth.risingFailedSubtitle"), isError: true)
                     return
                 }
 
-                viewModel.stageOnboardingBirthChart(chart)
+                let record = chartService.makeNatalChartRecord(
+                    from: chart,
+                    birthday: birthday,
+                    birthTime: confirmedBirthTime,
+                    precision: birthTimePrecision,
+                    uncertaintyMinutes: uncertaintyMinutes,
+                    birthplace: trimmedBirthplace,
+                    location: location
+                )
+                viewModel.stageOnboardingBirthChart(chart, record: record)
 
                 isCalculating = false
-                withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                withAnimation(stateAnimation) {
                     // Deliver the five-expert first read before asking to sign up.
                     viewModel.currentScreen = .firstExpertRead
                 }
             }
         }
+    }
+}
+
+private struct BirthTimePrecisionRow: View {
+    let precision: BirthTimePrecision
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(isSelected ? SimastryColor.gold : SimastryColor.mutedSilver)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(precision.title)
+                        .font(SimastryFont.labelMedium)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text(precision.detail)
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ? SimastryColor.gold.opacity(0.1) : Color.white.opacity(0.045),
+                in: .rect(cornerRadius: 14)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? SimastryColor.gold.opacity(0.45) : .white.opacity(0.1), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Birth time precision: \(precision.title)")
+        .accessibilityHint(precision.detail)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

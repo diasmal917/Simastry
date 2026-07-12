@@ -384,6 +384,12 @@ nonisolated struct UserAstrologyContext: Codable, Equatable, Sendable {
     let partnerBirthDateAvailable: Bool
     let partnerBirthTimeAvailable: Bool
     let partnerBirthPlaceAvailable: Bool
+    var birthTimePrecision: BirthTimePrecision? = nil
+    var birthTimeUncertaintyMinutes: Int? = nil
+    var chartProvenance: BirthChartProvenance? = nil
+    var sunSignPossibilities: [String]?
+    var moonSignPossibilities: [String]?
+    var risingSignPossibilities: [String]?
 
     var summary: String {
         var parts: [String] = []
@@ -397,6 +403,28 @@ nonisolated struct UserAstrologyContext: Codable, Equatable, Sendable {
         ].compactMap { $0 }
         if !placements.isEmpty {
             parts.append("User placements: \(placements.joined(separator: ", "))")
+        }
+        if let chartProvenance {
+            parts.append("Chart source: \(chartProvenance.title)")
+        }
+        switch birthTimePrecision {
+        case .exact:
+            parts.append("Birth-time precision: exact")
+        case .approximate:
+            let margin = birthTimeUncertaintyMinutes.map { " ±\($0) minutes" } ?? ""
+            parts.append("Birth-time precision: approximate\(margin); houses and exact timing are unavailable")
+        case .unknown:
+            parts.append("Birth-time precision: unknown; Rising, houses, and exact timing are unavailable")
+        case nil:
+            break
+        }
+        let uncertainPlacements = [
+            sunSignPossibilities.flatMap { $0.count > 1 ? "Sun \($0.joined(separator: " or "))" : nil },
+            moonSignPossibilities.flatMap { $0.count > 1 ? "Moon \($0.joined(separator: " or "))" : nil },
+            risingSignPossibilities.flatMap { $0.count > 1 ? "Rising \($0.joined(separator: " or "))" : nil }
+        ].compactMap { $0 }
+        if !uncertainPlacements.isEmpty {
+            parts.append("Calculated possibilities (do not choose one): \(uncertainPlacements.joined(separator: "; "))")
         }
         if let partnerName, !partnerName.isEmpty {
             parts.append("Partner/person: \(partnerName)")

@@ -719,6 +719,37 @@ nonisolated final class SupabaseService {
         try await client.from("profiles").upsert(profile).execute()
     }
 
+    /// Fetches the private calculation source of truth. Legacy accounts may
+    /// legitimately have profile sign caches but no provenance row yet.
+    func fetchNatalChart() async throws -> NatalChartRecord? {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else { return nil }
+        let records: [NatalChartRecord] = try await client
+            .from("user_birth_charts")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .limit(1)
+            .execute()
+            .value
+        return records.first
+    }
+
+    /// Upserts only for the current session owner. RLS repeats this guarantee
+    /// in Postgres, keeping raw birth provenance private even if a caller is
+    /// accidentally handed another record.
+    func upsertNatalChart(_ record: NatalChartRecord) async throws {
+        let client = try configuredClient()
+        guard let userId = await currentUserId else {
+            throw SupabaseServiceError.missingSession
+        }
+        if let recordUserId = record.userId, recordUserId != userId {
+            throw SupabaseServiceError.profileMismatch
+        }
+        var ownedRecord = record
+        ownedRecord.userId = userId
+        try await client.from("user_birth_charts").upsert(ownedRecord).execute()
+    }
+
     func fetchCompanions() async throws -> [CompanionData] {
         let client = try configuredClient()
         guard let userId = await currentUserId else { return [] }

@@ -228,6 +228,8 @@ struct SignSelectionView: View {
         viewModel.onboardingBirthday = birthday
         viewModel.onboardingBirthTime = birthTime
         viewModel.onboardingBirthplace = trimmedBirthplace
+        viewModel.onboardingBirthTimePrecision = .exact
+        viewModel.onboardingBirthTimeUncertaintyMinutes = nil
 
         let location = await birthplaceGeocodingService.resolve(trimmedBirthplace)
         guard let location else {
@@ -245,13 +247,22 @@ struct SignSelectionView: View {
             timeZone: location.timeZone
         )
 
-        guard chart.risingSign != nil else {
+        guard chart.rising != nil else {
             isCalculating = false
             viewModel.showToast("Couldn't calculate your Rising sign", subtitle: "Double-check your birth time and birthplace, then try again.", isError: true)
             return
         }
 
-        viewModel.stageOnboardingBirthChart(chart)
+        let record = chartService.makeNatalChartRecord(
+            from: chart,
+            birthday: birthday,
+            birthTime: birthTime,
+            precision: .exact,
+            uncertaintyMinutes: nil,
+            birthplace: trimmedBirthplace,
+            location: location
+        )
+        viewModel.stageOnboardingBirthChart(chart, record: record)
         isCalculating = false
 
         HapticManager.signConfirmed()

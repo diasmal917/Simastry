@@ -13,7 +13,7 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
     var id: Int { rawValue }
 
     /// Left-to-right order shown in the floating nav. Intentionally differs from
-    /// the raw-value order so Predict can sit first-class beside Today without
+    /// the raw-value order so Compass can sit first-class beside Today without
     /// breaking persisted selections from older builds.
     static let visualOrder: [AppTab] = [.today, .predict, .messages, .people]
 
@@ -21,7 +21,7 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
     var title: String {
         switch self {
         case .today: "Home"
-        case .predict: "Predict"
+        case .predict: "Compass"
         case .messages: "Talk"
         case .people: "People"
         case .me: "Profile"
@@ -32,7 +32,7 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
     var icon: String {
         switch self {
         case .today: "sun.max"
-        case .predict: "sparkles"
+        case .predict: "location.north.circle"
         case .messages: "bubble.left.and.bubble.right"
         case .people: "person.2"
         case .me: "person.crop.circle"
@@ -43,7 +43,7 @@ nonisolated enum AppTab: Int, CaseIterable, Codable, Hashable, Identifiable, Sen
     var selectedIcon: String {
         switch self {
         case .today: "sun.max.fill"
-        case .predict: "sparkles"
+        case .predict: "location.north.circle.fill"
         case .messages: "bubble.left.and.bubble.right.fill"
         case .people: "person.2.fill"
         case .me: "person.crop.circle.fill"
@@ -737,7 +737,7 @@ nonisolated enum DeepLink: Equatable, Sendable {
         case .person:
             return "Open this person in Simastry"
         case .predict:
-            return "Predict the tone of a conversation on Simastry"
+            return "Open Compass for practical conversation guidance on Simastry"
         case .simulate:
             return "Simulate a conversation persona on Simastry"
         case .home:

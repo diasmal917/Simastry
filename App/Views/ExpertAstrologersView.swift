@@ -1857,12 +1857,9 @@ struct AddMissingAstrologyInfoSheet: View {
                     .datePickerStyle(.compact)
             }
 
-            Toggle("I do not know their birth time", isOn: $partnerDoesNotKnowBirthTime)
-                .tint(SimastryColor.gold)
-                .onChange(of: partnerDoesNotKnowBirthTime) { _, value in
-                    if value { includePartnerBirthTime = false }
-                }
-                .accessibilityIdentifier("expertAstrologers.addMissingInfo.partnerUnknownTime")
+            if !partnerDoesNotKnowBirthTime {
+                partnerUnknownTimeToggle
+            }
 
             TextField("Partner/person birth place", text: $partnerBirthPlace)
                 .textInputAutocapitalization(.words)
@@ -1885,8 +1882,25 @@ struct AddMissingAstrologyInfoSheet: View {
             manualTextField("Known profection year", text: $knownProfectionYear, identifier: "knownProfectionYear")
             manualTextField("Relationship pattern notes", text: $relationshipPatternNotes, identifier: "relationshipPatternNotes", lineLimit: 2...4)
             manualTextField("Reflection prompts", text: $reflectionPrompts, identifier: "reflectionPrompts", lineLimit: 2...4)
+
+            // Keep the persisted partner-time choice adjacent to the manual
+            // fields. This makes the saved state discoverable after the sheet
+            // reopens, even when the form is restored at its previous scroll
+            // position.
+            if partnerDoesNotKnowBirthTime {
+                partnerUnknownTimeToggle
+            }
         }
         .formCard()
+    }
+
+    private var partnerUnknownTimeToggle: some View {
+        Toggle("I do not know their birth time", isOn: $partnerDoesNotKnowBirthTime)
+            .tint(SimastryColor.gold)
+            .onChange(of: partnerDoesNotKnowBirthTime) { _, value in
+                if value { includePartnerBirthTime = false }
+            }
+            .accessibilityIdentifier("expertAstrologers.addMissingInfo.partnerUnknownTime")
     }
 
     private func sectionTitle(_ title: String) -> some View {

@@ -12,7 +12,7 @@ enum SimastryShortcutDestination: String, CaseIterable, AppEnum {
 
     static var caseDisplayRepresentations: [SimastryShortcutDestination: DisplayRepresentation] = [
         .today: "Home",
-        .predict: "Predict",
+        .predict: "Compass",
         .simulate: "Simulate",
         .messages: "Messages",
         .expertAstrologers: "Expert Astrologers"
@@ -76,7 +76,7 @@ struct OpenSimastryDestinationIntent: AppIntent {
     private var destinationDisplayName: String {
         switch destination {
         case .today: "Home"
-        case .predict: "Predict"
+        case .predict: "Compass"
         case .simulate: "Simulate"
         case .messages: "Messages"
         case .expertAstrologers: "Expert Astrologers"

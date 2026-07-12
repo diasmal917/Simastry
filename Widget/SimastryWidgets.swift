@@ -12,24 +12,24 @@ struct SimastryWidgetBundle: WidgetBundle {
 
 struct DailyNoteEntry: TimelineEntry {
     let date: Date
-    let expertName: String
-    let headline: String
-    let move: String
+    let sourceName: String
+    let notice: String
+    let action: String
     let isPlaceholder: Bool
 
     static let sample = DailyNoteEntry(
         date: .now,
-        expertName: "Leyla",
-        headline: "Mercury is in the same sign as your Moon today.",
-        move: "Choose the first line carefully.",
+        sourceName: "Simastry",
+        notice: "Notice where tone matters more than perfect words today.",
+        action: "Choose the first line carefully.",
         isPlaceholder: false
     )
 
     static let empty = DailyNoteEntry(
         date: .now,
-        expertName: "Simastry",
-        headline: "Open Simastry to start your daily note.",
-        move: "Your chosen expert writes one line each morning.",
+        sourceName: "Simastry",
+        notice: "Open Simastry to start your daily guidance.",
+        action: "Choose one small action for today.",
         isPlaceholder: true
     )
 }
@@ -61,17 +61,17 @@ struct DailyNoteProvider: TimelineProvider {
     private func currentEntries() -> [DailyNoteEntry] {
         let calendar = Calendar.current
         let now = Date()
-        return SharedDefaults.readDailyNotes()
-            .compactMap { note -> DailyNoteEntry? in
-                guard let day = note.date() else { return nil }
+        return SharedDefaults.readDailyGuidance()
+            .compactMap { guidance -> DailyNoteEntry? in
+                guard let day = guidance.date() else { return nil }
                 let start = calendar.startOfDay(for: day)
                 // Keep today's note (already started) and future days.
                 guard let end = calendar.date(byAdding: .day, value: 1, to: start), end > now else { return nil }
                 return DailyNoteEntry(
                     date: max(start, calendar.startOfDay(for: now)) == start ? start : start,
-                    expertName: note.expertName,
-                    headline: note.headline,
-                    move: note.move,
+                    sourceName: guidance.sourceName,
+                    notice: guidance.notice,
+                    action: guidance.action,
                     isPlaceholder: false
                 )
             }
@@ -87,8 +87,8 @@ struct DailyNoteWidget: Widget {
             DailyNoteWidgetView(entry: entry)
                 .widgetURL(URL(string: "simastry://home"))
         }
-        .configurationDisplayName("Daily note")
-        .description("One line from your chosen expert, composed from your saved chart and today's sky.")
+        .configurationDisplayName("Daily guidance")
+        .description("One thing to notice and one practical action for today.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryInline])
     }
 }
@@ -108,14 +108,14 @@ struct DailyNoteWidgetView: View {
     var body: some View {
         switch family {
         case .accessoryInline:
-            Text("\(entry.expertName): \(entry.headline)")
+            Text("\(entry.sourceName): \(entry.notice)")
                 .containerBackground(.clear, for: .widget)
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 1) {
-                Text(entry.expertName.uppercased())
+                Text(entry.sourceName.uppercased())
                     .font(.system(size: 11, weight: .semibold))
                     .opacity(0.75)
-                Text(entry.headline)
+                Text(entry.notice)
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(2)
             }
@@ -127,11 +127,11 @@ struct DailyNoteWidgetView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     overline
-                    Text(entry.headline)
+                    Text(entry.notice)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(WidgetPalette.offWhite)
                         .lineLimit(3)
-                    Text(entry.move)
+                    Text(entry.action)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(WidgetPalette.goldSoft)
                         .lineLimit(2)
@@ -143,7 +143,7 @@ struct DailyNoteWidgetView: View {
         default:
             VStack(alignment: .leading, spacing: 6) {
                 overline
-                Text(entry.headline)
+                Text(entry.notice)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(WidgetPalette.offWhite)
                     .lineLimit(4)
@@ -166,7 +166,7 @@ struct DailyNoteWidgetView: View {
     }
 
     private var overline: some View {
-        Text("TODAY · \(entry.expertName.uppercased())")
+        Text("TODAY · \(entry.sourceName.uppercased())")
             .font(.system(size: 10, weight: .bold))
             .kerning(1.1)
             .foregroundStyle(WidgetPalette.gold)

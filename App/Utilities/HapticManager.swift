@@ -1,8 +1,24 @@
 import UIKit
 
 struct HapticManager {
-    static func zodiacSelection() {
+    static func selection() {
         UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    static func commit() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    static func error() {
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+    }
+
+    static func zodiacSelection() {
+        selection()
     }
 
     static func signConfirmed() {
@@ -14,7 +30,7 @@ struct HapticManager {
     }
 
     static func soulFlash() {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        success()
     }
 
     static func themeToggle() {
@@ -22,11 +38,11 @@ struct HapticManager {
     }
 
     static func tabChange() {
-        UISelectionFeedbackGenerator().selectionChanged()
+        selection()
     }
 
     static func errorToast() {
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        error()
     }
 
     static func buttonPress() {

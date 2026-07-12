@@ -1,7 +1,14 @@
 import Foundation
 import Combine
 
-/// Tracks daily check-in streaks to drive retention.
+nonisolated enum MeaningfulStreakAction: String, Codable, CaseIterable, Sendable {
+    case readingCompleted = "reading_completed"
+    case dailyActionCompleted = "daily_action_completed"
+    case outcomeCheckIn = "outcome_check_in"
+    case journalEntry = "journal_entry"
+}
+
+/// Tracks practice streaks only after the user does something meaningful.
 @MainActor
 final class StreakManager: ObservableObject {
     static let shared = StreakManager()
@@ -9,30 +16,38 @@ final class StreakManager: ObservableObject {
     @Published var currentStreak: Int = 0
     @Published var longestStreak: Int = 0
     @Published var lastCheckIn: Date?
+    @Published var lastMeaningfulAction: MeaningfulStreakAction?
     @Published var checkedInToday: Bool = false
 
     private let currentStreakKey = "currentStreak"
     private let longestStreakKey = "longestStreak"
     private let lastCheckInKey = "lastCheckInDate"
+    private let lastMeaningfulActionKey = "lastMeaningfulStreakAction"
+    private let defaults: UserDefaults
+    private let calendar: Calendar
 
-    private init() {
+    init(defaults: UserDefaults = .standard, calendar: Calendar = .current) {
+        self.defaults = defaults
+        self.calendar = calendar
         loadStreak()
     }
 
-    /// Call when the user opens the app / home screen
-    func recordCheckIn() {
-        let today = Calendar.current.startOfDay(for: Date())
+    /// A screen view or app launch is deliberately not a streak event.
+    /// Call only after the named action has actually completed.
+    func recordMeaningfulAction(_ action: MeaningfulStreakAction, at date: Date = Date()) {
+        let today = calendar.startOfDay(for: date)
 
         if let lastDate = lastCheckIn {
-            let lastDay = Calendar.current.startOfDay(for: lastDate)
+            let lastDay = calendar.startOfDay(for: lastDate)
 
             if lastDay == today {
-                // Already checked in today
                 checkedInToday = true
+                lastMeaningfulAction = action
+                defaults.set(action.rawValue, forKey: lastMeaningfulActionKey)
                 return
             }
 
-            let daysBetween = Calendar.current.dateComponents([.day], from: lastDay, to: today).day ?? 0
+            let daysBetween = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
 
             if daysBetween == 1 {
                 // Consecutive day — extend streak
@@ -48,6 +63,7 @@ final class StreakManager: ObservableObject {
 
         checkedInToday = true
         lastCheckIn = today
+        lastMeaningfulAction = action
 
         if currentStreak > longestStreak {
             longestStreak = currentStreak
@@ -61,10 +77,10 @@ final class StreakManager: ObservableObject {
         switch currentStreak {
         case 3: return "3 days in a row! You're building a habit"
         case 7: return "One week streak! Your communication habit is forming"
-        case 14: return "Two weeks strong! Your chart awareness is growing"
+        case 14: return "Two weeks strong! Your reflection habit is growing"
         case 30: return "30-day streak! You're building real pattern awareness"
-        case 50: return "50 days! Astrologers wish they were this consistent"
-        case 100: return "100 days! Your relationship intuition is getting sharper"
+        case 50: return "50 days! That consistency is becoming a practice"
+        case 100: return "100 days! You keep turning reflection into action"
         case 365: return "One year! That's serious consistency"
         default: return nil
         }
@@ -95,7 +111,6 @@ final class StreakManager: ObservableObject {
             return Array(repeating: false, count: 7)
         }
 
-        let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let lastDay = calendar.startOfDay(for: lastDate)
 
@@ -127,16 +142,19 @@ final class StreakManager: ObservableObject {
     }
 
     private func loadStreak() {
-        currentStreak = UserDefaults.standard.integer(forKey: currentStreakKey)
-        longestStreak = UserDefaults.standard.integer(forKey: longestStreakKey)
-        if let date = UserDefaults.standard.object(forKey: lastCheckInKey) as? Date {
+        currentStreak = defaults.integer(forKey: currentStreakKey)
+        longestStreak = defaults.integer(forKey: longestStreakKey)
+        if let rawAction = defaults.string(forKey: lastMeaningfulActionKey) {
+            lastMeaningfulAction = MeaningfulStreakAction(rawValue: rawAction)
+        }
+        if let date = defaults.object(forKey: lastCheckInKey) as? Date {
             lastCheckIn = date
-            let today = Calendar.current.startOfDay(for: Date())
-            let lastDay = Calendar.current.startOfDay(for: date)
+            let today = calendar.startOfDay(for: Date())
+            let lastDay = calendar.startOfDay(for: date)
             checkedInToday = (lastDay == today)
 
             // Check if streak is broken (more than 1 day gap)
-            let daysBetween = Calendar.current.dateComponents([.day], from: lastDay, to: today).day ?? 0
+            let daysBetween = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
             if daysBetween > 1 {
                 currentStreak = 0
                 saveStreak()
@@ -145,18 +163,21 @@ final class StreakManager: ObservableObject {
     }
 
     private func saveStreak() {
-        UserDefaults.standard.set(currentStreak, forKey: currentStreakKey)
-        UserDefaults.standard.set(longestStreak, forKey: longestStreakKey)
-        UserDefaults.standard.set(lastCheckIn, forKey: lastCheckInKey)
+        defaults.set(currentStreak, forKey: currentStreakKey)
+        defaults.set(longestStreak, forKey: longestStreakKey)
+        defaults.set(lastCheckIn, forKey: lastCheckInKey)
+        defaults.set(lastMeaningfulAction?.rawValue, forKey: lastMeaningfulActionKey)
     }
 
     func reset() {
         currentStreak = 0
         longestStreak = 0
         lastCheckIn = nil
+        lastMeaningfulAction = nil
         checkedInToday = false
-        UserDefaults.standard.removeObject(forKey: currentStreakKey)
-        UserDefaults.standard.removeObject(forKey: longestStreakKey)
-        UserDefaults.standard.removeObject(forKey: lastCheckInKey)
+        defaults.removeObject(forKey: currentStreakKey)
+        defaults.removeObject(forKey: longestStreakKey)
+        defaults.removeObject(forKey: lastCheckInKey)
+        defaults.removeObject(forKey: lastMeaningfulActionKey)
     }
 }

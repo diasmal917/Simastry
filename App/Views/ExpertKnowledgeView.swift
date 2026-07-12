@@ -5,31 +5,22 @@ import SwiftUI
 /// what stays unavailable, and where to add or remove data.
 struct ExpertKnowledgeView: View {
     @Bindable var viewModel: AppViewModel
+    let embeddedInNavigationStack: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var intakeSpecialist: AstrologySpecialist?
 
+    init(viewModel: AppViewModel, embeddedInNavigationStack: Bool = false) {
+        self.viewModel = viewModel
+        self.embeddedInNavigationStack = embeddedInNavigationStack
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    intro
-
-                    ForEach(ExpertAstrologerRegistry.specialists) { specialist in
-                        expertSection(specialist)
-                    }
-
-                    footer
-                }
-                .padding(20)
-            }
-            .lockHorizontalScroll()
-            .navigationTitle("What The Experts Know")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .tint(SimastryColor.gold)
+        Group {
+            if embeddedInNavigationStack {
+                knowledgeContent
+            } else {
+                NavigationStack {
+                    knowledgeContent
                 }
             }
         }
@@ -42,6 +33,34 @@ struct ExpertKnowledgeView: View {
             )
         }
         .accessibilityIdentifier("expertKnowledge.screen")
+    }
+
+    private var knowledgeContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                intro
+
+                ForEach(ExpertAstrologerRegistry.specialists) { specialist in
+                    expertSection(specialist)
+                }
+
+                footer
+            }
+            .padding(20)
+        }
+        .lockHorizontalScroll()
+        .background { CelestialBackground() }
+        .navigationTitle("What The Experts Know")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            if !embeddedInNavigationStack {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .tint(SimastryColor.gold)
+                }
+            }
+        }
     }
 
     private func checklist(for specialist: AstrologySpecialist) -> ExpertReadinessChecklist {

@@ -6,6 +6,7 @@ import UIKit
 nonisolated private enum PeopleSheet: Identifiable {
     case addPerson
     case teamRead
+    case discovery
 
     var id: String {
         switch self {
@@ -13,6 +14,8 @@ nonisolated private enum PeopleSheet: Identifiable {
             return "addPerson"
         case .teamRead:
             return "teamRead"
+        case .discovery:
+            return "discovery"
         }
     }
 }
@@ -68,6 +71,8 @@ struct PeopleView: View {
                         searchAndFilterSection
                             .id("people.searchSection")
 
+                        discoveryEntry
+
                         // The hero is a home-state element (it reads the
                         // unfiltered roster), so hide it while a search or
                         // filter narrows the list — it must never sit above
@@ -121,6 +126,8 @@ struct PeopleView: View {
                         }
                     case .teamRead:
                         TeamReadView(viewModel: viewModel)
+                    case .discovery:
+                        DiscoveryView(viewModel: viewModel)
                     }
                 }
                 .navigationDestination(for: RelationshipPerson.self) { person in
@@ -150,6 +157,40 @@ struct PeopleView: View {
                 }
             }
         }
+    }
+
+    private var discoveryEntry: some View {
+        Button {
+            HapticManager.buttonPress()
+            activeSheet = .discovery
+        } label: {
+            HStack(spacing: SimastrySpacing.sm) {
+                Image(systemName: "person.2.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(SimastryColor.celestialBlue)
+                    .frame(width: 44, height: 44)
+                    .background(SimastryColor.celestialBlue.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Find others like you")
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text("Optional private discovery")
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(SimastryColor.deepMuted)
+            }
+            .padding(SimastrySpacing.sm)
+            .contentSurface(cornerRadius: SimastryRadius.medium)
+        }
+        .buttonStyle(CompassPressStyle())
+        .accessibilityIdentifier("people.discoveryEntry")
     }
 
     /// Expands or collapses the inline search field. Expanding scrolls the
@@ -1083,7 +1124,7 @@ struct RelationshipPersonDetailView: View {
                 .background(SimastryGradient.gold, in: Capsule())
         }
         .buttonStyle(SpringPressStyle())
-        .accessibilityHint("Opens Predict with \(currentPerson.displayName)'s chart signals filled in")
+        .accessibilityHint("Opens Compass with \(currentPerson.displayName)'s user-confirmed chart details filled in")
         .accessibilityIdentifier("people.detail.predictReplyButton")
     }
 
@@ -2331,9 +2372,12 @@ struct AddRelationshipPersonView: View {
                 longitude: nil,
                 timeZone: .current
             )
-            finalSun = chart.sunSign
+            // A date-only chart can cross a Sun or Moon ingress. Never choose
+            // one side of the boundary on the person's behalf: keep their
+            // explicitly selected Sun and leave an uncertain Moon unset.
+            finalSun = chart.sunSign ?? sunSign
             finalMoon = chart.moonSign
-            calculated = true
+            calculated = chart.sunSign != nil && chart.moonSign != nil
         }
 
         let person = RelationshipPerson(

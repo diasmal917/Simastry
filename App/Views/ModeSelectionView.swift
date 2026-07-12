@@ -192,7 +192,7 @@ struct ModeSelectionView: View {
 
     private func handleModeSelection(_ mode: CompanionMode) {
         if mode == .simulateAnyone && !isProUser {
-            viewModel.showToast("Pro feature", subtitle: "Predict The Future requires Simastry Pro", isError: true)
+            viewModel.showToast("Pro feature", subtitle: "Compass requires Simastry Pro", isError: true)
             viewModel.showUpsell = true
             return
         }
@@ -223,7 +223,7 @@ struct ModeSelectionView: View {
         guard AppConfig.expertAstrologersEnabled else { return mode.displayName }
         switch mode {
         case .simulateAnyone:
-            return "Predict The Future"
+            return "Compass"
         case .soulmate:
             return "Ask Expert Astrologers"
         case .bestie:

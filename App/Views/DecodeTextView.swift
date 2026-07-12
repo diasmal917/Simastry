@@ -272,6 +272,7 @@ struct FirstPredictionView: View {
                         GoldButton(localization.string("firstPrediction.button"), isEnabled: canAsk) {
                             generatePrediction()
                         }
+                        .accessibilityIdentifier("firstPrediction.submit")
                     }
 
                     if let errorMessage {
@@ -281,12 +282,12 @@ struct FirstPredictionView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    SecondaryButton(title: localization.string("firstPrediction.chooseDifferent")) {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
-                            viewModel.currentScreen = .firstReadChoice
+                    if result == nil {
+                        SecondaryButton(title: localization.string("firstPrediction.personalize")) {
+                            viewModel.continueToBirthDetails(after: .predict)
                         }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
 
                     privacyLine
                 }
@@ -294,6 +295,30 @@ struct FirstPredictionView: View {
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
+
+            VStack {
+                HStack {
+                    Button {
+                        HapticManager.buttonPress()
+                        withAnimation(SimastryMotion.stateChange) {
+                            viewModel.currentScreen = .landing
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(SimastryColor.offWhite)
+                            .frame(width: 44, height: 44)
+                            .interactiveGlass(cornerRadius: 22, tint: SimastryColor.offWhite)
+                    }
+                    .buttonStyle(SpringPressStyle())
+                    .accessibilityLabel(localization.string("common.backToLanding"))
+
+                    Spacer()
+                }
+                Spacer()
+            }
+            .padding(.top, 10)
+            .padding(.leading, 16)
         }
         .onAppear {
             if questionText.isEmpty {
@@ -303,7 +328,7 @@ struct FirstPredictionView: View {
             if reduceMotion {
                 appeared = true
             } else {
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.08)) {
+                withAnimation(SimastryMotion.stateChange.delay(0.08)) {
                     appeared = true
                 }
             }
@@ -319,7 +344,11 @@ struct FirstPredictionView: View {
         VStack(spacing: 10) {
             SimastryWordmark(font: .system(.title, weight: .bold).italic())
 
-            PredictionOrbIcon(size: 56, animated: appeared)
+            Image(systemName: "location.north.circle.fill")
+                .font(.system(size: 48, weight: .medium))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(SimastryColor.gold, SimastryColor.risingViolet.opacity(0.75))
+                .accessibilityHidden(true)
                 .padding(.top, 2)
 
             Text(localization.string("firstPrediction.title"))
@@ -359,6 +388,7 @@ struct FirstPredictionView: View {
                     RoundedRectangle(cornerRadius: 15, style: .continuous)
                         .stroke(SimastryColor.risingViolet.opacity(0.22), lineWidth: 0.8)
                 }
+                .accessibilityIdentifier("firstPrediction.question")
 
             ScrollView(.horizontal) {
                 HStack(spacing: 9) {
@@ -390,7 +420,7 @@ struct FirstPredictionView: View {
         .padding(16)
         .surfaceCard(cornerRadius: 20, accent: SimastryColor.risingViolet.opacity(0.6))
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 14)
+        .offset(y: reduceMotion ? 0 : (appeared ? 0 : 14))
         .onChange(of: questionText) {
             result = nil
             errorMessage = nil
@@ -412,15 +442,31 @@ struct FirstPredictionView: View {
 
     private func resultCard(_ result: PredictionResult) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            resultRow(title: localization.string("firstPrediction.row.shortAnswer"), body: localizedPredictionAnswer(result))
+            resultRow(title: localization.string("firstPrediction.row.shortAnswer"), body: result.displayAnswer)
 
-            if let timingWindow = result.timingWindow, !timingWindow.isEmpty {
-                resultRow(title: localization.string("firstPrediction.row.window"), body: localizedTimingWindow(timingWindow))
+            if result.evidence?.contains(where: { $0.basis == .calculated && $0.supportsTiming }) == true,
+               let timingWindow = result.timingWindow?.nilIfEmpty {
+                resultRow(title: localization.string("firstPrediction.row.window"), body: timingWindow)
             }
 
-            if result.practicalNextMove?.isEmpty == false {
-                resultRow(title: localization.string("firstPrediction.row.nextMove"), body: localizedPredictionNextMove(result))
+            if let nextMove = result.practicalNextMove?.nilIfEmpty {
+                resultRow(title: localization.string("firstPrediction.row.nextMove"), body: nextMove)
             }
+
+            if let alternative = result.plausibleAlternative?.nilIfEmpty {
+                resultRow(title: "Another possibility", body: alternative)
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal")
+                Text(result.evidence?.first?.basis.title.uppercased() ?? "GENERAL LENS")
+                Text("•")
+                Text(result.contextQuality?.title ?? "Question only")
+            }
+            .font(SimastryFont.overline)
+            .foregroundStyle(SimastryColor.celestialBlue)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Evidence: \(result.evidence?.first?.basis.title ?? "General lens"). Context: \(result.contextQuality?.title ?? "Question only")")
 
             Text(localizedPredictionSafety(result))
                 .font(SimastryFont.captionSmall)
@@ -432,7 +478,7 @@ struct FirstPredictionView: View {
             }
 
             SecondaryButton(title: localization.string("firstPrediction.askAnother")) {
-                withAnimation(.spring(SimastrySpring.snappy)) {
+                withAnimation(SimastryMotion.stateChange) {
                     self.result = nil
                 }
             }
@@ -456,85 +502,20 @@ struct FirstPredictionView: View {
         }
     }
 
-    private func localizedPredictionAnswer(_ result: PredictionResult) -> String {
-        localization.string(
-            "firstPrediction.answer.\(predictionLocalizationSuffix(for: result))",
-            replacements: ["window": localizedTimingWindow(result.timingWindow ?? "")]
-        )
-    }
-
-    private func localizedPredictionNextMove(_ result: PredictionResult) -> String {
-        localization.string("firstPrediction.next.\(predictionLocalizationSuffix(for: result))")
-    }
-
     private func localizedPredictionSafety(_ result: PredictionResult) -> String {
-        switch result.categoryOrDefault {
-        case .commitment:
-            localization.string("firstPrediction.safety.commitment")
-        case .familyPath:
-            localization.string("firstPrediction.safety.family")
-        case .moneyDirection:
-            localization.string("firstPrediction.safety.money")
-        default:
-            localization.string("firstPrediction.safety")
-        }
-    }
-
-    private func predictionLocalizationSuffix(for result: PredictionResult) -> String {
-        if selectedPrompt.id == "text" || result.categoryOrDefault == .messageOutcome {
-            return "text"
+        if let safetyNote = result.safetyNote?.nilIfEmpty {
+            return safetyNote
         }
 
         switch result.categoryOrDefault {
         case .commitment:
-            return "commitment"
+            return localization.string("firstPrediction.safety.commitment")
         case .familyPath:
-            return "family"
-        case .careerSuccess:
-            return "career"
+            return localization.string("firstPrediction.safety.family")
         case .moneyDirection:
-            return "money"
-        case .loveTiming, .privateQuestion, .messageOutcome:
-            return "love"
-        }
-    }
-
-    private func localizedTimingWindow(_ timingWindow: String) -> String {
-        switch timingWindow {
-        case "the next 6 to 10 weeks":
-            localization.string("firstPrediction.window.6to10")
-        case "late this season":
-            localization.string("firstPrediction.window.lateSeason")
-        case "the next 3 months":
-            localization.string("firstPrediction.window.3months")
-        case "the next 9 to 18 months":
-            localization.string("firstPrediction.window.9to18")
-        case "after one more consistency test":
-            localization.string("firstPrediction.window.consistency")
-        case "the next serious relationship chapter":
-            localization.string("firstPrediction.window.seriousChapter")
-        case "the next 12 to 24 months":
-            localization.string("firstPrediction.window.12to24")
-        case "after your home base feels steadier":
-            localization.string("firstPrediction.window.homeBase")
-        case "the next chapter where care and stability become louder":
-            localization.string("firstPrediction.window.familyChapter")
-        case "the next 4 to 8 weeks":
-            localization.string("firstPrediction.window.4to8")
-        case "the next quarter":
-            localization.string("firstPrediction.window.quarter")
-        case "the next visible work cycle":
-            localization.string("firstPrediction.window.workCycle")
-        case "the next 3 to 6 months":
-            localization.string("firstPrediction.window.3to6")
-        case "after one cleaner structure is in place":
-            localization.string("firstPrediction.window.structure")
-        case "the next practical earning cycle":
-            localization.string("firstPrediction.window.earningCycle")
-        case "the next reply window":
-            localization.string("firstPrediction.window.reply")
+            return localization.string("firstPrediction.safety.money")
         default:
-            timingWindow
+            return localization.string("firstPrediction.safety")
         }
     }
 
@@ -576,7 +557,7 @@ struct FirstPredictionView: View {
             defer { isGenerating = false }
             do {
                 let generated = try await localPredictionService.generatePrediction(request: request, tier: "free")
-                withAnimation(.spring(SimastrySpring.smooth)) {
+                withAnimation(SimastryMotion.stateChange) {
                     result = generated
                 }
             } catch {
@@ -586,7 +567,7 @@ struct FirstPredictionView: View {
     }
 }
 
-/// Predict's little sister and the most frequent moment: paste the one
+/// Compass's quick decoder for a frequent moment: paste the one
 /// message you just received and get the tone, the subtext by their sign —
 /// and what NOT to read into it. Fully on-device.
 struct DecodeTextView: View {
@@ -604,7 +585,7 @@ struct DecodeTextView: View {
         !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && theirSign != nil
     }
 
-    /// Deterministic per (text, day) like the local Predict composer.
+    /// Deterministic per (text, day) like the local Compass fallback.
     private var seed: Int {
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
         return abs(messageText.count &+ dayOfYear)

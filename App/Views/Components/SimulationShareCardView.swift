@@ -6,6 +6,7 @@ struct SimulationShareCardView: View {
     let userSunSign: ZodiacSign?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isStoryFormat: Bool = true
     @State private var appeared: Bool = false
 
@@ -31,7 +32,7 @@ struct SimulationShareCardView: View {
             // Card preview
             ScrollView {
                 cardPreview
-                    .scaleEffect(appeared ? 1 : 0.8)
+                    .scaleEffect(reduceMotion ? 1 : (appeared ? 1 : 0.98))
                     .opacity(appeared ? 1 : 0)
             }
 
@@ -46,7 +47,7 @@ struct SimulationShareCardView: View {
                     .foregroundStyle(SimastryColor.offWhite)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .simastryGlassPill()
+                    .simastryGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
 
@@ -59,7 +60,7 @@ struct SimulationShareCardView: View {
                     .foregroundStyle(SimastryColor.midnight)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .goldGlassPill()
+                    .goldGlassPill(interactive: true)
                 }
                 .buttonStyle(SpringPressStyle())
             }
@@ -71,7 +72,7 @@ struct SimulationShareCardView: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {
-            withAnimation(.spring(SimastrySpring.bouncy).delay(0.2)) {
+            withAnimation((reduceMotion ? Animation.easeOut(duration: 0.15) : SimastryMotion.reveal).delay(0.05)) {
                 appeared = true
             }
         }
@@ -108,8 +109,8 @@ struct SimulationShareCardView: View {
                 signMatchup
                     .padding(.bottom, isStoryFormat ? 20 : 10)
 
-                // Compatibility score ring
-                confidenceRing
+                // Transparent source label — never a pseudo-precise score.
+                evidenceBadge
                     .padding(.bottom, isStoryFormat ? 16 : 8)
 
                 // Teaser excerpt
@@ -145,7 +146,7 @@ struct SimulationShareCardView: View {
                 .italic()
                 .foregroundStyle(SimastryColor.gold)
 
-            Text("What will they say?")
+            Text("A Compass reading")
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .tracking(0.8)
@@ -211,41 +212,24 @@ struct SimulationShareCardView: View {
         }
     }
 
-    private var confidenceRing: some View {
-        ZStack {
-            Circle()
-                .stroke(SimastryColor.mutedSilver.opacity(0.2), lineWidth: 2.5)
-
-            Circle()
-                .trim(from: 0, to: Double(result.confidence) / 100.0)
-                .stroke(
-                    AngularGradient(
-                        colors: [SimastryColor.gold, SimastryColor.amber, SimastryColor.gold],
-                        center: .center
-                    ),
-                    style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-
-            VStack(spacing: 0) {
-                Text(result.confidenceDisplayTier)
-                    .font(.system(size: isStoryFormat ? 11 : 8, weight: .semibold, design: .rounded))
-                    .foregroundStyle(SimastryColor.gold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .padding(.horizontal, 2)
-                Text("signal")
-                    .font(.system(size: isStoryFormat ? 7 : 5, weight: .medium))
-                    .foregroundStyle(SimastryColor.mutedSilver)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-            }
+    private var evidenceBadge: some View {
+        let basis = result.evidence?.first?.basis ?? .generalLens
+        return VStack(spacing: 3) {
+            Image(systemName: evidenceIcon(for: basis))
+                .font(.system(size: isStoryFormat ? 14 : 10, weight: .semibold))
+                .foregroundStyle(SimastryColor.gold)
+            Text(basis.title)
+                .font(.system(size: isStoryFormat ? 8 : 6, weight: .semibold))
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .lineLimit(1)
         }
-        .frame(width: isStoryFormat ? 52 : 38, height: isStoryFormat ? 52 : 38)
+        .frame(minWidth: isStoryFormat ? 88 : 68, minHeight: isStoryFormat ? 48 : 34)
+        .background(SimastryColor.surfaceElevated.opacity(0.82), in: Capsule())
+        .overlay { Capsule().stroke(SimastryColor.gold.opacity(0.22), lineWidth: 0.7) }
     }
 
     private var teaserExcerpt: some View {
-        let teaser = truncatedTeaser(result.predictedMessage, maxLength: 80)
+        let teaser = truncatedTeaser(result.displayAnswer, maxLength: 80)
         return VStack(spacing: 6) {
             Text("\"\(teaser)\"")
                 .font(.system(isStoryFormat ? .callout : .caption, design: .serif))
@@ -357,6 +341,14 @@ struct SimulationShareCardView: View {
         }
 
         return truncated + "..."
+    }
+
+    private func evidenceIcon(for basis: ReadingEvidenceBasis) -> String {
+        switch basis {
+        case .calculated: "function"
+        case .userConfirmed: "person.badge.shield.checkmark"
+        case .generalLens: "text.magnifyingglass"
+        }
     }
 
     // MARK: - Rendering & Sharing

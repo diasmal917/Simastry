@@ -22,6 +22,8 @@ class AppViewModel {
     var userSunSign: ZodiacSign?
     var userMoonSign: ZodiacSign?
     var userRisingSign: ZodiacSign?
+    var natalChartRecord: NatalChartRecord?
+    var birthChartProvenance: BirthChartProvenance = .generalLens
     var auraSnapshot: AuraSnapshot?
 
     // MARK: - Profile Image (Local Storage)
@@ -55,6 +57,8 @@ class AppViewModel {
     var onboardingBirthday: Date?
     var onboardingBirthTime: Date?
     var onboardingBirthplace: String?
+    var onboardingBirthTimePrecision: BirthTimePrecision = .exact
+    var onboardingBirthTimeUncertaintyMinutes: Int?
     var onboardingDisplayName: String? = UserDefaults.standard.string(forKey: "simastry_onboarding_display_name") {
         didSet {
             let trimmed = onboardingDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -235,7 +239,7 @@ class AppViewModel {
     }
     var showUpsell: Bool = false
     var selectedTab: AppTab = .today
-    /// A prediction is awaiting its real-world outcome — drives the Predict tab
+    /// A prediction is awaiting its real-world outcome — drives the Compass tab
     /// follow-up dot until the user logs Landed / Unclear / Wrong / Not yet.
     var predictFollowUpPending: Bool = UserDefaults.standard.bool(forKey: "simastry_predict_followup_pending") {
         didSet {
@@ -584,11 +588,19 @@ class AppViewModel {
 
     func completeAgeVerification() {
         verifyAge()
-        // Skip the legacy 3-way choice — go straight to collecting birth details,
-        // then the five-expert first read.
-        firstReadOnboardingIntent = .astrologer
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            currentScreen = .birthDetails
+        // Preserve the value path chosen on the landing screen. Guest Compass
+        // proves the product before asking for chart data; chart-first remains
+        // available for people who explicitly chose it.
+        let intent = firstReadOnboardingIntent ?? .predict
+        withAnimation(SimastryMotion.stateChange) {
+            switch intent {
+            case .predict:
+                currentScreen = .firstPrediction
+            case .astrologer:
+                currentScreen = .birthDetails
+            case .decode:
+                currentScreen = .firstRead
+            }
         }
     }
 
@@ -627,7 +639,24 @@ class AppViewModel {
     }
 
     var hasCompletedSigns: Bool {
-        profile?.sunSign != nil && profile?.moonSign != nil && profile?.risingSign != nil
+        (userSunSign != nil && userMoonSign != nil && userRisingSign != nil)
+            || (profile?.sunSign != nil && profile?.moonSign != nil && profile?.risingSign != nil)
+    }
+
+    /// A partial chart is enough to enter the everyday app. Features that
+    /// genuinely require all three signs continue to use `hasCompletedSigns`.
+    var hasBirthChartContext: Bool {
+        natalChartRecord != nil
+            || (userSunSign != nil && userMoonSign != nil)
+            || (profile?.sunSign != nil && profile?.moonSign != nil)
+    }
+
+    var birthChartCapabilityLabel: AstrologyCapabilityLabel {
+        birthChartProvenance.capabilityLabel
+    }
+
+    var birthChartContextSummary: String {
+        natalChartRecord?.contextQualitySummary ?? birthChartProvenance.title
     }
 
     var hasCompanion: Bool {
@@ -664,10 +693,14 @@ class AppViewModel {
         practiceRouteRequest += 1
     }
 
-    func openProfileDrawer() {
+    func openAccountHub() {
         homeSetupPhase = .complete
-        selectedTab = .today
         profileDrawerRouteRequest += 1
+    }
+
+    /// Compatibility entry point for existing deep links and shortcuts.
+    func openProfileDrawer() {
+        openAccountHub()
     }
 
     func loadRelationshipPeople() {
@@ -1709,29 +1742,24 @@ class AppViewModel {
         publishDailyNotesForWidget()
     }
 
-    /// Pre-composes today's and tomorrow's notes into the shared app group so
+    /// Pre-composes today's and tomorrow's canonical guidance into the shared app group so
     /// the widget can render (and flip at midnight) without computing anything.
     func publishDailyNotesForWidget() {
         guard let specialist = dailyNoteSpecialist else { return }
         let calendar = Calendar.current
         let today = Date()
         let days = [today, calendar.date(byAdding: .day, value: 1, to: today) ?? today]
-        let notes = days.map { day -> SharedDailyNote in
-            let note = DailyExpertNoteComposer.note(
+        let guidance = days.map { day in
+            DailyGuidanceComposer.guidance(
                 for: specialist.id,
+                sourceName: specialist.characterName,
                 on: day,
                 sun: userSunSign,
                 moon: userMoonSign,
                 rising: userRisingSign
             )
-            return SharedDailyNote(
-                dateKey: SharedDailyNote.dateKey(for: day),
-                expertName: specialist.characterName,
-                headline: note.headline,
-                move: note.move
-            )
         }
-        SharedDefaults.writeDailyNotes(notes)
+        SharedDefaults.writeDailyGuidance(guidance)
         WidgetCenter.shared.reloadTimelines(ofKind: "SimastryDailyNote")
     }
 
@@ -1766,8 +1794,9 @@ class AppViewModel {
             components.timeZone = calendar.timeZone
             guard let fireDate = calendar.date(from: components), fireDate > now else { return nil }
 
-            let body = DailyExpertNoteComposer.notificationBody(
+            let body = DailyGuidanceComposer.notificationBody(
                 for: specialist.id,
+                sourceName: specialist.characterName,
                 on: fireDate,
                 sun: userSunSign,
                 moon: userMoonSign,
@@ -1852,32 +1881,45 @@ class AppViewModel {
     }
 
     func saveUserSigns() async {
-        guard let sun = userSunSign, let moon = userMoonSign, let rising = userRisingSign else { return }
-        if var p = profile {
-            p.sunSign = sun.rawValue
-            p.moonSign = moon.rawValue
-            p.risingSign = rising.rawValue
-            applyOnboardingDisplayNameIfNeeded(to: &p)
-            profile = p
+        guard userSunSign != nil || userMoonSign != nil || userRisingSign != nil || natalChartRecord != nil,
+              let userId = await supabase.currentUserId else { return }
+
+        var updatedProfile = profile ?? UserProfile.createDefault(id: userId)
+        updatedProfile.sunSign = userSunSign?.rawValue
+        updatedProfile.moonSign = userMoonSign?.rawValue
+        updatedProfile.risingSign = userRisingSign?.rawValue
+        applyOnboardingDisplayNameIfNeeded(to: &updatedProfile)
+
+        var profileSaved = false
+        do {
+            try await supabase.upsertProfile(updatedProfile)
+            profile = updatedProfile
+            profileSaved = true
+        } catch {
+            CrashReporter.log(error, context: "saveBirthChartProfileCache")
+            showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+        }
+
+        var chartSaved = natalChartRecord == nil
+        if var record = natalChartRecord {
+            record.userId = userId
             do {
-                try await supabase.upsertProfile(p)
-                clearPendingOnboardingChart()
+                try await supabase.upsertNatalChart(record)
+                natalChartRecord = record
+                birthChartProvenance = record.provenance
+                chartSaved = true
             } catch {
-                showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
+                CrashReporter.log(error, context: "saveNatalChartProvenance")
+                showToast(
+                    "Couldn't save birth details",
+                    subtitle: "Your chart stays on this device so you can try again.",
+                    isError: true
+                )
             }
-        } else if let userId = await supabase.currentUserId {
-            var p = UserProfile.createDefault(id: userId)
-            p.sunSign = sun.rawValue
-            p.moonSign = moon.rawValue
-            p.risingSign = rising.rawValue
-            applyOnboardingDisplayNameIfNeeded(to: &p)
-            profile = p
-            do {
-                try await supabase.upsertProfile(p)
-                clearPendingOnboardingChart()
-            } catch {
-                showToast("Couldn't save profile", subtitle: "Your changes may not be saved", isError: true)
-            }
+        }
+
+        if profileSaved && chartSaved {
+            clearPendingOnboardingChart()
         }
         await setupNotifications()
     }
@@ -1894,10 +1936,18 @@ class AppViewModel {
         onboardingDisplayName = nil
     }
 
-    func stageOnboardingBirthChart(_ chart: BirthChartService.BirthChart) {
+    func stageOnboardingBirthChart(
+        _ chart: BirthChartService.BirthChart,
+        record: NatalChartRecord? = nil
+    ) {
         userSunSign = chart.sunSign
         userMoonSign = chart.moonSign
         userRisingSign = chart.risingSign
+        natalChartRecord = record
+        birthChartProvenance = record?.provenance ?? .calculated
+        onboardingBirthTimePrecision = record?.birthTimePrecision ?? onboardingBirthTimePrecision
+        onboardingBirthTimeUncertaintyMinutes = record?.birthTimeUncertaintyMinutes
+        expertManualAstrologyData.userDoesNotKnowBirthTime = record?.birthTimePrecision == .unknown
         persistPendingOnboardingChart()
     }
 
@@ -3398,7 +3448,7 @@ class AppViewModel {
     private func syncHomeSetupPhase() {
         // The completed Today feed, including Nadia's guide panel, only needs
         // the user's chart. A saved companion is no longer required to enter it.
-        if hasCompletedSigns {
+        if hasBirthChartContext {
             homeSetupPhase = .complete
         } else {
             homeSetupPhase = .modeSelection
@@ -3406,6 +3456,11 @@ class AppViewModel {
     }
 
     private func loadProfile() async {
+        // Restore the pre-auth calculation before fetching the remote cache.
+        // A newly created profile row may exist with empty sign columns and
+        // must not erase the chart the user just calculated in onboarding.
+        let restoredPendingChart = restorePendingOnboardingChart()
+
         do {
             profile = try await supabase.fetchProfile()
         } catch {
@@ -3413,18 +3468,47 @@ class AppViewModel {
             profile = nil
             showToast("Couldn't load profile", subtitle: "Some saved details may be unavailable right now.", isError: true)
         }
-        if let p = profile {
+
+        let remoteNatalChart: NatalChartRecord?
+        do {
+            remoteNatalChart = try await supabase.fetchNatalChart()
+        } catch {
+            // The compatibility cache remains usable while older environments
+            // wait for the provenance migration to be deployed.
+            CrashReporter.log(error, context: "fetchNatalChart")
+            remoteNatalChart = nil
+        }
+
+        if let remoteNatalChart {
+            natalChartRecord = remoteNatalChart
+            birthChartProvenance = remoteNatalChart.provenance
+            onboardingBirthTimePrecision = remoteNatalChart.birthTimePrecision
+            onboardingBirthTimeUncertaintyMinutes = remoteNatalChart.birthTimeUncertaintyMinutes
+            expertManualAstrologyData.userDoesNotKnowBirthTime = remoteNatalChart.birthTimePrecision == .unknown
+            onboardingBirthday = remoteNatalChart.decodedBirthDate()
+            onboardingBirthTime = remoteNatalChart.decodedBirthTime()
+            onboardingBirthplace = remoteNatalChart.birthPlace
+            userSunSign = remoteNatalChart.sunEstimate.resolvedSign
+            userMoonSign = remoteNatalChart.moonEstimate.resolvedSign
+            userRisingSign = remoteNatalChart.risingEstimate?.resolvedSign
+            clearPendingOnboardingChart()
+        } else if restoredPendingChart {
+            // Keep the staged source-of-truth and let navigateAfterAuth persist
+            // it after the compatibility profile has loaded.
+        } else if let p = profile {
             userSunSign = p.sunSign.flatMap { ZodiacSign(rawValue: $0) }
             userMoonSign = p.moonSign.flatMap { ZodiacSign(rawValue: $0) }
             userRisingSign = p.risingSign.flatMap { ZodiacSign(rawValue: $0) }
-            clearPendingOnboardingChart()
+            natalChartRecord = nil
+            birthChartProvenance = (userSunSign != nil || userMoonSign != nil || userRisingSign != nil)
+                ? .previouslySaved
+                : .generalLens
         } else {
-            let restored = restorePendingOnboardingChart()
-            if !restored {
-                userSunSign = nil
-                userMoonSign = nil
-                userRisingSign = nil
-            }
+            userSunSign = nil
+            userMoonSign = nil
+            userRisingSign = nil
+            natalChartRecord = nil
+            birthChartProvenance = .generalLens
         }
     }
 
@@ -3442,6 +3526,13 @@ class AppViewModel {
         userSunSign = nil
         userMoonSign = nil
         userRisingSign = nil
+        natalChartRecord = nil
+        birthChartProvenance = .generalLens
+        onboardingBirthday = nil
+        onboardingBirthTime = nil
+        onboardingBirthplace = nil
+        onboardingBirthTimePrecision = .exact
+        onboardingBirthTimeUncertaintyMinutes = nil
         companionSunSign = nil
         companionMoonSign = nil
         companionRisingSign = nil
@@ -3450,22 +3541,26 @@ class AppViewModel {
     }
 
     private var shouldPersistPendingBirthChart: Bool {
-        guard let profile else {
-            return userSunSign != nil && userMoonSign != nil && userRisingSign != nil
+        if natalChartRecord?.userId == nil {
+            return true
         }
 
-        let isMissingPersistedChart = profile.sunSign == nil || profile.moonSign == nil || profile.risingSign == nil
+        guard let profile else {
+            return userSunSign != nil || userMoonSign != nil || userRisingSign != nil
+        }
+
+        let isMissingPersistedChart = profile.sunSign == nil && profile.moonSign == nil && profile.risingSign == nil
         return isMissingPersistedChart
-            && userSunSign != nil
-            && userMoonSign != nil
-            && userRisingSign != nil
+            && (userSunSign != nil || userMoonSign != nil || userRisingSign != nil)
     }
 
     private func persistPendingOnboardingChart() {
         let pending = PendingOnboardingChart(
             sunSign: userSunSign?.rawValue,
             moonSign: userMoonSign?.rawValue,
-            risingSign: userRisingSign?.rawValue
+            risingSign: userRisingSign?.rawValue,
+            natalChartRecord: natalChartRecord,
+            provenance: birthChartProvenance
         )
 
         guard let data = try? JSONEncoder().encode(pending) else { return }
@@ -3482,7 +3577,21 @@ class AppViewModel {
         userSunSign = pending.sunSign.flatMap { ZodiacSign(rawValue: $0) }
         userMoonSign = pending.moonSign.flatMap { ZodiacSign(rawValue: $0) }
         userRisingSign = pending.risingSign.flatMap { ZodiacSign(rawValue: $0) }
-        return userSunSign != nil || userMoonSign != nil || userRisingSign != nil
+        natalChartRecord = pending.natalChartRecord
+        birthChartProvenance = pending.provenance
+            ?? (pending.natalChartRecord == nil ? .previouslySaved : .calculated)
+        onboardingBirthTimePrecision = pending.natalChartRecord?.birthTimePrecision ?? .exact
+        onboardingBirthTimeUncertaintyMinutes = pending.natalChartRecord?.birthTimeUncertaintyMinutes
+        expertManualAstrologyData.userDoesNotKnowBirthTime = pending.natalChartRecord?.birthTimePrecision == .unknown
+        if let record = pending.natalChartRecord {
+            onboardingBirthday = record.decodedBirthDate()
+            onboardingBirthTime = record.decodedBirthTime()
+            onboardingBirthplace = record.birthPlace
+        }
+        return userSunSign != nil
+            || userMoonSign != nil
+            || userRisingSign != nil
+            || natalChartRecord != nil
     }
 
     private func clearPendingOnboardingChart() {
@@ -3502,6 +3611,14 @@ class AppViewModel {
                 "risingSign": profile.risingSign ?? "",
                 "tier": profile.tier
             ]
+        }
+
+        // Raw provenance is private in-product, but belongs in the user's own
+        // data export together with the uncertainty and calculation version.
+        if let natalChartRecord,
+           let encoded = try? JSONEncoder().encode(natalChartRecord),
+           let object = try? JSONSerialization.jsonObject(with: encoded) {
+            exportData["birthChartProvenance"] = object
         }
 
         // Companions (no PII from other users)
@@ -3757,6 +3874,11 @@ extension AppViewModel {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 self.openPredict()
+            }
+        case "accountHub":
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                self.openAccountHub()
             }
         case "firstReadHome":
             seedDebugFirstReadDraft(now: now)
@@ -4195,6 +4317,8 @@ private struct PendingOnboardingChart: Codable {
     let sunSign: String?
     let moonSign: String?
     let risingSign: String?
+    let natalChartRecord: NatalChartRecord?
+    let provenance: BirthChartProvenance?
 }
 
 // MARK: - Prediction Pack (Consumable IAP)

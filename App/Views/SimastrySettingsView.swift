@@ -3,6 +3,7 @@ import UIKit
 
 struct SimastrySettingsView: View {
     @Bindable var viewModel: AppViewModel
+    let embeddedInNavigationStack: Bool
     @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -32,31 +33,18 @@ struct SimastrySettingsView: View {
         viewModel.hasAuraWalletContext || !savedAuraWalletInputLabel.isEmpty
     }
 
+    init(viewModel: AppViewModel, embeddedInNavigationStack: Bool = false) {
+        self.viewModel = viewModel
+        self.embeddedInNavigationStack = embeddedInNavigationStack
+    }
+
     var body: some View {
-        NavigationStack {
-            // Celestial backdrop comes from `.presentationBackground` so the
-            // scroll content insets below the nav bar instead of running up under
-            // it (a full-bleed ZStack layer here clipped the first section).
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    accountSection
-                    auraWalletSection
-                    notificationsSection
-                    appearanceSection
-                    privacySection
-                    aboutSection
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 36)
-            }
-            .scrollIndicators(.hidden)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .tint(SimastryColor.gold)
+        Group {
+            if embeddedInNavigationStack {
+                settingsContent
+            } else {
+                NavigationStack {
+                    settingsContent
                 }
             }
         }
@@ -106,6 +94,36 @@ struct SimastrySettingsView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+
+    private var settingsContent: some View {
+        // Celestial backdrop comes from `.presentationBackground` for modal
+        // presentation and is explicit here for Account Hub navigation.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                accountSection
+                auraWalletSection
+                notificationsSection
+                appearanceSection
+                privacySection
+                aboutSection
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 36)
+        }
+        .scrollIndicators(.hidden)
+        .background { CelestialBackground() }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !embeddedInNavigationStack {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .tint(SimastryColor.gold)
+                }
+            }
+        }
     }
 
     private var accountSection: some View {

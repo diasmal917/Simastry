@@ -65,14 +65,15 @@ struct AgeGateView: View {
                     VStack(spacing: 14) {
                         GoldButton(localization.string("ageGate.over13")) {
                             HapticManager.buttonPress()
-                            withAnimation(.spring(SimastrySpring.smooth)) {
+                            withAnimation(SimastryMotion.stateChange) {
                                 viewModel.completeAgeVerification()
                             }
                         }
+                        .accessibilityIdentifier("ageGate.over13")
 
                         Button {
                             HapticManager.buttonPress()
-                            withAnimation(reduceMotion ? .default : .spring(SimastrySpring.smooth)) {
+                            withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
                                 showUnderageMessage = true
                             }
                         } label: {
@@ -84,6 +85,7 @@ struct AgeGateView: View {
                                 .simastryGlass(cornerRadius: 16)
                         }
                         .buttonStyle(SpringPressStyle())
+                        .accessibilityIdentifier("ageGate.under13")
                     }
                     .padding(.horizontal, 24)
                     .opacity(appeared ? 1 : 0)
@@ -104,7 +106,7 @@ struct AgeGateView: View {
             if reduceMotion {
                 appeared = true
             } else {
-                withAnimation(.spring(SimastrySpring.smooth).delay(0.2)) {
+                withAnimation(SimastryMotion.stateChange.delay(0.08)) {
                     appeared = true
                 }
             }

@@ -253,7 +253,13 @@ extension AppViewModel {
             partnerRisingSign: partner?.risingSign?.displayName,
             partnerBirthDateAvailable: partner?.birthDate != nil,
             partnerBirthTimeAvailable: partner?.birthTime != nil,
-            partnerBirthPlaceAvailable: partner?.birthPlace?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            partnerBirthPlaceAvailable: partner?.birthPlace?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
+            birthTimePrecision: natalChartRecord?.birthTimePrecision,
+            birthTimeUncertaintyMinutes: natalChartRecord?.birthTimeUncertaintyMinutes,
+            chartProvenance: birthChartProvenance,
+            sunSignPossibilities: natalChartRecord?.sunEstimate.possibleSigns.map(\.displayName) ?? [],
+            moonSignPossibilities: natalChartRecord?.moonEstimate.possibleSigns.map(\.displayName) ?? [],
+            risingSignPossibilities: natalChartRecord?.risingEstimate?.possibleSigns.map(\.displayName) ?? []
         )
     }
 

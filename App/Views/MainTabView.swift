@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MainTabView: View {
     @Bindable var viewModel: AppViewModel
+    @State private var activeSheet: AppSheetDestination?
+    @State private var handledAccountHubRequest = 0
 
     var body: some View {
         // Native iOS 26 Liquid Glass tab bar. Using the system `TabView` means
@@ -14,10 +16,10 @@ struct MainTabView: View {
                 HomeView(viewModel: viewModel)
             }
 
-            Tab("Predict", systemImage: "sparkles", value: AppTab.predict) {
+            Tab("Compass", systemImage: "location.north.circle", value: AppTab.predict) {
                 PredictTabView(viewModel: viewModel)
             }
-            .badge(viewModel.predictFollowUpPending ? Text("!") : nil)
+            .badge(viewModel.predictFollowUpPending ? Text("1") : nil)
 
             Tab("Talk", systemImage: "bubble.left.and.bubble.right.fill", value: AppTab.messages) {
                 MessagesView(viewModel: viewModel)
@@ -29,6 +31,7 @@ struct MainTabView: View {
             }
         }
         .tint(SimastryColor.gold)
+        .accessibilityHidden(activeSheet != nil)
         // Vertical surfaces across every tab (and their pushed screens) must not
         // be draggable sideways; horizontal rows still scroll because their
         // content overflows.
@@ -43,6 +46,24 @@ struct MainTabView: View {
         } message: {
             Text("This saves the invite code on this device. Credits require server verification and are not granted locally.")
         }
+        .sheet(item: $activeSheet) { destination in
+            switch destination {
+            case .accountHub:
+                AccountHubView(viewModel: viewModel)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationContentInteraction(.scrolls)
+                    .presentationBackground {
+                        CelestialBackground()
+                    }
+            }
+        }
+        .onAppear {
+            presentAccountHubIfRequested()
+        }
+        .onChange(of: viewModel.profileDrawerRouteRequest) {
+            presentAccountHubIfRequested()
+        }
         .onChange(of: viewModel.selectedTab) { _, newTab in
             HapticManager.tabChange()
             if newTab == .messages {
@@ -52,6 +73,12 @@ struct MainTabView: View {
                 }
             }
         }
+    }
+
+    private func presentAccountHubIfRequested() {
+        guard viewModel.profileDrawerRouteRequest > handledAccountHubRequest else { return }
+        handledAccountHubRequest = viewModel.profileDrawerRouteRequest
+        activeSheet = .accountHub
     }
 
     private var inviteConfirmationBinding: Binding<Bool> {
@@ -81,7 +108,7 @@ struct AppTabFloatingHeader<Trailing: View>: View {
         HStack(alignment: .center, spacing: 12) {
             Button {
                 HapticManager.buttonPress()
-                viewModel.openProfileDrawer()
+                viewModel.openAccountHub()
             } label: {
                 ProfileImageView(
                     image: viewModel.profileImage,
@@ -95,8 +122,9 @@ struct AppTabFloatingHeader<Trailing: View>: View {
                 }
                 .shadow(color: (viewModel.userSunSign?.color ?? SimastryColor.gold).opacity(0.22), radius: 12, y: 5)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open profile menu")
+            .buttonStyle(SpringPressStyle())
+            .accessibilityLabel("Open Account Hub")
+            .accessibilityHint("Shows your profile, chart, journal, settings, and help without leaving this tab.")
             .accessibilityIdentifier("app.header.profileButton")
 
             Text(viewModel.selectedTab.title)
@@ -138,7 +166,7 @@ struct HeaderActionIcon: View {
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(SimastryColor.gold)
             .frame(width: 44, height: 44)
-            .simastryGlassPill(interactive: true)
+            .interactiveGlass(cornerRadius: 22, tint: SimastryColor.gold)
     }
 }
 
@@ -172,7 +200,7 @@ struct HomeHeaderGreetingSummary: View {
     }
 }
 
-/// First-class Predict surface. `SimulateView` already owns the full guided
+/// First-class Compass surface. `SimulateView` owns the progressive
 /// flow (question type, details, orb generation, result, outcome rating), so
 /// the tab just hosts it in its own navigation context.
 struct PredictTabView: View {

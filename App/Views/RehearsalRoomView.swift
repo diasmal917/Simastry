@@ -154,22 +154,28 @@ struct RehearsalRoomView: View {
                 .padding(16)
                 .surfaceCard(cornerRadius: 20)
 
-                Button {
-                    startSession()
-                } label: {
-                    Label("Start rehearsing", systemImage: "theatermasks.fill")
-                        .font(SimastryFont.labelLarge)
-                        .foregroundStyle(SimastryColor.midnight)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(SimastryGradient.gold, in: Capsule())
-                }
-                .buttonStyle(SpringPressStyle())
-                .disabled(!canStart)
-                .opacity(canStart ? 1 : 0.55)
-                .accessibilityIdentifier("rehearsal.start")
             }
             .padding(20)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button {
+                startSession()
+            } label: {
+                Label("Start rehearsing", systemImage: "theatermasks.fill")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(SimastryGradient.gold, in: Capsule())
+            }
+            .buttonStyle(SpringPressStyle())
+            .disabled(!canStart)
+            .opacity(canStart ? 1 : 0.55)
+            .accessibilityIdentifier("rehearsal.start")
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
         }
         .lockHorizontalScroll()
     }

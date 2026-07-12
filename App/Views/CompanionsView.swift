@@ -109,7 +109,7 @@ struct CompanionsView: View {
                         .font(SimastryFont.titleLarge)
                         .foregroundStyle(SimastryColor.offWhite)
 
-                    Text(AppConfig.expertAstrologersEnabled ? "Five named AI astrologers, each grounded in a distinct tradition." : "Browse the guide lens you want for Messages, Profile, and Predict.")
+                    Text(AppConfig.expertAstrologersEnabled ? "Five named AI astrologers, each grounded in a distinct tradition." : "Browse the guide lens you want for Talk, Profile, and Compass.")
                         .font(SimastryFont.bodySmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                         .fixedSize(horizontal: false, vertical: true)

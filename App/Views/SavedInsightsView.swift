@@ -5,44 +5,63 @@ import SwiftUI
 /// individually and the whole store clears with local data.
 struct SavedInsightsView: View {
     @Bindable var viewModel: AppViewModel
+    let embeddedInNavigationStack: Bool
     @Environment(\.dismiss) private var dismiss
 
     private var prompts: [SavedDailyPrompt] {
         viewModel.todayStore.savedDailyPrompts
     }
 
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Kept on this device only. Ask an expert to pick a line back up, or remove it for good.")
-                        .font(SimastryFont.captionSmall)
-                        .foregroundStyle(SimastryColor.deepMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+    init(viewModel: AppViewModel, embeddedInNavigationStack: Bool = false) {
+        self.viewModel = viewModel
+        self.embeddedInNavigationStack = embeddedInNavigationStack
+    }
 
-                    if prompts.isEmpty {
-                        emptyState
-                    } else {
-                        ForEach(prompts) { prompt in
-                            row(prompt)
-                        }
+    var body: some View {
+        Group {
+            if embeddedInNavigationStack {
+                journalContent
+            } else {
+                NavigationStack {
+                    journalContent
+                }
+            }
+        }
+        .presentationBackground { CelestialBackground() }
+        .accessibilityIdentifier("journal.screen")
+    }
+
+    private var journalContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Kept on this device only. Ask an expert to pick a line back up, or remove it for good.")
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.deepMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if prompts.isEmpty {
+                    emptyState
+                } else {
+                    ForEach(prompts) { prompt in
+                        row(prompt)
                     }
                 }
-                .padding(20)
             }
-            .lockHorizontalScroll()
-            .navigationTitle("Journal")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
+            .padding(20)
+        }
+        .lockHorizontalScroll()
+        .background { CelestialBackground() }
+        .navigationTitle("Journal")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            if !embeddedInNavigationStack {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                         .tint(SimastryColor.gold)
                 }
             }
         }
-        .presentationBackground { CelestialBackground() }
-        .accessibilityIdentifier("journal.screen")
     }
 
     private var emptyState: some View {

@@ -30,12 +30,6 @@ private struct HomeShortcutItem: Identifiable {
 }
 
 private enum HomeProfileSheet: Identifiable {
-    case profile
-    case settings
-    case journal
-    case discovery
-    case expertKnowledge
-    case methodology
     case aura
     case careerRead
     case shareCard
@@ -43,12 +37,6 @@ private enum HomeProfileSheet: Identifiable {
 
     var id: String {
         switch self {
-        case .profile: "profile"
-        case .settings: "settings"
-        case .journal: "journal"
-        case .discovery: "discovery"
-        case .expertKnowledge: "expertKnowledge"
-        case .methodology: "methodology"
         case .aura: "aura"
         case .careerRead: "careerRead"
         case .shareCard: "shareCard"
@@ -354,7 +342,6 @@ struct HomeView: View {
     @StateObject private var streakManager = StreakManager.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.openURL) private var openURL
     @State private var navigationPath = NavigationPath()
     @State private var appeared: Bool = false
     @State private var isLoading: Bool = true
@@ -363,7 +350,6 @@ struct HomeView: View {
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
     @State private var handledDecodeRouteRequest: Int = 0
-    @State private var handledProfileDrawerRouteRequest: Int = 0
     @State private var handledAuraRouteRequest: Int = 0
     @State private var handledShareCardRouteRequest: Int = 0
     @State private var handledCareerReadRouteRequest: Int = 0
@@ -377,7 +363,6 @@ struct HomeView: View {
     @State private var showingDailyDeciderInfo: Bool = false
     @State private var showMoreForToday: Bool = false
     @State private var showJournal: Bool = false
-    @State private var showProfileDrawer: Bool = false
     @State private var activeProfileSheet: HomeProfileSheet?
     @State private var showDailyDeciderExpanded: Bool = false
     @State private var didSeedDeciderExpansion: Bool = false
@@ -422,16 +407,10 @@ struct HomeView: View {
                         homeContent
                     }
                 }
-                .animation(.spring(SimastrySpring.smooth), value: viewModel.homeSetupPhase == .complete)
+                .animation(reduceMotion ? nil : SimastryMotion.stateChange, value: viewModel.homeSetupPhase == .complete)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .top) {
                 streakMilestoneToast
-            }
-            .overlay {
-                profileDrawerBackdrop
-            }
-            .overlay(alignment: .leading) {
-                profileDrawer
             }
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
@@ -475,9 +454,6 @@ struct HomeView: View {
             .onChange(of: viewModel.decodeRouteRequest) {
                 presentRoutesIfRequested()
             }
-            .onChange(of: viewModel.profileDrawerRouteRequest) {
-                presentRoutesIfRequested()
-            }
             .onChange(of: viewModel.auraRouteRequest) {
                 presentRoutesIfRequested()
             }
@@ -495,18 +471,6 @@ struct HomeView: View {
             }
             .sheet(item: $activeProfileSheet) { sheet in
                 switch sheet {
-                case .profile:
-                    ProfileView(viewModel: viewModel)
-                case .settings:
-                    SimastrySettingsView(viewModel: viewModel)
-                case .journal:
-                    SavedInsightsView(viewModel: viewModel)
-                case .discovery:
-                    DiscoveryView(viewModel: viewModel)
-                case .expertKnowledge:
-                    ExpertKnowledgeView(viewModel: viewModel)
-                case .methodology:
-                    HomeMethodologySheet()
                 case .aura:
                     AuraView(viewModel: viewModel)
                 case .careerRead:
@@ -561,12 +525,6 @@ struct HomeView: View {
             handledDecodeRouteRequest = viewModel.decodeRouteRequest
             navigationPath.append(HomeRoute.decode)
         }
-        if viewModel.profileDrawerRouteRequest > handledProfileDrawerRouteRequest {
-            handledProfileDrawerRouteRequest = viewModel.profileDrawerRouteRequest
-            withAnimation(.spring(SimastrySpring.smooth)) {
-                showProfileDrawer = true
-            }
-        }
         if viewModel.auraRouteRequest > handledAuraRouteRequest {
             handledAuraRouteRequest = viewModel.auraRouteRequest
             activeProfileSheet = .aura
@@ -600,10 +558,6 @@ struct HomeView: View {
 
                 homeSection { dailyExpertNoteCard }
 
-                homeSection { todaysReadCard }
-
-                homeSection { dailyDeciderCard }
-
                 homeSection { homeShortcutGrid }
 
                 homeSection { situationCard }
@@ -625,7 +579,6 @@ struct HomeView: View {
             .background(TodayRootScrollConfigurator().frame(width: 0, height: 0))
             .containerRelativeFrame(.horizontal)
             .onAppear {
-                streakManager.recordCheckIn()
                 AnalyticsService.shared.track(.appOpened, key: "streak", value: "\(streakManager.currentStreak)")
                 sealedDrafts = SealedDraftStore().load()
                 viewModel.todayStore.reloadSavedPrompts()
@@ -641,19 +594,19 @@ struct HomeView: View {
                 if reduceMotion {
                     appeared = true
                 } else {
-                    withAnimation(.spring(SimastrySpring.smooth).delay(0.05)) {
+                    withAnimation(SimastryMotion.reveal.delay(0.05)) {
                         appeared = true
                     }
                 }
                 // Show milestone toast after a brief delay
                 if streakManager.streakMessage != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(SimastryMotion.stateChange) {
                             showStreakMilestone = true
                         }
                         // Auto-dismiss after 4 seconds
                         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                            withAnimation(.easeOut(duration: 0.3)) {
+                            withAnimation(.easeOut(duration: 0.20)) {
                                 showStreakMilestone = false
                             }
                         }
@@ -686,7 +639,7 @@ struct HomeView: View {
             )
             // Today's reading is computed synchronously above, so reveal content
             // as soon as it's ready — no artificial delay just to show shimmer.
-            withAnimation(.easeOut(duration: 0.3)) {
+            withAnimation(SimastryMotion.reveal) {
                 isLoading = false
             }
         }
@@ -720,75 +673,8 @@ struct HomeView: View {
             .shadow(color: SimastryColor.gold.opacity(0.25), radius: 18, y: 8)
             .padding(.top, 12)
             .padding(.horizontal, 20)
-            .transition(.move(edge: .top).combined(with: .opacity))
+            .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             .zIndex(50)
-        }
-    }
-
-    @ViewBuilder
-    private var profileDrawerBackdrop: some View {
-        if showProfileDrawer {
-            Color.black.opacity(0.52)
-                .ignoresSafeArea()
-                .transition(.opacity)
-                .onTapGesture {
-                    closeProfileDrawer()
-                }
-        }
-    }
-
-    @ViewBuilder
-    private var profileDrawer: some View {
-        if showProfileDrawer {
-            HomeProfileDrawer(
-                displayName: profileDisplayName,
-                subtitle: profileSubtitle,
-                profileImage: viewModel.profileImage,
-                sunSign: viewModel.userSunSign,
-                onClose: closeProfileDrawer,
-                onOpenProfile: { openProfileSheet(.profile) },
-                onSettings: { openProfileSheet(.settings) },
-                onJournal: { openProfileSheet(.journal) },
-                onDiscovery: { openProfileSheet(.discovery) },
-                onExpertKnowledge: { openProfileSheet(.expertKnowledge) },
-                onMethodology: { openProfileSheet(.methodology) },
-                onAstrologer: { openURL(AppConfig.astrologerDirectoryURL) }
-            )
-            .frame(width: min(UIScreen.main.bounds.width * 0.86, 342))
-            .frame(maxHeight: .infinity)
-            .transition(.move(edge: .leading).combined(with: .opacity))
-            .zIndex(60)
-        }
-    }
-
-    private var profileDisplayName: String {
-        let profileName = viewModel.profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !profileName.isEmpty { return profileName }
-
-        let socialName = viewModel.socialDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !socialName.isEmpty { return socialName }
-
-        return "Your profile"
-    }
-
-    private var profileSubtitle: String {
-        if let communicationType {
-            return communicationType.title
-        }
-        if let sun = viewModel.userSunSign {
-            return "\(sun.displayName) Sun"
-        }
-        return "View profile"
-    }
-
-    private func openProfileSheet(_ sheet: HomeProfileSheet) {
-        closeProfileDrawer()
-        activeProfileSheet = sheet
-    }
-
-    private func closeProfileDrawer() {
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            showProfileDrawer = false
         }
     }
 
@@ -846,13 +732,13 @@ struct HomeView: View {
         }
     }
 
-    /// The daily ritual anchor: the chosen expert's short note for today,
-    /// composed only from honestly derivable data (see DailyExpertNoteComposer)
-    /// and matching the morning notification word for word.
+    /// The one canonical daily ritual used by Home, Compass, the widget, and
+    /// the morning notification.
     private var dailyExpertNoteCard: some View {
         let specialist = viewModel.dailyNoteSpecialist
-        let note = DailyExpertNoteComposer.note(
+        let guidance = DailyGuidanceComposer.guidance(
             for: specialist?.id ?? "leyla-western",
+            sourceName: specialist?.characterName ?? "Your specialist",
             sun: viewModel.userSunSign,
             moon: viewModel.userMoonSign,
             rising: viewModel.userRisingSign
@@ -863,12 +749,12 @@ struct HomeView: View {
                 expertNoteAvatar(specialist)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TODAY'S NOTE · \(specialist?.characterName.uppercased() ?? "YOUR EXPERT")")
+                    Text("TODAY'S GUIDANCE · \(specialist?.characterName.uppercased() ?? "YOUR SPECIALIST")")
                         .font(SimastryFont.overline)
                         .foregroundStyle(SimastryColor.gold)
                         .tracking(1.4)
 
-                    Text(note.headline)
+                    Text(guidance.notice)
                         .font(SimastryFont.bodyLarge)
                         .foregroundStyle(SimastryColor.offWhite)
                         .lineSpacing(3)
@@ -877,7 +763,7 @@ struct HomeView: View {
 
                 Spacer(minLength: 4)
 
-                expertNoteSaveButton(note)
+                expertNoteSaveButton(guidance)
 
                 expertNoteSwitcher
             }
@@ -888,19 +774,59 @@ struct HomeView: View {
                     .foregroundStyle(SimastryColor.gold)
                     .padding(.top, 3)
 
-                Text(note.move)
+                Text(guidance.action)
                     .font(SimastryFont.labelMedium)
                     .foregroundStyle(SimastryColor.goldLight)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if let rationale = guidance.astrologicalRationale?.nilIfEmpty {
+                DisclosureGroup {
+                    Text(rationale)
+                        .font(SimastryFont.bodySmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 6)
+                } label: {
+                    HStack(spacing: 7) {
+                        Text("Why this lens")
+                            .font(SimastryFont.labelMedium)
+                            .foregroundStyle(SimastryColor.offWhite)
+                        Text("GENERAL LENS")
+                            .font(SimastryFont.overline)
+                            .foregroundStyle(SimastryColor.celestialBlue)
+                    }
+                    .frame(minHeight: 44)
+                }
+                .tint(SimastryColor.gold)
+            }
+
+            if let checkIn = guidance.eveningCheckIn?.nilIfEmpty {
+                Text(checkIn)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    HapticManager.success()
+                    streakManager.recordMeaningfulAction(.dailyActionCompleted)
+                    viewModel.showToast("Action checked in", subtitle: "That counts toward your reflection streak", isError: false)
+                } label: {
+                    Label("I tried today's action", systemImage: "checkmark.circle")
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(CompassPressStyle())
+                .foregroundStyle(SimastryColor.gold)
+                .accessibilityIdentifier("today.guidanceCheckIn")
+            }
+
             Button {
                 HapticManager.buttonPress()
                 viewModel.openAIAstrologists(
-                    question: note.askPrompt,
+                    question: "\(guidance.notice) \(guidance.action) How can I apply this in a practical way today?",
                     autoRunEveryone: false,
-                    specialistId: note.specialistId
+                    specialistId: guidance.sourceId
                 )
             } label: {
                 Label("Ask \(specialist?.characterName ?? "the experts") about this", systemImage: "sparkles")
@@ -943,18 +869,19 @@ struct HomeView: View {
 
     /// Keeps today's note in the private journal (local-only, inspectable
     /// from Home's Journal pill and Profile → Private journal).
-    private func expertNoteSaveButton(_ note: DailyExpertNote) -> some View {
+    private func expertNoteSaveButton(_ guidance: DailyGuidance) -> some View {
         Button {
             HapticManager.buttonPress()
             viewModel.todayStore.savePrompt(
-                SavedDailyPrompt(text: "\(note.headline) \(note.move)", guideId: note.specialistId)
+                SavedDailyPrompt(text: "\(guidance.notice) \(guidance.action)", guideId: guidance.sourceId)
             )
+            streakManager.recordMeaningfulAction(.journalEntry)
             viewModel.showToast("Saved to your journal", subtitle: "Keep the lines worth rereading", isError: false)
         } label: {
             Image(systemName: "bookmark")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold.opacity(0.9))
-                .frame(width: 30, height: 30)
+                .frame(width: 44, height: 44)
                 .background(.white.opacity(0.06), in: Circle())
         }
         .buttonStyle(.plain)
@@ -982,7 +909,7 @@ struct HomeView: View {
             Image(systemName: "chevron.up.chevron.down")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(SimastryColor.gold.opacity(0.9))
-                .frame(width: 30, height: 30)
+                .frame(width: 44, height: 44)
                 .background(.white.opacity(0.06), in: Circle())
         }
         .accessibilityLabel("Change who writes the daily note")
@@ -995,7 +922,9 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
                 HapticManager.buttonPress()
-                withAnimation(.spring(SimastrySpring.smooth)) { showMoreForToday.toggle() }
+                withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+                    showMoreForToday.toggle()
+                }
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "square.grid.2x2")
@@ -1034,7 +963,7 @@ struct HomeView: View {
 
                     learnCard
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
         }
         .opacity(appeared ? 1 : 0)
@@ -1051,7 +980,7 @@ struct HomeView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Button {
                 HapticManager.buttonPress()
-                withAnimation(.spring(SimastrySpring.smooth)) {
+                withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
                     showDailyDeciderExpanded.toggle()
                 }
             } label: {
@@ -1081,7 +1010,7 @@ struct HomeView: View {
                 }
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SpringPressStyle())
             .accessibilityLabel(showDailyDeciderExpanded ? "Hide Daily Decider" : "Show Daily Decider")
             .accessibilityHint("One tiny next move, picked from today's transit read")
             .accessibilityIdentifier("today.dailyDeciderToggle")
@@ -1104,7 +1033,7 @@ struct HomeView: View {
                     }
                     .scrollIndicators(.hidden)
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(16)
@@ -1285,14 +1214,14 @@ struct HomeView: View {
 
                     Button {
                         HapticManager.buttonPress()
-                        withAnimation(.spring(SimastrySpring.smooth)) {
+                        withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
                             viewModel.dismissFirstReadDraft()
                         }
                     } label: {
                         Image(systemName: "xmark")
                             .font(SimastryFont.microBold)
                             .foregroundStyle(SimastryColor.mutedSilver)
-                            .frame(width: 30, height: 30)
+                            .frame(width: 44, height: 44)
                             .background(.white.opacity(0.06), in: Circle())
                     }
                     .buttonStyle(SpringPressStyle())
@@ -1456,16 +1385,16 @@ struct HomeView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("PREDICT")
+                Text("COMPASS")
                     .font(SimastryFont.overline)
                     .foregroundStyle(SimastryColor.risingViolet)
                     .tracking(1.8)
 
-                Text("Predict The Future")
+                Text("Ask Compass")
                     .font(SimastryFont.titleLarge)
                     .foregroundStyle(SimastryColor.offWhite)
 
-                Text("Ask one question — get a short answer, a likely window, and one move.")
+                Text("Ask in your own words — get a takeaway, one next move, and another possibility.")
                     .font(SimastryFont.bodySmall)
                     .foregroundStyle(SimastryColor.mutedSilver)
                     .lineSpacing(3)
@@ -1478,10 +1407,10 @@ struct HomeView: View {
                 HapticManager.buttonPress()
                 viewModel.selectedTab = .predict
             } label: {
-                Label("Ask a question", systemImage: "sparkles")
+                Label("Open Compass", systemImage: "location.north.fill")
             }
             .buttonStyle(SimastryAccentButtonStyle(accent: SimastryColor.risingViolet))
-            .accessibilityHint("Opens the Predict tab")
+            .accessibilityHint("Opens the Compass tab")
 
             NavigationLink(value: HomeRoute.decode) {
                 Text("Decode one text instead \u{2192}")
@@ -1496,7 +1425,7 @@ struct HomeView: View {
             .accessibilityLabel("Decode one received text")
         }
         .padding(18)
-        .heroGlass(SimastryColor.risingViolet)
+        .contentSurface(cornerRadius: SimastryRadius.card, accent: SimastryColor.risingViolet)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
         .zIndex(2)
@@ -1512,7 +1441,7 @@ struct HomeView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(SimastryColor.risingViolet.opacity(0.9))
 
-                Text("Reads your chart and the details you add.")
+                Text("Starts with your question; chart and person details are optional.")
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.deepMuted)
                     .lineLimit(2)
@@ -1520,14 +1449,14 @@ struct HomeView: View {
             }
         }
         .buttonStyle(.plain)
-        .help("Sources: your saved chart placements, optional relationship signs, and pasted conversation text for reply predictions.")
+        .help("Sources: your question, optional practical context, and only the chart evidence explicitly labeled in a reading.")
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("How Ask the Future works")
+        .accessibilityLabel("How Compass works")
         .padding(.vertical, 6)
         .contentShape(.rect)
         .popover(isPresented: $showingPredictionSourceInfo) {
             methodInfoPopover(
-                "Ask the Future starts with your chart, then adds whatever context you provide: another person's signs, a pasted conversation, or the question type. Reply predictions require their Sun sign and get sharper with Moon, Rising, and real message text."
+                "Compass works with a question alone. You can optionally add practical context, a conversation, choices, or user-confirmed chart details. Timing stays unavailable unless calculated evidence explicitly supports it."
             )
             .presentationCompactAdaptation(.popover)
         }
@@ -2256,7 +2185,7 @@ private struct HomeShortcutTileView: View {
         }
         .padding(.leading, 16)
         .padding(.trailing, 12)
-        .frame(height: 108)
+        .frame(minHeight: 108)
         .frame(maxWidth: .infinity)
         .simastryGlass(cornerRadius: 26)
         .contentShape(shape)
@@ -2267,11 +2196,13 @@ private struct HomeShortcutTileView: View {
 /// A press style tuned for the glass tiles: the surface scales in slightly
 /// and brightens, so the Liquid Glass reads as responding to touch.
 struct HomeTilePressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.965 : 1)
-            .brightness(configuration.isPressed ? 0.06 : 0)
-            .animation(.spring(SimastrySpring.snappy), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.90 : 1)
+            .animation(SimastryMotion.press, value: configuration.isPressed)
     }
 }
 
@@ -2329,118 +2260,6 @@ private struct HomeLoadingSkeleton: View {
         .frame(maxWidth: .infinity)
         .clipped()
         .transition(.opacity)
-    }
-}
-
-private struct HomeProfileDrawer: View {
-    let displayName: String
-    let subtitle: String
-    let profileImage: UIImage?
-    let sunSign: ZodiacSign?
-    let onClose: () -> Void
-    let onOpenProfile: () -> Void
-    let onSettings: () -> Void
-    let onJournal: () -> Void
-    let onDiscovery: () -> Void
-    let onExpertKnowledge: () -> Void
-    let onMethodology: () -> Void
-    let onAstrologer: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(SimastryColor.offWhite)
-                        .frame(width: 34, height: 34)
-                        .background(Color.black.opacity(0.34), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close profile menu")
-            }
-            .padding(.top, 14)
-            .padding(.horizontal, 18)
-
-            Button(action: onOpenProfile) {
-                HStack(spacing: 13) {
-                    ProfileImageView(image: profileImage, size: 58, sunSign: sunSign)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(displayName)
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-
-                        Text(subtitle)
-                            .font(SimastryFont.bodySmall)
-                            .foregroundStyle(SimastryColor.mutedSilver)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-                }
-                .padding(.horizontal, 22)
-                .padding(.top, 6)
-                .padding(.bottom, 18)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("View profile")
-
-            Divider()
-                .overlay(Color.white.opacity(0.08))
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
-                    drawerRow("Profile details", systemImage: "person.text.rectangle.fill", action: onOpenProfile)
-                    drawerRow("Settings and privacy", systemImage: "gearshape.fill", action: onSettings)
-                    drawerRow("Private journal", systemImage: "bookmark.fill", action: onJournal)
-                    drawerRow("Find others like you", systemImage: "person.2.wave.2.fill", action: onDiscovery)
-                    drawerRow("What the experts know", systemImage: "lock.shield.fill", action: onExpertKnowledge)
-                    drawerRow("How Simastry works", systemImage: "books.vertical.fill", action: onMethodology)
-                    drawerRow("Work with an astrologer", systemImage: "person.crop.circle.badge.checkmark", action: onAstrologer)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 14)
-            }
-            .scrollIndicators(.hidden)
-
-            Spacer(minLength: 0)
-        }
-        .background(SimastryColor.surface.opacity(0.98))
-        .overlay(alignment: .trailing) {
-            Rectangle()
-                .fill(Color.white.opacity(0.08))
-                .frame(width: 0.7)
-        }
-        .ignoresSafeArea(edges: .vertical)
-    }
-
-    private func drawerRow(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .frame(width: 28)
-
-                Text(title)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(SimastryColor.offWhite)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-
-                Spacer()
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 13)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
     }
 }
 

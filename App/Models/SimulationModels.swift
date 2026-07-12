@@ -1,5 +1,165 @@
 import Foundation
 
+/// The shape of help requested in Compass. Raw values are persisted in drafts,
+/// so additions must be backward compatible.
+nonisolated enum CompassIntent: String, Codable, CaseIterable, Identifiable, Sendable {
+    case general
+    case conversation
+    case compareOptions = "compare_options"
+    case timing
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: "Ask"
+        case .conversation: "Conversation"
+        case .compareOptions: "Compare options"
+        case .timing: "Timing"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .general: "Get a clear next step"
+        case .conversation: "Understand a thread"
+        case .compareOptions: "Weigh two or three paths"
+        case .timing: "Use calculated sky context"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: "questionmark.bubble"
+        case .conversation: "text.bubble"
+        case .compareOptions: "arrow.triangle.branch"
+        case .timing: "clock"
+        }
+    }
+}
+
+nonisolated enum CompassTopic: String, Codable, CaseIterable, Identifiable, Sendable {
+    case relationships, work, money, family, personal
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+
+    var systemImage: String {
+        switch self {
+        case .relationships: "heart"
+        case .work: "briefcase"
+        case .money: "banknote"
+        case .family: "house"
+        case .personal: "person"
+        }
+    }
+}
+
+/// A value draft makes navigation/deep-link handoff explicit without requiring
+/// birth data. Legacy `PredictionDraft` remains supported below.
+nonisolated struct CompassDraft: Codable, Equatable, Sendable {
+    var intent: CompassIntent
+    var question: String
+    var topic: CompassTopic?
+    var conversationText: String
+    var options: [String]
+    var additionalContext: String
+
+    init(
+        intent: CompassIntent = .general,
+        question: String = "",
+        topic: CompassTopic? = nil,
+        conversationText: String = "",
+        options: [String] = ["", ""],
+        additionalContext: String = ""
+    ) {
+        self.intent = intent
+        self.question = question
+        self.topic = topic
+        self.conversationText = conversationText
+        self.options = Array(options.prefix(3))
+        self.additionalContext = additionalContext
+    }
+}
+
+nonisolated enum ReadingEvidenceBasis: String, Codable, CaseIterable, Sendable {
+    case calculated
+    case userConfirmed = "user_confirmed"
+    case generalLens = "general_lens"
+
+    var title: String {
+        switch self {
+        case .calculated: "Calculated"
+        case .userConfirmed: "User-confirmed"
+        case .generalLens: "General lens"
+        }
+    }
+}
+
+/// A fact the reading is allowed to rely on. `supportsTiming` is deliberately
+/// explicit so a sign or freeform statement cannot silently become a forecast.
+nonisolated struct ReadingEvidence: Codable, Equatable, Identifiable, Sendable {
+    let id: UUID
+    let basis: ReadingEvidenceBasis
+    let label: String
+    let detail: String
+    let supportsTiming: Bool
+
+    init(
+        id: UUID = UUID(),
+        basis: ReadingEvidenceBasis,
+        label: String,
+        detail: String,
+        supportsTiming: Bool = false
+    ) {
+        self.id = id
+        self.basis = basis
+        self.label = label
+        self.detail = detail
+        self.supportsTiming = supportsTiming
+    }
+}
+
+nonisolated enum ContextQuality: String, Codable, CaseIterable, Sendable {
+    case questionOnly = "question_only"
+    case someContext = "some_context"
+    case detailed
+
+    var title: String {
+        switch self {
+        case .questionOnly: "Question only"
+        case .someContext: "Some context"
+        case .detailed: "Detailed context"
+        }
+    }
+}
+
+nonisolated enum ReadingHelpfulness: String, Codable, CaseIterable, Sendable {
+    case helpful
+    case notHelpful = "not_helpful"
+
+    var title: String {
+        switch self {
+        case .helpful: "Helpful"
+        case .notHelpful: "Not helpful"
+        }
+    }
+}
+
+nonisolated enum ReplyToneSimilarity: String, Codable, CaseIterable, Sendable {
+    case similar, different, unsure
+
+    var title: String { rawValue.capitalized }
+}
+
+/// Objective outcome data is intentionally separate from a user's opinion of
+/// whether the guidance was useful.
+nonisolated struct ReadingFollowUp: Codable, Equatable, Sendable {
+    var replyReceived: Bool?
+    var elapsedMinutes: Int?
+    var toneSimilarity: ReplyToneSimilarity?
+}
+
 nonisolated enum SimulationMode: String, Codable, CaseIterable, Identifiable, Sendable {
     case whatWillTheySay = "what_will_they_say"
 
@@ -172,9 +332,15 @@ nonisolated enum SimulationTone: String, Codable, CaseIterable, Sendable {
 }
 
 nonisolated struct PredictionRequest: Sendable {
+    let idempotencyKey: UUID
     let mode: SimulationMode
     let category: FutureQuestionCategory
+    let intent: CompassIntent
+    let topic: CompassTopic?
     let conversationText: String
+    let comparisonOptions: [String]
+    let additionalContext: String
+    let evidence: [ReadingEvidence]
     let userSunSign: ZodiacSign?
     let userMoonSign: ZodiacSign?
     let userRisingSign: ZodiacSign?
@@ -186,9 +352,15 @@ nonisolated struct PredictionRequest: Sendable {
     let auraSnapshot: AuraSnapshotDescriptor?
 
     init(
+        idempotencyKey: UUID = UUID(),
         mode: SimulationMode,
         category: FutureQuestionCategory = .messageOutcome,
+        intent: CompassIntent = .general,
+        topic: CompassTopic? = nil,
         conversationText: String,
+        comparisonOptions: [String] = [],
+        additionalContext: String = "",
+        evidence: [ReadingEvidence] = [],
         userSunSign: ZodiacSign? = nil,
         userMoonSign: ZodiacSign? = nil,
         userRisingSign: ZodiacSign? = nil,
@@ -199,9 +371,15 @@ nonisolated struct PredictionRequest: Sendable {
         hypotheticalReply: String?,
         auraSnapshot: AuraSnapshotDescriptor? = nil
     ) {
+        self.idempotencyKey = idempotencyKey
         self.mode = mode
         self.category = category
+        self.intent = intent
+        self.topic = topic
         self.conversationText = conversationText
+        self.comparisonOptions = Array(comparisonOptions.prefix(3))
+        self.additionalContext = additionalContext
+        self.evidence = evidence
         self.userSunSign = userSunSign
         self.userMoonSign = userMoonSign
         self.userRisingSign = userRisingSign
@@ -225,6 +403,10 @@ nonisolated struct PredictionRequest: Sendable {
     var trimmedHypotheticalReply: String? {
         let trimmed = hypotheticalReply?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    var hasTimingEvidence: Bool {
+        evidence.contains { $0.basis == .calculated && $0.supportsTiming }
     }
 }
 
@@ -297,6 +479,8 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     let id: UUID
     let mode: SimulationMode
     var category: FutureQuestionCategory?
+    var compassIntent: CompassIntent?
+    var compassTopic: CompassTopic?
     let question: String
     let conversationText: String?
     var userSunSign: ZodiacSign?
@@ -311,6 +495,13 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     let astrologicalBreakdown: String
     var practicalNextMove: String?
     var safetyNote: String?
+    /// A credible second interpretation, surfaced directly after the next move.
+    var plausibleAlternative: String?
+    /// A reply grounded in the supplied thread, when conversation context exists.
+    var suggestedReply: String?
+    /// Facts actually used by the reading. Nil keeps legacy history decodable.
+    var evidence: [ReadingEvidence]?
+    var contextQuality: ContextQuality?
     let confidence: Int
     let tone: SimulationTone?
     let privacySummary: String?
@@ -320,6 +511,8 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
     var isLocalComposition: Bool?
     /// User-reported accuracy ("Did this land?"). Optional so old history decodes.
     var outcome: PredictionOutcome?
+    var followUp: ReadingFollowUp?
+    var helpfulness: ReadingHelpfulness?
 
     var categoryOrDefault: FutureQuestionCategory {
         category ?? .messageOutcome
@@ -368,6 +561,8 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
         id: UUID,
         mode: SimulationMode,
         category: FutureQuestionCategory? = nil,
+        compassIntent: CompassIntent? = nil,
+        compassTopic: CompassTopic? = nil,
         question: String,
         conversationText: String?,
         userSunSign: ZodiacSign? = nil,
@@ -382,16 +577,24 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
         astrologicalBreakdown: String,
         practicalNextMove: String? = nil,
         safetyNote: String? = nil,
+        plausibleAlternative: String? = nil,
+        suggestedReply: String? = nil,
+        evidence: [ReadingEvidence]? = nil,
+        contextQuality: ContextQuality? = nil,
         confidence: Int,
         tone: SimulationTone?,
         privacySummary: String?,
         createdAt: Date,
         isLocalComposition: Bool? = nil,
-        outcome: PredictionOutcome? = nil
+        outcome: PredictionOutcome? = nil,
+        followUp: ReadingFollowUp? = nil,
+        helpfulness: ReadingHelpfulness? = nil
     ) {
         self.id = id
         self.mode = mode
         self.category = category
+        self.compassIntent = compassIntent
+        self.compassTopic = compassTopic
         self.question = question
         self.conversationText = conversationText
         self.userSunSign = userSunSign
@@ -406,12 +609,18 @@ nonisolated struct PredictionResult: Codable, Identifiable, Sendable {
         self.astrologicalBreakdown = astrologicalBreakdown
         self.practicalNextMove = practicalNextMove
         self.safetyNote = safetyNote
+        self.plausibleAlternative = plausibleAlternative
+        self.suggestedReply = suggestedReply
+        self.evidence = evidence
+        self.contextQuality = contextQuality
         self.confidence = confidence
         self.tone = tone
         self.privacySummary = privacySummary
         self.createdAt = createdAt
         self.isLocalComposition = isLocalComposition
         self.outcome = outcome
+        self.followUp = followUp
+        self.helpfulness = helpfulness
     }
 }
 

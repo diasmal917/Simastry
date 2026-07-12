@@ -14,15 +14,15 @@
   "packages": {
     "Supabase": {
       "url": "https://github.com/supabase/supabase-swift.git",
-      "from": "2.0.0"
+      "exactVersion": "2.47.0"
     },
     "RevenueCat": {
       "url": "https://github.com/RevenueCat/purchases-ios-spm.git",
-      "from": "5.0.0"
+      "exactVersion": "5.78.0"
     },
     "SwissEphemeris": {
       "url": "https://github.com/vsmithers1087/SwissEphemeris.git",
-      "from": "0.0.99"
+      "exactVersion": "0.0.99"
     }
   },
   "settings": {
@@ -53,7 +53,7 @@
         "properties": {
           "CFBundleDisplayName": "Simastry",
           "CFBundleShortVersionString": "1.0",
-          "CFBundleVersion": "1",
+          "CFBundleVersion": "2",
           "CFBundleURLTypes": [
             {
               "CFBundleTypeRole": "Editor",
@@ -80,7 +80,7 @@
       "settings": {
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
-        "CURRENT_PROJECT_VERSION": "1",
+        "CURRENT_PROJECT_VERSION": "2",
         "CODE_SIGN_STYLE": "Automatic",
         "DEVELOPMENT_TEAM": "A6PP462J72",
         "MARKETING_VERSION": "1.0",
@@ -103,6 +103,25 @@
           ]
         }
       }
+    },
+    "SimastryTests": {
+      "dependencies": [
+        {
+          "target": "Simastry"
+        }
+      ],
+      "platform": "iOS",
+      "settings": {
+        "GENERATE_INFOPLIST_FILE": "YES",
+        "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819.tests",
+        "SWIFT_VERSION": "5.0"
+      },
+      "sources": [
+        {
+          "path": "Tests"
+        }
+      ],
+      "type": "bundle.unit-test"
     },
     "SimastryUITests": {
       "dependencies": [
@@ -139,6 +158,8 @@
         "path": "Widget/Info.plist",
         "properties": {
           "CFBundleDisplayName": "Simastry",
+          "CFBundleShortVersionString": "1.0",
+          "CFBundleVersion": "2",
           "NSExtension": {
             "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
           }
@@ -157,7 +178,7 @@
         "CODE_SIGN_STYLE": "Automatic",
         "DEVELOPMENT_TEAM": "A6PP462J72",
         "MARKETING_VERSION": "1.0",
-        "CURRENT_PROJECT_VERSION": "1",
+        "CURRENT_PROJECT_VERSION": "2",
         "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819.widgets",
         "PRODUCT_NAME": "$(TARGET_NAME)",
         "SWIFT_VERSION": "5.0",
