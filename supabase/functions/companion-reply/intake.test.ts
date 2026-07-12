@@ -7,7 +7,10 @@ import {
   mergeExpertAstrologyHydration,
   mergeExpertAstrologyIntake,
 } from "./intake.ts";
-import type { CompanionReplyPayload } from "./specialistPrompt.ts";
+import {
+  type CompanionReplyPayload,
+  summarizeProfileContext,
+} from "./specialistPrompt.ts";
 
 Deno.test("flattenUserSuppliedTraditionData keeps only canonical manual fields", () => {
   const flattened = flattenUserSuppliedTraditionData({
@@ -64,8 +67,43 @@ Deno.test("mergeExpertAstrologyIntake hydrates availability without creating cal
     "Expected user-supplied manual field note.",
   );
   assert(
-    expert.dataLimitations?.some((item) => item.includes("do not infer Rising sign")) === true,
+    expert.dataLimitations?.some((item) =>
+      item.includes("do not infer Rising sign")
+    ) === true,
     "Expected birth-time limitation.",
+  );
+});
+
+Deno.test("profile summary preserves approximate and ingress uncertainty", () => {
+  const summary = summarizeProfileContext({
+    birthDateAvailable: true,
+    birthTimeAvailable: true,
+    birthPlaceAvailable: true,
+    partnerBirthDateAvailable: false,
+    partnerBirthTimeAvailable: false,
+    partnerBirthPlaceAvailable: false,
+    birthTimePrecision: "approximate",
+    birthTimeUncertaintyMinutes: 60,
+    chartProvenance: "calculated",
+    moonSignPossibilities: ["Gemini", "Cancer"],
+    risingSignPossibilities: ["Libra", "Scorpio"],
+  });
+
+  assert(
+    summary.includes("approximate ±60 minutes"),
+    "Expected approximate-time disclosure.",
+  );
+  assert(
+    summary.includes("Moon Gemini or Cancer"),
+    "Expected both possible Moon signs.",
+  );
+  assert(
+    summary.includes("Rising Libra or Scorpio"),
+    "Expected both possible Rising signs.",
+  );
+  assert(
+    summary.includes("do not choose one"),
+    "Expected a no-invention instruction.",
   );
 });
 
@@ -123,11 +161,15 @@ Deno.test("mergeExpertAstrologyHydration labels confirmed chart import as user s
   );
   assertEquals(expert.calculatedTraditionData, undefined);
   assert(
-    expert.knownDataPoints?.some((item) => item.includes("user-confirmed from Astro-Seek screenshot")) === true,
+    expert.knownDataPoints?.some((item) =>
+      item.includes("user-confirmed from Astro-Seek screenshot")
+    ) === true,
     "Expected confirmed upload source note.",
   );
   assert(
-    expert.dataLimitations?.some((item) => item.includes("not app-calculated")) === true,
+    expert.dataLimitations?.some((item) =>
+      item.includes("not app-calculated")
+    ) === true,
     "Expected non-calculated limitation.",
   );
 });
@@ -150,11 +192,15 @@ Deno.test("mergeExpertAstrologyHydration does not use unconfirmed extracted char
 
   assertEquals(expert.userSuppliedTraditionData, undefined);
   assert(
-    expert.dataLimitations?.some((item) => item.includes("extraction is not confirmed")) === true,
+    expert.dataLimitations?.some((item) =>
+      item.includes("extraction is not confirmed")
+    ) === true,
     "Expected unconfirmed extraction limitation.",
   );
   assert(
-    expert.knownDataPoints?.some((item) => item.includes("still needs confirmation")) === true,
+    expert.knownDataPoints?.some((item) =>
+      item.includes("still needs confirmation")
+    ) === true,
     "Expected needs-confirmation known data point.",
   );
 });

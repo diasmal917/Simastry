@@ -36,6 +36,16 @@ export type UserAstrologyContext = {
   birthDate?: string;
   birthTime?: string;
   birthTimeUnknown?: boolean;
+  birthTimePrecision?: "exact" | "approximate" | "unknown";
+  birthTimeUncertaintyMinutes?: number;
+  chartProvenance?:
+    | "calculated"
+    | "user_confirmed"
+    | "previously_saved"
+    | "general_lens";
+  sunSignPossibilities?: string[];
+  moonSignPossibilities?: string[];
+  risingSignPossibilities?: string[];
   birthPlace?: string;
   birthDateAvailable: boolean;
   birthTimeAvailable: boolean;
@@ -117,7 +127,8 @@ export const specialists: Record<SpecialistId, Specialist> = {
     publicTitle: "Western Astrologer",
     displayName: "Leyla - Western Astrologer",
     internalTradition: "Western tropical astrology",
-    publicDescription: "Relationships, identity, compatibility, and life direction.",
+    publicDescription:
+      "Relationships, identity, compatibility, and life direction.",
     legacyCharacterId: "virgo-mara",
     legacyCharacterLayer:
       "Portrait/personality continuity layer: Leyla keeps a precise, calm, useful, emotionally intelligent tone when compatible. Do not preserve fictional-guide framing that conflicts with the expert role.",
@@ -136,7 +147,8 @@ If birth time/location are missing, say Rising, houses, and exact chart ruler wo
     publicTitle: "Vedic Astrologer",
     displayName: "Mateo - Vedic Astrologer",
     internalTradition: "Jyotish / Vedic astrology",
-    publicDescription: "Karma, timing, dharma, destiny, and spiritual patterns.",
+    publicDescription:
+      "Karma, timing, dharma, destiny, and spiritual patterns.",
     legacyCharacterId: "libra-mateo",
     legacyCharacterLayer:
       "Portrait/personality continuity layer: Mateo keeps a polished, tactful, calm, socially intelligent tone when compatible. Do not preserve fictional-guide framing that conflicts with the expert role.",
@@ -155,7 +167,8 @@ For Mercury retrograde questions, use Budha, speech, intellect, trade, discernme
     publicTitle: "Chinese Astrologer",
     displayName: "Naomi - Chinese Astrologer",
     internalTradition: "BaZi / Four Pillars / Chinese astrology",
-    publicDescription: "Five Elements, life cycles, compatibility, and practical strategy.",
+    publicDescription:
+      "Five Elements, life cycles, compatibility, and practical strategy.",
     legacyCharacterId: "capricorn-naomi",
     legacyCharacterLayer:
       "Portrait/personality continuity layer: Naomi keeps a composed, practical, elegant, strategic tone when compatible. Do not preserve fictional-guide framing that conflicts with the expert role.",
@@ -173,7 +186,8 @@ Do not invent Day Masters, pillars, Ten Gods, Luck Pillars, or annual influences
     publicTitle: "Ancient Astrologer",
     displayName: "Soren - Ancient Astrologer",
     internalTradition: "Hellenistic astrology",
-    publicDescription: "Ancient predictive methods, fate, timing, and classical technique.",
+    publicDescription:
+      "Ancient predictive methods, fate, timing, and classical technique.",
     legacyCharacterId: "aries-cassian",
     legacyCharacterLayer:
       "Portrait/personality continuity layer: Soren keeps a direct, composed, classical tone when compatible. Do not preserve fictional-guide framing that conflicts with the expert role.",
@@ -192,7 +206,8 @@ If birth time is missing, say sect and houses cannot be judged reliably.
     publicTitle: "Evolutionary Astrologer",
     displayName: "Nadia - Evolutionary Astrologer",
     internalTradition: "Evolutionary astrology",
-    publicDescription: "Healing, shadow work, emotional patterns, and personal growth.",
+    publicDescription:
+      "Healing, shadow work, emotional patterns, and personal growth.",
     legacyCharacterId: "sagittarius-nadia",
     legacyCharacterLayer:
       "Portrait/personality continuity layer: Nadia keeps an honest, spacious, funny, direct tone when compatible. Do not preserve fictional-guide framing that conflicts with the expert role.",
@@ -331,11 +346,62 @@ export function summarizeProfileContext(
   if (placements.length > 0) {
     lines.push(`User placements: ${placements.join(", ")}`);
   }
+  if (context.chartProvenance) {
+    const sourceLabels: Record<string, string> = {
+      calculated: "Calculated",
+      user_confirmed: "User-confirmed",
+      previously_saved:
+        "Previously saved; calculation provenance is not yet confirmed",
+      general_lens: "General lens",
+    };
+    lines.push(
+      `Chart source: ${
+        sourceLabels[context.chartProvenance] ?? context.chartProvenance
+      }.`,
+    );
+  }
+  if (context.birthTimePrecision === "approximate") {
+    const uncertainty = context.birthTimeUncertaintyMinutes
+      ? ` ±${context.birthTimeUncertaintyMinutes} minutes`
+      : "";
+    lines.push(
+      `Birth time is approximate${uncertainty}. Do not present houses, angles, sect, or exact timing as settled facts.`,
+    );
+  } else if (context.birthTimePrecision === "unknown") {
+    lines.push(
+      "Birth time is unknown. Rising sign and houses are unavailable; never infer them or exact timing.",
+    );
+  } else if (context.birthTimePrecision === "exact") {
+    lines.push(
+      "Birth time was supplied as exact; only placements explicitly listed here are calculated facts.",
+    );
+  }
+  const uncertainPlacements = [
+    context.sunSignPossibilities && context.sunSignPossibilities.length > 1
+      ? `Sun ${context.sunSignPossibilities.join(" or ")}`
+      : undefined,
+    context.moonSignPossibilities && context.moonSignPossibilities.length > 1
+      ? `Moon ${context.moonSignPossibilities.join(" or ")}`
+      : undefined,
+    context.risingSignPossibilities &&
+      context.risingSignPossibilities.length > 1
+      ? `Rising ${context.risingSignPossibilities.join(" or ")}`
+      : undefined,
+  ].filter(Boolean);
+  if (uncertainPlacements.length > 0) {
+    lines.push(
+      `Calculated possibilities: ${
+        uncertainPlacements.join("; ")
+      }. Keep every listed possibility; do not choose one.`,
+    );
+  }
   if (context.partnerName) lines.push(`Partner/person: ${context.partnerName}`);
   const partnerPlacements = [
     context.partnerSunSign ? `Sun ${context.partnerSunSign}` : undefined,
     context.partnerMoonSign ? `Moon ${context.partnerMoonSign}` : undefined,
-    context.partnerRisingSign ? `Rising ${context.partnerRisingSign}` : undefined,
+    context.partnerRisingSign
+      ? `Rising ${context.partnerRisingSign}`
+      : undefined,
   ].filter(Boolean);
   if (partnerPlacements.length > 0) {
     lines.push(`Partner/person placements: ${partnerPlacements.join(", ")}`);
@@ -348,28 +414,36 @@ export function summarizeProfileContext(
   ].filter(Boolean);
   if (userSuppliedBirth.length > 0) {
     lines.push(
-      `User-supplied birth details: ${userSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated chart data.`,
+      `User-supplied birth details: ${
+        userSuppliedBirth.join(", ")
+      }. Treat as user-supplied, not calculated chart data.`,
     );
   }
   const partnerSuppliedBirth = [
     context.partnerBirthDate ? `date ${context.partnerBirthDate}` : undefined,
     context.partnerBirthTime ? `time ${context.partnerBirthTime}` : undefined,
     context.partnerBirthTimeUnknown ? "time marked unknown by user" : undefined,
-    context.partnerBirthPlace ? `place ${context.partnerBirthPlace}` : undefined,
+    context.partnerBirthPlace
+      ? `place ${context.partnerBirthPlace}`
+      : undefined,
   ].filter(Boolean);
   if (partnerSuppliedBirth.length > 0) {
     lines.push(
-      `Partner/person user-supplied birth details: ${partnerSuppliedBirth.join(", ")}. Treat as user-supplied, not calculated compatibility data.`,
+      `Partner/person user-supplied birth details: ${
+        partnerSuppliedBirth.join(", ")
+      }. Treat as user-supplied, not calculated compatibility data.`,
     );
   }
   lines.push(
-    `Birth data: user date ${availability(context.birthDateAvailable)}, time ${availability(context.birthTimeAvailable)}, place ${
-      availability(context.birthPlaceAvailable)
-    }`,
+    `Birth data: user date ${availability(context.birthDateAvailable)}, time ${
+      availability(context.birthTimeAvailable)
+    }, place ${availability(context.birthPlaceAvailable)}`,
   );
   if (context.partnerName) {
     lines.push(
-      `Partner birth data: date ${availability(context.partnerBirthDateAvailable)}, time ${availability(context.partnerBirthTimeAvailable)}, place ${
+      `Partner birth data: date ${
+        availability(context.partnerBirthDateAvailable)
+      }, time ${availability(context.partnerBirthTimeAvailable)}, place ${
         availability(context.partnerBirthPlaceAvailable)
       }`,
     );
@@ -407,7 +481,9 @@ export function summarizeReadinessContext(
 
 function formatList(title: string, values?: string[]): string {
   const cleaned = (values ?? []).map((value) => value.trim()).filter(Boolean);
-  return cleaned.length > 0 ? `${title}: ${cleaned.join("; ")}` : `${title}: none supplied`;
+  return cleaned.length > 0
+    ? `${title}: ${cleaned.join("; ")}`
+    : `${title}: none supplied`;
 }
 
 function formatRecord(title: string, values?: Record<string, string>): string {
@@ -415,7 +491,9 @@ function formatRecord(title: string, values?: Record<string, string>): string {
     .map(([key, value]) => [key.trim(), String(value).trim()] as const)
     .filter(([key, value]) => key.length > 0 && value.length > 0);
   if (entries.length === 0) return `${title}: none supplied`;
-  return `${title}: ${entries.map(([key, value]) => `${key}=${value}`).join("; ")}`;
+  return `${title}: ${
+    entries.map(([key, value]) => `${key}=${value}`).join("; ")
+  }`;
 }
 
 function summarizeTranscript(
