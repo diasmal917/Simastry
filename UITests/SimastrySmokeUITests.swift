@@ -15,24 +15,21 @@ final class SimastrySmokeUITests: XCTestCase {
         launchSeededApp(arguments: ["-SimastryPreviewScreen", "landing"])
 
         let cta = app.buttons["landing.crystal.cta"]
-        XCTAssertTrue(cta.waitForExistence(timeout: 10), "Expected the crystal landing CTA")
+        XCTAssertTrue(cta.waitForExistence(timeout: 10), "Expected the value-first Compass CTA")
+        XCTAssertTrue(app.staticTexts["LIVE BRIEFING"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["landing.crystal.chartCTA"].exists)
 
-        cta.tap() // → council page
-        let back = app.buttons["landing.crystal.back"]
-        XCTAssertTrue(back.waitForExistence(timeout: 4), "Expected the back button from page 2 on")
+        cta.tap()
+        let ageConfirmation = app.buttons["ageGate.over13"]
+        XCTAssertTrue(ageConfirmation.waitForExistence(timeout: 6), "Expected the age gate before guest guidance")
+        ageConfirmation.tap()
 
-        back.tap() // ← welcome page
-        XCTAssertTrue(back.waitForNonExistence(timeout: 4), "Back button should hide on page 1")
-
-        cta.tap() // → council
-        cta.tap() // → daily note
-        cta.tap() // → begin
-        cta.tap() // → routes into the first-read flow (age gate first)
-
-        let ageGate = app.staticTexts.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "old enough")
-        ).firstMatch
-        XCTAssertTrue(ageGate.waitForExistence(timeout: 6), "Expected the age gate after the final CTA")
+        XCTAssertTrue(app.textFields["firstPrediction.question"].waitForExistence(timeout: 6))
+        let submit = app.buttons["firstPrediction.submit"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 4))
+        XCTAssertTrue(submit.isEnabled)
+        submit.tap()
+        XCTAssertTrue(app.staticTexts["GENERAL LENS"].waitForExistence(timeout: 8))
     }
 
     func testRehearsalRoomRunsAPracticeTurn() throws {
@@ -144,10 +141,76 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(predictReply.waitForExistence(timeout: 8))
         predictReply.tap()
 
-        XCTAssertTrue(app.tabBars.buttons["Predict"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.staticTexts["What happened in the thread?"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.textViews["predict.conversationInput"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.buttons["predict.stickyAction"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.tabBars.buttons["Compass"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["compass.intent.conversation"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.textFields["compass.conversation"].waitForExistence(timeout: 4))
+        XCTAssertTrue(reveal(app.buttons["compass.submit"], maxSwipes: 5))
+    }
+
+    func testCompassGeneralQuestionWorksWithoutCalculatedChart() throws {
+        launchSeededApp()
+
+        let compassTab = app.tabBars.buttons["Compass"]
+        XCTAssertTrue(compassTab.waitForExistence(timeout: 10))
+        compassTab.tap()
+
+        let question = app.textFields["compass.question"]
+        XCTAssertTrue(question.waitForExistence(timeout: 6))
+        question.tap()
+        question.typeText("How should I handle a difficult conversation tomorrow?")
+
+        app.swipeUp()
+        let submit = app.buttons["compass.submit"]
+        XCTAssertTrue(reveal(submit, maxSwipes: 5))
+        XCTAssertTrue(submit.isEnabled)
+        submit.tap()
+
+        XCTAssertTrue(app.navigationBars["Reading"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "TAKEAWAY")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "EVIDENCE")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "confidence")).firstMatch.exists)
+    }
+
+    func testCompassProgressivelyRevealsIntentContext() throws {
+        launchSeededApp()
+        app.tabBars.buttons["Compass"].tap()
+
+        let conversation = app.buttons["compass.intent.conversation"]
+        XCTAssertTrue(conversation.waitForExistence(timeout: 8))
+        conversation.tap()
+        XCTAssertTrue(app.textFields["compass.conversation"].waitForExistence(timeout: 4))
+
+        let compare = app.buttons["compass.intent.compare_options"]
+        compare.tap()
+        XCTAssertTrue(element("compass.option.1").waitForExistence(timeout: 4))
+        XCTAssertTrue(element("compass.option.2").waitForExistence(timeout: 4))
+
+        let timing = app.buttons["compass.intent.timing"]
+        XCTAssertTrue(timing.waitForExistence(timeout: 4))
+        XCTAssertFalse(timing.isEnabled, "Timing should stay disabled without calculated transit evidence")
+    }
+
+    func testAccountHubPreservesEverySelectedTab() throws {
+        launchSeededApp()
+
+        for tabName in ["Home", "Compass", "Talk", "People"] {
+            let tab = app.tabBars.buttons[tabName]
+            XCTAssertTrue(tab.waitForExistence(timeout: 8))
+            tab.tap()
+
+            let profile = app.buttons["app.header.profileButton"]
+            XCTAssertTrue(profile.waitForExistence(timeout: 6), "Expected account button on \(tabName)")
+            profile.tap()
+
+            XCTAssertTrue(element("accountHub.screen").waitForExistence(timeout: 6))
+            XCTAssertTrue(element("accountHub.fullProfile").waitForExistence(timeout: 4))
+            XCTAssertTrue(element("accountHub.birthChart").waitForExistence(timeout: 4))
+
+            app.buttons["Close Account Hub"].tap()
+            XCTAssertTrue(element("accountHub.screen").waitForNonExistence(timeout: 5))
+            XCTAssertTrue(tab.isSelected, "Closing Account should preserve the \(tabName) tab")
+            XCTAssertEqual(app.staticTexts["app.header.tabTitle"].label, tabName)
+        }
     }
 
     func testExpertAstrologersEveryoneAndIndividualFlow() throws {
@@ -530,15 +593,13 @@ final class SimastrySmokeUITests: XCTestCase {
     }
 
     func testDiscoveryProfileStartsLocalConversationAndOpensTalk() throws {
-        launchSeededApp(arguments: ["-SimastryPreviewTab", "3"])
+        launchSeededApp()
 
-        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 10))
-        let profileButton = app.buttons["app.header.profileButton"]
-        XCTAssertTrue(profileButton.waitForExistence(timeout: 6), "Expected Home to expose the profile menu")
-        profileButton.tap()
+        XCTAssertTrue(app.tabBars.buttons["People"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["People"].tap()
 
-        let discoveryEntry = app.buttons["Find others like you"]
-        XCTAssertTrue(discoveryEntry.waitForExistence(timeout: 4), "Expected the profile drawer to expose Discovery")
+        let discoveryEntry = app.buttons["people.discoveryEntry"]
+        XCTAssertTrue(discoveryEntry.waitForExistence(timeout: 6), "Expected People to expose optional discovery")
         discoveryEntry.tap()
 
         XCTAssertTrue(app.navigationBars["Find others like you"].waitForExistence(timeout: 8))
