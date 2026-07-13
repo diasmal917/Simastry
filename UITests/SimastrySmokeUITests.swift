@@ -190,6 +190,47 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertFalse(timing.isEnabled, "Timing should stay disabled without calculated transit evidence")
     }
 
+    func testCompassShowsGlanceableWindowsWithoutTyping() throws {
+        launchSeededApp()
+
+        let compassTab = app.tabBars.buttons["Compass"]
+        XCTAssertTrue(compassTab.waitForExistence(timeout: 10))
+        compassTab.tap()
+
+        // The Now dial and Today strip must render before any typing — the
+        // whole point of the glanceable hero. Windows differ daily, so these
+        // assertions are existence-only.
+        let dial = element("compass.now")
+        XCTAssertTrue(dial.waitForExistence(timeout: 8), "Expected the Now dial to render without typing")
+        let timeline = element("compass.timeline")
+        XCTAssertTrue(timeline.waitForExistence(timeout: 8), "Expected the Today strip to render without typing")
+
+        // The instrument sits at the very top of the screen, so no scrolling —
+        // a swipe would move it AWAY. The strip shows a placeholder until the
+        // day-windows engine finishes its first compute, so allow time for
+        // the real segments to replace it.
+        let firstSegment = app.buttons["compass.timeline.segment.0"]
+        XCTAssertTrue(firstSegment.waitForExistence(timeout: 8), "Expected the first timeline segment to appear")
+        XCTAssertTrue(firstSegment.isHittable, "Expected the first timeline segment to be tappable without scrolling")
+        firstSegment.tap()
+
+        let detail = element("compass.window.detail")
+        XCTAssertTrue(detail.waitForExistence(timeout: 6), "Expected the window detail card to appear")
+        // Scope to the card: the composer below also mentions "calculated",
+        // so an app-wide query would not prove the evidence badge rendered.
+        let calculatedLabel = detail.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[c] %@", "Calculated"))
+            .firstMatch
+        XCTAssertTrue(calculatedLabel.waitForExistence(timeout: 4), "Expected the evidence badge to read Calculated")
+        XCTAssertFalse(
+            detail.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", "confidence")).firstMatch.exists,
+            "Windows must never surface a confidence claim"
+        )
+
+        app.buttons["compass.window.close"].tap()
+        XCTAssertTrue(detail.waitForNonExistence(timeout: 5), "Expected the detail card to dismiss on close")
+    }
+
     func testAccountHubPreservesEverySelectedTab() throws {
         launchSeededApp()
 

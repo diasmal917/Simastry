@@ -20,6 +20,7 @@ struct SimulateView: View {
     private let showsTabHeader: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(GuidanceStyle.storageKey) private var guidanceStyleRawValue = GuidanceStyle.practical.rawValue
     @State private var draft = CompassDraft()
     @State private var selectedPersonID: UUID?
     @State private var targetSunSign: ZodiacSign?
@@ -32,6 +33,8 @@ struct SimulateView: View {
     @State private var activeSheet: CompassSheetDestination?
     @State private var transitReading: DailyTransitReading?
     @State private var submissionCoordinator = PredictionSubmissionCoordinator.shared
+    @State private var dayWindows: DayWindowsResult?
+    @State private var selectedWindowID: String?
 
     init(viewModel: AppViewModel, showsTabHeader: Bool = false) {
         self.viewModel = viewModel
@@ -109,22 +112,48 @@ struct SimulateView: View {
         )
     }
 
+    private var selectedWindow: DayWindow? {
+        guard let selectedWindowID, let dayWindows else { return nil }
+        return dayWindows.windows.first { $0.id == selectedWindowID }
+    }
+
+    /// The glanceable hero: a Now dial + Today strip driven by a per-minute
+    /// `TimelineView`, plus the inline detail card when a window is
+    /// selected. Both entry paths (tab + Home push) render this — it is now
+    /// the self-identifying header for Compass, superseding `CompassHeader`.
+    @ViewBuilder
+    private var compassInstrument: some View {
+        VStack(alignment: .leading, spacing: SimastrySpacing.md) {
+            TimelineView(.everyMinute) { context in
+                VStack(alignment: .leading, spacing: SimastrySpacing.md) {
+                    CompassNowDial(result: dayWindows, now: context.date)
+                    CompassTodayStrip(result: dayWindows, selection: $selectedWindowID, now: context.date)
+                }
+                .task(id: dayWindowsTaskKey(for: context.date)) {
+                    await recomputeDayWindows()
+                }
+            }
+
+            if let selectedWindow {
+                CompassWindowDetailCard(window: selectedWindow) {
+                    withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+                        selectedWindowID = nil
+                    }
+                }
+            }
+        }
+        .onChange(of: dayWindows) { _, newValue in
+            guard let selectedWindowID else { return }
+            if newValue?.windows.contains(where: { $0.id == selectedWindowID }) != true {
+                self.selectedWindowID = nil
+            }
+        }
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: SimastrySpacing.lg) {
-                if !showsTabHeader {
-                    CompassHeader()
-                }
-
-                if viewModel.predictFollowUpPending, let pendingCheckIn {
-                    CompassPendingCheckInCard(result: pendingCheckIn) {
-                        activeSheet = .result(pendingCheckIn)
-                    }
-                }
-
-                if let canonicalDailyGuidance {
-                    CompassDailyGuidanceCard(guidance: canonicalDailyGuidance)
-                }
+                compassInstrument
 
                 CompassComposerCard(
                     draft: $draft,
@@ -141,6 +170,16 @@ struct SimulateView: View {
                     onSelectPerson: selectPerson,
                     onSubmit: beginSubmission
                 )
+
+                if viewModel.predictFollowUpPending, let pendingCheckIn {
+                    CompassPendingCheckInCard(result: pendingCheckIn) {
+                        activeSheet = .result(pendingCheckIn)
+                    }
+                }
+
+                if let canonicalDailyGuidance {
+                    CompassDailyGuidanceCard(guidance: canonicalDailyGuidance)
+                }
 
                 CompassRecentReadingsSection(
                     viewModel: viewModel,
@@ -242,6 +281,42 @@ struct SimulateView: View {
             moon: viewModel.userMoonSign,
             rising: viewModel.userRisingSign
         )
+    }
+
+    /// Mirrors `refreshTransitEvidence`'s gate: natal signs only travel to
+    /// the day-windows engine (and its all-day context line) once the chart
+    /// is calculated or user-confirmed, never for a general-lens/previously
+    /// saved chart.
+    private var provenanceGatedNatalSigns: (sun: ZodiacSign?, moon: ZodiacSign?, rising: ZodiacSign?) {
+        switch viewModel.birthChartProvenance {
+        case .calculated, .userConfirmed:
+            return (viewModel.userSunSign, viewModel.userMoonSign, viewModel.userRisingSign)
+        case .previouslySaved, .generalLens:
+            return (nil, nil, nil)
+        }
+    }
+
+    /// Changes once per local day (midnight rollover) or when the guidance
+    /// style changes; `context.date` comes from the minute-driven
+    /// `TimelineView` so the day boundary is reliably observed without a
+    /// separate timer.
+    private func dayWindowsTaskKey(for date: Date) -> String {
+        "\(DailyGuidance.dateKey(for: date))|\(guidanceStyleRawValue)"
+    }
+
+    @MainActor
+    private func recomputeDayWindows() async {
+        let style = GuidanceStyle(rawValue: guidanceStyleRawValue) ?? .practical
+        let gated = provenanceGatedNatalSigns
+        let inputs = DayWindowsEngine.Inputs(
+            date: Date(),
+            timeZone: .current,
+            natalSun: gated.sun,
+            natalMoon: gated.moon,
+            natalRising: gated.rising,
+            style: style
+        )
+        dayWindows = await DayWindowsEngine.windows(for: inputs)
     }
 
     private func applyLegacyDraftIfNeeded() {

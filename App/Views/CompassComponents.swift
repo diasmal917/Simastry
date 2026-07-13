@@ -1,28 +1,6 @@
 import SwiftUI
 import PhotosUI
 
-struct CompassHeader: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: SimastrySpacing.xs) {
-            Label("COMPASS", systemImage: "location.north.circle.fill")
-                .font(SimastryFont.overline)
-                .foregroundStyle(SimastryColor.gold)
-                .tracking(1.4)
-
-            Text("What do you want clarity on?")
-                .font(SimastryFont.displayMedium)
-                .foregroundStyle(SimastryColor.offWhite)
-
-            Text("Ask in your own words. Astrology is optional; practical context comes first.")
-                .font(SimastryFont.bodySmall)
-                .foregroundStyle(SimastryColor.mutedSilver)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 struct CompassPendingCheckInCard: View {
     let result: PredictionResult
     let onOpen: () -> Void
