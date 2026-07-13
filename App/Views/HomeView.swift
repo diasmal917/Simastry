@@ -1778,7 +1778,7 @@ struct HomeView: View {
         if !sealedDrafts.isEmpty || SealedDraftStore.isLateNight() {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
-                    Image(systemName: "envelope.badge.clock.fill")
+                    Image(systemName: "envelope.open.fill")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(SimastryColor.celestialBlue)
 
