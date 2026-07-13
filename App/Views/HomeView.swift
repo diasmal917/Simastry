@@ -587,7 +587,10 @@ struct HomeView: View {
                 viewModel.todayStore.reloadSavedPrompts()
                 viewModel.todayStore.reloadDailyDecisions()
                 viewModel.reloadAuraSnapshot()
-                Task { await viewModel.publishDailyNotesForWidget() }
+                Task {
+                    await viewModel.publishDailyNotesForWidget()
+                    await viewModel.publishDayWindowsForWidget()
+                }
                 #if DEBUG
                 if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
                     profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")

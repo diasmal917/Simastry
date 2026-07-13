@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct GuidanceStyleView: View {
+    let viewModel: AppViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(GuidanceStyle.storageKey) private var selection = GuidanceStyle.practical.rawValue
 
@@ -35,6 +36,14 @@ struct GuidanceStyleView: View {
         .navigationTitle("Guidance style")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("guidanceStyle.screen")
+        // The style only lives in `@AppStorage` — there is no central
+        // AppViewModel-observed property to hang this off, so the write
+        // site republishes directly. Day windows are style-aware copy over
+        // the same sky facts, so the widget needs a fresh write whenever
+        // this changes, not just at the next natural republish moment.
+        .onChange(of: selection) { _, _ in
+            Task { await viewModel.publishDayWindowsForWidget() }
+        }
     }
 
     private func guidanceStyleButton(_ style: GuidanceStyle) -> some View {

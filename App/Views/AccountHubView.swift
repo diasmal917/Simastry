@@ -45,7 +45,7 @@ struct AccountHubView: View {
         case .journal:
             SavedInsightsView(viewModel: viewModel, embeddedInNavigationStack: true)
         case .guidanceStyle:
-            GuidanceStyleView()
+            GuidanceStyleView(viewModel: viewModel)
         case .settings:
             SimastrySettingsView(viewModel: viewModel, embeddedInNavigationStack: true)
         case .methodology:

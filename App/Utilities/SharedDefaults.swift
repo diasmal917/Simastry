@@ -106,13 +106,51 @@ enum SharedDefaults {
         return notes
     }
 
+    // MARK: - Day windows (widget)
+
+    static let dayWindowsKey = "widgetDayWindows"
+
+    /// The app pre-composes today's and tomorrow's honest, time-bounded
+    /// windows (style-resolved, final strings); the widget only ever renders
+    /// them, never computing astrology itself — same contract as
+    /// `writeDailyNotes`/`readDailyNotes`.
+    static func writeDayWindows(_ windows: [SharedDayWindow]) {
+        guard let defaults = shared, let data = try? JSONEncoder().encode(windows) else { return }
+        defaults.set(data, forKey: dayWindowsKey)
+    }
+
+    static func readDayWindows() -> [SharedDayWindow] {
+        guard let defaults = shared,
+              let data = defaults.data(forKey: dayWindowsKey),
+              let windows = try? JSONDecoder().decode([SharedDayWindow].self, from: data) else {
+            return []
+        }
+        return windows
+    }
+
+    static func readUnexpiredDayWindows(at date: Date = Date()) -> [SharedDayWindow] {
+        readDayWindows()
+            .filter { $0.endsAt > date }
+            .sorted { $0.startsAt < $1.startsAt }
+    }
+
     // MARK: - Clear
+
+    /// Removes only the legacy companion widget payload. Daily guidance and
+    /// Compass windows belong to separate widgets and must survive mode
+    /// changes or an empty companion list.
+    static func clearCompanionData() {
+        guard let defaults = shared else { return }
+        for key in [Key.companionName, Key.companionSunSign, Key.companionGlyph,
+                    Key.userSunSign, Key.userGlyph, Key.compatibilityScore, Key.companionId] {
+            defaults.removeObject(forKey: key)
+        }
+    }
 
     static func clearAll() {
         guard let defaults = shared else { return }
-        for key in [Key.companionName, Key.companionSunSign, Key.companionGlyph,
-                    Key.userSunSign, Key.userGlyph, Key.compatibilityScore, Key.companionId,
-                    dailyNotesKey, dailyGuidanceKey] {
+        clearCompanionData()
+        for key in [dailyNotesKey, dailyGuidanceKey, dayWindowsKey] {
             defaults.removeObject(forKey: key)
         }
     }
@@ -173,6 +211,24 @@ nonisolated struct DailyGuidance: Codable, Equatable, Identifiable, Sendable {
         guard parts.count == 3 else { return nil }
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
+}
+
+/// One honest, time-bounded Compass window as shared with the widget
+/// extension. A flattened, pre-composed mirror of `DayWindow` — the widget
+/// target compiles only `Widget/` + this file (see Project.json), so it
+/// never sees `DayWindow`, `ReadingEvidence`, or any other App model; the
+/// app resolves the final style-aware strings once and writes them here.
+struct SharedDayWindow: Codable, Equatable {
+    /// Local-calendar day the window belongs to, "yyyy-MM-dd".
+    let dateKey: String
+    /// `SimastryCategoryToken.rawValue`; the widget resolves its own color.
+    let tokenID: String
+    /// "Favors hard conversations" — never an outcome claim.
+    let title: String
+    let startsAt: Date
+    let endsAt: Date
+    /// Style-aware one-liner (why, honestly).
+    let rationale: String
 }
 
 /// One day's expert note as shared with the widget extension.

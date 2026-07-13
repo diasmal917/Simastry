@@ -47,6 +47,7 @@ class AppViewModel {
     private let auraWalletLastCheckedAtKey = "simastry_aura_wallet_last_checked_at"
     private let privateNotificationsEnabledKey = "simastry_private_notifications_enabled"
     private let conversationSuggestionsEnabledKey = "simastry_conversation_suggestions_enabled"
+    private var dayWindowsPublicationGeneration = 0
 
     var companionSunSign: ZodiacSign?
     var companionMoonSign: ZodiacSign?
@@ -218,6 +219,7 @@ class AppViewModel {
                     await self.scheduleDailyMorningNoteNotification()
                 }
                 await self.publishDailyNotesForWidget()
+                await self.publishDayWindowsForWidget()
             }
         }
     }
@@ -1215,6 +1217,7 @@ class AppViewModel {
 
         // Clear widget data
         SharedDefaults.clearAll()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func clearLocalDeviceData() {
@@ -1417,14 +1420,15 @@ class AppViewModel {
 
     func updateWidgetData() {
         guard !AppConfig.expertAstrologersEnabled else {
-            SharedDefaults.clearAll()
+            SharedDefaults.clearCompanionData()
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
 
         guard let topCompanion = companions.first else {
-            // No companions — clear widget data so it shows empty state
-            SharedDefaults.clearAll()
+            // No companions — clear only the legacy companion widget. Daily
+            // guidance and Compass windows are independent app-wide surfaces.
+            SharedDefaults.clearCompanionData()
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
@@ -1744,6 +1748,7 @@ class AppViewModel {
         }
         await scheduleDailyMorningNoteNotification()
         await publishDailyNotesForWidget()
+        await publishDayWindowsForWidget()
     }
 
     /// Pre-composes today's and tomorrow's canonical guidance into the shared app group so
@@ -1767,6 +1772,65 @@ class AppViewModel {
         }
         SharedDefaults.writeDailyGuidance(guidance)
         WidgetCenter.shared.reloadTimelines(ofKind: "SimastryDailyNote")
+    }
+
+    /// Pre-composes today's and tomorrow's honest, time-bounded windows into
+    /// the shared app group so `CurrentWindowWidget` can render the current
+    /// window without touching the ephemeris — the widget target only ever
+    /// reads what this method writes, mirroring `publishDailyNotesForWidget()`.
+    /// Natal signs are gated exactly like `SimulateView.provenanceGatedNatalSigns`
+    /// / `refreshTransitEvidence()`: only a calculated or user-confirmed chart
+    /// reaches the engine's all-day context line.
+    func publishDayWindowsForWidget() async {
+        dayWindowsPublicationGeneration &+= 1
+        let publicationGeneration = dayWindowsPublicationGeneration
+        let timeZone = TimeZone.current
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        let today = Date()
+        let days = [today, calendar.date(byAdding: .day, value: 1, to: today) ?? today]
+        let style = GuidanceStyle.stored
+
+        let gatedSun: ZodiacSign?
+        let gatedMoon: ZodiacSign?
+        let gatedRising: ZodiacSign?
+        switch birthChartProvenance {
+        case .calculated, .userConfirmed:
+            gatedSun = userSunSign
+            gatedMoon = userMoonSign
+            gatedRising = userRisingSign
+        case .previouslySaved, .generalLens:
+            gatedSun = nil
+            gatedMoon = nil
+            gatedRising = nil
+        }
+
+        var shared: [SharedDayWindow] = []
+        for day in days {
+            let inputs = DayWindowsEngine.Inputs(
+                date: day,
+                timeZone: timeZone,
+                natalSun: gatedSun,
+                natalMoon: gatedMoon,
+                natalRising: gatedRising,
+                style: style
+            )
+            let result = await DayWindowsEngine.windows(for: inputs)
+            let dateKey = DailyGuidance.dateKey(for: day, calendar: calendar)
+            shared.append(contentsOf: result.windows.map { window in
+                SharedDayWindow(
+                    dateKey: dateKey,
+                    tokenID: window.tokenID,
+                    title: window.title,
+                    startsAt: window.interval.start,
+                    endsAt: window.interval.end,
+                    rationale: window.rationale
+                )
+            })
+        }
+        guard publicationGeneration == dayWindowsPublicationGeneration else { return }
+        SharedDefaults.writeDayWindows(shared)
+        WidgetCenter.shared.reloadTimelines(ofKind: "SimastryCurrentWindow")
     }
 
     /// Daily nudge that a guide opened the panel's conversation starter.
