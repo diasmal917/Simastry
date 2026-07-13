@@ -290,7 +290,7 @@ nonisolated enum DayWindowsEngine {
             // Read the transit at local midday so every instant of the same
             // local day produces the same context line.
             let midday = day.start.addingTimeInterval(day.duration / 2)
-            if let reading = await TransitEngine.dailyReading(
+            if let reading = TransitEngine.dailyReading(
                 sun: inputs.natalSun,
                 moon: inputs.natalMoon,
                 rising: inputs.natalRising,

@@ -35,6 +35,7 @@ struct SimulateView: View {
     @State private var submissionCoordinator = PredictionSubmissionCoordinator.shared
     @State private var dayWindows: DayWindowsResult?
     @State private var selectedWindowID: String?
+    @State private var canonicalDailyGuidance: DailyGuidance?
 
     init(viewModel: AppViewModel, showsTabHeader: Bool = false) {
         self.viewModel = viewModel
@@ -101,9 +102,19 @@ struct SimulateView: View {
         history.first { $0.followUp == nil && $0.isMessageOutcome }
     }
 
-    private var canonicalDailyGuidance: DailyGuidance? {
-        guard let specialist = viewModel.dailyNoteSpecialist else { return nil }
-        return DailyGuidanceComposer.guidance(
+    /// Re-runs the async guidance composition when the local day or the
+    /// chosen specialist changes. Body re-renders at least on every
+    /// day-windows recompute, so the key is re-evaluated across midnight.
+    private var dailyGuidanceRefreshKey: String {
+        "\(DailyGuidance.dateKey(for: Date()))|\(viewModel.dailyNoteSpecialist?.id ?? "none")"
+    }
+
+    private func refreshCanonicalDailyGuidance() async {
+        guard let specialist = viewModel.dailyNoteSpecialist else {
+            canonicalDailyGuidance = nil
+            return
+        }
+        canonicalDailyGuidance = await DailyGuidanceComposer.guidance(
             for: specialist.id,
             sourceName: specialist.characterName,
             sun: viewModel.userSunSign,
@@ -237,8 +248,11 @@ struct SimulateView: View {
             viewModel.loadRelationshipPeople()
             viewModel.todayStore.reloadDailyDecisions()
             loadHistory()
-            refreshTransitEvidence()
+            await refreshTransitEvidence()
             applyLegacyDraftIfNeeded()
+        }
+        .task(id: dailyGuidanceRefreshKey) {
+            await refreshCanonicalDailyGuidance()
         }
         .onChange(of: viewModel.predictionDraft?.id) { _, _ in
             applyLegacyDraftIfNeeded()
@@ -268,7 +282,7 @@ struct SimulateView: View {
         targetRisingSign = person.risingSign
     }
 
-    private func refreshTransitEvidence() {
+    private func refreshTransitEvidence() async {
         switch viewModel.birthChartProvenance {
         case .calculated, .userConfirmed:
             break
@@ -276,7 +290,7 @@ struct SimulateView: View {
             transitReading = nil
             return
         }
-        transitReading = TransitEngine.dailyReading(
+        transitReading = await TransitEngine.dailyReading(
             sun: viewModel.userSunSign,
             moon: viewModel.userMoonSign,
             rising: viewModel.userRisingSign

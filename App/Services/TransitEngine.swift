@@ -126,14 +126,12 @@ nonisolated struct DailyTransitReading: Sendable, Equatable {
 /// Computes real current planetary positions (Swiss Ephemeris) and reads them
 /// against the user's natal signs as whole-sign aspects.
 ///
-/// The ephemeris-touching statics are pinned to the main actor: the raw C
-/// library mutates process-global state on every call, and the main executor
-/// is the app's single ephemeris serialization domain (`EphemerisActor` is
-/// bound to the same executor — see EphemerisActor.swift). Pinning keeps the
-/// existing synchronous view/composer callers valid while forbidding calls
-/// from arbitrary background contexts at compile time.
+/// The ephemeris-touching statics are isolated to `EphemerisActor` — the raw
+/// C library mutates process-global state on every call, so all ephemeris
+/// access shares that one serialization domain and stays off the main thread
+/// (see EphemerisActor.swift). Callers await across the actor boundary.
 nonisolated enum TransitEngine {
-    @MainActor
+    @EphemerisActor
     static func transitingSign(of body: TransitBody, on date: Date) -> ZodiacSign {
         let coordinate = Coordinate<Planet>(body: body.planet, date: date)
         return signFromLongitude(coordinate.longitude)
@@ -141,7 +139,7 @@ nonisolated enum TransitEngine {
 
     /// The most significant transit-to-natal contact of the day, or nil when
     /// nothing aspects (or no natal signs exist). Deterministic per day.
-    @MainActor
+    @EphemerisActor
     static func dailyReading(
         sun: ZodiacSign?,
         moon: ZodiacSign?,

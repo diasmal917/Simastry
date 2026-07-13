@@ -3,10 +3,10 @@ import Foundation
 /// Converts the selected specialist's derivable note into one practical-first
 /// record shared by every daily surface.
 nonisolated enum DailyGuidanceComposer {
-    /// Main-actor pinned: composes from `DailyExpertNoteComposer`, which reads
-    /// the ephemeris; all raw ephemeris access shares the main executor as its
-    /// single serialization domain (see EphemerisActor.swift).
-    @MainActor
+    /// Ephemeris-actor isolated: composes from `DailyExpertNoteComposer`,
+    /// which reads the ephemeris; all raw ephemeris access shares that one
+    /// serialization domain (see EphemerisActor.swift).
+    @EphemerisActor
     static func guidance(
         for specialistId: String,
         sourceName: String,
@@ -34,7 +34,7 @@ nonisolated enum DailyGuidanceComposer {
         )
     }
 
-    @MainActor
+    @EphemerisActor
     static func notificationBody(
         for specialistId: String,
         sourceName: String,

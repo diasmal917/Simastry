@@ -210,11 +210,15 @@ class AppViewModel {
     var dailyNoteSpecialistId: String = UserDefaults.standard.string(forKey: "simastry_daily_note_specialist_id") ?? "leyla-western" {
         didSet {
             UserDefaults.standard.set(dailyNoteSpecialistId, forKey: "simastry_daily_note_specialist_id")
-            // Tomorrow's push should speak in the newly chosen voice.
-            if isAuthenticated, privateNotificationsEnabled {
-                scheduleDailyMorningNoteNotification()
+            // Tomorrow's push should speak in the newly chosen voice. The
+            // composition awaits the ephemeris actor, so it runs as a task.
+            let shouldReschedule = isAuthenticated && privateNotificationsEnabled
+            Task {
+                if shouldReschedule {
+                    await self.scheduleDailyMorningNoteNotification()
+                }
+                await self.publishDailyNotesForWidget()
             }
-            publishDailyNotesForWidget()
         }
     }
 
@@ -1738,19 +1742,20 @@ class AppViewModel {
             schedulePanelStarterNotification()
             notificationService.scheduleGuideTipNudges()
         }
-        scheduleDailyMorningNoteNotification()
-        publishDailyNotesForWidget()
+        await scheduleDailyMorningNoteNotification()
+        await publishDailyNotesForWidget()
     }
 
     /// Pre-composes today's and tomorrow's canonical guidance into the shared app group so
     /// the widget can render (and flip at midnight) without computing anything.
-    func publishDailyNotesForWidget() {
+    func publishDailyNotesForWidget() async {
         guard let specialist = dailyNoteSpecialist else { return }
         let calendar = Calendar.current
         let today = Date()
         let days = [today, calendar.date(byAdding: .day, value: 1, to: today) ?? today]
-        let guidance = days.map { day in
-            DailyGuidanceComposer.guidance(
+        var guidance: [DailyGuidance] = []
+        for day in days {
+            let dayGuidance = await DailyGuidanceComposer.guidance(
                 for: specialist.id,
                 sourceName: specialist.characterName,
                 on: day,
@@ -1758,6 +1763,7 @@ class AppViewModel {
                 moon: userMoonSign,
                 rising: userRisingSign
             )
+            guidance.append(dayGuidance)
         }
         SharedDefaults.writeDailyGuidance(guidance)
         WidgetCenter.shared.reloadTimelines(ofKind: "SimastryDailyNote")
@@ -1781,20 +1787,21 @@ class AppViewModel {
     /// Schedules the next week of morning pushes in the chosen expert's voice.
     /// Each one-shot notification is composed for its own fire date, matching
     /// the deterministic note the Today card will show that morning.
-    func scheduleDailyMorningNoteNotification() {
+    func scheduleDailyMorningNoteNotification() async {
         guard let specialist = dailyNoteSpecialist else { return }
         let calendar = Calendar.current
         let now = Date()
-        let requests = NotificationService.dailyMorningNoteIdentifiers.enumerated().compactMap { index, identifier -> NotificationService.DailyMorningNoteRequest? in
-            guard let day = calendar.date(byAdding: .day, value: index + 1, to: now) else { return nil }
+        var requests: [NotificationService.DailyMorningNoteRequest] = []
+        for (index, identifier) in NotificationService.dailyMorningNoteIdentifiers.enumerated() {
+            guard let day = calendar.date(byAdding: .day, value: index + 1, to: now) else { continue }
             var components = calendar.dateComponents([.year, .month, .day], from: day)
             components.hour = 8
             components.minute = 30
             components.calendar = calendar
             components.timeZone = calendar.timeZone
-            guard let fireDate = calendar.date(from: components), fireDate > now else { return nil }
+            guard let fireDate = calendar.date(from: components), fireDate > now else { continue }
 
-            let body = DailyGuidanceComposer.notificationBody(
+            let body = await DailyGuidanceComposer.notificationBody(
                 for: specialist.id,
                 sourceName: specialist.characterName,
                 on: fireDate,
@@ -1802,12 +1809,12 @@ class AppViewModel {
                 moon: userMoonSign,
                 rising: userRisingSign
             )
-            return NotificationService.DailyMorningNoteRequest(
+            requests.append(NotificationService.DailyMorningNoteRequest(
                 identifier: identifier,
                 expertName: specialist.characterName,
                 body: body,
                 fireDate: fireDate
-            )
+            ))
         }
         notificationService.scheduleDailyMorningNotes(requests)
     }

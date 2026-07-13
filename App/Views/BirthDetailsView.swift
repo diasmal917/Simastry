@@ -504,7 +504,7 @@ struct BirthDetailsView: View {
                 }
 
                 let chartService = BirthChartService()
-                let chart = chartService.calculate(
+                let chart = await chartService.calculate(
                     birthday: birthday,
                     birthTime: confirmedBirthTime,
                     precision: birthTimePrecision,

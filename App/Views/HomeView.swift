@@ -347,6 +347,7 @@ struct HomeView: View {
     @State private var isLoading: Bool = true
     @State private var showStreakMilestone: Bool = false
     @State private var transitReading: DailyTransitReading?
+    @State private var dailyGuidance: DailyGuidance?
     @State private var handledAstrologistsRouteRequest: Int = 0
     @State private var handledPredictRouteRequest: Int = 0
     @State private var handledDecodeRouteRequest: Int = 0
@@ -556,7 +557,9 @@ struct HomeView: View {
 
                 if debugExpertsFirst { homeSection { panelCard } }
 
-                homeSection { dailyExpertNoteCard }
+                if let dailyGuidance {
+                    homeSection { dailyExpertNoteCard(dailyGuidance) }
+                }
 
                 homeSection { homeShortcutGrid }
 
@@ -584,7 +587,7 @@ struct HomeView: View {
                 viewModel.todayStore.reloadSavedPrompts()
                 viewModel.todayStore.reloadDailyDecisions()
                 viewModel.reloadAuraSnapshot()
-                viewModel.publishDailyNotesForWidget()
+                Task { await viewModel.publishDailyNotesForWidget() }
                 #if DEBUG
                 if profileRoute == nil, ProcessInfo.processInfo.arguments.contains("-SimastryPreviewOpenAstrologerProfile") {
                     profileRoute = AstrologerProfileRoute(id: ExpertAstrologerRegistry.specialists.first?.id ?? "leyla-western")
@@ -631,14 +634,23 @@ struct HomeView: View {
                 HomeHeaderGreetingSummary()
             }
         }
-        .task {
-            transitReading = TransitEngine.dailyReading(
+        .task(id: viewModel.dailyNoteSpecialistId) {
+            // Both reads hop to the ephemeris actor; the loading skeleton
+            // stays up until they land so the card never pops in visibly.
+            // Re-keyed on the specialist so switching voices recomposes.
+            transitReading = await TransitEngine.dailyReading(
                 sun: viewModel.userSunSign,
                 moon: viewModel.userMoonSign,
                 rising: viewModel.userRisingSign
             )
-            // Today's reading is computed synchronously above, so reveal content
-            // as soon as it's ready — no artificial delay just to show shimmer.
+            let specialist = viewModel.dailyNoteSpecialist
+            dailyGuidance = await DailyGuidanceComposer.guidance(
+                for: specialist?.id ?? "leyla-western",
+                sourceName: specialist?.characterName ?? "Your specialist",
+                sun: viewModel.userSunSign,
+                moon: viewModel.userMoonSign,
+                rising: viewModel.userRisingSign
+            )
             withAnimation(SimastryMotion.reveal) {
                 isLoading = false
             }
@@ -733,16 +745,10 @@ struct HomeView: View {
     }
 
     /// The one canonical daily ritual used by Home, Compass, the widget, and
-    /// the morning notification.
-    private var dailyExpertNoteCard: some View {
+    /// the morning notification. The guidance arrives async from the
+    /// ephemeris actor (composed in the `.task` alongside the transit read).
+    private func dailyExpertNoteCard(_ guidance: DailyGuidance) -> some View {
         let specialist = viewModel.dailyNoteSpecialist
-        let guidance = DailyGuidanceComposer.guidance(
-            for: specialist?.id ?? "leyla-western",
-            sourceName: specialist?.characterName ?? "Your specialist",
-            sun: viewModel.userSunSign,
-            moon: viewModel.userMoonSign,
-            rising: viewModel.userRisingSign
-        )
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {

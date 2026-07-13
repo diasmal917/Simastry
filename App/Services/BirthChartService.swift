@@ -3,6 +3,12 @@ import SwissEphemeris
 
 /// Calculates tropical natal placements with explicit birth-time uncertainty.
 /// The service never substitutes a made-up birth time for an unknown one.
+///
+/// The facade stays `@MainActor`, but every raw ephemeris touch
+/// (`Coordinate`/`HouseCusps` sampling) hops onto `EphemerisActor` — the
+/// app's single ephemeris serialization domain — so chart calculation can
+/// never race the day-windows engine or the transit readers
+/// (see EphemerisActor.swift). `calculate` is therefore async.
 @MainActor
 final class BirthChartService {
     struct BirthChart: Sendable {
@@ -36,8 +42,8 @@ final class BirthChartService {
         latitude: Double?,
         longitude: Double?,
         timeZone: TimeZone?
-    ) -> BirthChart {
-        calculate(
+    ) async -> BirthChart {
+        await calculate(
             birthday: birthday,
             birthTime: birthTime,
             precision: birthTime == nil ? .unknown : .exact,
@@ -59,7 +65,7 @@ final class BirthChartService {
         latitude: Double?,
         longitude: Double?,
         timeZone: TimeZone?
-    ) -> BirthChart {
+    ) async -> BirthChart {
         let effectivePrecision: BirthTimePrecision = birthTime == nil ? .unknown : precision
         let birthPlaceTimeZone = timeZone ?? .current
         let calculation = calculationSamples(
@@ -72,8 +78,8 @@ final class BirthChartService {
         let interval = calculation.interval
         let sampleDates = calculation.dates
 
-        let sun = placementEstimate(body: .sun, dates: sampleDates, interval: interval)
-        let moon = placementEstimate(body: .moon, dates: sampleDates, interval: interval)
+        let sun = await placementEstimate(body: .sun, dates: sampleDates, interval: interval)
+        let moon = await placementEstimate(body: .moon, dates: sampleDates, interval: interval)
 
         guard effectivePrecision != .unknown,
               birthTime != nil,
@@ -82,15 +88,11 @@ final class BirthChartService {
             return BirthChart(sun: sun, moon: moon, rising: nil, houseCusps: nil)
         }
 
-        let risingSamples = sampleDates.map { date -> Double in
-            let houses = HouseCusps(
-                date: date,
-                latitude: latitude,
-                longitude: longitude,
-                houseSystem: .placidus
-            )
-            return houses.ascendent.tropical.value
-        }
+        let risingSamples = await Self.ascendantLongitudes(
+            dates: sampleDates,
+            latitude: latitude,
+            longitude: longitude
+        )
         let rising = estimate(
             longitudes: risingSamples,
             interval: interval,
@@ -101,17 +103,7 @@ final class BirthChartService {
         // Approximate and unknown times intentionally do not persist houses.
         let cusps: [Double]?
         if effectivePrecision == .exact, sampleDates.count == 1, let date = sampleDates.first {
-            let houses = HouseCusps(
-                date: date,
-                latitude: latitude,
-                longitude: longitude,
-                houseSystem: .placidus
-            )
-            cusps = [
-                houses.first, houses.second, houses.third, houses.fourth,
-                houses.fifth, houses.sixth, houses.seventh, houses.eighth,
-                houses.ninth, houses.tenth, houses.eleventh, houses.twelfth
-            ].map { $0.tropical.value }
+            cusps = await Self.houseCuspLongitudes(date: date, latitude: latitude, longitude: longitude)
         } else {
             cusps = nil
         }
@@ -317,13 +309,47 @@ final class BirthChartService {
         body: Planet,
         dates: [Date],
         interval: DateInterval
-    ) -> PlacementEstimate {
-        let longitudes = dates.map { Coordinate<Planet>(body: body, date: $0).longitude }
+    ) async -> PlacementEstimate {
+        let longitudes = await Self.sampledLongitudes(body: body, dates: dates)
         return estimate(
             longitudes: longitudes,
             interval: interval,
             representativeLongitude: longitudes[safe: longitudes.count / 2]
         )
+    }
+
+    // MARK: - Raw ephemeris sampling (single serialization domain)
+
+    @EphemerisActor
+    private static func sampledLongitudes(body: Planet, dates: [Date]) -> [Double] {
+        dates.map { Coordinate<Planet>(body: body, date: $0).longitude }
+    }
+
+    @EphemerisActor
+    private static func ascendantLongitudes(dates: [Date], latitude: Double, longitude: Double) -> [Double] {
+        dates.map { date in
+            HouseCusps(
+                date: date,
+                latitude: latitude,
+                longitude: longitude,
+                houseSystem: .placidus
+            ).ascendent.tropical.value
+        }
+    }
+
+    @EphemerisActor
+    private static func houseCuspLongitudes(date: Date, latitude: Double, longitude: Double) -> [Double] {
+        let houses = HouseCusps(
+            date: date,
+            latitude: latitude,
+            longitude: longitude,
+            houseSystem: .placidus
+        )
+        return [
+            houses.first, houses.second, houses.third, houses.fourth,
+            houses.fifth, houses.sixth, houses.seventh, houses.eighth,
+            houses.ninth, houses.tenth, houses.eleventh, houses.twelfth
+        ].map { $0.tropical.value }
     }
 
     private func estimate(

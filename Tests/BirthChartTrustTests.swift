@@ -13,8 +13,8 @@ final class BirthChartTrustTests: XCTestCase {
         BirthChartService.setup()
     }
 
-    func testUnknownTimeNeverCalculatesRisingOrHouses() {
-        let chart = service.calculate(
+    func testUnknownTimeNeverCalculatesRisingOrHouses() async {
+        let chart = await service.calculate(
             birthday: makeDate(year: 1995, month: 8, day: 12),
             birthTime: nil,
             precision: .unknown,
@@ -31,9 +31,9 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertFalse(chart.moon.possibleSigns.isEmpty)
     }
 
-    func testNilTimeOverridesAnIncorrectExactFlag() {
+    func testNilTimeOverridesAnIncorrectExactFlag() async {
         let birthday = makeDate(year: 1995, month: 8, day: 12)
-        let chart = service.calculate(
+        let chart = await service.calculate(
             birthday: birthday,
             birthTime: nil,
             precision: .exact,
@@ -62,10 +62,10 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertNil(record.houseCusps)
     }
 
-    func testExactTimeCalculatesOneRisingSignAndTwelveHouses() {
+    func testExactTimeCalculatesOneRisingSignAndTwelveHouses() async {
         let date = makeDate(year: 1995, month: 8, day: 12)
         let time = makeDate(year: 2026, month: 1, day: 1, hour: 9, minute: 42)
-        let chart = service.calculate(
+        let chart = await service.calculate(
             birthday: date,
             birthTime: time,
             precision: .exact,
@@ -80,10 +80,10 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertEqual(chart.houseCusps?.count, 12)
     }
 
-    func testApproximateTimeDoesNotPersistHouses() {
+    func testApproximateTimeDoesNotPersistHouses() async {
         let date = makeDate(year: 1995, month: 8, day: 12)
         let time = makeDate(year: 2026, month: 1, day: 1, hour: 9, minute: 42)
-        let chart = service.calculate(
+        let chart = await service.calculate(
             birthday: date,
             birthTime: time,
             precision: .approximate,
@@ -98,36 +98,39 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertEqual(chart.risingSign == nil, (chart.rising?.possibleSigns.count ?? 0) != 1)
     }
 
-    func testApproximateRisingShowsPossibilitiesAcrossARealSignBoundary() throws {
+    func testApproximateRisingShowsPossibilitiesAcrossARealSignBoundary() async throws {
         let birthday = makeDate(year: 1995, month: 8, day: 12)
         let candidates = stride(from: 0, to: 24 * 60, by: 20).map { [self] in
             self.makeDate(year: 2026, month: 1, day: 1, hour: $0 / 60, minute: $0 % 60)
         }
-        let transitionIndex = zip(candidates, candidates.dropFirst()).enumerated().first { [self] entry in
-            let pair = entry.element
-            let first = self.service.calculate(
+        var transitionIndex: Int?
+        for index in 0..<(candidates.count - 1) {
+            let first = await service.calculate(
                 birthday: birthday,
-                birthTime: pair.0,
+                birthTime: candidates[index],
                 precision: .exact,
                 uncertaintyMinutes: nil,
-                latitude: self.bangkokLatitude,
-                longitude: self.bangkokLongitude,
-                timeZone: self.bangkokTimeZone
+                latitude: bangkokLatitude,
+                longitude: bangkokLongitude,
+                timeZone: bangkokTimeZone
             ).risingSign
-            let second = self.service.calculate(
+            let second = await service.calculate(
                 birthday: birthday,
-                birthTime: pair.1,
+                birthTime: candidates[index + 1],
                 precision: .exact,
                 uncertaintyMinutes: nil,
-                latitude: self.bangkokLatitude,
-                longitude: self.bangkokLongitude,
-                timeZone: self.bangkokTimeZone
+                latitude: bangkokLatitude,
+                longitude: bangkokLongitude,
+                timeZone: bangkokTimeZone
             ).risingSign
-            return first != second
-        }?.offset
+            if first != second {
+                transitionIndex = index
+                break
+            }
+        }
 
         let index = try XCTUnwrap(transitionIndex)
-        let approximate = service.calculate(
+        let approximate = await service.calculate(
             birthday: birthday,
             birthTime: candidates[index + 1],
             precision: .approximate,
@@ -142,23 +145,28 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertNotNil(approximate.rising?.disclosure)
     }
 
-    func testUnknownTimeFindsMoonIngressInsteadOfChoosingNoon() throws {
-        let ingressChart = try XCTUnwrap((1...31).lazy.compactMap { [self] day -> BirthChartService.BirthChart? in
-            let chart = self.service.calculate(
-                birthday: self.makeDate(year: 2024, month: 3, day: day),
+    func testUnknownTimeFindsMoonIngressInsteadOfChoosingNoon() async throws {
+        var ingressChart: BirthChartService.BirthChart?
+        for day in 1...31 {
+            let chart = await service.calculate(
+                birthday: makeDate(year: 2024, month: 3, day: day),
                 birthTime: nil,
                 precision: .unknown,
                 uncertaintyMinutes: nil,
-                latitude: self.bangkokLatitude,
-                longitude: self.bangkokLongitude,
-                timeZone: self.bangkokTimeZone
+                latitude: bangkokLatitude,
+                longitude: bangkokLongitude,
+                timeZone: bangkokTimeZone
             )
-            return chart.moon.possibleSigns.count > 1 ? chart : nil
-        }.first)
+            if chart.moon.possibleSigns.count > 1 {
+                ingressChart = chart
+                break
+            }
+        }
 
-        XCTAssertGreaterThanOrEqual(ingressChart.moon.possibleSigns.count, 2)
-        XCTAssertNil(ingressChart.moonSign)
-        XCTAssertNotNil(ingressChart.moon.disclosure)
+        let found = try XCTUnwrap(ingressChart)
+        XCTAssertGreaterThanOrEqual(found.moon.possibleSigns.count, 2)
+        XCTAssertNil(found.moonSign)
+        XCTAssertNotNil(found.moon.disclosure)
     }
 
     func testLocalBirthDayUsesDSTLength() {
@@ -178,7 +186,7 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertEqual(fall.duration, 25 * 60 * 60 - 1, accuracy: 0.1)
     }
 
-    func testRepeatedDSTWallTimeRetainsBothPossibleInstants() {
+    func testRepeatedDSTWallTimeRetainsBothPossibleInstants() async {
         let newYork = TimeZone(identifier: "America/New_York")!
         let birthday = makeDate(year: 2024, month: 11, day: 3)
         let wallTime = makeDate(year: 2026, month: 1, day: 1, hour: 1, minute: 30)
@@ -192,7 +200,7 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertEqual(candidates.count, 2)
         XCTAssertEqual(candidates[1].timeIntervalSince(candidates[0]), 60 * 60, accuracy: 0.1)
 
-        let chart = service.calculate(
+        let chart = await service.calculate(
             birthday: birthday,
             birthTime: wallTime,
             precision: .exact,
@@ -205,9 +213,9 @@ final class BirthChartTrustTests: XCTestCase {
         XCTAssertNil(chart.houseCusps)
     }
 
-    func testUnknownRecordPersistsNilTimeRisingAndHouses() {
+    func testUnknownRecordPersistsNilTimeRisingAndHouses() async {
         let birthday = makeDate(year: 1995, month: 8, day: 12)
-        let chart = service.calculate(
+        let chart = await service.calculate(
             birthday: birthday,
             birthTime: nil,
             precision: .unknown,

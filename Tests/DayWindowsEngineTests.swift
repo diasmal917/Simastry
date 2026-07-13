@@ -303,8 +303,8 @@ final class DayWindowsEngineTests: XCTestCase {
 
     // Synchronous on purpose: XCTest forbids `wait(for:)` inside async test
     // methods, and `measure {}` has no async variant, so the async engine is
-    // driven through expectations while the main run loop pumps the shared
-    // ephemeris executor.
+    // driven through expectations; the work runs on the ephemeris actor's
+    // own executor while the main run loop pumps the task resumption.
     func testPerformanceBudget() {
         let engineInputs = makeInputs(
             makeDate(2026, 3, 14, in: bangkok),
@@ -336,12 +336,12 @@ final class DayWindowsEngineTests: XCTestCase {
 
     /// Regression guard for the single ephemeris serialization domain. Runs
     /// sanitizer-free: it guards via determinism-equality (plus the executor
-    /// identity assertion), not TSan. If `EphemerisActor` ever stops sharing
-    /// the main executor while the `@MainActor` facades stay behind, or the
-    /// engine loses its actor isolation, this test goes red.
+    /// identity assertion), not TSan. If the engine loses its actor
+    /// isolation, or `EphemerisActor` gets rebound to the main executor and
+    /// re-stalls first paint, this test goes red.
     func testConcurrentEngineAndChartAccessMatchesSerialBaselines() async {
         await Task.detached {
-            await Self.assertEphemerisDomainRunsOnMainThread()
+            await Self.assertEphemerisDomainRunsOffTheMainThread()
         }.value
 
         let cases: [DayWindowsEngine.Inputs] = [
@@ -361,8 +361,8 @@ final class DayWindowsEngineTests: XCTestCase {
         let service = BirthChartService()
         let birthday = makeDate(1995, 8, 12, in: bangkok)
         let birthTime = makeDate(2026, 1, 1, 9, 42, in: bangkok)
-        func computeChart() -> BirthChartService.BirthChart {
-            service.calculate(
+        func computeChart() async -> BirthChartService.BirthChart {
+            await service.calculate(
                 birthday: birthday,
                 birthTime: birthTime,
                 precision: .exact,
@@ -372,7 +372,7 @@ final class DayWindowsEngineTests: XCTestCase {
                 timeZone: bangkok
             )
         }
-        let chartBaseline = computeChart()
+        let chartBaseline = await computeChart()
 
         await withTaskGroup(of: (Int, DayWindowsResult).self) { group in
             for _ in 0..<4 {
@@ -383,10 +383,10 @@ final class DayWindowsEngineTests: XCTestCase {
                 }
             }
 
-            // Interleave main-actor chart computations with the hammering
-            // detached tasks; yields let queued engine jobs run in between.
+            // Interleave chart computations with the hammering detached
+            // tasks; both contend for the ephemeris actor and must serialize.
             for _ in 0..<3 {
-                let chart = computeChart()
+                let chart = await computeChart()
                 XCTAssertEqual(chart.sun, chartBaseline.sun)
                 XCTAssertEqual(chart.moon, chartBaseline.moon)
                 XCTAssertEqual(chart.rising, chartBaseline.rising)
@@ -404,10 +404,10 @@ final class DayWindowsEngineTests: XCTestCase {
     }
 
     @EphemerisActor
-    private static func assertEphemerisDomainRunsOnMainThread() {
-        XCTAssertTrue(
+    private static func assertEphemerisDomainRunsOffTheMainThread() {
+        XCTAssertFalse(
             Thread.isMainThread,
-            "EphemerisActor must share the main executor; if you rebind it, migrate the @MainActor ephemeris facades onto it in the same change"
+            "EphemerisActor must run on its own executor so ephemeris work stays off the main thread; if you rebind it to the main executor, migrate every ephemeris facade and this tripwire in the same change"
         )
     }
 

@@ -1515,7 +1515,7 @@ struct AddRelationshipPersonView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        savePerson()
+                        Task { await savePerson() }
                     }
                     .disabled(!canSave)
                     .tint(SimastryColor.gold)
@@ -2359,13 +2359,13 @@ struct AddRelationshipPersonView: View {
         return "people.addPerson.option.\(group).\(safeValue)"
     }
 
-    private func savePerson() {
+    private func savePerson() async {
         var finalSun = sunSign
         var finalMoon = moonSign
         var calculated = false
 
         if hasBirthDate {
-            let chart = BirthChartService().calculate(
+            let chart = await BirthChartService().calculate(
                 birthday: birthDate,
                 birthTime: nil,
                 latitude: nil,

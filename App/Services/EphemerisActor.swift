@@ -8,28 +8,21 @@ import Foundation
 /// ones hidden inside `Coordinate`, `RiseTime`, `SetTime`, and `HouseCusps`
 /// inits — are a data race on shared globals and open file handles.
 ///
-/// This global actor is deliberately bound to the main executor:
-/// - Every pre-existing touchpoint already runs there: `BirthChartService` is
-///   a `@MainActor` facade, and `TransitEngine`/the daily composers are
-///   pinned `@MainActor` and consumed synchronously from SwiftUI views.
-///   Sharing the executor makes `@EphemerisActor` and `@MainActor` one and
-///   the same serialization domain, so raw ephemeris access cannot
-///   interleave — by construction, not by convention.
-/// - `DayWindowsEngine` gets the async, type-enforced boundary Stage 2 needs:
-///   callers hop through this actor from any context and can never race the
-///   synchronous facades.
+/// The actor runs on its own executor so ephemeris computation stays off the
+/// main thread (the day-windows hero must not stall first paint). Every
+/// ephemeris touchpoint is isolated here:
+/// - `DayWindowsEngine`, `TransitEngine`, and the daily composers are
+///   `@EphemerisActor` — callers hop through the actor from any context.
+/// - `BirthChartService` keeps its `@MainActor` facade but hops its raw
+///   `Coordinate`/`HouseCusps` sampling onto this actor internally.
 ///
-/// If ephemeris work ever needs to leave the main thread, rebind this actor
-/// to its own executor AND migrate the `@MainActor` ephemeris facades onto it
-/// in the same change. The executor-identity assertion and the concurrency
-/// stress test in `DayWindowsEngineTests` go red if the domains are split.
+/// Regression guards live in `DayWindowsEngineTests`: an executor-identity
+/// assertion (the domain must NOT be the main executor) and a concurrency
+/// stress test that hammers the engine while charts compute, asserting
+/// byte-equality with serial baselines.
 @globalActor
 actor EphemerisActor {
     static let shared = EphemerisActor()
-
-    nonisolated var unownedExecutor: UnownedSerialExecutor {
-        MainActor.sharedUnownedExecutor
-    }
 
     private init() {}
 }
