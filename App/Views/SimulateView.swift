@@ -40,6 +40,10 @@ struct SimulateView: View {
     /// by default. It expands explicitly (the row's toggle) or automatically
     /// when a legacy `PredictionDraft` needs the full form.
     @State private var isComposerExpanded = false
+    /// Drives the one-time dial → strip → bearings stagger — see
+    /// `instrumentReveal(_:step:)`. Flips false→true once in the initial
+    /// `.task`, mirroring `SimulationResultView`'s `appeared` flag.
+    @State private var instrumentAppeared = false
 
     init(viewModel: AppViewModel, showsTabHeader: Bool = false) {
         self.viewModel = viewModel
@@ -124,8 +128,18 @@ struct SimulateView: View {
     /// suggested-questions bank. `salt` decorrelates bearings that happen to
     /// share a category (a topic bearing and a person chip both resolve to
     /// `.privateQuestion`, for example) so they don't echo identical text.
-    private func bearingQuestion(intent: CompassIntent, topic: CompassTopic?, salt: Int) -> String {
-        let bearingCategory = resolveCategory(intent: intent, topic: topic)
+    /// `questionBank` lets a bearing preview a different category's bank
+    /// than the one its `intent`/`topic` actually submits under — the Love
+    /// bearing keeps `.general`/`.relationships` (still a private-question
+    /// reading), but previews `.loveTiming`'s bank so a love-branded card
+    /// shows love-flavored copy instead of the generic private-question one.
+    private func bearingQuestion(
+        intent: CompassIntent,
+        topic: CompassTopic?,
+        salt: Int,
+        questionBank: FutureQuestionCategory? = nil
+    ) -> String {
+        let bearingCategory = questionBank ?? resolveCategory(intent: intent, topic: topic)
         let bank = bearingCategory.suggestedQuestions
         guard !bank.isEmpty else { return bearingCategory.defaultQuestion }
         let index = abs(dayOfYear(for: Date()) + salt) % bank.count
@@ -140,7 +154,11 @@ struct SimulateView: View {
     /// intact.
     private var compassBearingItems: [CompassBearingItem] {
         let workQuestion = bearingQuestion(intent: .general, topic: .work, salt: 0)
-        let loveQuestion = bearingQuestion(intent: .general, topic: .relationships, salt: 1)
+        // Draft intent/topic stay general+relationships (still a
+        // private-question reading under the hood) — only the preview text
+        // is pulled from the love-specific bank so a heart-tinted card
+        // doesn't show the same generic copy a person chip could show.
+        let loveQuestion = bearingQuestion(intent: .general, topic: .relationships, salt: 1, questionBank: .loveTiming)
         let moneyQuestion = bearingQuestion(intent: .general, topic: .money, salt: 2)
 
         var items: [CompassBearingItem] = [
@@ -183,7 +201,15 @@ struct SimulateView: View {
         }
 
         for (index, person) in viewModel.relationshipPeople.prefix(2).enumerated() {
-            let question = bearingQuestion(intent: .general, topic: .relationships, salt: 4 + index)
+            // `.privateQuestion`'s 4-entry bank is also what "Today's
+            // timing" (salt 3, topic `nil`) and any other relationship-topic
+            // bearing draw from. Salts 8/9 keep every bearing that reads
+            // from this bank pairwise non-congruent mod 4 — 8 and 9 each
+            // differ from 3 (and from each other), so two person chips (or
+            // a person chip and the timing bearing) never land on the same
+            // day-picked index and echo identical text. Love is exempt: it
+            // now previews `.loveTiming`'s bank instead (see above).
+            let question = bearingQuestion(intent: .general, topic: .relationships, salt: 8 + index)
             items.append(CompassBearingItem(
                 id: "compass.bearing.person-\(index)",
                 title: person.displayName,
@@ -246,6 +272,21 @@ struct SimulateView: View {
     /// `isComposerExpanded` `onChange` in `body`.
     private let composerAnchorID = "compass.composer.anchor"
 
+    /// One staggered reveal on first appearance: dial → strip → bearings
+    /// row, 50ms steps, opacity + an 8pt y-offset, eased in via
+    /// `SimastryMotion.instrumentEnter`. Mirrors `SimulationResultView`'s
+    /// `appeared`-flag/step pattern. Reduce Motion drops the stagger and the
+    /// offset entirely — every step just crossfades in together.
+    private func instrumentReveal(_ view: some View, step: Int) -> some View {
+        view
+            .opacity(instrumentAppeared ? 1 : 0)
+            .offset(y: reduceMotion ? 0 : (instrumentAppeared ? 0 : 8))
+            .animation(
+                SimastryMotion.instrumentEnter.delay(reduceMotion ? 0 : Double(step) * 0.05),
+                value: instrumentAppeared
+            )
+    }
+
     /// The glanceable hero: a Now dial + Today strip driven by a per-minute
     /// `TimelineView`, plus the inline detail card when a window is
     /// selected. Both entry paths (tab + Home push) render this — it is now
@@ -255,8 +296,11 @@ struct SimulateView: View {
         VStack(alignment: .leading, spacing: SimastrySpacing.md) {
             TimelineView(.everyMinute) { context in
                 VStack(alignment: .leading, spacing: SimastrySpacing.md) {
-                    CompassNowDial(result: dayWindows, now: context.date)
-                    CompassTodayStrip(result: dayWindows, selection: $selectedWindowID, now: context.date)
+                    instrumentReveal(CompassNowDial(result: dayWindows, now: context.date), step: 0)
+                    instrumentReveal(
+                        CompassTodayStrip(result: dayWindows, selection: $selectedWindowID, now: context.date),
+                        step: 1
+                    )
                 }
                 .task(id: dayWindowsTaskKey(for: context.date)) {
                     await recomputeDayWindows(now: context.date)
@@ -265,10 +309,23 @@ struct SimulateView: View {
 
             if let selectedWindow {
                 CompassWindowDetailCard(window: selectedWindow) {
-                    withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+                    withAnimation(reduceMotion ? nil : SimastryMotion.instrumentExit) {
                         selectedWindowID = nil
                     }
                 }
+                // The segment tap that opens/retargets this card already
+                // animates under `.segmentSelect` (the segment's own
+                // highlight spring); attaching the animation directly to
+                // each half of the transition keeps the card's own
+                // enter/exit curve independent of that ambient transaction.
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top))
+                            .animation(reduceMotion ? nil : SimastryMotion.instrumentEnter),
+                        removal: .opacity
+                            .animation(reduceMotion ? nil : SimastryMotion.instrumentExit)
+                    )
+                )
             }
         }
         .onChange(of: dayWindows) { _, newValue in
@@ -320,7 +377,10 @@ struct SimulateView: View {
                 LazyVStack(alignment: .leading, spacing: SimastrySpacing.lg) {
                     compassInstrument
 
-                    CompassBearingsRow(items: compassBearingItems, creditCaption: bearingCreditCaption)
+                    instrumentReveal(
+                        CompassBearingsRow(items: compassBearingItems, creditCaption: bearingCreditCaption),
+                        step: 2
+                    )
 
                     // Anchored so an expand (toggle or a person bearing) can
                     // scroll the composer to the top of the viewport — see
@@ -399,6 +459,7 @@ struct SimulateView: View {
                 }
             }
             .task {
+                instrumentAppeared = true
                 viewModel.loadRelationshipPeople()
                 viewModel.todayStore.reloadDailyDecisions()
                 loadHistory()

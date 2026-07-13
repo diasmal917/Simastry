@@ -39,6 +39,17 @@ enum SimastryMotion {
     static let press = Animation.easeOut(duration: 0.14)
     static let stateChange = Animation.easeInOut(duration: 0.20)
     static let reveal = Animation.easeOut(duration: 0.20)
+
+    // Compass live instrument (Stage 4). Entrances ease out (arrive slow),
+    // exits ease in (leave fast) — the same in/out asymmetry the rest of the
+    // app's motion follows, just named for this screen's own choreography.
+    static let instrumentEnter = Animation.easeOut(duration: 0.32)
+    static let instrumentExit = Animation.easeIn(duration: 0.18)
+    static let segmentSelect = Animation.spring(SimastrySpring.snappy)
+    /// The Now dial's day-progress arc draws itself in once, the first time
+    /// it renders with real data. Never reused for a repeating/looping
+    /// effect — call sites must gate this behind a one-shot flag.
+    static let dialSweep = Animation.easeOut(duration: 0.6)
 }
 
 struct SimastryColor {

@@ -54,6 +54,9 @@ struct CompassNowDial: View {
     let now: Date
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Gates the arc's one-time sweep — see `dayProgressArc`. Flips
+    /// false→true exactly once per appearance and never resets.
+    @State private var arcRevealed = false
 
     private var currentWindow: DayWindow? {
         guard let result else { return nil }
@@ -149,16 +152,26 @@ struct CompassNowDial: View {
 
     // MARK: Progress arc
 
+    /// The arc draws itself in once, the first time it renders with real
+    /// data: every segment's trim is clamped to a shared `sweepTo` fraction
+    /// that animates 0→1 over `dialSweep` (0.6s ease-out) the first time
+    /// this view appears, then never moves again — `arcRevealed` only ever
+    /// flips false→true. Reduce Motion skips straight to the fully-drawn
+    /// arc. The "now" dot is unrelated to the sweep; it keeps its own
+    /// spring below.
     private func dayProgressArc(windows: [DayWindow], dayInterval: DateInterval) -> some View {
-        GeometryReader { geo in
+        let sweepTo: CGFloat = arcRevealed ? 1 : 0
+
+        return GeometryReader { geo in
             ZStack(alignment: .topLeading) {
                 CompassDialArcShape()
+                    .trim(from: 0, to: sweepTo)
                     .stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: 3, lineCap: .round))
 
                 ForEach(Array(windows.enumerated()), id: \.offset) { _, window in
                     let fractions = arcFractions(for: window, in: dayInterval)
                     CompassDialArcShape()
-                        .trim(from: fractions.from, to: fractions.to)
+                        .trim(from: min(fractions.from, sweepTo), to: min(fractions.to, sweepTo))
                         .stroke(compassTint(for: window.tokenID).opacity(0.9), style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 }
 
@@ -168,8 +181,10 @@ struct CompassNowDial: View {
                     .frame(width: 6, height: 6)
                     .shadow(color: .black.opacity(0.3), radius: 2)
                     .position(point)
-                    .animation(reduceMotion ? nil : SimastryMotion.stateChange, value: point)
+                    .animation(reduceMotion ? nil : .spring(SimastrySpring.grounded), value: point)
             }
+            .animation(reduceMotion ? nil : SimastryMotion.dialSweep, value: arcRevealed)
+            .onAppear { arcRevealed = true }
         }
         .frame(height: 16)
         .accessibilityHidden(true)
@@ -347,7 +362,7 @@ struct CompassTodayStrip: View {
 
         return Button {
             HapticManager.zodiacSelection()
-            withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+            withAnimation(reduceMotion ? nil : SimastryMotion.segmentSelect) {
                 selection = isSelected ? nil : window.id
             }
         } label: {
@@ -404,7 +419,7 @@ struct CompassTodayStrip: View {
             .shadow(color: .black.opacity(0.32), radius: 2)
             .offset(x: totalWidth * fraction - 3.5, y: -1)
             .frame(width: totalWidth, height: 5, alignment: .topLeading)
-            .animation(reduceMotion ? nil : SimastryMotion.stateChange, value: fraction)
+            .animation(reduceMotion ? nil : .spring(SimastrySpring.grounded), value: fraction)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -427,7 +442,7 @@ struct CompassTodayStrip: View {
 
         return Button {
             HapticManager.zodiacSelection()
-            withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+            withAnimation(reduceMotion ? nil : SimastryMotion.segmentSelect) {
                 selection = isSelected ? nil : window.id
             }
         } label: {
@@ -570,20 +585,34 @@ struct CompassBearingsRow: View {
     let items: [CompassBearingItem]
     let creditCaption: String?
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: SimastrySpacing.xs) {
-            ScrollView(.horizontal) {
-                HStack(spacing: SimastrySpacing.xs) {
-                    ForEach(items) { item in
-                        bearingCard(item)
-                    }
-                }
+            // Fixed 168pt cards truncate and land below the fold at
+            // accessibility Dynamic Type sizes — mirrors
+            // `CompassTodayStrip`'s horizontal/vertical split for the same
+            // reason.
+            if dynamicTypeSize.isAccessibilitySize {
+                verticalList
+            } else {
+                horizontalRow
             }
-            .scrollIndicators(.hidden)
-            .contentMargins(.horizontal, 0)
 
             footer
         }
+    }
+
+    private var horizontalRow: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: SimastrySpacing.xs) {
+                ForEach(items) { item in
+                    bearingCard(item)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+        .contentMargins(.horizontal, 0)
     }
 
     private func bearingCard(_ item: CompassBearingItem) -> some View {
@@ -619,6 +648,55 @@ struct CompassBearingsRow: View {
         .accessibilityIdentifier(item.id)
     }
 
+    // MARK: Vertical (accessibility Dynamic Type)
+
+    /// Full-width rows, same ids — mirrors `CompassTodayStrip.verticalList`.
+    /// Neither the title nor the question truncates: the title stays a
+    /// single natural line at these sizes, and the question may wrap to two
+    /// or three lines rather than being clipped.
+    private var verticalList: some View {
+        VStack(alignment: .leading, spacing: SimastrySpacing.xs) {
+            ForEach(items) { item in
+                bearingRow(item)
+            }
+        }
+    }
+
+    private func bearingRow(_ item: CompassBearingItem) -> some View {
+        let tint = compassTint(for: item.tokenID)
+
+        return Button(action: item.action) {
+            HStack(alignment: .top, spacing: SimastrySpacing.sm) {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 30, height: 30)
+                    .background(tint.opacity(0.16), in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(item.question)
+                        .font(SimastryFont.caption)
+                        .foregroundStyle(SimastryColor.mutedSilver)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(SimastrySpacing.sm)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .interactiveGlass(cornerRadius: SimastryRadius.medium, tint: tint)
+        }
+        .buttonStyle(CompassPressStyle())
+        .accessibilityLabel("\(item.title). \(item.question)")
+        .accessibilityIdentifier(item.id)
+    }
+
     private var footer: some View {
         VStack(alignment: .leading, spacing: 2) {
             if let creditCaption {
@@ -628,7 +706,7 @@ struct CompassBearingsRow: View {
             }
             Text("Creates one reading")
                 .font(SimastryFont.captionSmall)
-                .foregroundStyle(SimastryColor.deepMuted)
+                .foregroundStyle(SimastryColor.mutedSilver)
         }
     }
 }
