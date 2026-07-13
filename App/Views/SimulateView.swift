@@ -36,6 +36,10 @@ struct SimulateView: View {
     @State private var dayWindows: DayWindowsResult?
     @State private var selectedWindowID: String?
     @State private var canonicalDailyGuidance: DailyGuidance?
+    /// D3: the composer is demoted behind `CompassAskYourOwnRow`, collapsed
+    /// by default. It expands explicitly (the row's toggle) or automatically
+    /// when a legacy `PredictionDraft` needs the full form.
+    @State private var isComposerExpanded = false
 
     init(viewModel: AppViewModel, showsTabHeader: Bool = false) {
         self.viewModel = viewModel
@@ -88,14 +92,124 @@ struct SimulateView: View {
     }
 
     private var category: FutureQuestionCategory {
-        if draft.intent == .conversation { return .messageOutcome }
-        switch draft.topic {
-        case .relationships: return draft.intent == .timing ? .loveTiming : .privateQuestion
+        resolveCategory(intent: draft.intent, topic: draft.topic)
+    }
+
+    /// The same intent+topic → category mapping `category` applies to the
+    /// live draft, exposed so bearings can pick a suggested question before
+    /// any draft mutation happens. Bearings deliberately reuse this bank
+    /// rather than inventing new copy.
+    private func resolveCategory(intent: CompassIntent, topic: CompassTopic?) -> FutureQuestionCategory {
+        if intent == .conversation { return .messageOutcome }
+        switch topic {
+        case .relationships: return intent == .timing ? .loveTiming : .privateQuestion
         case .work: return .careerSuccess
         case .money: return .moneyDirection
         case .family: return .familyPath
         case .personal, .none: return .privateQuestion
         }
+    }
+
+    /// Day-of-year, mirroring `DayWindowsEngine`'s own helper — used to pick
+    /// bearing question text deterministically from
+    /// `FutureQuestionCategory.suggestedQuestions`, the same
+    /// `pick(dayOfYear % variants)` idiom `DayWindowCopy` uses.
+    private func dayOfYear(for date: Date) -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+    }
+
+    /// A deterministic, day-picked question from the derived category's
+    /// suggested-questions bank. `salt` decorrelates bearings that happen to
+    /// share a category (a topic bearing and a person chip both resolve to
+    /// `.privateQuestion`, for example) so they don't echo identical text.
+    private func bearingQuestion(intent: CompassIntent, topic: CompassTopic?, salt: Int) -> String {
+        let bearingCategory = resolveCategory(intent: intent, topic: topic)
+        let bank = bearingCategory.suggestedQuestions
+        guard !bank.isEmpty else { return bearingCategory.defaultQuestion }
+        let index = abs(dayOfYear(for: Date()) + salt) % bank.count
+        return bank[index]
+    }
+
+    /// Deterministic order per the plan: work, love, money, then today's
+    /// timing (natal-gated — the same rule as the composer's Timing chip),
+    /// then up to two saved-person chips. No new persistence: every bearing
+    /// reuses `CompassDraft` and `beginSubmission` exactly as the composer
+    /// does, so moderation, the rate limiter, and the credit gate all stay
+    /// intact.
+    private var compassBearingItems: [CompassBearingItem] {
+        let workQuestion = bearingQuestion(intent: .general, topic: .work, salt: 0)
+        let loveQuestion = bearingQuestion(intent: .general, topic: .relationships, salt: 1)
+        let moneyQuestion = bearingQuestion(intent: .general, topic: .money, salt: 2)
+
+        var items: [CompassBearingItem] = [
+            CompassBearingItem(
+                id: "compass.bearing.work",
+                title: "Work read",
+                question: workQuestion,
+                systemImage: "briefcase.fill",
+                tokenID: "career",
+                action: { runTopicBearing(intent: .general, topic: .work, question: workQuestion) }
+            ),
+            CompassBearingItem(
+                id: "compass.bearing.love",
+                title: "Love read",
+                question: loveQuestion,
+                systemImage: "heart.fill",
+                tokenID: "love",
+                action: { runTopicBearing(intent: .general, topic: .relationships, question: loveQuestion) }
+            ),
+            CompassBearingItem(
+                id: "compass.bearing.money",
+                title: "Money read",
+                question: moneyQuestion,
+                systemImage: "banknote.fill",
+                tokenID: "money",
+                action: { runTopicBearing(intent: .general, topic: .money, question: moneyQuestion) }
+            )
+        ]
+
+        if timingIsAvailable {
+            let timingQuestion = bearingQuestion(intent: .timing, topic: nil, salt: 3)
+            items.append(CompassBearingItem(
+                id: "compass.bearing.timing",
+                title: "Today’s timing",
+                question: timingQuestion,
+                systemImage: "clock.fill",
+                tokenID: "personal",
+                action: { runTopicBearing(intent: .timing, topic: nil, question: timingQuestion) }
+            ))
+        }
+
+        for (index, person) in viewModel.relationshipPeople.prefix(2).enumerated() {
+            let question = bearingQuestion(intent: .general, topic: .relationships, salt: 4 + index)
+            items.append(CompassBearingItem(
+                id: "compass.bearing.person-\(index)",
+                title: person.displayName,
+                question: question,
+                systemImage: "person.crop.circle.fill",
+                tokenID: "marriage",
+                action: { prefillPersonBearing(person, question: question) }
+            ))
+        }
+
+        return items
+    }
+
+    /// D7: the dial and strip stay free and unlimited; only bearings spend a
+    /// credit, through the same gate the composer's primary action uses.
+    /// Surfacing the remaining count here means tapping one is never a
+    /// surprise — including at zero, where bearings stay tappable and land
+    /// on the existing top-up sheet.
+    private var bearingCreditCaption: String? {
+        guard viewModel.isRevenueCatAvailable, (viewModel.profile?.tier ?? "free") == "free" else { return nil }
+        let remaining = viewModel.remainingWeeklyPredictions
+        var caption = "\(remaining) reading\(remaining == 1 ? "" : "s") left this week"
+        if viewModel.hasBonusPredictions {
+            caption += " + \(viewModel.bonusPredictions) bonus"
+        }
+        return caption
     }
 
     private var pendingCheckIn: PredictionResult? {
@@ -128,6 +242,10 @@ struct SimulateView: View {
         return dayWindows.windows.first { $0.id == selectedWindowID }
     }
 
+    /// `ScrollViewReader` anchor id for `composerSection` — see the
+    /// `isComposerExpanded` `onChange` in `body`.
+    private let composerAnchorID = "compass.composer.anchor"
+
     /// The glanceable hero: a Now dial + Today strip driven by a per-minute
     /// `TimelineView`, plus the inline detail card when a window is
     /// selected. Both entry paths (tab + Home push) render this — it is now
@@ -141,7 +259,7 @@ struct SimulateView: View {
                     CompassTodayStrip(result: dayWindows, selection: $selectedWindowID, now: context.date)
                 }
                 .task(id: dayWindowsTaskKey(for: context.date)) {
-                    await recomputeDayWindows()
+                    await recomputeDayWindows(now: context.date)
                 }
             }
 
@@ -161,11 +279,22 @@ struct SimulateView: View {
         }
     }
 
-    var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: SimastrySpacing.lg) {
-                compassInstrument
+    /// D3: the composer, demoted behind a collapsed toggle row. Expanding is
+    /// either explicit (`CompassAskYourOwnRow`) or automatic when a legacy
+    /// `PredictionDraft` hands off a question that needs the full form
+    /// (`applyLegacyDraftIfNeeded`). Bearings never expand it for their own
+    /// submission — only person bearings do, since prefilling a person
+    /// benefits from letting the user add context before it runs.
+    @ViewBuilder
+    private var composerSection: some View {
+        VStack(alignment: .leading, spacing: SimastrySpacing.sm) {
+            CompassAskYourOwnRow(isExpanded: isComposerExpanded) {
+                withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+                    isComposerExpanded.toggle()
+                }
+            }
 
+            if isComposerExpanded {
                 CompassComposerCard(
                     draft: $draft,
                     timingIsAvailable: timingIsAvailable,
@@ -181,90 +310,122 @@ struct SimulateView: View {
                     onSelectPerson: selectPerson,
                     onSubmit: beginSubmission
                 )
+            }
+        }
+    }
 
-                if viewModel.predictFollowUpPending, let pendingCheckIn {
-                    CompassPendingCheckInCard(result: pendingCheckIn) {
-                        activeSheet = .result(pendingCheckIn)
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: SimastrySpacing.lg) {
+                    compassInstrument
+
+                    CompassBearingsRow(items: compassBearingItems, creditCaption: bearingCreditCaption)
+
+                    // Anchored so an expand (toggle or a person bearing) can
+                    // scroll the composer to the top of the viewport — see
+                    // the `isComposerExpanded` onChange below. Content this
+                    // tall can otherwise land partly behind the bottom CTA's
+                    // safe-area inset the instant it appears, since that
+                    // inset reserves scroll room rather than repositioning
+                    // already-laid-out content.
+                    composerSection
+                        .id(composerAnchorID)
+
+                    if viewModel.predictFollowUpPending, let pendingCheckIn {
+                        CompassPendingCheckInCard(result: pendingCheckIn) {
+                            activeSheet = .result(pendingCheckIn)
+                        }
                     }
-                }
 
-                if let canonicalDailyGuidance {
-                    CompassDailyGuidanceCard(guidance: canonicalDailyGuidance)
-                }
-
-                CompassRecentReadingsSection(
-                    viewModel: viewModel,
-                    readings: Array(history.prefix(3)),
-                    onOpen: { activeSheet = .result($0) }
-                )
-
-                CompassPrivacyNote()
-            }
-            .padding(.horizontal, SimastrySpacing.lg)
-            .padding(.top, SimastrySpacing.lg)
-            .padding(.bottom, SimastrySpacing.tabBarEndClearance)
-        }
-        .scrollIndicators(.hidden)
-        // A swipe after typing should both dismiss the keyboard and expose the
-        // single primary CTA, especially on the compact simulator viewport.
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            CompassPrimaryAction(
-                title: actionTitle,
-                isGenerating: isGenerating,
-                canSubmit: canSubmit,
-                onSubmit: beginSubmission,
-                submissionHint: submissionHint
-            )
-        }
-        .background { CelestialBackground() }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if showsTabHeader {
-                AppTabFloatingHeader(viewModel: viewModel)
-            }
-        }
-        .sheet(item: $activeSheet) { destination in
-            switch destination {
-            case .result(let result):
-                SimulationResultView(
-                    result: result,
-                    userSunSign: viewModel.userSunSign,
-                    onSaveFollowUp: { followUp in
-                        saveFollowUp(followUp, for: result.id)
-                    },
-                    onSetHelpfulness: { helpfulness in
-                        viewModel.predictionService.setHelpfulness(helpfulness, for: result.id)
-                        loadHistory()
+                    if let canonicalDailyGuidance {
+                        CompassDailyGuidanceCard(guidance: canonicalDailyGuidance)
                     }
-                )
-            case .topUp:
-                PredictionTopUpView(viewModel: viewModel)
+
+                    CompassRecentReadingsSection(
+                        viewModel: viewModel,
+                        readings: Array(history.prefix(3)),
+                        onOpen: { activeSheet = .result($0) }
+                    )
+
+                    CompassPrivacyNote()
+                }
+                .padding(.horizontal, SimastrySpacing.lg)
+                .padding(.top, SimastrySpacing.lg)
+                .padding(.bottom, SimastrySpacing.tabBarEndClearance)
             }
-        }
-        .task {
-            viewModel.loadRelationshipPeople()
-            viewModel.todayStore.reloadDailyDecisions()
-            loadHistory()
-            await refreshTransitEvidence()
-            applyLegacyDraftIfNeeded()
-        }
-        .task(id: dailyGuidanceRefreshKey) {
-            await refreshCanonicalDailyGuidance()
-        }
-        .onChange(of: viewModel.predictionDraft?.id) { _, _ in
-            applyLegacyDraftIfNeeded()
-        }
-        .onChange(of: screenshotPickerItem) { _, item in
-            guard let item else { return }
-            screenshotPickerItem = nil
-            importScreenshot(item)
-        }
-        .onChange(of: draft.intent) { _, intent in
-            if intent != .conversation {
-                selectedPersonID = nil
+            .scrollIndicators(.hidden)
+            // A swipe after typing should both dismiss the keyboard and expose the
+            // single primary CTA, especially on the compact simulator viewport.
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                // D3: the bottom CTA only makes sense once the composer is open
+                // — bearings submit on their own tap and never need it.
+                if isComposerExpanded {
+                    CompassPrimaryAction(
+                        title: actionTitle,
+                        isGenerating: isGenerating,
+                        canSubmit: canSubmit,
+                        onSubmit: beginSubmission,
+                        submissionHint: submissionHint
+                    )
+                }
+            }
+            .background { CelestialBackground() }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if showsTabHeader {
+                    AppTabFloatingHeader(viewModel: viewModel)
+                }
+            }
+            .sheet(item: $activeSheet) { destination in
+                switch destination {
+                case .result(let result):
+                    SimulationResultView(
+                        result: result,
+                        userSunSign: viewModel.userSunSign,
+                        onSaveFollowUp: { followUp in
+                            saveFollowUp(followUp, for: result.id)
+                        },
+                        onSetHelpfulness: { helpfulness in
+                            viewModel.predictionService.setHelpfulness(helpfulness, for: result.id)
+                            loadHistory()
+                        }
+                    )
+                case .topUp:
+                    PredictionTopUpView(viewModel: viewModel)
+                }
+            }
+            .task {
+                viewModel.loadRelationshipPeople()
+                viewModel.todayStore.reloadDailyDecisions()
+                loadHistory()
+                await refreshTransitEvidence()
+                applyLegacyDraftIfNeeded()
+            }
+            .task(id: dailyGuidanceRefreshKey) {
+                await refreshCanonicalDailyGuidance()
+            }
+            .onChange(of: viewModel.predictionDraft?.id) { _, _ in
+                applyLegacyDraftIfNeeded()
+            }
+            .onChange(of: screenshotPickerItem) { _, item in
+                guard let item else { return }
+                screenshotPickerItem = nil
+                importScreenshot(item)
+            }
+            .onChange(of: draft.intent) { _, intent in
+                if intent != .conversation {
+                    selectedPersonID = nil
+                }
+            }
+            .onChange(of: isComposerExpanded) { _, expanded in
+                guard expanded else { return }
+                withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+                    proxy.scrollTo(composerAnchorID, anchor: .top)
+                }
             }
         }
     }
@@ -280,6 +441,32 @@ struct SimulateView: View {
         targetSunSign = person.sunSign
         targetMoonSign = person.moonSign
         targetRisingSign = person.risingSign
+    }
+
+    /// Topic and timing bearings: prefill the draft and submit immediately
+    /// through the untouched `beginSubmission` gate (moderation, rate
+    /// limiter, credit gate, top-up sheet all apply exactly as they do from
+    /// the composer). The composer itself stays collapsed — there is
+    /// nothing to add context to before a one-tap read fires.
+    private func runTopicBearing(intent: CompassIntent, topic: CompassTopic?, question: String) {
+        draft.intent = intent
+        draft.topic = topic
+        draft.question = question
+        beginSubmission()
+    }
+
+    /// Person bearings: prefill the person, topic, and a starting question,
+    /// then expand the composer instead of auto-running — unlike a topic
+    /// read, a reading about a specific person benefits from the user
+    /// adding context (or swapping the question) before it spends a credit.
+    private func prefillPersonBearing(_ person: RelationshipPerson, question: String) {
+        selectPerson(person.id)
+        draft.intent = .general
+        draft.topic = .relationships
+        draft.question = question
+        withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+            isComposerExpanded = true
+        }
     }
 
     private func refreshTransitEvidence() async {
@@ -319,11 +506,11 @@ struct SimulateView: View {
     }
 
     @MainActor
-    private func recomputeDayWindows() async {
+    private func recomputeDayWindows(now: Date) async {
         let style = GuidanceStyle(rawValue: guidanceStyleRawValue) ?? .practical
         let gated = provenanceGatedNatalSigns
         let inputs = DayWindowsEngine.Inputs(
-            date: Date(),
+            date: now,
             timeZone: .current,
             natalSun: gated.sun,
             natalMoon: gated.moon,
@@ -335,6 +522,11 @@ struct SimulateView: View {
 
     private func applyLegacyDraftIfNeeded() {
         guard let legacy = viewModel.predictionDraft else { return }
+        // This handoff always carries a specific question (a reply-draft
+        // from People, for example) that needs the full form, not a
+        // one-tap bearing — auto-expand so the prefilled fields are
+        // immediately visible instead of hidden behind the toggle.
+        isComposerExpanded = true
 
         draft.intent = legacy.category == .messageOutcome ? .conversation : .general
         draft.topic = topic(for: legacy.category)
@@ -507,6 +699,15 @@ struct SimulateView: View {
                 detail: transitReading.detailLine + " Scope: today only.",
                 supportsTiming: true
             ))
+        }
+
+        // D4: whenever a current window exists, attach it as evidence too —
+        // this is natal-independent (moon-first windows work for every
+        // user), so readings can echo real clock bounds honestly even when
+        // `timingIsAvailable` (the natal-gated composer chip, untouched
+        // above) is false.
+        if let currentWindow = dayWindows?.window(at: Date()) {
+            items.append(currentWindow.readingEvidenceRow)
         }
 
         let userPlacements = placementLine(

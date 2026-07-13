@@ -128,3 +128,20 @@ nonisolated struct DayWindowsResult: Equatable, Sendable {
         return boundaries.filter { $0 > date }.min()
     }
 }
+
+extension DayWindow {
+    /// The evidence row a Compass reading may cite for the current sky
+    /// window (D4): an honest, clock-bounded, transiting-only fact — never
+    /// natal, always scoped to today, same as every other window. Callers
+    /// (`SimulateView.readingEvidence`) attach this only when a window
+    /// actually covers "now"; `timingIsAvailable` (the natal-gated composer
+    /// chip) is a separate, untouched concern.
+    var readingEvidenceRow: ReadingEvidence {
+        ReadingEvidence(
+            basis: .calculated,
+            label: "Current sky window",
+            detail: "\(title) — \(derivation). Scope: today only.",
+            supportsTiming: true
+        )
+    }
+}

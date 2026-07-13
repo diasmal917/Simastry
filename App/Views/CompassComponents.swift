@@ -403,6 +403,46 @@ struct CompassComposerCard: View {
 
 }
 
+/// D3: the composer's collapsed-state toggle. Compass leads with the
+/// glanceable instrument and one-tap bearings; typing a custom question is
+/// still one tap away behind this row. Expanding also happens automatically
+/// when a legacy `PredictionDraft` hands off a question that needs the full
+/// form — see `SimulateView.applyLegacyDraftIfNeeded()`.
+struct CompassAskYourOwnRow: View {
+    let isExpanded: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: SimastrySpacing.sm) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(SimastryColor.gold)
+                    .frame(width: 32, height: 32)
+                    .background(SimastryColor.gold.opacity(0.12), in: Circle())
+
+                Text("Ask your own question")
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+
+                Spacer(minLength: SimastrySpacing.xs)
+
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+            }
+            .padding(.horizontal, SimastrySpacing.md)
+            .frame(minHeight: 44)
+            .interactiveGlass(cornerRadius: SimastryRadius.medium)
+        }
+        .buttonStyle(CompassPressStyle())
+        .accessibilityIdentifier("compass.composer.expand")
+        .accessibilityLabel("Ask your own question")
+        .accessibilityAddTraits(isExpanded ? .isSelected : [])
+    }
+}
+
 /// The one primary Compass CTA. It is also used as a bottom safe-area action
 /// so the keyboard cannot strand the user below the fold after typing.
 struct CompassPrimaryAction: View {

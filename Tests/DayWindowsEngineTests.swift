@@ -411,6 +411,41 @@ final class DayWindowsEngineTests: XCTestCase {
         )
     }
 
+    // MARK: - 16. Reading evidence row (D4)
+
+    /// Compass bearings attach the current window as reading evidence so a
+    /// reply can echo real clock bounds honestly. This is a pure
+    /// transformation (`DayWindow.readingEvidenceRow`) independent of the
+    /// engine's own computation, so it is fixture-driven rather than
+    /// engine-driven like the tests above.
+    func testCurrentWindowEvidenceRowIsCalculatedAndSupportsTiming() {
+        let window = DayWindow(
+            kind: .moonAspect,
+            interval: DateInterval(start: makeDate(2026, 3, 14, 9, 0, in: bangkok), duration: 3600),
+            tokenID: "career",
+            title: "Good window for a decisive push",
+            rationale: "An easy stretch — momentum tends to work with you.",
+            derivation: "Moon trine Mars at 9:00 AM; separates by 10:00 AM.",
+            evidence: ReadingEvidence(
+                basis: .calculated,
+                label: "Moon trine Mars",
+                detail: "Moon trine Mars at 9:00 AM. Scope: today only.",
+                supportsTiming: true
+            )
+        )
+
+        let row = window.readingEvidenceRow
+
+        XCTAssertEqual(row.basis, .calculated)
+        XCTAssertTrue(row.supportsTiming)
+        XCTAssertTrue(
+            row.detail.localizedCaseInsensitiveContains("today"),
+            "evidence row must carry the today-only scope: \(row.detail)"
+        )
+        XCTAssertTrue(row.detail.contains(window.title), "evidence row should echo the window's title")
+        XCTAssertTrue(row.detail.contains(window.derivation), "evidence row should echo the window's sky-fact derivation")
+    }
+
     // MARK: - Shared assertions & helpers
 
     private func assertStripIsSortedNonOverlappingAndTilesTheDay(

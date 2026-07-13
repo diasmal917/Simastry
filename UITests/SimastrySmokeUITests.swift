@@ -153,6 +153,7 @@ final class SimastrySmokeUITests: XCTestCase {
         let compassTab = app.tabBars.buttons["Compass"]
         XCTAssertTrue(compassTab.waitForExistence(timeout: 10))
         compassTab.tap()
+        expandComposerIfNeeded()
 
         let question = app.textFields["compass.question"]
         XCTAssertTrue(question.waitForExistence(timeout: 6))
@@ -174,6 +175,7 @@ final class SimastrySmokeUITests: XCTestCase {
     func testCompassProgressivelyRevealsIntentContext() throws {
         launchSeededApp()
         app.tabBars.buttons["Compass"].tap()
+        expandComposerIfNeeded()
 
         let conversation = app.buttons["compass.intent.conversation"]
         XCTAssertTrue(conversation.waitForExistence(timeout: 8))
@@ -229,6 +231,27 @@ final class SimastrySmokeUITests: XCTestCase {
 
         app.buttons["compass.window.close"].tap()
         XCTAssertTrue(detail.waitForNonExistence(timeout: 5), "Expected the detail card to dismiss on close")
+    }
+
+    func testCompassBearingRunsReading() throws {
+        launchSeededApp()
+
+        let compassTab = app.tabBars.buttons["Compass"]
+        XCTAssertTrue(compassTab.waitForExistence(timeout: 10))
+        compassTab.tap()
+
+        // Topic bearings prefill the draft and submit immediately — no
+        // typing, and the composer never needs to expand. Seeded launch runs
+        // RevenueCat-unavailable, so this hits the local-fallback path with
+        // no credit gate in the way.
+        let workBearing = app.buttons["compass.bearing.work"]
+        XCTAssertTrue(reveal(workBearing, maxSwipes: 6), "Expected the Work read bearing to be reachable")
+        workBearing.tap()
+
+        XCTAssertTrue(app.navigationBars["Reading"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "TAKEAWAY")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "EVIDENCE")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "confidence")).firstMatch.exists)
     }
 
     func testAccountHubPreservesEverySelectedTab() throws {
@@ -707,6 +730,29 @@ final class SimastrySmokeUITests: XCTestCase {
             app.launchEnvironment[key] = value
         }
         app.launch()
+    }
+
+    /// D3 demoted the composer behind a collapsed "Ask your own question"
+    /// row. Tests that need the composer's own fields (`compass.question`,
+    /// `compass.intent.*`, …) call this first; it is a no-op when the
+    /// composer is already open (for example after a legacy-draft handoff
+    /// auto-expands it).
+    private func expandComposerIfNeeded() {
+        let question = app.textFields["compass.question"]
+        if question.waitForExistence(timeout: 1), question.isHittable { return }
+
+        let expand = app.buttons["compass.composer.expand"]
+        if reveal(expand, maxSwipes: 6) {
+            expand.tap()
+        }
+        guard question.waitForExistence(timeout: 4) else { return }
+
+        // The expand toggle animates the composer's fields in and scrolls
+        // them into place at the same time. Wait for that to settle before
+        // handing back control, so a caller's next tap (an intent chip, for
+        // example) lands on its target instead of a still-moving layout.
+        let settled = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: question, handler: nil)
+        wait(for: [settled], timeout: 2)
     }
 
     private func reveal(_ element: XCUIElement, maxSwipes: Int = 6) -> Bool {

@@ -36,8 +36,9 @@ private func compassTimeRangeText(_ interval: DateInterval) -> String {
     "\(compassClockFormatter.string(from: interval.start)) – \(compassClockFormatter.string(from: interval.end))"
 }
 
-private func compassSegmentAccessibilityLabel(_ window: DayWindow) -> String {
-    "\(compassClockFormatter.string(from: window.interval.start))–\(compassClockFormatter.string(from: window.interval.end)), \(window.title)"
+private func compassSegmentAccessibilityLabel(_ window: DayWindow, isCurrent: Bool) -> String {
+    let base = "\(compassClockFormatter.string(from: window.interval.start))–\(compassClockFormatter.string(from: window.interval.end)), \(window.title)"
+    return isCurrent ? "\(base), current" : base
 }
 
 // MARK: - Now dial
@@ -242,7 +243,12 @@ struct CompassTodayStrip: View {
 
     @ViewBuilder
     private var content: some View {
-        if let result, !result.windows.isEmpty {
+        // Gate on the cached result actually covering "now", mirroring the
+        // dial's `window(at:)` behavior: right at midnight (or in the brief
+        // gap before the first compute lands) `result` may still describe
+        // yesterday, and showing yesterday's segments with the progress dot
+        // pinned at 100% reads as broken rather than loading.
+        if let result, !result.windows.isEmpty, result.dayInterval.contains(now) {
             if dynamicTypeSize.isAccessibilitySize {
                 verticalList(result: result)
             } else {
@@ -337,6 +343,7 @@ struct CompassTodayStrip: View {
         let tint = compassTint(for: window.tokenID)
         let icon = compassIcon(for: window.tokenID)
         let isSelected = selection == window.id
+        let isCurrent = window.interval.contains(now)
 
         return Button {
             HapticManager.zodiacSelection()
@@ -356,8 +363,7 @@ struct CompassTodayStrip: View {
                 }
         }
         .buttonStyle(CompassPressStyle())
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(compassSegmentAccessibilityLabel(window))
+        .accessibilityLabel(compassSegmentAccessibilityLabel(window, isCurrent: isCurrent))
         .accessibilityIdentifier("compass.timeline.segment.\(index)")
     }
 
@@ -460,8 +466,7 @@ struct CompassTodayStrip: View {
             }
         }
         .buttonStyle(CompassPressStyle())
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(compassSegmentAccessibilityLabel(window))
+        .accessibilityLabel(compassSegmentAccessibilityLabel(window, isCurrent: isCurrent))
         .accessibilityIdentifier("compass.timeline.segment.\(index)")
     }
 }
@@ -535,5 +540,95 @@ struct CompassWindowDetailCard: View {
         // `.contain` keeps the close button's own identifier intact.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("compass.window.detail")
+    }
+}
+
+// MARK: - Bearings row
+
+/// One tappable "bearing": a pre-composed reading the user can run (or
+/// begin) in a single tap. `SimulateView` owns the label/question pairing
+/// and the tap behavior — topic bearings prefill the draft and immediately
+/// submit through the existing credit-gated flow; person bearings prefill
+/// and expand the composer instead so the user can add context first. This
+/// type is purely a rendering contract; nothing here decides what happens
+/// on tap.
+struct CompassBearingItem: Identifiable {
+    let id: String
+    let title: String
+    let question: String
+    let systemImage: String
+    let tokenID: String
+    let action: () -> Void
+}
+
+/// A horizontally scrolling row of one-tap readings, sitting between the
+/// Today strip and the (now demoted) composer. D7: the dial and strip above
+/// are free and unlimited; a tap here is the one thing in Compass that
+/// spends a credit, so every card previews the exact question it will ask
+/// and the footer says so plainly before anything fires.
+struct CompassBearingsRow: View {
+    let items: [CompassBearingItem]
+    let creditCaption: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: SimastrySpacing.xs) {
+            ScrollView(.horizontal) {
+                HStack(spacing: SimastrySpacing.xs) {
+                    ForEach(items) { item in
+                        bearingCard(item)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            .contentMargins(.horizontal, 0)
+
+            footer
+        }
+    }
+
+    private func bearingCard(_ item: CompassBearingItem) -> some View {
+        let tint = compassTint(for: item.tokenID)
+
+        return Button(action: item.action) {
+            VStack(alignment: .leading, spacing: SimastrySpacing.xs) {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 28, height: 28)
+                    .background(tint.opacity(0.16), in: Circle())
+
+                Text(item.title)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.offWhite)
+                    .lineLimit(1)
+
+                Text(item.question)
+                    .font(SimastryFont.caption)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(width: 168, alignment: .leading)
+            .padding(SimastrySpacing.sm)
+            .frame(minHeight: 44)
+            .interactiveGlass(cornerRadius: SimastryRadius.medium, tint: tint)
+        }
+        .buttonStyle(CompassPressStyle())
+        .accessibilityLabel("\(item.title). \(item.question)")
+        .accessibilityIdentifier(item.id)
+    }
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let creditCaption {
+                Text(creditCaption)
+                    .font(SimastryFont.captionSmall)
+                    .foregroundStyle(SimastryColor.mutedSilver)
+            }
+            Text("Creates one reading")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.deepMuted)
+        }
     }
 }
