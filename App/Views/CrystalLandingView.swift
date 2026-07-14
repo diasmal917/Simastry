@@ -8,6 +8,7 @@ struct CrystalLandingView: View {
     @Bindable var viewModel: AppViewModel
     @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var appeared = false
     /// The real thing, before any tap: today's windows computed on-device
@@ -22,7 +23,7 @@ struct CrystalLandingView: View {
 
             ZStack {
                 MoodMeshBackground()
-                activationPage(compact: compact)
+                activationPage(compact: compact, height: geo.size.height)
             }
         }
         .preferredColorScheme(.dark)
@@ -34,11 +35,19 @@ struct CrystalLandingView: View {
         }
     }
 
-    private func activationPage(compact: Bool) -> some View {
-        ScrollView {
+    private func activationPage(compact: Bool, height: CGFloat) -> some View {
+        // Sized off real height, not the compact flag. The primary CTA is a
+        // pinned bottom bar (always tappable, no scrolling needed — the
+        // funnel UITest depends on that), so the ball only has to leave the
+        // headline and the now-line near the first fold, not the whole page.
+        let ballDiameter = min(190, max(150, (height - 500) / 1.38))
+
+        return ScrollView {
             VStack(spacing: compact ? 14 : 18) {
                 SimastryWordmark(font: .title3.bold().italic())
                     .padding(.top, compact ? 8 : 14)
+
+                CrystalBallView(diameter: ballDiameter)
 
                 VStack(spacing: 8) {
                     Text("Know what to say.\nTo anyone.")
@@ -71,11 +80,16 @@ struct CrystalLandingView: View {
                         }
                 }
 
+                featureLine
+
                 VStack(spacing: 10) {
-                    CrystalPrimaryButton(title: "Try Compass — no account needed") {
-                        beginGuestCompass()
+                    // At accessibility sizes the pinned bar would fill half
+                    // the screen and collide with the story behind it — the
+                    // CTA rides in the flow instead (the same size-class
+                    // swap the Compass strip and bearings row use).
+                    if dynamicTypeSize.isAccessibilitySize {
+                        primaryCTA
                     }
-                    .accessibilityIdentifier("landing.crystal.cta")
 
                     Button {
                         HapticManager.buttonPress()
@@ -122,6 +136,36 @@ struct CrystalLandingView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
+        // The one action every visitor needs is never below the fold: a
+        // pinned bar over the scrolling story (constant-height inset per
+        // size class — no mid-interaction appearance, so none of the
+        // layout-feedback class).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !dynamicTypeSize.isAccessibilitySize {
+                primaryCTA
+                    .padding(.horizontal, 24)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
+                    .frame(maxWidth: 620)
+                    .frame(maxWidth: .infinity)
+                    .background {
+                        LinearGradient(
+                            colors: [.black.opacity(0), .black.opacity(0.42), .black.opacity(0.62)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea(edges: .bottom)
+                        .allowsHitTesting(false)
+                    }
+            }
+        }
+    }
+
+    private var primaryCTA: some View {
+        CrystalPrimaryButton(title: "Try Compass — no account needed") {
+            beginGuestCompass()
+        }
+        .accessibilityIdentifier("landing.crystal.cta")
     }
 
     /// The real current window, or a shimmer while the first compute lands.
@@ -198,6 +242,53 @@ struct CrystalLandingView: View {
             .foregroundStyle(CrystalMood.gold)
     }
 
+    /// One quiet line naming what else is inside — chrome, not data. The
+    /// expert cluster uses the real approved portraits; everything else is
+    /// a plain glyph. Falls to a three-row list when the line doesn't fit
+    /// (accessibility sizes included).
+    private var featureLine: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                featureItem(text: "Ask five experts") { ExpertPortraitCluster() }
+                featureDot
+                featureItem(text: "Practice a conversation") { featureGlyph("theatermasks.fill") }
+                featureDot
+                featureItem(text: "Decode a text") { featureGlyph(SimastryIcon.lens) }
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                featureItem(text: "Ask five experts") { ExpertPortraitCluster() }
+                featureItem(text: "Practice a conversation") { featureGlyph("theatermasks.fill") }
+                featureItem(text: "Decode a text") { featureGlyph(SimastryIcon.lens) }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Also inside: ask five experts, practice a conversation, decode a text.")
+        .accessibilityIdentifier("landing.featureLine")
+    }
+
+    private func featureItem(text: String, @ViewBuilder icon: () -> some View) -> some View {
+        HStack(spacing: 5) {
+            icon()
+            Text(text)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.white.opacity(0.64))
+                .lineLimit(1)
+        }
+    }
+
+    private func featureGlyph(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.55))
+    }
+
+    private var featureDot: some View {
+        Text("·")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.white.opacity(0.35))
+    }
+
     private func beginGuestCompass() {
         viewModel.firstReadOnboardingIntent = .predict
         withAnimation(SimastryMotion.stateChange) {
@@ -234,6 +325,28 @@ private let landingClockFormatter: DateFormatter = {
     formatter.dateFormat = "h:mm a"
     return formatter
 }()
+
+/// Three overlapping expert portraits at caption scale — the real approved
+/// art standing in for a generic "experts" glyph on the feature line.
+private struct ExpertPortraitCluster: View {
+    private var portraitNames: [String] {
+        Array(ExpertAstrologerRegistry.specialists.compactMap(\.profileImageName).prefix(3))
+    }
+
+    var body: some View {
+        HStack(spacing: -6) {
+            ForEach(portraitNames, id: \.self) { name in
+                Image(name)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 18, height: 18)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(.white.opacity(0.28), lineWidth: 0.6))
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
 
 /// Flighty-inspired high-contrast primary action: immediately readable, while
 /// the adjacent optional chart action uses interactive Liquid Glass.
