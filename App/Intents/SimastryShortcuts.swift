@@ -136,6 +136,128 @@ struct DailyVibeIntent: AppIntent {
     }
 }
 
+// MARK: - Quick Bearing Shortcut
+
+enum CompassBearingShortcutOption: String, CaseIterable, AppEnum {
+    case work
+    case love
+    case money
+    case timing
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Compass Bearing"
+
+    static var caseDisplayRepresentations: [CompassBearingShortcutOption: DisplayRepresentation] = [
+        .work: "Work",
+        .love: "Love",
+        .money: "Money",
+        .timing: "Today’s timing"
+    ]
+}
+
+extension CompassBearingShortcutOption {
+    /// The draft the matching in-app bearing card arms. Intent/topic, the
+    /// question salt, and the preview bank must stay in lockstep with
+    /// `SimulateView.compassBearingItems` so a Siri-armed read shows exactly
+    /// the question the card on screen shows that day.
+    var draftIntent: CompassIntent {
+        self == .timing ? .timing : .general
+    }
+
+    var draftTopic: CompassTopic? {
+        switch self {
+        case .work: .work
+        case .love: .relationships
+        case .money: .money
+        case .timing: nil
+        }
+    }
+
+    var questionSalt: Int {
+        switch self {
+        case .work: 0
+        case .love: 1
+        case .money: 2
+        case .timing: 3
+        }
+    }
+
+    var questionBank: FutureQuestionCategory? {
+        self == .love ? .loveTiming : nil
+    }
+
+    var spokenName: String {
+        switch self {
+        case .work: "work"
+        case .love: "love"
+        case .money: "money"
+        case .timing: "timing"
+        }
+    }
+}
+
+struct QuickBearingIntent: AppIntent {
+    static var title: LocalizedStringResource = "Quick Bearing"
+    static var description = IntentDescription("Open Compass with a one-tap read prefilled — you confirm before it spends a reading")
+    static var openAppWhenRun: Bool = true
+
+    @Parameter(title: "Bearing")
+    var bearing: CompassBearingShortcutOption
+
+    init() {
+        bearing = .work
+    }
+
+    init(bearing: CompassBearingShortcutOption) {
+        self.bearing = bearing
+    }
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        // Route to Compass and stage the bearing; SimulateView arms it —
+        // prefill + expand only. A background intent must never call
+        // `beginSubmission` itself: that would silently spend a weekly
+        // credit on a question the user never saw.
+        UserDefaults.standard.set(SimastryShortcutDestination.predict.rawValue, forKey: AppViewModel.shortcutDestinationKey)
+        UserDefaults.standard.set(bearing.rawValue, forKey: AppViewModel.pendingBearingKey)
+        return .result(dialog: "Setting up your \(bearing.spokenName) read — confirm it in Compass.")
+    }
+}
+
+// MARK: - Current Window Shortcut
+
+struct CurrentWindowIntent: AppIntent {
+    static var title: LocalizedStringResource = "Current Window"
+    static var description = IntentDescription("The window Compass finds in today's sky — read from the last computed set, no reading spent")
+    static var openAppWhenRun: Bool = false
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        // Re-reads the pre-composed widget payload only: zero network, zero
+        // credits, no ephemeris work — the same contract the widget has.
+        let line = Self.dialLine(windows: SharedDefaults.readDayWindows(), now: Date())
+        return .result(dialog: "\(line)")
+    }
+
+    /// The Now dial's line, recomposed from the shared payload. Scope stays
+    /// "today only": a gap falls forward to today's next window, never to
+    /// tomorrow's, and an empty or expired payload gets the widget's honest
+    /// fallback instead of an invented answer.
+    static func dialLine(windows: [SharedDayWindow], now: Date, calendar: Calendar = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+
+        if let active = windows.first(where: { $0.startsAt <= now && now < $0.endsAt }) {
+            return "\(active.title) — until \(formatter.string(from: active.endsAt))."
+        }
+
+        if let next = windows
+            .filter({ $0.startsAt > now && calendar.isDate($0.startsAt, inSameDayAs: now) })
+            .min(by: { $0.startsAt < $1.startsAt }) {
+            return "Between windows right now. Next: \(next.title), from \(formatter.string(from: next.startsAt))."
+        }
+
+        return "Open Simastry to compute today's windows."
+    }
+}
+
 // MARK: - App Shortcuts Provider
 struct SimastryShortcutsProvider: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
@@ -177,6 +299,26 @@ struct SimastryShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Expert Astrologers",
             systemImageName: "person.wave.2.fill"
+        )
+        AppShortcut(
+            intent: QuickBearingIntent(),
+            phrases: [
+                "Quick \(\.$bearing) read in \(.applicationName)",
+                "Run a \(\.$bearing) read in \(.applicationName)",
+                "\(.applicationName) \(\.$bearing) bearing"
+            ],
+            shortTitle: "Quick Bearing",
+            systemImageName: "location.north.circle.fill"
+        )
+        AppShortcut(
+            intent: CurrentWindowIntent(),
+            phrases: [
+                "What's the current window in \(.applicationName)",
+                "What does right now favor in \(.applicationName)",
+                "\(.applicationName) current window"
+            ],
+            shortTitle: "Current Window",
+            systemImageName: "clock.badge.checkmark"
         )
     }
 }

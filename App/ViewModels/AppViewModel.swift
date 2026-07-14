@@ -7,6 +7,10 @@ import WidgetKit
 @Observable
 class AppViewModel {
     nonisolated static let shortcutDestinationKey = "simastry_pending_shortcut_destination"
+    /// A `QuickBearingIntent` stages its bearing here (a
+    /// `CompassBearingShortcutOption` raw value); SimulateView consumes it on
+    /// appear/foreground and arms — prefill + expand, never auto-fire.
+    nonisolated static let pendingBearingKey = "simastry_pending_bearing"
 
     var currentScreen: AppScreen = .loading
     var homeSetupPhase: HomeSetupPhase = .modeSelection

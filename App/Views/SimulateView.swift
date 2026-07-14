@@ -20,6 +20,7 @@ struct SimulateView: View {
     private let showsTabHeader: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(GuidanceStyle.storageKey) private var guidanceStyleRawValue = GuidanceStyle.practical.rawValue
     @State private var draft = CompassDraft()
     @State private var selectedPersonID: UUID?
@@ -464,6 +465,11 @@ struct SimulateView: View {
                 viewModel.todayStore.reloadDailyDecisions()
                 loadHistory()
                 await refreshTransitEvidence()
+                // Bearing first: its guard can still see a pending legacy
+                // draft and stand down. The reverse order would apply-and-nil
+                // the legacy draft, letting a generic Siri bearing overwrite
+                // the specific question a People reply-draft handed off.
+                applyPendingBearingIfNeeded()
                 applyLegacyDraftIfNeeded()
             }
             .task(id: dailyGuidanceRefreshKey) {
@@ -471,6 +477,14 @@ struct SimulateView: View {
             }
             .onChange(of: viewModel.predictionDraft?.id) { _, _ in
                 applyLegacyDraftIfNeeded()
+            }
+            // A QuickBearingIntent can fire while this view is already alive
+            // (Compass open, app backgrounded, Siri runs the shortcut) — no
+            // new `.task` will run, so the foreground transition is the
+            // consumption point ContentView uses for the destination key.
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                applyPendingBearingIfNeeded()
             }
             .onChange(of: screenshotPickerItem) { _, item in
                 guard let item else { return }
@@ -607,6 +621,38 @@ struct SimulateView: View {
         }
 
         viewModel.predictionDraft = nil
+    }
+
+    /// Stage 6: consumes the bearing a `QuickBearingIntent` staged from
+    /// Shortcuts/Siri. Arm, never auto-fire — the intent ran outside the
+    /// app, so silently spending a weekly credit is off the table. This
+    /// prefills the exact draft the matching bearing card would, expands the
+    /// composer, and leaves the submission to the primary CTA's untouched
+    /// moderation/limiter/credit gate.
+    private func applyPendingBearingIfNeeded() {
+        guard let raw = UserDefaults.standard.string(forKey: AppViewModel.pendingBearingKey) else { return }
+        UserDefaults.standard.removeObject(forKey: AppViewModel.pendingBearingKey)
+        // A pending legacy PredictionDraft carries a specific question (a
+        // reply-draft from People); the generic bearing stands down.
+        guard viewModel.predictionDraft == nil,
+              let bearing = CompassBearingShortcutOption(rawValue: raw) else { return }
+
+        // Timing stays natal-gated (D4): without calculated evidence the
+        // armed read degrades to a general one — the same honesty rule that
+        // hides the in-app timing bearing. The question is unchanged either
+        // way (both resolve to the `.privateQuestion` bank at salt 3).
+        let intent: CompassIntent = bearing == .timing && !timingIsAvailable ? .general : bearing.draftIntent
+        draft.intent = intent
+        draft.topic = bearing.draftTopic
+        draft.question = bearingQuestion(
+            intent: intent,
+            topic: bearing.draftTopic,
+            salt: bearing.questionSalt,
+            questionBank: bearing.questionBank
+        )
+        withAnimation(reduceMotion ? nil : SimastryMotion.stateChange) {
+            isComposerExpanded = true
+        }
     }
 
     private func topic(for category: FutureQuestionCategory) -> CompassTopic? {
