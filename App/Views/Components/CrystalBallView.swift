@@ -189,7 +189,7 @@ struct CrystalBallView: View {
     /// Horizontal drags spin the wheel and swirl the nebula; releasing with
     /// velocity carries a decaying fling.
     private var spinDrag: some Gesture {
-        DragGesture(minimumDistance: 2)
+        DragGesture(minimumDistance: 12)
             .onChanged { value in
                 let last = lastDragX ?? value.startLocation.x
                 userSpin += Double(value.location.x - last) / 90
