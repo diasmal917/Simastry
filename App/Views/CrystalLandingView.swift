@@ -10,6 +10,11 @@ struct CrystalLandingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var appeared = false
+    /// The real thing, before any tap: today's windows computed on-device
+    /// with zero personal data (nil natal, nil location, practical style),
+    /// exactly like the guest Compass one screen later.
+    @State private var dayWindows: DayWindowsResult?
+    @State private var computedDayWindowsKey: String?
 
     var body: some View {
         GeometryReader { geo in
@@ -49,7 +54,22 @@ struct CrystalLandingView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                liveBriefingCard(compact: compact)
+                TimelineView(.everyMinute) { context in
+                    nowLineCard(compact: compact, now: context.date)
+                        .task(id: DailyGuidance.dateKey(for: context.date)) {
+                            guard computedDayWindowsKey != DailyGuidance.dateKey(for: context.date) else { return }
+                            let inputs = DayWindowsEngine.Inputs(
+                                date: context.date,
+                                timeZone: .current,
+                                natalSun: nil,
+                                natalMoon: nil,
+                                natalRising: nil,
+                                style: .practical
+                            )
+                            dayWindows = await DayWindowsEngine.windows(for: inputs)
+                            computedDayWindowsKey = DailyGuidance.dateKey(for: context.date)
+                        }
+                }
 
                 VStack(spacing: 10) {
                     CrystalPrimaryButton(title: "Try Compass — no account needed") {
@@ -104,68 +124,78 @@ struct CrystalLandingView: View {
         .scrollIndicators(.hidden)
     }
 
-    private func liveBriefingCard(compact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: compact ? 10 : 12) {
-            HStack {
-                Label("LIVE BRIEFING", systemImage: "location.north.circle.fill")
-                    .font(.caption2.bold())
-                    .tracking(1.2)
-                    .foregroundStyle(CrystalMood.gold)
-                Spacer()
-                Text("GENERAL LENS")
-                    .font(.caption2.bold())
-                    .tracking(0.8)
-                    .foregroundStyle(SimastryColor.celestialBlue)
-            }
+    /// The real current window, or a shimmer while the first compute lands.
+    /// Never a canned briefing: if there is nothing computed to show (which
+    /// only happens for a stale cross-midnight result), the card disappears
+    /// and the static promise above carries the screen.
+    @ViewBuilder
+    private func nowLineCard(compact: Bool, now: Date) -> some View {
+        if let line = LandingNowLine.compose(result: dayWindows, now: now) {
+            VStack(alignment: .leading, spacing: compact ? 10 : 12) {
+                nowLineKicker
 
-            briefingRow(
-                title: "THEIR MESSAGE",
-                body: "“haha yeah maybe, this week is kind of crazy”",
-                icon: "text.bubble"
-            )
+                HStack(alignment: .top, spacing: 11) {
+                    Image(systemName: compassIcon(for: line.window))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(compassTint(for: line.window.tokenID))
+                        .frame(width: 22, height: 22)
 
-            Divider().overlay(.white.opacity(0.10))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(line.window.title)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.94))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(line.untilText)
+                            .font(.subheadline.weight(.medium))
+                            .monospacedDigit()
+                            .foregroundStyle(.white.opacity(0.64))
+                    }
+                }
 
-            briefingRow(
-                title: "TAKEAWAY",
-                body: "Interested, but not committing yet.",
-                icon: "scope"
-            )
-
-            briefingRow(
-                title: "NEXT MOVE",
-                body: "Offer one specific day without chasing.",
-                icon: "arrow.up.forward"
-            )
-        }
-        .padding(compact ? 15 : 17)
-        .landingGlass(cornerRadius: 24, emphasis: .card)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "Example Compass briefing. Their message: haha yeah maybe, this week is kind of crazy. "
-            + "Takeaway: Interested, but not committing yet. "
-            + "Next move: Offer one specific day without chasing. General lens."
-        )
-    }
-
-    private func briefingRow(title: String, body: String, icon: String) -> some View {
-        HStack(alignment: .top, spacing: 11) {
-            Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(CrystalMood.gold)
-                .frame(width: 22, height: 22)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.caption2.bold())
-                    .tracking(1.1)
-                    .foregroundStyle(.white.opacity(0.48))
-                Text(body)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.94))
+                Text("Computed from today’s sky · on this device.")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.52))
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(compact ? 15 : 17)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .landingGlass(cornerRadius: 24, emphasis: .card)
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("landing.nowLine")
+            .accessibilityLabel(
+                "Right now: \(line.window.title). \(line.untilText). Computed from today's sky on this device."
+            )
+        } else if dayWindows == nil {
+            VStack(alignment: .leading, spacing: compact ? 10 : 12) {
+                nowLineKicker
+                HStack(spacing: 11) {
+                    Circle()
+                        .fill(.white.opacity(0.10))
+                        .frame(width: 22, height: 22)
+                    VStack(alignment: .leading, spacing: 4) {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(.white.opacity(0.10))
+                            .frame(width: 210, height: 18)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(.white.opacity(0.10))
+                            .frame(width: 110, height: 13)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(compact ? 15 : 17)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .landingGlass(cornerRadius: 24, emphasis: .card)
+            .skeletonShimmer()
+            .accessibilityLabel("Computing today's windows")
         }
+    }
+
+    private var nowLineKicker: some View {
+        Label("RIGHT NOW", systemImage: "location.north.circle.fill")
+            .font(.caption2.bold())
+            .tracking(1.2)
+            .foregroundStyle(CrystalMood.gold)
     }
 
     private func beginGuestCompass() {
@@ -182,6 +212,28 @@ struct CrystalLandingView: View {
         }
     }
 }
+
+/// The landing's current-window line, composed from the same engine output
+/// the dial renders. Pure and testable: the real active window in the
+/// dial's "until h:mm a" format, or nil whenever there is nothing computed
+/// to show — the landing never substitutes canned data.
+nonisolated enum LandingNowLine {
+    struct Line: Equatable {
+        let window: DayWindow
+        let untilText: String
+    }
+
+    static func compose(result: DayWindowsResult?, now: Date) -> Line? {
+        guard let result, let window = result.window(at: now) else { return nil }
+        return Line(window: window, untilText: "until \(landingClockFormatter.string(from: window.interval.end))")
+    }
+}
+
+private let landingClockFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "h:mm a"
+    return formatter
+}()
 
 /// Flighty-inspired high-contrast primary action: immediately readable, while
 /// the adjacent optional chart action uses interactive Liquid Glass.

@@ -16,7 +16,9 @@ final class SimastrySmokeUITests: XCTestCase {
 
         let cta = app.buttons["landing.crystal.cta"]
         XCTAssertTrue(cta.waitForExistence(timeout: 10), "Expected the value-first Compass CTA")
-        XCTAssertTrue(app.staticTexts["LIVE BRIEFING"].waitForExistence(timeout: 4))
+        // The landing shows the real computed current window, never a canned
+        // briefing — the line appears once the on-device compute lands.
+        XCTAssertTrue(element("landing.nowLine").waitForExistence(timeout: 10), "Expected the real current-window line")
         XCTAssertTrue(app.buttons["landing.crystal.chartCTA"].exists)
 
         cta.tap()

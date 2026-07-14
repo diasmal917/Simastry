@@ -24,7 +24,7 @@ private func compassToken(for tokenID: String) -> SimastryCategoryToken? {
     SimastryCategoryToken(rawValue: tokenID)
 }
 
-private func compassTint(for tokenID: String) -> Color {
+func compassTint(for tokenID: String) -> Color {
     compassToken(for: tokenID)?.color ?? SimastryColor.gold
 }
 
@@ -32,7 +32,8 @@ private func compassTint(for tokenID: String) -> Color {
 /// personal token's padlock reads as "locked content" on a free timeline,
 /// so quiet and personal windows get neutral glyphs here. The composer's
 /// Private chip keeps its lock, where privacy is the intended meaning.
-private func compassIcon(for window: DayWindow) -> String {
+/// Internal (not private): the landing's now-line reuses the same mapping.
+func compassIcon(for window: DayWindow) -> String {
     if window.kind == .quiet { return "moon.zzz.fill" }
     if window.tokenID == SimastryCategoryToken.personal.rawValue { return "sparkles" }
     return compassToken(for: window.tokenID)?.systemImage ?? "sparkles"
