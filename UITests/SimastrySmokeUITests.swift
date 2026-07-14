@@ -44,13 +44,15 @@ final class SimastrySmokeUITests: XCTestCase {
 
         let nameField = app.textFields["rehearsal.nameField"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 6))
-        nameField.tap()
-        nameField.typeText("Dad")
+        focusAndType(nameField, text: "Dad")
 
+        // With the keyboard up from the name field, the goal card sits
+        // exactly behind the keyboard-floated Start bar, so the plain tap
+        // lands on that bar; focusAndType's focus check + swipe retry is
+        // what gets this field focused.
         let goalField = app.textFields["rehearsal.goalField"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 4))
-        goalField.tap()
-        goalField.typeText("Ask for space without a fight")
+        focusAndType(goalField, text: "Ask for space without a fight")
 
         let start = app.buttons["rehearsal.start"]
         XCTAssertTrue(reveal(start, maxSwipes: 3), "Expected the start button")
@@ -58,8 +60,7 @@ final class SimastrySmokeUITests: XCTestCase {
 
         let input = app.textFields["rehearsal.input"]
         XCTAssertTrue(input.waitForExistence(timeout: 6), "Expected the rehearsal composer")
-        input.tap()
-        input.typeText("Hey — can we talk about the weekend?")
+        focusAndType(input, text: "Hey — can we talk about the weekend?")
         app.buttons["rehearsal.send"].tap()
 
         // Debug preview returns the canned partner turn.
@@ -753,6 +754,30 @@ final class SimastrySmokeUITests: XCTestCase {
         // example) lands on its target instead of a still-moving layout.
         let settled = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: question, handler: nil)
         wait(for: [settled], timeout: 2)
+    }
+
+    /// Taps a field and types only once it actually holds keyboard focus.
+    /// Hittability can't gate this: AX hit-testing ignores chrome floating
+    /// over the scroll content (the keyboard, safe-area-inset bars like
+    /// rehearsal's Start bar), so a "hittable" field's tap can land on that
+    /// chrome instead — focus stays wherever it was and typeText aborts
+    /// with "neither element nor any descendant has keyboard focus". When
+    /// focus doesn't arrive, swipe the content up from under the overlay
+    /// and re-tap.
+    private func focusAndType(_ field: XCUIElement, text: String, attempts: Int = 3) {
+        for _ in 0..<attempts {
+            field.tap()
+            let focused = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "hasKeyboardFocus == true"),
+                object: field
+            )
+            if XCTWaiter().wait(for: [focused], timeout: 2) == .completed {
+                field.typeText(text)
+                return
+            }
+            app.swipeUp()
+        }
+        XCTFail("\(field.identifier) never took keyboard focus after \(attempts) taps")
     }
 
     private func reveal(_ element: XCUIElement, maxSwipes: Int = 6) -> Bool {
