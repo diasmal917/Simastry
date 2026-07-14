@@ -27,12 +27,27 @@ struct CrystalLandingView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .opacity(appeared ? 1 : 0)
         .onAppear {
-            withAnimation(.easeOut(duration: reduceMotion ? 0.01 : 0.20)) {
-                appeared = true
-            }
+            // Per-element `.animation(_, value:)` in `landingReveal` drives
+            // the staggered entrance — the flag flips plainly, once.
+            appeared = true
         }
+    }
+
+    /// One staggered entrance on first appearance — the instrument-reveal
+    /// pattern (opacity + 8pt rise, ease-out 0.32s, 50ms steps). The ball
+    /// additionally settles from 97% scale (never from zero). Reduce Motion
+    /// collapses everything to a plain crossfade. One-shot by construction:
+    /// `appeared` only ever flips false→true.
+    private func landingReveal(_ view: some View, step: Int, scales: Bool = false) -> some View {
+        view
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(scales && !reduceMotion ? (appeared ? 1 : 0.97) : 1)
+            .offset(y: reduceMotion ? 0 : (appeared ? 0 : 8))
+            .animation(
+                SimastryMotion.instrumentEnter.delay(reduceMotion ? 0 : Double(step) * 0.05),
+                value: appeared
+            )
     }
 
     private func activationPage(compact: Bool, height: CGFloat) -> some View {
@@ -44,92 +59,41 @@ struct CrystalLandingView: View {
 
         return ScrollView {
             VStack(spacing: compact ? 14 : 18) {
-                SimastryWordmark(font: .title3.bold().italic())
-                    .padding(.top, compact ? 8 : 14)
+                landingReveal(
+                    SimastryWordmark(font: .title3.bold().italic())
+                        .padding(.top, compact ? 8 : 14),
+                    step: 0
+                )
 
-                CrystalBallView(diameter: ballDiameter)
+                landingReveal(CrystalBallView(diameter: ballDiameter), step: 1, scales: true)
 
-                VStack(spacing: 8) {
-                    Text("Know what to say.\nTo anyone.")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                landingReveal(headlineBlock, step: 2)
 
-                    Text("Private guidance for difficult conversations. Astrology is optional and always labeled.")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.64))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                landingReveal(
+                    TimelineView(.everyMinute) { context in
+                        nowLineCard(compact: compact, now: context.date)
+                            .task(id: DailyGuidance.dateKey(for: context.date)) {
+                                guard computedDayWindowsKey != DailyGuidance.dateKey(for: context.date) else { return }
+                                let inputs = DayWindowsEngine.Inputs(
+                                    date: context.date,
+                                    timeZone: .current,
+                                    natalSun: nil,
+                                    natalMoon: nil,
+                                    natalRising: nil,
+                                    style: .practical
+                                )
+                                dayWindows = await DayWindowsEngine.windows(for: inputs)
+                                computedDayWindowsKey = DailyGuidance.dateKey(for: context.date)
+                            }
+                    },
+                    step: 3
+                )
 
-                TimelineView(.everyMinute) { context in
-                    nowLineCard(compact: compact, now: context.date)
-                        .task(id: DailyGuidance.dateKey(for: context.date)) {
-                            guard computedDayWindowsKey != DailyGuidance.dateKey(for: context.date) else { return }
-                            let inputs = DayWindowsEngine.Inputs(
-                                date: context.date,
-                                timeZone: .current,
-                                natalSun: nil,
-                                natalMoon: nil,
-                                natalRising: nil,
-                                style: .practical
-                            )
-                            dayWindows = await DayWindowsEngine.windows(for: inputs)
-                            computedDayWindowsKey = DailyGuidance.dateKey(for: context.date)
-                        }
-                }
+                landingReveal(featureLine, step: 4)
 
-                featureLine
+                landingReveal(actionsBlock, step: 5)
 
-                VStack(spacing: 10) {
-                    // At accessibility sizes the pinned bar would fill half
-                    // the screen and collide with the story behind it — the
-                    // CTA rides in the flow instead (the same size-class
-                    // swap the Compass strip and bearings row use).
-                    if dynamicTypeSize.isAccessibilitySize {
-                        primaryCTA
-                    }
-
-                    Button {
-                        HapticManager.buttonPress()
-                        beginChartOnboarding()
-                    } label: {
-                        Label("Build my chart instead", systemImage: "circle.hexagongrid")
-                            .font(.headline)
-                            .foregroundStyle(.white.opacity(0.92))
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .landingGlassCapsule(emphasis: .cta)
-                    }
-                    .buttonStyle(SpringPressStyle())
-                    .accessibilityIdentifier("landing.crystal.chartCTA")
-
-                    Button {
-                        HapticManager.buttonPress()
-                        withAnimation(SimastryMotion.stateChange) {
-                            viewModel.currentScreen = .signIn
-                        }
-                    } label: {
-                        Text(localization.string("landing.alreadyHaveAccount"))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.74))
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("landing.crystal.signIn")
-                }
-
-                HStack(spacing: 7) {
-                    Image(systemName: "lock.fill")
-                    Text("Your first reading stays on this iPhone")
-                    Text("•")
-                    Link("Privacy", destination: AppConfig.privacyPolicyURL)
-                }
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.white.opacity(0.52))
-                .fixedSize(horizontal: false, vertical: true)
-                .multilineTextAlignment(.center)
-                .padding(.bottom, 12)
+                landingReveal(privacyRow, step: 5)
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 620)
@@ -142,23 +106,96 @@ struct CrystalLandingView: View {
         // layout-feedback class).
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !dynamicTypeSize.isAccessibilitySize {
-                primaryCTA
-                    .padding(.horizontal, 24)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-                    .frame(maxWidth: 620)
-                    .frame(maxWidth: .infinity)
-                    .background {
-                        LinearGradient(
-                            colors: [.black.opacity(0), .black.opacity(0.42), .black.opacity(0.62)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .ignoresSafeArea(edges: .bottom)
-                        .allowsHitTesting(false)
-                    }
+                landingReveal(pinnedCTABar, step: 5)
             }
         }
+    }
+
+    private var headlineBlock: some View {
+        VStack(spacing: 8) {
+                    Text("Know what to say.\nTo anyone.")
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Private guidance for difficult conversations. Astrology is optional and always labeled.")
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.64))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+    }
+
+    private var actionsBlock: some View {
+        VStack(spacing: 10) {
+            // At accessibility sizes the pinned bar would fill half the
+            // screen and collide with the story behind it — the CTA rides
+            // in the flow instead (the same size-class swap the Compass
+            // strip and bearings row use).
+            if dynamicTypeSize.isAccessibilitySize {
+                primaryCTA
+            }
+
+            Button {
+                HapticManager.buttonPress()
+                beginChartOnboarding()
+            } label: {
+                Label("Build my chart instead", systemImage: SimastryIcon.chart)
+                    .font(.headline)
+                    .foregroundStyle(.white.opacity(0.92))
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .landingGlassCapsule(emphasis: .cta)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityIdentifier("landing.crystal.chartCTA")
+
+            Button {
+                HapticManager.buttonPress()
+                withAnimation(SimastryMotion.stateChange) {
+                    viewModel.currentScreen = .signIn
+                }
+            } label: {
+                Text(localization.string("landing.alreadyHaveAccount"))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.74))
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(SpringPressStyle())
+            .accessibilityIdentifier("landing.crystal.signIn")
+        }
+    }
+
+    private var privacyRow: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "lock.fill")
+            Text("Your first reading stays on this iPhone")
+            Text("•")
+            Link("Privacy", destination: AppConfig.privacyPolicyURL)
+        }
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(.white.opacity(0.52))
+        .fixedSize(horizontal: false, vertical: true)
+        .multilineTextAlignment(.center)
+        .padding(.bottom, 12)
+    }
+
+    private var pinnedCTABar: some View {
+        primaryCTA
+            .padding(.horizontal, 24)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+            .frame(maxWidth: 620)
+            .frame(maxWidth: .infinity)
+            .background {
+                LinearGradient(
+                    colors: [.black.opacity(0), .black.opacity(0.42), .black.opacity(0.62)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(false)
+            }
     }
 
     private var primaryCTA: some View {
@@ -179,10 +216,7 @@ struct CrystalLandingView: View {
                 nowLineKicker
 
                 HStack(alignment: .top, spacing: 11) {
-                    Image(systemName: compassIcon(for: line.window))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(compassTint(for: line.window.tokenID))
-                        .frame(width: 22, height: 22)
+                    nowLineTick(for: line.window)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(line.window.title)
@@ -232,6 +266,21 @@ struct CrystalLandingView: View {
             .landingGlass(cornerRadius: 24, emphasis: .card)
             .skeletonShimmer()
             .accessibilityLabel("Computing today's windows")
+        }
+    }
+
+    /// One discrete bounce when the real line lands — the window id changes
+    /// at most a handful of times a day, and the effect never repeats.
+    @ViewBuilder
+    private func nowLineTick(for window: DayWindow) -> some View {
+        let icon = Image(systemName: compassIcon(for: window))
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(compassTint(for: window.tokenID))
+            .frame(width: 22, height: 22)
+        if reduceMotion {
+            icon
+        } else {
+            icon.symbolEffect(.bounce, options: .nonRepeating, value: window.id)
         }
     }
 
