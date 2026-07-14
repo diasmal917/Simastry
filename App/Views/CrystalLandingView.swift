@@ -84,6 +84,7 @@ struct CrystalLandingView: View {
                                 )
                                 dayWindows = await DayWindowsEngine.windows(for: inputs)
                                 computedDayWindowsKey = DailyGuidance.dateKey(for: context.date)
+                                await viewModel.publishDayWindowsForWidget()
                             }
                     },
                     step: 3
