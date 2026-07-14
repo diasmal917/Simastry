@@ -22,6 +22,9 @@ struct GuestCompassView: View {
     /// off to sign-up instead of running another read. UX framing, not
     /// enforcement — guests have no persistence to enforce against.
     @State private var hasUsedGuestRead = false
+    /// Drives the one-shot entrance stagger, mirroring the authed Compass's
+    /// `instrumentAppeared`. Flips false→true exactly once.
+    @State private var instrumentAppeared = false
 
     private let localPredictionService = PredictionService()
 
@@ -35,18 +38,24 @@ struct GuestCompassView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
-                    header
+                    guestReveal(header, step: 0)
 
-                    CompassDialFraming()
+                    guestReveal(CompassDialFraming(), step: 0)
 
                     TimelineView(.everyMinute) { context in
                         VStack(alignment: .leading, spacing: SimastrySpacing.md) {
-                            CompassNowDial(result: dayWindows, now: context.date, idPrefix: "guestCompass")
-                            CompassTodayStrip(
-                                result: dayWindows,
-                                selection: $selectedWindowID,
-                                now: context.date,
-                                idPrefix: "guestCompass"
+                            guestReveal(
+                                CompassNowDial(result: dayWindows, now: context.date, idPrefix: "guestCompass"),
+                                step: 1
+                            )
+                            guestReveal(
+                                CompassTodayStrip(
+                                    result: dayWindows,
+                                    selection: $selectedWindowID,
+                                    now: context.date,
+                                    idPrefix: "guestCompass"
+                                ),
+                                step: 2
                             )
                         }
                         .task(id: dayWindowsTaskKey(for: context.date)) {
@@ -71,7 +80,7 @@ struct GuestCompassView: View {
                         )
                     }
 
-                    CompassBearingsRow(items: guestBearingItems, creditCaption: nil)
+                    guestReveal(CompassBearingsRow(items: guestBearingItems, creditCaption: nil), step: 3)
 
                     if isGenerating {
                         workingRow
@@ -84,15 +93,18 @@ struct GuestCompassView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    signupFooter
+                    guestReveal(signupFooter, step: 4)
 
-                    privacyLine
+                    guestReveal(privacyLine, step: 4)
                 }
                 .padding(.horizontal, SimastrySpacing.lg)
                 .padding(.top, SimastrySpacing.lg)
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
+        }
+        .onAppear {
+            instrumentAppeared = true
         }
         .sheet(item: $result, onDismiss: { hasUsedGuestRead = true }) { generated in
             SimulationResultView(result: generated, userSunSign: viewModel.userSunSign)
@@ -106,6 +118,19 @@ struct GuestCompassView: View {
     }
 
     // MARK: - Sections
+
+    /// The authed Compass's staggered entrance, verbatim: opacity + 8pt
+    /// rise on `instrumentEnter` with 50ms steps, opacity-only under Reduce
+    /// Motion, one-shot by construction.
+    private func guestReveal(_ view: some View, step: Int) -> some View {
+        view
+            .opacity(instrumentAppeared ? 1 : 0)
+            .offset(y: reduceMotion ? 0 : (instrumentAppeared ? 0 : 8))
+            .animation(
+                SimastryMotion.instrumentEnter.delay(reduceMotion ? 0 : Double(step) * 0.05),
+                value: instrumentAppeared
+            )
+    }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: SimastrySpacing.xs) {
