@@ -19,7 +19,7 @@ struct ContentView: View {
                 case .firstReadChoice:
                     FirstReadChoiceView(viewModel: viewModel)
                 case .firstPrediction:
-                    FirstPredictionView(viewModel: viewModel)
+                    GuestCompassView(viewModel: viewModel)
                 case .firstRead:
                     FirstReadView(viewModel: viewModel)
                 case .birthDetails:

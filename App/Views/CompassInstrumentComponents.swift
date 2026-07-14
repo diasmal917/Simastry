@@ -82,6 +82,10 @@ struct CompassDialFraming: View {
 struct CompassNowDial: View {
     let result: DayWindowsResult?
     let now: Date
+    /// Accessibility-identifier namespace. The authed Compass pins
+    /// `compass.*` (frozen test contract); the guest surface passes
+    /// `guestCompass` so both can coexist without touching that contract.
+    var idPrefix: String = "compass"
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Gates the arc's one-time sweep — see `dayProgressArc`. Flips
@@ -104,7 +108,7 @@ struct CompassNowDial: View {
         .padding(SimastrySpacing.md)
         .floatingGlass(cornerRadius: SimastryRadius.panel)
         .accessibilityElement(children: .ignore)
-        .accessibilityIdentifier("compass.now")
+        .accessibilityIdentifier("\(idPrefix).now")
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -272,6 +276,8 @@ struct CompassTodayStrip: View {
     let result: DayWindowsResult?
     @Binding var selection: String?
     let now: Date
+    /// See `CompassNowDial.idPrefix`.
+    var idPrefix: String = "compass"
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -283,7 +289,7 @@ struct CompassTodayStrip: View {
             // per-segment identifiers (SwiftUI stamps a container id onto
             // descendant elements of plain stacks otherwise).
             .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("compass.timeline")
+            .accessibilityIdentifier("\(idPrefix).timeline")
     }
 
     @ViewBuilder
@@ -409,7 +415,7 @@ struct CompassTodayStrip: View {
         }
         .buttonStyle(CompassPressStyle())
         .accessibilityLabel(compassSegmentAccessibilityLabel(window, isCurrent: isCurrent))
-        .accessibilityIdentifier("compass.timeline.segment.\(index)")
+        .accessibilityIdentifier("\(idPrefix).timeline.segment.\(index)")
     }
 
     private func hourTicks(dayInterval: DateInterval, totalWidth: CGFloat) -> some View {
@@ -512,7 +518,7 @@ struct CompassTodayStrip: View {
         }
         .buttonStyle(CompassPressStyle())
         .accessibilityLabel(compassSegmentAccessibilityLabel(window, isCurrent: isCurrent))
-        .accessibilityIdentifier("compass.timeline.segment.\(index)")
+        .accessibilityIdentifier("\(idPrefix).timeline.segment.\(index)")
     }
 }
 
@@ -524,6 +530,9 @@ struct CompassTodayStrip: View {
 /// instrument chrome.
 struct CompassWindowDetailCard: View {
     let window: DayWindow
+    /// See `CompassNowDial.idPrefix`. Declared before `onClose` so trailing
+    /// closures at existing call sites keep compiling.
+    var idPrefix: String = "compass"
     let onClose: () -> Void
 
     var body: some View {
@@ -550,7 +559,7 @@ struct CompassWindowDetailCard: View {
                 }
                 .buttonStyle(CompassPressStyle())
                 .accessibilityLabel("Close window detail")
-                .accessibilityIdentifier("compass.window.close")
+                .accessibilityIdentifier("\(idPrefix).window.close")
             }
 
             Text(window.rationale)
@@ -584,7 +593,7 @@ struct CompassWindowDetailCard: View {
         .contentSurface(cornerRadius: SimastryRadius.card, accent: compassTint(for: window.tokenID))
         // `.contain` keeps the close button's own identifier intact.
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("compass.window.detail")
+        .accessibilityIdentifier("\(idPrefix).window.detail")
     }
 }
 

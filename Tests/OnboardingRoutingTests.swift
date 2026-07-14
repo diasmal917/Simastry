@@ -24,4 +24,15 @@ final class OnboardingRoutingTests: XCTestCase {
             return XCTFail("Chart-first should continue to birth details")
         }
     }
+
+    func testAgeGatePreservesDecodeIntentIntoGuestCompass() {
+        let viewModel = AppViewModel()
+        viewModel.firstReadOnboardingIntent = .decode
+
+        viewModel.completeAgeVerification()
+
+        guard case .firstPrediction = viewModel.currentScreen else {
+            return XCTFail("Decode should land on the guest Compass first read")
+        }
+    }
 }

@@ -24,12 +24,19 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(ageConfirmation.waitForExistence(timeout: 6), "Expected the age gate before guest guidance")
         ageConfirmation.tap()
 
-        XCTAssertTrue(app.textFields["firstPrediction.question"].waitForExistence(timeout: 6))
-        let submit = app.buttons["firstPrediction.submit"]
-        XCTAssertTrue(submit.waitForExistence(timeout: 4))
-        XCTAssertTrue(submit.isEnabled)
-        submit.tap()
-        XCTAssertTrue(app.staticTexts["GENERAL LENS"].waitForExistence(timeout: 8))
+        // The guest lands on the real instrument — dial and strip render
+        // before any typing, and one tap runs the local general-lens read.
+        XCTAssertTrue(element("guestCompass.now").waitForExistence(timeout: 10), "Expected the guest dial without typing")
+        XCTAssertTrue(element("guestCompass.timeline").exists)
+
+        let workBearing = app.buttons["guestCompass.bearing.work"]
+        XCTAssertTrue(reveal(workBearing, maxSwipes: 6), "Expected the guest work bearing")
+        workBearing.tap()
+
+        XCTAssertTrue(app.navigationBars["Reading"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "TAKEAWAY")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "EVIDENCE")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "confidence")).firstMatch.exists)
     }
 
     func testRehearsalRoomRunsAPracticeTurn() throws {

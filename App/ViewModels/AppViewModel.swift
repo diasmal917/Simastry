@@ -609,7 +609,9 @@ class AppViewModel {
             case .astrologer:
                 currentScreen = .birthDetails
             case .decode:
-                currentScreen = .firstRead
+                // The decode-flavored first read retired with the legacy
+                // screens; its persisted intent lands on the guest Compass.
+                currentScreen = .firstPrediction
             }
         }
     }
@@ -3792,6 +3794,12 @@ extension AppViewModel {
             isDebugPreviewStateActive = true
             isAgeVerified = true
             currentScreen = .firstRead
+            return true
+        }
+        if debugPreviewScreen(from: arguments) == "guestCompass" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            currentScreen = .firstPrediction
             return true
         }
         if debugPreviewScreen(from: arguments) == "firstExpertRead" {
