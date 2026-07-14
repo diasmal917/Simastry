@@ -451,12 +451,9 @@ nonisolated struct MessageData: Codable, Identifiable, Sendable {
 nonisolated enum AppScreen: Sendable {
     case landing
     case ageGate
-    // Legacy onboarding screens — no longer in the active flow but kept so the
-    // path can be restored. The flow now runs ageGate → birthDetails →
-    // firstExpertRead → signUp.
-    case firstReadChoice
+    /// Hosts `GuestCompassView` — the guest first read. The case name
+    /// predates the view; keeping it avoids churn in routing and previews.
     case firstPrediction
-    case firstRead
     case birthDetails
     case firstExpertRead
     case signUp

@@ -616,20 +616,6 @@ class AppViewModel {
         }
     }
 
-    func chooseFirstReadIntent(_ intent: FirstReadOnboardingIntent) {
-        firstReadOnboardingIntent = intent
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            switch intent {
-            case .predict:
-                currentScreen = .firstPrediction
-            case .astrologer:
-                currentScreen = .birthDetails
-            case .decode:
-                currentScreen = .firstRead
-            }
-        }
-    }
-
     func continueToBirthDetails(after intent: FirstReadOnboardingIntent? = nil) {
         if let intent {
             firstReadOnboardingIntent = intent
@@ -769,7 +755,9 @@ class AppViewModel {
         case .astrologer:
             openAIAstrologists()
         case .decode:
-            break
+            // The decode first read retired with the legacy screens; the
+            // persisted intent lands on Compass, same as .predict.
+            openPredict()
         }
     }
 
@@ -3788,12 +3776,6 @@ extension AppViewModel {
             isDebugPreviewStateActive = true
             isAgeVerified = true
             currentScreen = .birthDetails
-            return true
-        }
-        if debugPreviewScreen(from: arguments) == "firstRead" {
-            isDebugPreviewStateActive = true
-            isAgeVerified = true
-            currentScreen = .firstRead
             return true
         }
         if debugPreviewScreen(from: arguments) == "guestCompass" {
