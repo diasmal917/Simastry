@@ -32,6 +32,8 @@ struct LandingGlass<S: Shape & InsettableShape>: ViewModifier {
     let shape: S
     var emphasis: LandingGlassEmphasis = .card
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     /// Edge highlight matching the app-wide `simastryGlass` hairline so landing
     /// cards read as the same material as every other screen.
     private var edgeHighlight: LinearGradient {
@@ -80,9 +82,27 @@ struct LandingGlass<S: Shape & InsettableShape>: ViewModifier {
                     .overlay(innerHighlight)
                     .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
             }
-        } else {
+        } else if reduceTransparency {
+            // Reduce Transparency keeps the original opaque treatment.
             content
                 .background(SimastryColor.surfaceElevated, in: shape)
+                .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
+                .overlay(innerHighlight)
+                .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
+        } else if #available(iOS 26.0, *) {
+            // Real Liquid Glass for cards and chips too — same triad shape as
+            // the app-wide floatingGlass: a faint sunken underlay for text
+            // contrast over the bright mesh, then the system material.
+            content
+                .background(SimastryColor.surfaceSunken.opacity(0.28), in: shape)
+                .glassEffect(.regular.tint(SimastryColor.offWhite.opacity(0.07)), in: shape)
+                .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
+                .overlay(innerHighlight)
+                .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
+        } else {
+            content
+                .background(SimastryColor.surface.opacity(0.72), in: shape)
+                .background(.ultraThinMaterial, in: shape)
                 .overlay(shape.strokeBorder(edgeHighlight, lineWidth: emphasis.borderWidth))
                 .overlay(innerHighlight)
                 .shadow(color: .black.opacity(emphasis.shadowOpacity), radius: emphasis.shadowRadius, y: emphasis.shadowY)
