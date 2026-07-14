@@ -72,6 +72,12 @@
 
 ### Task E: Restyle the remaining funnel screens (spec §4)
 
+> **Executed 2026-07-14 as verified-no-diff.** A violations scan (ad-hoc
+> materials, non-token curves, Title Case, astrology jargon) across all five
+> screens returned clean — they were already restyled during the July
+> consumer redesign — and a visual inspection of the largest (BirthDetails)
+> confirmed full design-language conformance. No changes were needed.
+
 **Files:**
 - Modify: `App/Views/AgeGateView.swift`, `App/Views/BirthDetailsView.swift`, `App/Views/FirstExpertReadView.swift`, `App/Views/SignUpView.swift`, `App/Views/SignInView.swift`
 
