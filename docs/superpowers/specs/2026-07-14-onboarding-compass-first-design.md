@@ -85,6 +85,31 @@ Deletion sweep the plan must include: `chooseFirstReadIntent` (dead once
 tokens, sentence casing, `tabBarEndClearance` insets) with **no logic or routing changes**.
 Age-gate copy still precedes any guest computation that touches user input.
 
+## Consumer clarity (owner amendment, 2026-07-14 — applies to Compass itself, not just onboarding)
+
+Everything on the guest surfaces and the default (practical-style) Compass must read for
+someone who knows no astrology. Verified against the current `compass-17pro.png` baseline:
+
+- **C1 — The dial gets a kicker and a frame.** The top card shows a bare claim ("Good
+  window for checking in on your people · until 9:00 PM") with nothing saying what it is.
+  Add a tiny overline kicker `RIGHT NOW` (the `TODAY` card's overline treatment) and a
+  one-line caption under the arc: "What this hour favors — computed from today's sky."
+  Same dial component everywhere (authed + guest), so both surfaces gain it.
+- **C2 — No padlocks on the timeline.** Quiet and personal-category windows currently
+  render `SimastryCategoryToken.personal`'s `lock.fill` in the strip and dial tick — a
+  padlock reads as "pay to unlock". Add a display-icon mapping for window kinds on the
+  instrument surfaces only (quiet → `moon.zzz.fill`, personal non-quiet → `sparkles`);
+  `SimastryCategoryToken` itself is untouched (the composer's Private chip keeps its lock,
+  where privacy is the intended meaning).
+- **C3 — Plain-first language rule.** Default-style titles/rationales stay free of
+  astrology terms (trine, void-of-course, ingress, ruler, transit…); those words live in
+  the detail card's "HOW THIS IS COMPUTED" section and the opt-in balanced/astrology-rich
+  styles. Enforced by extending the 366×3 language lint: the practical row must not
+  contain the jargon list. Onboarding copy follows the same rule everywhere.
+- **C4 — Say it's free where a skeptic would ask.** The guest surfaces carry the
+  "computed on this device · free" framing (spec §1–2); the authed dial does not repeat
+  "free" (it already is), only the C1 caption.
+
 ## Trust rules (the substance of the credibility goal)
 
 - Guest windows are transiting-sky facts only. With `natal: nil` the engine's provenance
