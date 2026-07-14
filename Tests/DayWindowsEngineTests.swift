@@ -259,6 +259,22 @@ final class DayWindowsEngineTests: XCTestCase {
                     }
                     XCTAssertFalse(title.contains("°"), "degree language never belongs in titles: \(title)")
                     XCTAssertFalse(entry.rationale.contains("°"), "degree language never belongs in rationales: \(entry.rationale)")
+                    if style == .practical {
+                        // The default style is the consumer-facing one: it must
+                        // read for someone who knows no astrology. Jargon lives
+                        // in the detail card and the opt-in richer styles.
+                        let jargon = [
+                            "trine", "sextile", "conjunct", "opposition", "square to",
+                            "void-of-course", "void of course", "ingress", "transit",
+                            "ruler", "retrograde", "moon in", "hour of"
+                        ]
+                        for term in jargon {
+                            XCTAssertFalse(
+                                haystack.contains(term),
+                                "day \(dayOfYear) practical \(entry.kind): astrology term '\(term)' in the plain style: \(haystack)"
+                            )
+                        }
+                    }
                 }
             }
         }

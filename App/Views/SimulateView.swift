@@ -35,6 +35,11 @@ struct SimulateView: View {
     @State private var transitReading: DailyTransitReading?
     @State private var submissionCoordinator = PredictionSubmissionCoordinator.shared
     @State private var dayWindows: DayWindowsResult?
+    /// The task key `dayWindows` was last computed for. The compute task
+    /// re-runs whenever the instrument re-appears (tab switches, navigation
+    /// pushes); the guard skips the ephemeris math and the state rewrite
+    /// when nothing about the day or style actually changed.
+    @State private var computedDayWindowsKey: String?
     @State private var selectedWindowID: String?
     @State private var canonicalDailyGuidance: DailyGuidance?
     /// D3: the composer is demoted behind `CompassAskYourOwnRow`, collapsed
@@ -295,6 +300,8 @@ struct SimulateView: View {
     @ViewBuilder
     private var compassInstrument: some View {
         VStack(alignment: .leading, spacing: SimastrySpacing.md) {
+            CompassDialFraming()
+
             TimelineView(.everyMinute) { context in
                 VStack(alignment: .leading, spacing: SimastrySpacing.md) {
                     instrumentReveal(CompassNowDial(result: dayWindows, now: context.date), step: 0)
@@ -304,6 +311,7 @@ struct SimulateView: View {
                     )
                 }
                 .task(id: dayWindowsTaskKey(for: context.date)) {
+                    guard computedDayWindowsKey != dayWindowsTaskKey(for: context.date) else { return }
                     await recomputeDayWindows(now: context.date)
                 }
             }
@@ -375,7 +383,16 @@ struct SimulateView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: SimastrySpacing.lg) {
+                // Eager on purpose. This screen has about a dozen children, so
+                // laziness buys nothing — and it cost a hard main-thread spin:
+                // `scrollTo(composerAnchorID)` inside a LazyVStack whose row
+                // heights re-negotiate (ViewThatFits dial, flexible captions)
+                // can make the lazy height estimates and the anchor position
+                // chase each other without converging, pegging the main thread
+                // ("process main thread busy for 30.0s") the moment the
+                // composer expands. A plain VStack has exact geometry, so the
+                // anchor scroll resolves in one pass.
+                VStack(alignment: .leading, spacing: SimastrySpacing.lg) {
                     compassInstrument
 
                     instrumentReveal(
@@ -593,6 +610,7 @@ struct SimulateView: View {
             style: style
         )
         dayWindows = await DayWindowsEngine.windows(for: inputs)
+        computedDayWindowsKey = dayWindowsTaskKey(for: now)
     }
 
     private func applyLegacyDraftIfNeeded() {

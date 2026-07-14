@@ -28,8 +28,14 @@ private func compassTint(for tokenID: String) -> Color {
     compassToken(for: tokenID)?.color ?? SimastryColor.gold
 }
 
-private func compassIcon(for tokenID: String) -> String {
-    compassToken(for: tokenID)?.systemImage ?? "sparkles"
+/// C2: instrument surfaces map icons by window kind, not raw token — the
+/// personal token's padlock reads as "locked content" on a free timeline,
+/// so quiet and personal windows get neutral glyphs here. The composer's
+/// Private chip keeps its lock, where privacy is the intended meaning.
+private func compassIcon(for window: DayWindow) -> String {
+    if window.kind == .quiet { return "moon.zzz.fill" }
+    if window.tokenID == SimastryCategoryToken.personal.rawValue { return "sparkles" }
+    return compassToken(for: window.tokenID)?.systemImage ?? "sparkles"
 }
 
 private func compassTimeRangeText(_ interval: DateInterval) -> String {
@@ -39,6 +45,30 @@ private func compassTimeRangeText(_ interval: DateInterval) -> String {
 private func compassSegmentAccessibilityLabel(_ window: DayWindow, isCurrent: Bool) -> String {
     let base = "\(compassClockFormatter.string(from: window.interval.start))–\(compassClockFormatter.string(from: window.interval.end)), \(window.title)"
     return isCurrent ? "\(base), current" : base
+}
+
+// MARK: - Dial framing (C1)
+
+/// The one-line frame that tells a newcomer what the dial is, kept OUTSIDE
+/// the dial card on purpose: children added inside the TimelineView-driven
+/// card put its height into a feedback loop with the composer-expand scroll
+/// (lazy re-instantiation restarts the arc sweep, the animation never
+/// settles, and XCUITest's idle wait hangs). Static text out here restarts
+/// nothing. Shared by the authed Compass and the guest surface.
+struct CompassDialFraming: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: SimastrySpacing.xxs) {
+            Text("RIGHT NOW")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.gold)
+                .tracking(1.2)
+            Text("What this hour favors — computed from today’s sky.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.mutedSilver)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
 }
 
 // MARK: - Now dial
@@ -80,13 +110,13 @@ struct CompassNowDial: View {
 
     private var accessibilityLabel: String {
         guard let window = currentWindow else { return "Today's windows, loading" }
-        return "\(window.title). Until \(compassClockFormatter.string(from: window.interval.end))."
+        return "\(window.title). Until \(compassClockFormatter.string(from: window.interval.end)). Computed from today's sky."
     }
 
     @ViewBuilder
     private func dialLine(result: DayWindowsResult, window: DayWindow) -> some View {
         let tint = compassTint(for: window.tokenID)
-        let icon = compassIcon(for: window.tokenID)
+        let icon = compassIcon(for: window)
         let untilText = "until \(compassClockFormatter.string(from: window.interval.end))"
 
         VStack(alignment: .leading, spacing: SimastrySpacing.sm) {
@@ -356,7 +386,7 @@ struct CompassTodayStrip: View {
 
     private func segmentButton(window: DayWindow, index: Int) -> some View {
         let tint = compassTint(for: window.tokenID)
-        let icon = compassIcon(for: window.tokenID)
+        let icon = compassIcon(for: window)
         let isSelected = selection == window.id
         let isCurrent = window.interval.contains(now)
 
@@ -436,7 +466,7 @@ struct CompassTodayStrip: View {
 
     private func verticalRow(window: DayWindow, index: Int) -> some View {
         let tint = compassTint(for: window.tokenID)
-        let icon = compassIcon(for: window.tokenID)
+        let icon = compassIcon(for: window)
         let isSelected = selection == window.id
         let isCurrent = window.interval.contains(now)
 
