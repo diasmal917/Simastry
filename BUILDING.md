@@ -70,4 +70,9 @@ The override is compiled out of release builds entirely.
 
 Do not commit provider secrets. Supabase Edge Functions expect production
 secrets such as `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, managed RPC
-URLs, and rate-limit overrides to be configured in Supabase.
+URLs, and rate-limit overrides to be configured in Supabase. Companion Chat
+also requires `SIMASTRY_COMPANION_IDEMPOTENCY_HMAC_KEY`: provision at least 32
+random UTF-8 bytes and retain the same value across deploys so privacy-safe
+request fingerprints remain comparable. Keep it for the lifetime of retained
+companion messages; rotate it only with a key-ring migration that can verify
+the prior key version.

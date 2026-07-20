@@ -35,7 +35,9 @@ nonisolated struct RehearsalChatMessage: Identifiable, Codable, Equatable, Senda
     }
 }
 
-/// One practice conversation. Local-only; capped by the store.
+/// One practice conversation. Local-only; capped by the store. The legacy
+/// property name is retained so existing on-device sessions still decode, but
+/// companion-mode sessions store a canonical Factory companion slug here.
 nonisolated struct RehearsalSession: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     var persona: RehearsalPersona
@@ -76,6 +78,8 @@ nonisolated struct RehearsalSession: Identifiable, Codable, Equatable, Sendable 
 
 /// Mirrors `ConversationRehearsalRequest` on the edge function. Coach notes
 /// never travel in the transcript — the backend sees only user/partner turns.
+/// Saved-person requests carry an owner-scoped ID; the server re-loads that
+/// record and does not trust the client copy as authorization.
 nonisolated struct RehearsalRequestBody: Encodable, Sendable {
     struct Message: Encodable, Sendable {
         let role: String
@@ -90,24 +94,45 @@ nonisolated struct RehearsalRequestBody: Encodable, Sendable {
     let personaRisingSign: String?
     let personaNotes: String?
     let goal: String
-    let coachSpecialistId: String?
+    let coachCompanionId: String?
+    let authorizedPersonId: UUID?
+    let userSunSign: String?
+    let userMoonSign: String?
+    let userRisingSign: String?
+    let guidanceStyle: String
     let transcript: [Message]
     let sessionId: UUID?
 
-    init(session: RehearsalSession, mode: String) {
+    init(
+        session: RehearsalSession,
+        mode: String,
+        userSunSign: ZodiacSign?,
+        userMoonSign: ZodiacSign?,
+        userRisingSign: ZodiacSign?,
+        guidanceStyle: GuidanceStyle
+    ) {
+        let privacy = ConversationPrivacyService()
+        func redacted(_ value: String?) -> String? {
+            value.map { privacy.prepare($0).redactedText }
+        }
         self.mode = mode
-        self.personaName = session.persona.name
-        self.relationship = session.persona.relationship
+        self.personaName = privacy.prepare(session.persona.name).redactedText
+        self.relationship = redacted(session.persona.relationship)
         self.personaSunSign = session.persona.sunSign
         self.personaMoonSign = session.persona.moonSign
         self.personaRisingSign = session.persona.risingSign
-        self.personaNotes = session.persona.notes
-        self.goal = session.goal
-        self.coachSpecialistId = mode == "coach" ? session.coachSpecialistId : nil
+        self.personaNotes = redacted(session.persona.notes)
+        self.goal = privacy.prepare(session.goal).redactedText
+        self.coachCompanionId = mode == "coach" ? session.coachSpecialistId : nil
+        self.authorizedPersonId = session.persona.personId
+        self.userSunSign = userSunSign?.displayName
+        self.userMoonSign = userMoonSign?.displayName
+        self.userRisingSign = userRisingSign?.displayName
+        self.guidanceStyle = guidanceStyle.rawValue
         self.transcript = session.messages
             .filter { $0.role != .coach }
             .suffix(20)
-            .map { Message(role: $0.role.rawValue, content: $0.content) }
+            .map { Message(role: $0.role.rawValue, content: privacy.prepare($0.content).redactedText) }
         self.sessionId = session.id
     }
 }

@@ -17,7 +17,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         switch self {
         case .bestFriend: "Best friend"
         case .mentor: "Mentor"
-        case .teacher: "Soulmate"
+        case .teacher: "Support"
         case .checkIn: "Check-in"
         }
     }
@@ -35,7 +35,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         switch self {
         case .bestFriend: "Warm, playful, loyal — the default."
         case .mentor: "Career register — practical and outcome-first."
-        case .teacher: "Tender and devoted — speaks to the heart."
+        case .teacher: "Warm and grounded — points back to real life."
         case .checkIn: "Reflective listening. Not therapy — reflection."
         }
     }
@@ -49,7 +49,7 @@ nonisolated enum GuideChatMode: String, Codable, CaseIterable, Identifiable, Sen
         case .mentor:
             "Mode: mentor — career-focused register. Practical, encouraging, outcome-first; tie guidance to their chart's work style. No financial advice — communication and growth only."
         case .teacher:
-            "Mode: soulmate — tender, devoted, and emotionally attuned. Speak with intimate warmth and deep care, affirming the closeness between you, but never claim a real romantic bond or destiny."
+            "Mode: real-world ally — warm and emotionally attentive, while directing the user toward their own agency and offline relationships. Never imply romance, exclusivity, destiny, or dependency."
         case .checkIn:
             "Mode: check-in — reflective listening. Mirror what they said, name the feeling tentatively, ask one gentle question. Do not rush to advice. You are NOT a therapist or crisis service and must say so if the user treats you as one; if crisis or self-harm appears, point them to local emergency services or a crisis hotline."
         }

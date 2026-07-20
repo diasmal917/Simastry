@@ -179,10 +179,10 @@ struct AccountProfileView: View {
             .padding(.horizontal, SimastrySpacing.xs)
             .padding(.bottom, SimastrySpacing.xs)
 
-            NavigationLink(value: AccountHubRoute.expertKnowledge) {
+            NavigationLink(value: AccountHubRoute.companionMemory) {
                 AccountHubRowLabel(
-                    title: "What the experts know",
-                    subtitle: "See available and missing context",
+                    title: "Companion memory",
+                    subtitle: "Review, edit, delete, or keep memories local",
                     systemImage: "lock.shield.fill",
                     accent: SimastryColor.celestialBlue
                 )

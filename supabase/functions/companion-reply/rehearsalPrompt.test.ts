@@ -14,7 +14,11 @@ function baseRequest(mode: "partner" | "coach"): ConversationRehearsalRequest {
     personaSunSign: "Capricorn",
     personaNotes: "Hates surprises; softens after facts.",
     goal: "Ask for space without a fight",
-    coachSpecialistId: mode === "coach" ? "leyla-western" : undefined,
+    coachCompanionId: mode === "coach" ? "aries-amara" : undefined,
+    authorizedPersonId: "00000000-0000-4000-8000-000000000001",
+    userSunSign: "Virgo",
+    userMoonSign: "Gemini",
+    guidanceStyle: "balanced",
     transcript: [
       { role: "user", content: "Hey — can we talk about the weekend?" },
       { role: "partner", content: "What about it." },
@@ -27,7 +31,7 @@ Deno.test("partner prompt is framed as a rehearsal stand-in, never the real pers
   const { system } = buildConversationRehearsalPrompt(baseRequest("partner"));
   assertStringIncludes(system, "REHEARSAL");
   assertStringIncludes(system, "never the real person");
-  assertStringIncludes(system, "stand-in for \"Dad\"");
+  assertStringIncludes(system, 'stand-in for "Dad"');
 });
 
 Deno.test("partner prompt treats signs and notes as user-supplied symbolism", () => {
@@ -45,13 +49,38 @@ Deno.test("partner prompt with no signs keeps the stand-in neutral", () => {
   assertStringIncludes(system, "No signs supplied");
 });
 
-Deno.test("coach prompt carries the specialist harness and coaches only the user's side", () => {
-  const { system, user } = buildConversationRehearsalPrompt(baseRequest("coach"));
-  assertStringIncludes(system, "Leyla - Western Astrologer");
-  assertStringIncludes(system, "Western tropical astrology");
+Deno.test("coach prompt carries the primary companion voice and coaches only the user's side", () => {
+  const { system, user } = buildConversationRehearsalPrompt(
+    baseRequest("coach"),
+  );
+  assertStringIncludes(system, "Amara");
+  assertStringIncludes(system, "primary AI companion");
+  assertStringIncludes(system, "Fast, candid");
   assertStringIncludes(system, "Never coach manipulation");
   assertStringIncludes(system, "Critique only the USER's latest message");
+  assertStringIncludes(system, "Guidance style: balanced");
+  assertStringIncludes(system, "Sun Virgo");
   assertStringIncludes(user, "coaching note");
+});
+
+Deno.test("pilot coaching personas are distinct and share non-dependency boundaries", () => {
+  const prompts = ["aries-amara", "taurus-theo", "libra-isolde", "pisces-zev"]
+    .map(
+      (coachCompanionId) => {
+        const request = baseRequest("coach");
+        request.coachCompanionId = coachCompanionId;
+        return buildConversationRehearsalPrompt(request).system;
+      },
+    );
+  assertEquals(new Set(prompts).size, 4);
+  for (const prompt of prompts) {
+    assertStringIncludes(prompt, "never a human or therapist");
+    assertStringIncludes(
+      prompt,
+      "Do not seek exclusivity, dependency, romance, sexual contact",
+    );
+    assertStringIncludes(prompt, "Never coach manipulation");
+  }
 });
 
 Deno.test("transcript renders with the persona's name and the goal travels in the user turn", () => {

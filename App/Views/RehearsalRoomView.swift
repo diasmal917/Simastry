@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Rehearsal Room: practice a conversation with a stand-in shaped by what
-/// you've saved about someone, while a chosen expert coaches your side.
+/// you've saved about someone, while the primary companion coaches your side.
 /// Always labeled as rehearsal — never the real person. Sessions stay local.
 struct RehearsalRoomView: View {
     @Bindable var viewModel: AppViewModel
@@ -14,7 +14,7 @@ struct RehearsalRoomView: View {
     @State private var manualName: String = ""
     @State private var manualSun: ZodiacSign?
     @State private var goal: String = ""
-    @State private var coachSpecialistId: String = ""
+    @State private var coachCompanionId: String = ""
 
     // Session
     @State private var session: RehearsalSession?
@@ -23,7 +23,8 @@ struct RehearsalRoomView: View {
     @State private var isCoachThinking = false
     @State private var inlineError: String?
 
-    // Someone-new: describe-and-go, bypasses goal/coach setup entirely.
+    // Preserved for the deferred legacy "someone new" implementation, but no
+    // pilot UI presents or mutates it.
     @State private var practiceRoomModal: PracticeRoomModal?
 
     var body: some View {
@@ -51,24 +52,23 @@ struct RehearsalRoomView: View {
         }
         .presentationBackground { CelestialBackground() }
         .onAppear {
-            if coachSpecialistId.isEmpty {
-                coachSpecialistId = viewModel.dailyNoteSpecialist?.id ?? "leyla-western"
+            if coachCompanionId.isEmpty {
+                coachCompanionId = viewModel.primaryCompanionRelationship?.companionId.rawValue ?? ""
             }
             if let prefilledPerson, selectedPersonId == nil {
                 selectedPersonId = prefilledPerson.id
             }
-        }
-        .accessibilityIdentifier("rehearsal.screen")
-        .sheet(item: $practiceRoomModal) { modal in
-            switch modal {
-            case .newPerson:
-                PracticeNewPersonForm(viewModel: viewModel) { person in
-                    practiceRoomModal = .chat(person)
+            // Onboarding's "prepare for a conversation" goal lands here with
+            // the person the user just added preselected.
+            if let pendingId = viewModel.pendingRehearsalPersonId {
+                viewModel.pendingRehearsalPersonId = nil
+                if selectedPersonId == nil,
+                   viewModel.relationshipPeople.contains(where: { $0.id == pendingId }) {
+                    selectedPersonId = pendingId
                 }
-            case .chat(let person):
-                PracticeChatView(viewModel: viewModel, person: person)
             }
         }
+        .accessibilityIdentifier("rehearsal.screen")
     }
 
     // MARK: - Setup
@@ -83,41 +83,18 @@ struct RehearsalRoomView: View {
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            someoneNewChip
                             ForEach(viewModel.relationshipPeople) { person in
                                 personChip(person)
                             }
-                            manualChip
                         }
                         .padding(.vertical, 1)
                     }
 
-                    if selectedPersonId == nil {
-                        TextField("Their name or nickname", text: $manualName)
-                            .font(SimastryFont.bodyMedium)
-                            .foregroundStyle(SimastryColor.offWhite)
-                            .padding(12)
-                            .background(SimastryColor.surfaceSunken.opacity(0.55), in: .rect(cornerRadius: 14))
-                            .accessibilityIdentifier("rehearsal.nameField")
-
-                        Menu {
-                            Button("No sign — keep it neutral") { manualSun = nil }
-                            ForEach(ZodiacSign.allCases, id: \.self) { sign in
-                                Button(sign.displayName) { manualSun = sign }
-                            }
-                        } label: {
-                            HStack {
-                                Text(manualSun.map { "Sun: \($0.displayName)" } ?? "Their Sun sign (optional)")
-                                    .font(SimastryFont.labelMedium)
-                                    .foregroundStyle(SimastryColor.offWhite)
-                                Spacer()
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(SimastryFont.captionSmall)
-                                    .foregroundStyle(SimastryColor.mutedSilver)
-                            }
-                            .padding(12)
-                            .background(SimastryColor.surfaceSunken.opacity(0.55), in: .rect(cornerRadius: 14))
-                        }
+                    if viewModel.relationshipPeople.isEmpty {
+                        Text("Add someone first. AI rehearsal uses an authorized private People record rather than an unlinked name.")
+                            .font(SimastryFont.captionSmall)
+                            .foregroundStyle(SimastryColor.mutedSilver)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(16)
@@ -137,16 +114,9 @@ struct RehearsalRoomView: View {
                 .surfaceCard(cornerRadius: 20)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionTitle("Who coaches you?")
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(ExpertAstrologerRegistry.specialists) { specialist in
-                                coachChip(specialist)
-                            }
-                        }
-                        .padding(.vertical, 1)
-                    }
-                    Text("Your coach critiques your drafts — never scripts to control the other person.")
+                    sectionTitle("Your communication ally")
+                    primaryCoachCard
+                    Text("Your primary companion critiques your draft — never scripts a way to control the other person.")
                         .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.deepMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -181,9 +151,9 @@ struct RehearsalRoomView: View {
     }
 
     private var canStart: Bool {
-        let hasSubject = selectedPersonId != nil
-            || !manualName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return hasSubject && !goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return selectedPersonId != nil
+            && !goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && viewModel.primaryCompanionPersona != nil
     }
 
     private func personChip(_ person: RelationshipPerson) -> some View {
@@ -255,53 +225,60 @@ struct RehearsalRoomView: View {
         .accessibilityLabel("Type a name. With a coach.")
     }
 
-    private func coachChip(_ specialist: AstrologySpecialist) -> some View {
-        Button {
-            HapticManager.buttonPress()
-            coachSpecialistId = specialist.id
-        } label: {
-            HStack(spacing: 7) {
-                if let profile = specialist.archivedProfile {
-                    Image(profile.profileImageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 24, height: 24, alignment: .top)
-                        .clipShape(Circle())
+    @ViewBuilder
+    private var primaryCoachCard: some View {
+        if let companion = viewModel.primaryCompanionPersona {
+            HStack(spacing: 11) {
+                Image(companion.profileImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 42, height: 42, alignment: .top)
+                    .clipShape(Circle())
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(companion.displayName)
+                        .font(SimastryFont.labelLarge)
+                        .foregroundStyle(SimastryColor.offWhite)
+                    Text("Primary AI companion · \(companion.sign.displayName)")
+                        .font(SimastryFont.captionSmall)
+                        .foregroundStyle(SimastryColor.mutedSilver)
                 }
-                Text(specialist.characterName)
-                    .font(SimastryFont.labelMedium)
+                Spacer(minLength: 0)
+                Image(systemName: "pin.fill")
+                    .foregroundStyle(SimastryColor.gold)
+                    .accessibilityLabel("Pinned primary companion")
             }
-            .foregroundStyle(coachSpecialistId == specialist.id ? SimastryColor.midnight : SimastryColor.offWhite)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
-            .modifier(RehearsalChipBackground(isSelected: coachSpecialistId == specialist.id))
+            .padding(12)
+            .simastryGlass(cornerRadius: 16)
+        } else {
+            Text("Choose a primary companion before starting a rehearsal.")
+                .font(SimastryFont.bodySmall)
+                .foregroundStyle(SimastryColor.amber)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
     }
 
     private func startSession() {
         HapticManager.buttonPress()
-        let persona: RehearsalPersona
-        if let person = viewModel.relationshipPeople.first(where: { $0.id == selectedPersonId }) {
-            persona = RehearsalPersona(
-                name: person.displayName,
-                relationship: person.relationshipType.rawValue,
-                sunSign: person.sunSign.displayName,
-                moonSign: person.moonSign?.displayName,
-                risingSign: person.risingSign?.displayName,
-                notes: person.notes,
-                personId: person.id
-            )
-        } else {
-            persona = RehearsalPersona(
-                name: manualName.trimmingCharacters(in: .whitespacesAndNewlines),
-                sunSign: manualSun?.displayName
-            )
-        }
+        guard let person = viewModel.relationshipPeople.first(where: { $0.id == selectedPersonId }) else { return }
+        let persona = RehearsalPersona(
+            name: person.displayName,
+            relationship: person.relationshipType.rawValue,
+            sunSign: person.sunSign.displayName,
+            moonSign: person.moonSign?.displayName,
+            risingSign: person.risingSign?.displayName,
+            notes: person.notes,
+            personId: person.id
+        )
         session = RehearsalSession(
             persona: persona,
             goal: goal.trimmingCharacters(in: .whitespacesAndNewlines),
-            coachSpecialistId: coachSpecialistId
+            coachSpecialistId: coachCompanionId
+        )
+        viewModel.analytics.track(
+            .rehearsalStarted,
+            params: ["coach_mode": "primary_companion"]
         )
     }
 
@@ -369,7 +346,7 @@ struct RehearsalRoomView: View {
     }
 
     private var coachName: String {
-        ExpertAstrologerRegistry.specialist(id: coachSpecialistId)?.characterName ?? "Your coach"
+        viewModel.primaryCompanionPersona?.displayName ?? "Your companion"
     }
 
     private var disclosureBanner: some View {

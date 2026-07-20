@@ -42,10 +42,21 @@ struct AIAstrologistsView: View {
 
     @ViewBuilder
     var body: some View {
-        if AppConfig.expertAstrologersEnabled {
-            ExpertAstrologersView(viewModel: viewModel)
-        } else {
-            legacyDirectory
+        switch viewModel.experienceMode {
+        case .companionPilot:
+            PrimaryCompanionChooserView(viewModel: viewModel)
+        case .companionFull:
+            // The full mode exists for rollout control, but it never falls
+            // through to the old relationship/message mechanics. Until the
+            // remaining twenty have server certification, the released chooser
+            // remains the same four-person pilot.
+            PrimaryCompanionChooserView(viewModel: viewModel)
+        case .expertArchive:
+            if AppConfig.restoresLegacyExpertExperience {
+                ExpertAstrologersView(viewModel: viewModel)
+            } else {
+                ExpertArchiveView(viewModel: viewModel)
+            }
         }
     }
 

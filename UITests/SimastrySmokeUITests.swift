@@ -11,19 +11,65 @@ final class SimastrySmokeUITests: XCTestCase {
         app = nil
     }
 
-    func testCrystalLandingPagerReachesFirstRead() throws {
+    func testCompanionPilotPinsPrimaryAcrossHomeTalkAndPeople() throws {
+        launchSeededApp()
+
+        XCTAssertTrue(element("companion.home.screen").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Amara"].exists)
+
+        app.tabBars.buttons["Talk"].tap()
+        XCTAssertTrue(element("companion.talk.screen").waitForExistence(timeout: 6))
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Primary companion")).firstMatch.exists
+        )
+
+        app.tabBars.buttons["People"].tap()
+        XCTAssertTrue(app.buttons["people.toolbar.addPersonButton"].waitForExistence(timeout: 6))
+        XCTAssertFalse(app.buttons["people.discoveryEntry"].exists)
+    }
+
+    func testCompanionChooserRequiresExplicitConfirmation() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "companionSetup"])
+
+        XCTAssertTrue(element("companion.chooser.screen").waitForExistence(timeout: 10))
+        let chooseAmara = app.buttons["companion.chooser.choose.aries-amara"]
+        XCTAssertTrue(reveal(chooseAmara), "Expected Amara in the certified pilot chooser")
+        chooseAmara.tap()
+
+        let confirm = app.buttons["Choose Amara"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Choosing a primary must require explicit confirmation")
+    }
+
+    func testChartOnboardingRecommendsPrimaryCompanionsInsteadOfLegacyPanel() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "onboardingInsight"])
+
+        let title = app.staticTexts["YOUR COMPANION OPTIONS ARE READY"]
+        XCTAssertTrue(reveal(title, maxSwipes: 6), "Expected certified companion recommendations after chart context")
+        XCTAssertFalse(app.staticTexts["YOUR PANEL IS FORMING"].exists)
+        XCTAssertTrue(reveal(app.buttons["Choose Your Companion"], maxSwipes: 4))
+    }
+
+    func testWelcomeReachesGuestCompassWithinTwoTaps() throws {
         launchSeededApp(arguments: ["-SimastryPreviewScreen", "landing"])
 
-        let cta = app.buttons["landing.crystal.cta"]
-        XCTAssertTrue(cta.waitForExistence(timeout: 10), "Expected the value-first Compass CTA")
-        // The landing shows the real computed current window, never a canned
-        // briefing — the line appears once the on-device compute lands.
-        XCTAssertTrue(element("landing.nowLine").waitForExistence(timeout: 10), "Expected the real current-window line")
-        XCTAssertTrue(app.buttons["landing.crystal.chartCTA"].exists)
+        // The communication-companion promise carries the first screen; no
+        // orb, no crystal ball, no zodiac spectacle.
+        XCTAssertTrue(app.buttons["welcome.getStarted"].waitForExistence(timeout: 10), "Expected the welcome screen")
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Understand people")).firstMatch.exists,
+            "Expected the welcome promise headline"
+        )
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "set a boundary")).firstMatch.exists,
+            "Expected the real product example, not an abstract hero"
+        )
+        XCTAssertTrue(app.buttons["welcome.getStarted"].exists)
+        XCTAssertTrue(app.buttons["welcome.signIn"].exists)
 
-        cta.tap()
-        let ageConfirmation = app.buttons["ageGate.over13"]
-        XCTAssertTrue(ageConfirmation.waitForExistence(timeout: 6), "Expected the age gate before guest guidance")
+        // Guest Compass in two taps: the CTA, then the 18+ confirmation.
+        app.buttons["welcome.guestCompass"].tap()
+        let ageConfirmation = app.buttons["ageGate.over18"]
+        XCTAssertTrue(ageConfirmation.waitForExistence(timeout: 6), "Expected the age disclosure sheet")
         ageConfirmation.tap()
 
         // The guest lands on the real instrument — dial and strip render
@@ -39,6 +85,111 @@ final class SimastrySmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "TAKEAWAY")).firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "EVIDENCE")).firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "confidence")).firstMatch.exists)
+    }
+
+    func testSetupFlowSkipChartReachesExplicitCompanionChoiceAndAccountAsk() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "landing"])
+
+        XCTAssertTrue(app.buttons["welcome.getStarted"].waitForExistence(timeout: 10))
+        app.buttons["welcome.getStarted"].tap()
+
+        let ageConfirmation = app.buttons["ageGate.over18"]
+        XCTAssertTrue(ageConfirmation.waitForExistence(timeout: 6), "Expected the age disclosure before setup")
+        ageConfirmation.tap()
+
+        // Goal: one meaningful question, no astrology terminology.
+        let decodeGoal = app.buttons["onboarding.goal.decode_message"]
+        XCTAssertTrue(decodeGoal.waitForExistence(timeout: 8), "Expected the goal step")
+        decodeGoal.tap()
+
+        // Chart is optional and skippable without punishment.
+        let skipChart = app.buttons["onboarding.chart.skip"]
+        XCTAssertTrue(skipChart.waitForExistence(timeout: 6), "Expected the optional chart step")
+        XCTAssertTrue(app.buttons["onboarding.chart.add"].exists)
+        skipChart.tap()
+
+        // Support style maps to calibration, not intimacy.
+        let straight = app.buttons["onboarding.style.tell_me_straight"]
+        XCTAssertTrue(straight.waitForExistence(timeout: 6), "Expected the support style step")
+        straight.tap()
+
+        // Companion choice must be explicit. Without a chart, the candid
+        // style recommends Amara first.
+        let chooseAmara = app.buttons["onboarding.companion.choose.aries-amara"]
+        XCTAssertTrue(reveal(chooseAmara, maxSwipes: 4), "Expected the explicit Choose button")
+        XCTAssertTrue(app.buttons["onboarding.companion.seeAllFour"].exists, "All four must stay reachable")
+        chooseAmara.tap()
+
+        // Decode is not person-centered, so the flow asks for the account
+        // exactly when the server-backed companion becomes necessary.
+        XCTAssertTrue(
+            app.staticTexts["Create your account"].waitForExistence(timeout: 8),
+            "Expected the concrete sign-in ask after the companion commitment"
+        )
+    }
+
+    func testSetupFlowPersonGoalAsksWhoThisIsAbout() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "onboardingStyle"])
+
+        // Resumed mid-flow: goal (prepare) and chart decision already made.
+        let words = app.buttons["onboarding.style.find_the_words"]
+        XCTAssertTrue(words.waitForExistence(timeout: 10), "Expected the support style step on resume")
+        words.tap()
+
+        // The words-first style recommends Isolde first; the fourth stays
+        // one tap away.
+        let seeAll = app.buttons["onboarding.companion.seeAllFour"]
+        XCTAssertTrue(seeAll.waitForExistence(timeout: 6))
+        seeAll.tap()
+        XCTAssertTrue(
+            app.buttons["onboarding.companion.roster.taurus-theo"].waitForExistence(timeout: 4),
+            "See all four must surface the remaining certified companion"
+        )
+
+        let chooseIsolde = app.buttons["onboarding.companion.choose.libra-isolde"]
+        XCTAssertTrue(reveal(chooseIsolde, maxSwipes: 4), "Expected the explicit Choose button")
+        chooseIsolde.tap()
+
+        // Person-centered goals ask who this is about — manual entry only.
+        XCTAssertTrue(element("onboarding.personStep").waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["onboarding.person.add"].exists)
+        let notSpecific = app.buttons["onboarding.person.skip"]
+        XCTAssertTrue(notSpecific.exists)
+        notSpecific.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Create your account"].waitForExistence(timeout: 8),
+            "Expected the account ask after the person question"
+        )
+    }
+
+    func testSetupFlowChartEntryEmbedsBirthDetailsAndPreservesBack() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "birthDetails"])
+
+        // The guest chart continuation resumes at the optional-chart step.
+        let addChart = app.buttons["onboarding.chart.add"]
+        XCTAssertTrue(addChart.waitForExistence(timeout: 10), "Expected the optional chart step")
+        addChart.tap()
+
+        let nameField = app.textFields["birth.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 6), "Expected the existing birth-details steps")
+        focusAndType(nameField, text: "Maya")
+
+        // The continue button sits under the raised keyboard; dismiss via the
+        // accessory bar first so the tap cannot land on a key.
+        app.buttons["Done"].firstMatch.tap()
+        let continueButton = app.buttons["birth.continueButton"]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 4))
+        continueButton.tap()
+        let previousStep = app.buttons["Previous step"]
+        XCTAssertTrue(previousStep.waitForExistence(timeout: 6), "Expected the birthday step's back control")
+        previousStep.tap()
+        XCTAssertTrue(nameField.waitForExistence(timeout: 6))
+        XCTAssertEqual(nameField.value as? String, "Maya", "Entered values must survive backward navigation")
+
+        // Backing out of the first step returns to the chart choice.
+        app.buttons["Back"].firstMatch.tap()
+        XCTAssertTrue(addChart.waitForExistence(timeout: 6), "Expected to return to the chart choice")
     }
 
     func testRehearsalRoomRunsAPracticeTurn() throws {

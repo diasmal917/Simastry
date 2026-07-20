@@ -7,8 +7,14 @@ import {
 import { buildPrompt, type CompanionReplyPayload, normalizedSpecialistId } from "./specialistPrompt.ts";
 import {
   buildConversationRehearsalPrompt,
+  pilotRehearsalCompanion,
   rehearsalTurnLimitReached,
 } from "./rehearsalPrompt.ts";
+import {
+  isCurrentPrimaryCompanion,
+  type PrimaryCompanionRelationshipRow,
+  redactRehearsalForProvider,
+} from "./rehearsalSecurity.ts";
 import { anthropicErrorFromSseBlock, anthropicTextDeltaFromSseBlock, encodeSseEvent, shouldStreamReply, streamHeaders } from "./streaming.ts";
 
 const corsHeaders = {
@@ -120,6 +126,7 @@ export async function handleCompanionReply(
     }
 
     payload = await hydrateExpertAstrologyIntake(user.id, payload);
+    payload = await hydrateConversationRehearsal(user.id, payload);
     const requestCharacters = estimateRequestCharacters(payload);
     usageEvent = await insertUsageEvent(
       user.id,
@@ -359,11 +366,11 @@ function validatePayload(payload: CompanionReplyPayload) {
     }
     if (
       rehearsal.mode === "coach" &&
-      !normalizedSpecialistId(rehearsal.coachSpecialistId ?? "")
+      !pilotRehearsalCompanion(rehearsal.coachCompanionId ?? "")
     ) {
       throw new CompanionReplyError(
-        "invalid_specialist",
-        "Unknown coaching specialist.",
+        "uncertified_companion",
+        "Choose a certified primary companion for rehearsal.",
         400,
       );
     }
@@ -385,6 +392,26 @@ function validatePayload(payload: CompanionReplyPayload) {
       validateText("personaNotes", rehearsal.personaNotes, 1, 600);
     }
     validateOptionalUuid("sessionId", rehearsal.sessionId);
+    validateOptionalUuid("authorizedPersonId", rehearsal.authorizedPersonId);
+    for (
+      const [field, value] of [
+        ["userSunSign", rehearsal.userSunSign],
+        ["userMoonSign", rehearsal.userMoonSign],
+        ["userRisingSign", rehearsal.userRisingSign],
+      ] as const
+    ) {
+      if (value !== undefined) validateText(field, value, 1, 30);
+    }
+    if (
+      rehearsal.guidanceStyle !== undefined &&
+      !["practical", "balanced", "astrology_rich"].includes(rehearsal.guidanceStyle)
+    ) {
+      throw new CompanionReplyError(
+        "invalid_payload",
+        "The rehearsal guidance style is invalid.",
+        400,
+      );
+    }
     if ((rehearsal.transcript ?? []).length > 32) {
       throw new CompanionReplyError(
         "payload_too_large",
@@ -498,6 +525,180 @@ async function hydrateExpertAstrologyIntake(
     selfChartImport,
     selectedPersonChartImport,
   });
+}
+
+type RehearsalPersonRow = {
+  display_name: string;
+  relationship_kind?: string | null;
+  birth_chart?: Record<string, unknown> | null;
+  notes?: string | null;
+  ai_context_enabled: boolean;
+};
+
+type RehearsalUserChartRow = {
+  sun_estimate?: Record<string, unknown> | null;
+  moon_estimate?: Record<string, unknown> | null;
+  rising_estimate?: Record<string, unknown> | null;
+};
+
+/// Saved-person rehearsal context is always reloaded with the authenticated
+/// owner's ID. This makes `authorizedPersonId` an authorization reference—not
+/// permission to trust a client-provided copy of another person's record.
+async function hydrateConversationRehearsal(
+  userId: string,
+  payload: CompanionReplyPayload,
+): Promise<CompanionReplyPayload> {
+  if (
+    payload.feature !== "conversation_rehearsal" ||
+    !payload.rehearsalRequest
+  ) {
+    return payload;
+  }
+
+  const personId = payload.rehearsalRequest.authorizedPersonId;
+  if (!personId) {
+    throw new CompanionReplyError(
+      "authorized_person_required",
+      "Choose a saved private People record for rehearsal.",
+      400,
+    );
+  }
+
+  const rehearsalMode = payload.rehearsalRequest.mode;
+  const coachCompanionId = payload.rehearsalRequest.coachCompanionId ?? "";
+  const [person, userChart, primaryRelationships] = await Promise.all([
+    fetchRehearsalPerson(userId, personId),
+    fetchRehearsalUserChart(userId),
+    rehearsalMode === "coach"
+      ? fetchPrimaryRehearsalRelationships(userId, coachCompanionId)
+      : Promise.resolve([]),
+  ]);
+  if (
+    rehearsalMode === "coach" &&
+    !isCurrentPrimaryCompanion(primaryRelationships, coachCompanionId)
+  ) {
+    throw new CompanionReplyError(
+      "primary_companion_required",
+      "Choose this companion as your active primary before rehearsal.",
+      403,
+    );
+  }
+  if (!person || person.ai_context_enabled !== true) {
+    throw new CompanionReplyError(
+      "person_not_authorized",
+      "That private People record is unavailable or not enabled for AI context.",
+      403,
+    );
+  }
+
+  const hydratedRequest = {
+    ...payload.rehearsalRequest,
+    personaName: person.display_name.trim().slice(0, 80),
+    relationship: person.relationship_kind?.trim().slice(0, 60) || undefined,
+    personaSunSign: signFromChart(person.birth_chart, "sun"),
+    personaMoonSign: signFromChart(person.birth_chart, "moon"),
+    personaRisingSign: signFromChart(person.birth_chart, "rising"),
+    personaNotes: person.notes?.trim().slice(0, 600) || undefined,
+    userSunSign: estimateSign(userChart?.sun_estimate),
+    userMoonSign: estimateSign(userChart?.moon_estimate),
+    userRisingSign: estimateSign(userChart?.rising_estimate),
+  };
+  return {
+    ...payload,
+    rehearsalRequest: redactRehearsalForProvider(hydratedRequest),
+  };
+}
+
+async function fetchPrimaryRehearsalRelationships(
+  userId: string,
+  companionId: string,
+): Promise<PrimaryCompanionRelationshipRow[]> {
+  const url = new URL(
+    `${requiredEnv("SUPABASE_URL")}/rest/v1/user_companion_relationships`,
+  );
+  url.searchParams.set("select", "companion_id,status,is_primary");
+  url.searchParams.set("user_id", `eq.${userId}`);
+  url.searchParams.set("companion_id", `eq.${companionId}`);
+  url.searchParams.set("status", "eq.active");
+  url.searchParams.set("is_primary", "eq.true");
+  url.searchParams.set("limit", "1");
+  return await supabaseRest<PrimaryCompanionRelationshipRow[]>(url, {
+    method: "GET",
+  });
+}
+
+async function fetchRehearsalPerson(
+  userId: string,
+  personId: string,
+): Promise<RehearsalPersonRow | undefined> {
+  const url = new URL(
+    `${requiredEnv("SUPABASE_URL")}/rest/v1/relationship_people`,
+  );
+  url.searchParams.set(
+    "select",
+    "display_name,relationship_kind,birth_chart,notes,ai_context_enabled",
+  );
+  url.searchParams.set("id", `eq.${personId}`);
+  url.searchParams.set("user_id", `eq.${userId}`);
+  url.searchParams.set("archived_at", "is.null");
+  url.searchParams.set("limit", "1");
+  const rows = await supabaseRest<RehearsalPersonRow[]>(url, { method: "GET" });
+  return rows[0];
+}
+
+async function fetchRehearsalUserChart(
+  userId: string,
+): Promise<RehearsalUserChartRow | undefined> {
+  const url = new URL(
+    `${requiredEnv("SUPABASE_URL")}/rest/v1/user_birth_charts`,
+  );
+  url.searchParams.set("select", "sun_estimate,moon_estimate,rising_estimate");
+  url.searchParams.set("user_id", `eq.${userId}`);
+  url.searchParams.set("limit", "1");
+  const rows = await supabaseRest<RehearsalUserChartRow[]>(url, {
+    method: "GET",
+  });
+  return rows[0];
+}
+
+function signFromChart(
+  chart: Record<string, unknown> | null | undefined,
+  placement: "sun" | "moon" | "rising",
+): string | undefined {
+  if (!chart) return undefined;
+  const camel = `${placement}Sign`;
+  const snake = `${placement}_sign`;
+  return cleanSign(chart[camel]) ?? cleanSign(chart[snake]) ??
+    estimateSign(asRecord(chart[placement]));
+}
+
+function estimateSign(
+  estimate: Record<string, unknown> | null | undefined,
+): string | undefined {
+  if (!estimate) return undefined;
+  const direct = cleanSign(estimate.resolvedSign) ??
+    cleanSign(estimate.resolved_sign) ?? cleanSign(estimate.sign);
+  if (direct) return direct;
+  const possible = estimate.possibleSigns ?? estimate.possible_signs;
+  if (!Array.isArray(possible) || possible.length !== 1) return undefined;
+  return cleanSign(possible[0]);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function cleanSign(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return [
+      "aries", "taurus", "gemini", "cancer", "leo", "virgo",
+      "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+    ].includes(normalized)
+    ? normalized
+    : undefined;
 }
 
 async function fetchExpertAstrologyIntake(

@@ -14,7 +14,7 @@ nonisolated enum GuideCalibrationRole: String, CaseIterable, Identifiable, Codab
         switch self {
         case .astrologer: "Astrologer"
         case .bestFriend: "Best friend"
-        case .soulmate: "Soulmate"
+        case .soulmate: "Real-world ally"
         case .mentor: "Mentor"
         case .teacher: "Teacher"
         case .coach: "Coach"
@@ -28,7 +28,7 @@ nonisolated enum GuideCalibrationRole: String, CaseIterable, Identifiable, Codab
         case .bestFriend:
             "Lean slightly closer, like a trusted best friend: warm, direct, playful, and still boundaried."
         case .soulmate:
-            "Use a tender, intimate register, but never claim a real romantic bond or destiny."
+            "Use a warm, grounded register that strengthens the user's agency and offline relationships."
         case .mentor:
             "Use a mentor register: wise, practical, steady, and focused on the next useful step."
         case .teacher:

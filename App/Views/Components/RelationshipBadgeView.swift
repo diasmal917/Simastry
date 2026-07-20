@@ -19,7 +19,7 @@ struct RelationshipBadgeView: View {
         case .familiar: Color(red: 192/255, green: 192/255, blue: 200/255)
         case .close: SimastryColor.gold
         case .bonded: SimastryColor.gold
-        case .soulbound: SimastryColor.gold
+        case .deepTrust: SimastryColor.gold
         }
     }
 
@@ -28,7 +28,7 @@ struct RelationshipBadgeView: View {
     }
 
     private var showShimmer: Bool {
-        level == .bonded || level == .soulbound
+        level == .bonded || level == .deepTrust
     }
 
     var progress: Double {
@@ -59,7 +59,7 @@ struct RelationshipBadgeView: View {
                     .foregroundStyle(SimastryColor.mutedSilver)
             }
 
-            if level != .soulbound {
+            if level != .deepTrust {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()

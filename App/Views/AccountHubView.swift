@@ -15,6 +15,9 @@ enum AccountHubRoute: Hashable {
     case settings
     case methodology
     case expertKnowledge
+    case companionMemory
+    case legacyCompanions
+    case expertArchive
 }
 
 struct AccountHubView: View {
@@ -52,6 +55,12 @@ struct AccountHubView: View {
             AccountMethodologyView()
         case .expertKnowledge:
             ExpertKnowledgeView(viewModel: viewModel, embeddedInNavigationStack: true)
+        case .companionMemory:
+            CompanionMemoryControlsView(viewModel: viewModel)
+        case .legacyCompanions:
+            LegacyCompanionArchiveView(viewModel: viewModel)
+        case .expertArchive:
+            ExpertArchiveView(viewModel: viewModel)
         }
     }
 
@@ -118,6 +127,21 @@ private struct AccountHubRootView: View {
                 }
 
                 AccountHubSection(title: "App & privacy") {
+                    if viewModel.experienceMode.isCompanionExperience {
+                        NavigationLink(value: AccountHubRoute.companionMemory) {
+                            AccountHubRowLabel(
+                                title: "Companion memory & sync",
+                                subtitle: "Review, edit, delete, or stop future private sync",
+                                systemImage: "brain.head.profile",
+                                accent: SimastryColor.risingViolet
+                            )
+                        }
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityIdentifier("accountHub.companionMemory")
+
+                        AccountHubDivider()
+                    }
+
                     NavigationLink(value: AccountHubRoute.settings) {
                         AccountHubRowLabel(
                             title: "Settings and privacy",
@@ -141,6 +165,36 @@ private struct AccountHubRootView: View {
                     }
                     .buttonStyle(SpringPressStyle())
                     .accessibilityIdentifier("accountHub.methodology")
+                }
+
+                if hasExpertArchive {
+                    AccountHubSection(title: "Past consultations") {
+                        NavigationLink(value: AccountHubRoute.expertArchive) {
+                            AccountHubRowLabel(
+                                title: "Expert archive",
+                                subtitle: "Read-only history · export or delete",
+                                systemImage: "archivebox.fill",
+                                accent: SimastryColor.celestialBlue
+                            )
+                        }
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityIdentifier("accountHub.expertArchive")
+                    }
+                }
+
+                if !viewModel.companionPivotState.legacyRecords.isEmpty {
+                    AccountHubSection(title: "Legacy records") {
+                        NavigationLink(value: AccountHubRoute.legacyCompanions) {
+                            AccountHubRowLabel(
+                                title: "Previous companions",
+                                subtitle: "Read-only local records · never identity-matched",
+                                systemImage: "tray.full.fill",
+                                accent: SimastryColor.risingViolet
+                            )
+                        }
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityIdentifier("accountHub.legacyCompanions")
+                    }
                 }
 
                 AccountHubSection(title: "Human help") {
@@ -187,5 +241,10 @@ private struct AccountHubRootView: View {
     private func openAstrologerDirectory() {
         HapticManager.buttonPress()
         openURL(AppConfig.astrologerDirectoryURL)
+    }
+
+    private var hasExpertArchive: Bool {
+        !viewModel.specialistMessages.isEmpty
+            || !viewModel.specialistConsultationResponses.isEmpty
     }
 }

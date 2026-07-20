@@ -104,6 +104,13 @@ class AppViewModel {
     var roomGuideTypingKeys: Set<String> = []
     var savedGuides: [SavedGuide] = []
     var relationshipPeople: [RelationshipPerson] = []
+    /// Separate local-first cache for the primary-companion pilot. This never
+    /// reads from or writes to the expert astrologer persistence namespace.
+    var companionPivotState: CompanionPivotState = CompanionPivotStore.shared.load()
+    var experienceMode: ExperienceMode = AppConfig.experienceMode
+    var primaryCompanionDraft: String?
+    var companionSyncTask: Task<Void, Error>?
+    var companionSyncIncludesPrivateRecords = false
     var pendingInviteCodeForConfirmation: String?
 
     // MARK: - Social Discovery
@@ -274,6 +281,7 @@ class AppViewModel {
     var decodeRouteRequest: Int = 0
     /// Preselects the sign when Decode opens from a person's page.
     var decodeDraftSign: ZodiacSign?
+    var decodeDraftPersonId: UUID?
     var pendingDeepLinkURL: URL?
     var pendingDeepLink: DeepLink?
     var guideFocusSign: ZodiacSign?
@@ -310,6 +318,12 @@ class AppViewModel {
     var peopleDetailRequestPersonId: UUID?
     /// Bumped to present the Team Read sheet.
     var teamReadRouteRequest: Int = 0
+    /// Bumped to present the manual Add Person sheet on the People tab
+    /// (onboarding's "Understand someone" landing when no person was added).
+    var peopleAddPersonRouteRequest: Int = 0
+    /// Person the next Rehearsal presentation should preselect, so the
+    /// onboarding goal lands in a ready-to-start practice room.
+    var pendingRehearsalPersonId: UUID?
 
     // MARK: - Guide Work Lifecycle
     /// Bumped whenever account-scoped local state is cleared; in-flight
@@ -481,7 +495,11 @@ class AppViewModel {
     }
 
     // MARK: - Safety Gates
-    var isAgeVerified: Bool = UserDefaults.standard.bool(forKey: "ageVerified")
+    private static let adultAgeVerificationVersion = 2
+    private static let adultAgeVerificationVersionKey = "simastry_age_verification_version"
+    var isAgeVerified: Bool = UserDefaults.standard.integer(
+        forKey: AppViewModel.adultAgeVerificationVersionKey
+    ) == AppViewModel.adultAgeVerificationVersion
     var hasAcceptedThirdPartyConsent: Bool = UserDefaults.standard.bool(forKey: "thirdPartyDataConsent")
     var firstReadOnboardingIntent: FirstReadOnboardingIntent? = {
         UserDefaults.standard.string(forKey: "simastry_first_read_onboarding_intent")
@@ -594,39 +612,173 @@ class AppViewModel {
     func verifyAge() {
         isAgeVerified = true
         UserDefaults.standard.set(true, forKey: "ageVerified")
+        UserDefaults.standard.set(
+            Self.adultAgeVerificationVersion,
+            forKey: Self.adultAgeVerificationVersionKey
+        )
     }
 
-    func completeAgeVerification() {
+    /// Where the welcome screen continues after the 18+ sheet is confirmed.
+    enum PostAgeDestination: Sendable {
+        case guestCompass
+        case setupFlow
+    }
+
+    func confirmAdultAge(then destination: PostAgeDestination) {
         verifyAge()
-        // Preserve the value path chosen on the landing screen. Guest Compass
-        // proves the product before asking for chart data; chart-first remains
-        // available for people who explicitly chose it.
-        let intent = firstReadOnboardingIntent ?? .predict
         withAnimation(SimastryMotion.stateChange) {
-            switch intent {
-            case .predict:
+            switch destination {
+            case .guestCompass:
                 currentScreen = .firstPrediction
-            case .astrologer:
-                currentScreen = .birthDetails
-            case .decode:
-                // The decode-flavored first read retired with the legacy
-                // screens; its persisted intent lands on the guest Compass.
-                currentScreen = .firstPrediction
+            case .setupFlow:
+                currentScreen = .onboarding
             }
-        }
-    }
-
-    func continueToBirthDetails(after intent: FirstReadOnboardingIntent? = nil) {
-        if let intent {
-            firstReadOnboardingIntent = intent
-        }
-        withAnimation(.spring(SimastrySpring.smooth)) {
-            currentScreen = .birthDetails
         }
     }
 
     func clearFirstReadOnboardingIntent() {
         firstReadOnboardingIntent = nil
+    }
+
+    // MARK: - Onboarding Flow
+
+    /// Setup progress, persisted so an interrupted onboarding resumes at the
+    /// same step. Cleared once the first task launches, and on sign-out or
+    /// account deletion — but never by the routine signed-out launch reset.
+    var onboardingProgress: OnboardingProgress = OnboardingProgressStore.load() {
+        didSet { OnboardingProgressStore.save(onboardingProgress) }
+    }
+
+    /// "Get started" (or "Continue setup") on the welcome screen.
+    func beginSetupFlow() {
+        if !onboardingProgress.hasStarted {
+            analytics.track(.onboardingStarted)
+        }
+        withAnimation(SimastryMotion.stateChange) {
+            currentScreen = .onboarding
+        }
+    }
+
+    /// Guest Compass's "add your chart" continuation: the guest already chose
+    /// today's clarity, so the flow resumes at the chart step with that goal.
+    func continueGuestIntoSetupFlow() {
+        if onboardingProgress.goal == nil {
+            onboardingProgress.goal = .clarityToday
+            analytics.track(.onboardingGoalSelected, key: "goal", value: OnboardingGoal.clarityToday.rawValue)
+        }
+        withAnimation(.spring(SimastrySpring.smooth)) {
+            currentScreen = .onboarding
+        }
+    }
+
+    func selectOnboardingGoal(_ goal: OnboardingGoal) {
+        onboardingProgress.goal = goal
+        analytics.track(.onboardingGoalSelected, key: "goal", value: goal.rawValue)
+    }
+
+    func recordOnboardingChartDecision(added: Bool) {
+        onboardingProgress.chartDecided = true
+        analytics.track(added ? .onboardingChartAdded : .onboardingChartSkipped)
+    }
+
+    func selectOnboardingSupportStyle(_ style: OnboardingSupportStyle) {
+        onboardingProgress.supportStyle = style
+        analytics.track(.onboardingSupportStyleSelected, key: "style", value: style.rawValue)
+    }
+
+    /// Recommendations for the setup companion step: the just-chosen support
+    /// style carries the bias; chart placements contribute when present.
+    var onboardingRecommendedPersonas: [CompanionPersona] {
+        if let style = onboardingProgress.supportStyle {
+            return CompanionPersonaRegistry.recommendations(
+                sun: userSunSign,
+                moon: userMoonSign,
+                rising: userRisingSign,
+                supportStyle: style
+            )
+        }
+        return recommendedCompanionPersonas
+    }
+
+    /// Restores a staged pre-auth chart after a relaunch, so a resumed setup
+    /// still shows the calculated Sun/Moon/Rising. Post-auth restore stays in
+    /// `loadProfile()`.
+    func restoreOnboardingChartForResume() {
+        guard !isAuthenticated, !hasCompletedSigns else { return }
+        _ = restorePendingOnboardingChart()
+    }
+
+    /// The explicit "Choose <name>" press during setup. Seeds the support
+    /// style onto the relationship and moves the flow toward the first task.
+    func chooseOnboardingCompanion(_ personaID: CompanionPersonaID) {
+        choosePrimaryCompanion(personaID, seeding: onboardingProgress.supportStyle?.seededPreferences)
+        onboardingProgress.companionChosen = true
+        analytics.track(.onboardingPrimaryChosen, key: "companion", value: personaID.rawValue)
+    }
+
+    func recordOnboardingPerson(_ personId: UUID?) {
+        onboardingProgress.personId = personId
+        onboardingProgress.personDecided = true
+    }
+
+    /// The flow's final transition: authenticated users enter the product
+    /// immediately; guests are asked to sign in exactly when the server-backed
+    /// companion becomes necessary.
+    func finishOnboardingFlow() {
+        if isAuthenticated {
+            syncHomeSetupPhase()
+            withAnimation(SimastryMotion.stateChange) {
+                currentScreen = .home
+            }
+            if homeSetupPhase == .complete {
+                analytics.track(.onboardingCompleted)
+            }
+            consumeOnboardingFirstTaskIfReady()
+        } else {
+            withAnimation(SimastryMotion.stateChange) {
+                currentScreen = .signUp
+            }
+        }
+    }
+
+    /// Routes the completed setup into the chosen goal's real capability.
+    /// Returns true when it navigated, so callers can keep deep-link
+    /// precedence intact.
+    @discardableResult
+    func consumeOnboardingFirstTaskIfReady() -> Bool {
+        guard currentScreen == .home,
+              onboardingProgress.companionChosen,
+              let goal = onboardingProgress.goal else {
+            return false
+        }
+
+        let personId = onboardingProgress.personId
+        onboardingProgress = OnboardingProgress()
+        OnboardingProgressStore.clear()
+        // The legacy intent must not re-route on a later launch.
+        clearFirstReadOnboardingIntent()
+        analytics.track(.onboardingFirstTaskStarted, key: "goal", value: goal.rawValue)
+
+        switch goal {
+        case .prepareConversation:
+            pendingRehearsalPersonId = personId
+            openPractice()
+        case .understandSomeone:
+            homeSetupPhase = .complete
+            selectedTab = .people
+            if let personId {
+                peopleDetailRequestPersonId = personId
+            } else {
+                peopleAddPersonRouteRequest += 1
+            }
+        case .decodeMessage:
+            homeSetupPhase = .complete
+            selectedTab = .today
+            decodeRouteRequest += 1
+        case .clarityToday:
+            openPredict()
+        }
+        return true
     }
 
     // MARK: - Third-Party Data Consent
@@ -688,6 +840,9 @@ class AppViewModel {
     func openPractice() {
         homeSetupPhase = .complete
         selectedTab = .messages
+        guard !experienceMode.isCompanionExperience || primaryCompanionRelationship != nil else {
+            return
+        }
         practiceRouteRequest += 1
     }
 
@@ -714,6 +869,7 @@ class AppViewModel {
     func addRelationshipPerson(_ person: RelationshipPerson) {
         relationshipPeople.append(person)
         saveRelationshipPeople()
+        scheduleCompanionPilotSync()
     }
 
     private func loadFirstReadDraft() {
@@ -887,11 +1043,20 @@ class AppViewModel {
         updated.updatedAt = .now
         relationshipPeople[index] = updated
         saveRelationshipPeople()
+        scheduleCompanionPilotSync()
     }
 
     func deleteRelationshipPerson(_ person: RelationshipPerson) {
         relationshipPeople.removeAll { $0.id == person.id }
         saveRelationshipPeople()
+        guard isAuthenticated else { return }
+        Task {
+            do {
+                try await supabase.deleteSyncedRelationshipPerson(id: person.id)
+            } catch {
+                CrashReporter.log(error, context: "deleteSyncedRelationshipPerson")
+            }
+        }
     }
 
     func relationshipReading(for person: RelationshipPerson) -> RelationshipPersonReading {
@@ -912,11 +1077,17 @@ class AppViewModel {
         relationshipPeopleStore.savePeople(relationshipPeople)
     }
 
+    /// Companion server hydration reuses the same atomic local People cache.
+    func persistRelationshipPeopleCache() {
+        saveRelationshipPeople()
+    }
+
     var isRevenueCatAvailable: Bool {
         !AppConfig.revenueCatAPIKey.isEmpty
     }
 
     func checkAuthState() async {
+        await refreshCompanionExperienceMode()
         await notificationService.checkAuthorizationStatus()
 
         // Only a definitive sign-out may wipe account-scoped local state.
@@ -1066,6 +1237,8 @@ class AppViewModel {
         guideFocusSign = nil
         predictionDraft = nil
         resetSetupState()
+        onboardingProgress = OnboardingProgress()
+        OnboardingProgressStore.clear()
         homeSetupPhase = .modeSelection
         currentScreen = .landing
     }
@@ -1084,14 +1257,21 @@ class AppViewModel {
             }
 
             do {
-                try await supabase.deleteExpertAstrologerData(for: userId.uuidString)
+                try await supabase.deleteCurrentUserCompanionData()
+            } catch {
+                remoteFailures.append("primary_companion_data")
+                CrashReporter.log(error, context: "deleteAccountPrimaryCompanionData")
+            }
+
+            do {
+                let storageCleanupConfirmed = try await supabase.deleteCurrentUserExpertArchive()
+                if !storageCleanupConfirmed {
+                    remoteFailures.append("expert_chart_storage")
+                }
             } catch {
                 remoteFailures.append("expert_astrologers")
                 CrashReporter.log(error, context: "deleteAccountExpertAstrologers")
             }
-
-            // Best-effort: clear uploaded chart screenshots from private storage.
-            await supabase.deleteExpertChartImages(for: userId.uuidString)
 
             do {
                 try await supabase.deleteAvatarFiles(for: userId.uuidString)
@@ -1196,10 +1376,14 @@ class AppViewModel {
         clearFirstReadDraft()
         clearGuideFeedback()
 
-        // Clear UserDefaults
+        // Clear UserDefaults. The progress property resets first so its
+        // persistence didSet cannot re-write a value after the key removal.
+        onboardingProgress = OnboardingProgress()
         let keys = ["savedGuides", "simastry_companion_messages", "simastry_profile_image_url",
                     "thirdPartyDataConsent", "isDiscoverable", "simastry_referral_info",
                     "simastry_dark_mode", "appLanguage", "ageVerified",
+                    Self.adultAgeVerificationVersionKey,
+                    OnboardingProgressStore.defaultsKey,
                     "simastry_conversation_suggestions_enabled",
                     "socialDisplayName", "socialBio", "socialLinks",
                     "positiveActionCount", "lastReviewPromptDate", "reviewPromptCount",
@@ -1313,6 +1497,10 @@ class AppViewModel {
             selectedTab = .people
 
         case .guide:
+            if experienceMode.isCompanionExperience {
+                selectedTab = primaryCompanionRelationship == nil ? .today : .messages
+                return
+            }
             if AppConfig.expertAstrologersEnabled {
                 openAIAstrologists()
                 return
@@ -1321,6 +1509,16 @@ class AppViewModel {
             selectedTab = .today
 
         case .guideProfile(let id):
+            if experienceMode.isCompanionExperience {
+                let requested = CompanionPersonaID(rawValue: id)
+                if requested == primaryCompanionRelationship?.companionId {
+                    selectedTab = .messages
+                } else {
+                    selectedTab = .today
+                    aiAstrologistsRouteRequest += 1
+                }
+                return
+            }
             if AppConfig.expertAstrologersEnabled {
                 let mappedSpecialistId = ExpertAstrologerRegistry
                     .specialist(forLegacyCharacterId: id)?
@@ -1396,6 +1594,9 @@ class AppViewModel {
         await loadProfile()
         await loadSocialProfile()
         await loadCompanions()
+        claimCompanionStateForAuthenticatedUser()
+        await refreshCompanionPilotStateFromServer()
+        scheduleCompanionPilotSync()
         await refreshExpertAstrologerStateFromRemote()
         await checkSubscriptionStatus()
         syncHomeSetupPhase()
@@ -1736,8 +1937,10 @@ class AppViewModel {
         notificationService.clearScheduledNotifications()
         notificationService.cancelLegacyGuideAndCompanionNotifications()
 
-        if !AppConfig.expertAstrologersEnabled {
+        if AppConfig.guidedRoomsEnabled {
             schedulePanelStarterNotification()
+        }
+        if AppConfig.companionInitiatedMessagingEnabled {
             notificationService.scheduleGuideTipNudges()
         }
         await scheduleDailyMorningNoteNotification()
@@ -1749,6 +1952,9 @@ class AppViewModel {
     /// the widget can render (and flip at midnight) without computing anything.
     func publishDailyNotesForWidget() async {
         guard let specialist = dailyNoteSpecialist else { return }
+        let visibleSourceName = experienceMode.isCompanionExperience
+            ? "Simastry Compass"
+            : specialist.characterName
         let calendar = Calendar.current
         let today = Date()
         let days = [today, calendar.date(byAdding: .day, value: 1, to: today) ?? today]
@@ -1756,7 +1962,7 @@ class AppViewModel {
         for day in days {
             let dayGuidance = await DailyGuidanceComposer.guidance(
                 for: specialist.id,
-                sourceName: specialist.characterName,
+                sourceName: visibleSourceName,
                 on: day,
                 sun: userSunSign,
                 moon: userMoonSign,
@@ -1847,6 +2053,9 @@ class AppViewModel {
     /// the deterministic note the Today card will show that morning.
     func scheduleDailyMorningNoteNotification() async {
         guard let specialist = dailyNoteSpecialist else { return }
+        let visibleSourceName = experienceMode.isCompanionExperience
+            ? "Simastry Compass"
+            : specialist.characterName
         let calendar = Calendar.current
         let now = Date()
         var requests: [NotificationService.DailyMorningNoteRequest] = []
@@ -1861,7 +2070,7 @@ class AppViewModel {
 
             let body = await DailyGuidanceComposer.notificationBody(
                 for: specialist.id,
-                sourceName: specialist.characterName,
+                sourceName: visibleSourceName,
                 on: fireDate,
                 sun: userSunSign,
                 moon: userMoonSign,
@@ -1869,7 +2078,7 @@ class AppViewModel {
             )
             requests.append(NotificationService.DailyMorningNoteRequest(
                 identifier: identifier,
-                expertName: specialist.characterName,
+                expertName: visibleSourceName,
                 body: body,
                 fireDate: fireDate
             ))
@@ -1909,6 +2118,9 @@ class AppViewModel {
             await saveUserSigns()
         }
         await loadCompanions()
+        claimCompanionStateForAuthenticatedUser()
+        await refreshCompanionPilotStateFromServer()
+        scheduleCompanionPilotSync()
         loadSavedGuides()
         loadProfileImage()
         syncHomeSetupPhase()
@@ -1927,7 +2139,7 @@ class AppViewModel {
         } else if let pendingDeepLinkURL {
             self.pendingDeepLinkURL = nil
             handleDeepLink(pendingDeepLinkURL)
-        } else {
+        } else if !consumeOnboardingFirstTaskIfReady() {
             consumeFirstReadOnboardingIntentIfReady()
         }
 
@@ -2423,8 +2635,10 @@ class AppViewModel {
         loadMessages()
         await loadDiscoveryInboxMessages(showErrors: showErrors)
         await refreshGuidedRooms(showErrors: showErrors)
-        if !AppConfig.expertAstrologersEnabled {
+        if AppConfig.companionInitiatedMessagingEnabled {
             generateCompanionMessages()
+        }
+        if AppConfig.multiCompanionPanelsEnabled {
             postPanelDailyStarterIfNeeded()
             postPanelWeeklyRecapIfNeeded()
         }
@@ -3369,6 +3583,7 @@ class AppViewModel {
         discoveredProfiles = []
         connectedProfiles = []
         relationshipPeople = []
+        clearCompanionPivotState()
         predictionDraft = nil
         auraSnapshot = nil
         clearFirstReadOnboardingIntent()
@@ -3389,7 +3604,7 @@ class AppViewModel {
         auraWalletHoldings = nil
         auraWalletLastCheckedAt = nil
         useAuraWalletForAura = true
-        privateNotificationsEnabled = true
+        privateNotificationsEnabled = false
         conversationSuggestionsEnabled = true
 
         let defaults = UserDefaults.standard
@@ -3407,6 +3622,7 @@ class AppViewModel {
         defaults.removeObject(forKey: Self.practiceThreadsKey)
         openThreadRequestCompanionId = nil
         decodeDraftSign = nil
+        decodeDraftPersonId = nil
         methodCourseVersion += 1
         defaults.removeObject(forKey: socialLinksKey)
         defaults.removeObject(forKey: socialDisplayNameKey)
@@ -3510,14 +3726,17 @@ class AppViewModel {
         return fallback
     }
 
-    private func syncHomeSetupPhase() {
-        // The completed Today feed, including Nadia's guide panel, only needs
-        // the user's chart. A saved companion is no longer required to enter it.
-        if hasBirthChartContext {
-            homeSetupPhase = .complete
-        } else {
-            homeSetupPhase = .modeSelection
+    func syncHomeSetupPhase() {
+        if experienceMode.isCompanionExperience {
+            // The chart is optional context, never a gate: skipping it must
+            // not strand anyone in legacy setup screens. The only thing the
+            // companion experience requires is an explicit primary choice —
+            // no sign/name fallback silently assigns a relationship.
+            homeSetupPhase = primaryCompanionRelationship == nil ? .companionSetup : .complete
+            return
         }
+
+        homeSetupPhase = hasBirthChartContext ? .complete : .modeSelection
     }
 
     private func loadProfile() async {
@@ -3667,6 +3886,13 @@ class AppViewModel {
 
     func exportUserData() -> URL? {
         var exportData: [String: Any] = [:]
+        let exportEncoder = JSONEncoder()
+        exportEncoder.dateEncodingStrategy = .iso8601
+
+        func exportObject<Value: Encodable>(_ value: Value) -> Any? {
+            guard let data = try? exportEncoder.encode(value) else { return nil }
+            return try? JSONSerialization.jsonObject(with: data)
+        }
 
         // Profile
         if let profile = profile {
@@ -3698,6 +3924,17 @@ class AppViewModel {
             ] as [String: Any]
         }
 
+        // The pivot keeps these records separate from legacy companions and
+        // expert consultations, but they still belong in the user's own data
+        // export. This is the local mirror, including any server records this
+        // device has hydrated with explicit private-sync consent.
+        if let pivotData = exportObject(companionPivotState) {
+            exportData["primaryCompanionExperience"] = pivotData
+        }
+        if let peopleData = exportObject(relationshipPeople) {
+            exportData["relationshipPeople"] = peopleData
+        }
+
         // Saved guides
         exportData["savedGuides"] = savedGuides.map { guide in
             [
@@ -3714,7 +3951,9 @@ class AppViewModel {
             "language": UserDefaults.standard.string(forKey: "appLanguage") ?? "en",
             "isDiscoverable": isDiscoverable,
             "privateNotificationsEnabled": privateNotificationsEnabled,
-            "useAuraWalletForAura": useAuraWalletForAura
+            "useAuraWalletForAura": useAuraWalletForAura,
+            "companionPrivateSyncConsent": companionPivotState.syncConsent,
+            "experienceMode": experienceMode.rawValue
         ]
 
         exportData["auraWalletContext"] = [
@@ -3766,16 +4005,42 @@ extension AppViewModel {
         if debugPreviewScreen(from: arguments) == "landing" {
             isDebugPreviewStateActive = true
             // Deterministic pre-auth start: a seeded run in the same container
-            // may have persisted age verification — the landing preview always
-            // begins before the age gate.
+            // may have persisted age verification, setup progress, or a
+            // staged chart — the landing preview always begins untouched.
             isAgeVerified = false
+            resetStagedOnboardingIdentityForPreview()
+            onboardingProgress = OnboardingProgress()
+            OnboardingProgressStore.clear()
             currentScreen = .landing
+            return true
+        }
+        if debugPreviewScreen(from: arguments) == "onboarding" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            resetStagedOnboardingIdentityForPreview()
+            onboardingProgress = OnboardingProgress()
+            currentScreen = .onboarding
             return true
         }
         if debugPreviewScreen(from: arguments) == "birthDetails" {
             isDebugPreviewStateActive = true
             isAgeVerified = true
-            currentScreen = .birthDetails
+            resetStagedOnboardingIdentityForPreview()
+            var progress = OnboardingProgress()
+            progress.goal = .clarityToday
+            onboardingProgress = progress
+            currentScreen = .onboarding
+            return true
+        }
+        if debugPreviewScreen(from: arguments) == "onboardingStyle" {
+            isDebugPreviewStateActive = true
+            isAgeVerified = true
+            resetStagedOnboardingIdentityForPreview()
+            var progress = OnboardingProgress()
+            progress.goal = .prepareConversation
+            progress.chartDecided = true
+            onboardingProgress = progress
+            currentScreen = .onboarding
             return true
         }
         if debugPreviewScreen(from: arguments) == "guestCompass" {
@@ -3792,7 +4057,12 @@ extension AppViewModel {
             userSunSign = .leo
             userMoonSign = .cancer
             userRisingSign = .libra
-            currentScreen = .firstExpertRead
+            var progress = OnboardingProgress()
+            progress.goal = .prepareConversation
+            progress.chartDecided = true
+            progress.supportStyle = .findTheWords
+            onboardingProgress = progress
+            currentScreen = .onboarding
             return true
         }
 
@@ -3897,6 +4167,10 @@ extension AppViewModel {
         relationshipPeople = RelationshipPeopleStore.previewPeople()
         seedDebugSocialProfiles(now: now)
 
+        if experienceMode.isCompanionExperience {
+            seedDebugPrimaryCompanionState(userId: userId, now: now)
+        }
+
         // People power the Situation card on Today and the People tab —
         // seed them for every preview so those surfaces always render.
         relationshipPeople = RelationshipPeopleStore.previewPeople()
@@ -3929,6 +4203,7 @@ extension AppViewModel {
             homeSetupPhase = .modeSelection
         case "companionSetup":
             homeSetupPhase = .companionSetup
+            companionPivotState = CompanionPivotState()
         case "astrologists":
             // Home must be mounted before the route-request observer fires.
             Task { @MainActor in
@@ -4075,6 +4350,68 @@ extension AppViewModel {
         }
 
         return true
+    }
+
+    private func seedDebugPrimaryCompanionState(userId: UUID, now: Date) {
+        let conversationId = UUID(uuidString: "30000000-0000-0000-0000-000000000001") ?? UUID()
+        let personId = relationshipPeople.first?.id
+        var state = CompanionPivotState()
+        state.syncConsent = true
+        state.migrationVersion = CompanionPivotState.currentMigrationVersion
+        _ = state.selectPrimary(.amara, userId: userId, now: now.addingTimeInterval(-7 * 24 * 60 * 60))
+        state.conversations = [
+            CompanionConversation(
+                id: conversationId,
+                userId: userId,
+                companionId: .amara,
+                createdAt: now.addingTimeInterval(-7 * 24 * 60 * 60),
+                updatedAt: now.addingTimeInterval(-18 * 60)
+            ),
+        ]
+        state.messages = [
+            CompanionChatMessage(
+                conversationId: conversationId,
+                clientMessageId: UUID(uuidString: "40000000-0000-0000-0000-000000000001"),
+                role: .user,
+                content: "I need to be clear without turning this into a fight.",
+                personaVersion: 1,
+                createdAt: now.addingTimeInterval(-22 * 60)
+            ),
+            CompanionChatMessage(
+                conversationId: conversationId,
+                clientMessageId: UUID(uuidString: "40000000-0000-0000-0000-000000000001"),
+                role: .assistant,
+                content: "Lead with the boundary you can stand behind, then make one concrete request. Courage does not require pressure.",
+                personaVersion: 1,
+                modelVersion: "debug-preview-v1",
+                createdAt: now.addingTimeInterval(-18 * 60)
+            ),
+        ]
+        state.memories = [
+            CompanionMemoryItem(
+                userId: userId,
+                companionId: nil,
+                scope: .sharedUserFact,
+                source: .userRecorded,
+                content: "I prefer one practical next step.",
+                createdAt: now.addingTimeInterval(-3 * 24 * 60 * 60),
+                updatedAt: now.addingTimeInterval(-3 * 24 * 60 * 60)
+            ),
+        ]
+        if let personId {
+            state.outcomes = [
+                CommunicationOutcome(
+                    userId: userId,
+                    personId: personId,
+                    companionId: .amara,
+                    intendedAction: "Ask for a calmer ten-minute conversation.",
+                    result: .asExpected,
+                    occurredAt: now.addingTimeInterval(-24 * 60 * 60),
+                    createdAt: now.addingTimeInterval(-23 * 60 * 60)
+                ),
+            ]
+        }
+        companionPivotState = state
     }
 
     /// Seeds an `uploaded` self chart import so the review/confirm flow is
@@ -4349,6 +4686,24 @@ extension AppViewModel {
         }
 
         return arguments[arguments.index(after: flagIndex)]
+    }
+
+    /// Flow previews must start from a blank slate no matter what an earlier
+    /// run in the same container staged (name, birth values, pending chart) —
+    /// the same determinism rule the landing preview applies to age state.
+    private func resetStagedOnboardingIdentityForPreview() {
+        onboardingDisplayName = nil
+        onboardingBirthday = nil
+        onboardingBirthTime = nil
+        onboardingBirthplace = nil
+        onboardingBirthTimePrecision = .exact
+        onboardingBirthTimeUncertaintyMinutes = nil
+        userSunSign = nil
+        userMoonSign = nil
+        userRisingSign = nil
+        natalChartRecord = nil
+        birthChartProvenance = .generalLens
+        clearPendingOnboardingChart()
     }
 
     private func debugPreviewTab(from arguments: [String]) -> Int {

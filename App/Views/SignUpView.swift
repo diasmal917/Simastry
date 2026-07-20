@@ -16,14 +16,23 @@ struct SignUpView: View {
 
     var body: some View {
         ZStack {
-            CelestialBackground()
+            // Still ink, matching the setup flow this screen concludes.
+            SimastryColor.pureBlack.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 HStack {
                     Button {
                         HapticManager.buttonPress()
                         withAnimation(.spring(SimastrySpring.smooth)) {
-                            viewModel.currentScreen = .birthDetails
+                            // Back into the setup flow when one is underway;
+                            // guests who came from the Compass return there.
+                            if viewModel.onboardingProgress.hasStarted {
+                                viewModel.currentScreen = .onboarding
+                            } else if viewModel.isAgeVerified {
+                                viewModel.currentScreen = .firstPrediction
+                            } else {
+                                viewModel.currentScreen = .landing
+                            }
                         }
                     } label: {
                         Image(systemName: "chevron.left")
@@ -32,7 +41,7 @@ struct SignUpView: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(localization.string("common.backToBirthDetails"))
+                    .accessibilityLabel(localization.string("common.back"))
 
                     Spacer()
                 }

@@ -69,7 +69,7 @@ struct SimastrySettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes on-device messages, notes, wallet context, cached profile image, and local preferences. Your Simastry account is not deleted.")
+            Text("This removes on-device companion histories, People records, notes, cached profile data, and local preferences. Synced records and your Simastry account are not deleted.")
         }
         .confirmationDialog("Delete your Simastry account?", isPresented: $showingDeleteAccountConfirmation, titleVisibility: .visible) {
             Button("Delete Account", role: .destructive) {
@@ -102,7 +102,9 @@ struct SimastrySettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 accountSection
-                auraWalletSection
+                if AppConfig.auraWalletEnabled {
+                    auraWalletSection
+                }
                 notificationsSection
                 appearanceSection
                 privacySection
@@ -188,10 +190,12 @@ struct SimastrySettingsView: View {
                 }
             )) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Daily morning note")
+                    Text(viewModel.experienceMode.isCompanionExperience ? "Daily Compass reminder" : "Daily morning note")
                         .font(SimastryFont.labelLarge)
                         .foregroundStyle(SimastryColor.offWhite)
-                    Text("One note each morning, composed from your saved chart signals and today's sky. Off by default; no conversation content in previews.")
+                    Text(viewModel.experienceMode.isCompanionExperience
+                        ? "An optional, private Compass reminder based on your saved chart signals and today's sky. Your companion never messages first."
+                        : "One note each morning, composed from your saved chart signals and today's sky. Off by default; no conversation content in previews.")
                         .font(SimastryFont.captionSmall)
                         .foregroundStyle(SimastryColor.mutedSilver)
                 }
@@ -200,7 +204,7 @@ struct SimastrySettingsView: View {
             .padding(14)
             .simastryGlass(cornerRadius: 16)
 
-            if viewModel.privateNotificationsEnabled {
+            if viewModel.privateNotificationsEnabled && AppConfig.restoresLegacyExpertExperience {
                 Menu {
                     ForEach(ExpertAstrologerRegistry.specialists) { specialist in
                         Button {
@@ -447,7 +451,9 @@ struct SimastrySettingsView: View {
                 settingRow(
                     icon: "square.and.arrow.up",
                     title: "Export My Data",
-                    detail: "Includes settings and Aura wallet context",
+                    detail: viewModel.experienceMode.isCompanionExperience
+                        ? "Includes companion data and private People records"
+                        : "Includes settings and Aura wallet context",
                     tint: SimastryColor.celestialBlue,
                     showsChevron: true
                 )

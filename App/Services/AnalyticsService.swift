@@ -9,10 +9,18 @@ final class AnalyticsService {
 
     // Event categories
     enum Event: String {
-        // Onboarding
+        // Onboarding. Coarse funnel steps only — never birth details,
+        // message contents, person names, or free text.
         case onboardingStarted = "onboarding_started"
         case onboardingSignsSelected = "onboarding_signs_selected"
         case onboardingInsightViewed = "onboarding_insight_viewed"
+        case onboardingGoalSelected = "onboarding_goal_selected"
+        case onboardingChartAdded = "onboarding_chart_added"
+        case onboardingChartSkipped = "onboarding_chart_skipped"
+        case onboardingSupportStyleSelected = "onboarding_support_style_selected"
+        case onboardingCompanionViewed = "onboarding_companion_viewed"
+        case onboardingPrimaryChosen = "onboarding_primary_chosen"
+        case onboardingFirstTaskStarted = "onboarding_first_task_started"
         case onboardingCompleted = "onboarding_completed"
 
         // Auth
@@ -28,6 +36,18 @@ final class AnalyticsService {
         case companionCreated = "companion_created"
         case companionDeleted = "companion_deleted"
         case companionDetailViewed = "companion_detail_viewed"
+
+        // Primary companion pilot. Never attach person IDs or message text.
+        case primaryCompanionChosen = "primary_companion_chosen"
+        case primaryCompanionSwitched = "primary_companion_switched"
+        case companionDecodeCompleted = "companion_decode_completed"
+        case companionDecodeOfflineFallback = "companion_decode_offline_fallback"
+        case companionTalkOfflineFallback = "companion_talk_offline_fallback"
+        case rehearsalStarted = "rehearsal_started"
+        case rehearsalTurnCompleted = "rehearsal_turn_completed"
+        case communicationOutcomeRecorded = "communication_outcome_recorded"
+        case privateSyncConsentGranted = "private_sync_consent_granted"
+        case privateSyncConsentRevoked = "private_sync_consent_revoked"
 
         // First Read Activation
         case firstReadStarted = "first_read_started"

@@ -30,6 +30,10 @@ struct OnboardingInsightView: View {
         PanelMatcher.panelGuides(sun: sunSign, moon: moonSign, rising: risingSign)
     }
 
+    private var recommendedCompanions: [CompanionPersona] {
+        viewModel.recommendedCompanionPersonas
+    }
+
     var body: some View {
         ZStack {
             CelestialBackground()
@@ -75,11 +79,15 @@ struct OnboardingInsightView: View {
                         .padding(.horizontal, 8)
                         .opacity(buttonAppeared ? 1 : 0)
 
-                    GoldButton(AppConfig.expertAstrologersEnabled ? "Meet Your Experts" : "Meet Your Panel") {
+                    GoldButton(nextStepTitle) {
                         Task {
                             await viewModel.saveUserSigns()
-                            viewModel.homeSetupPhase = AppConfig.expertAstrologersEnabled ? .complete : .companionSetup
-                            if AppConfig.expertAstrologersEnabled {
+                            if viewModel.experienceMode.isCompanionExperience {
+                                viewModel.homeSetupPhase = .companionSetup
+                            } else {
+                                viewModel.homeSetupPhase = AppConfig.expertAstrologersEnabled ? .complete : .companionSetup
+                            }
+                            if !viewModel.experienceMode.isCompanionExperience, AppConfig.expertAstrologersEnabled {
                                 viewModel.openAIAstrologists()
                             }
                         }
@@ -99,6 +107,11 @@ struct OnboardingInsightView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Your personal insight based on \(sunSign.displayName) Sun sign")
+    }
+
+    private var nextStepTitle: String {
+        if viewModel.experienceMode.isCompanionExperience { return "Choose Your Companion" }
+        return AppConfig.expertAstrologersEnabled ? "Meet Your Experts" : "Meet Your Panel"
     }
 
     // MARK: - Personal Read
@@ -330,7 +343,7 @@ struct OnboardingInsightView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SimastryColor.goldLight)
 
-            Text(AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS ARE READY" : "YOUR PANEL IS FORMING")
+            Text(advisoryTitle)
                 .font(SimastryFont.overline)
                 .foregroundStyle(SimastryColor.goldLight)
                 .tracking(1.6)
@@ -338,14 +351,43 @@ struct OnboardingInsightView: View {
                 Spacer()
             }
 
-            Text(AppConfig.expertAstrologersEnabled ? "Five AI astrology specialists can read your question through distinct traditions." : "Three guides, trained in the Simastry Method, are matched to your placements.")
+            Text(advisoryBody)
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                if AppConfig.expertAstrologersEnabled {
+                if viewModel.experienceMode.isCompanionExperience {
+                    ForEach(recommendedCompanions) { persona in
+                        VStack(spacing: 7) {
+                            Image(persona.profileImageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 64, height: 64, alignment: .top)
+                                .clipShape(Circle())
+                                .overlay {
+                                    Circle().strokeBorder(persona.sign.color.opacity(0.65), lineWidth: 1.5)
+                                }
+                                .shadow(color: persona.sign.color.opacity(0.25), radius: 10, y: 4)
+
+                            VStack(spacing: 1) {
+                                Text(persona.displayName)
+                                    .font(SimastryFont.labelMedium)
+                                    .foregroundStyle(SimastryColor.offWhite)
+                                    .lineLimit(1)
+
+                                Text("\(persona.sign.displayName) lens")
+                                    .font(SimastryFont.captionSmall)
+                                    .foregroundStyle(persona.sign.color)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(persona.displayName), certified AI companion, \(persona.sign.displayName) lens")
+                    }
+                } else if AppConfig.expertAstrologersEnabled {
                     ForEach(ExpertAstrologerRegistry.specialists) { specialist in
                         VStack(spacing: 7) {
                             if let profile = specialist.archivedProfile {
@@ -417,6 +459,20 @@ struct OnboardingInsightView: View {
         }
         .padding(18)
         .heroGlass(SimastryColor.gold)
+    }
+
+    private var advisoryTitle: String {
+        if viewModel.experienceMode.isCompanionExperience { return "YOUR COMPANION OPTIONS ARE READY" }
+        return AppConfig.expertAstrologersEnabled ? "YOUR EXPERTS ARE READY" : "YOUR PANEL IS FORMING"
+    }
+
+    private var advisoryBody: String {
+        if viewModel.experienceMode.isCompanionExperience {
+            return "We recommend three certified companions from your chart context and support style. The choice stays yours."
+        }
+        return AppConfig.expertAstrologersEnabled
+            ? "Five AI astrology specialists can read your question through distinct traditions."
+            : "Three guides, trained in the Simastry Method, are matched to your placements."
     }
 
     // MARK: - Animation

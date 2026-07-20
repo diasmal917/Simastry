@@ -16,7 +16,8 @@ struct SignInView: View {
 
     var body: some View {
         ZStack {
-            CelestialBackground()
+            // Still ink, matching the welcome screen this returns to.
+            SimastryColor.pureBlack.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 HStack {

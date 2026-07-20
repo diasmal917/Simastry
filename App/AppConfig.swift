@@ -36,23 +36,62 @@ nonisolated enum AppConfig {
     static let websiteURL = URL(string: "https://simastry.com")!
     static let appStoreURL = websiteURL
 
-    static let socialDiscoveryEnabled = true
+    /// Public discovery remains compiled for a later experiment, but the
+    /// primary-companion pilot is a private relationship workspace.
+    static let socialDiscoveryEnabled = false
     static let llmChatEnabled = true
     static let roomGuideReplyEnabled = false
+    static let companionStreamingEnabled = true
+    static let momentsEnabled = false
+    static let guidedRoomsEnabled = false
+    static let multiCompanionPanelsEnabled = false
+    static let customCompanionsEnabled = false
+    static let auraWalletEnabled = false
+    /// Follow-ups happen only after a user records an offline outcome. The
+    /// pilot never fabricates proactive or companion-initiated messages.
+    static let companionInitiatedMessagingEnabled = false
     /// When true, expert-astrologer replies stream over SSE and render
     /// incrementally; the JSON request remains the fallback if streaming is
     /// unavailable or fails before the first token.
     static let expertAstrologerStreamingEnabled = true
-    /// When true, the landing screen uses the cinematic single-hero layout
-    /// (rotating glass experts + value pillars). Flip to false to restore the
-    /// legacy paged carousel, which remains intact for that reason.
-    static let landingUsesCinematicHero = true
-    /// When true, landing is the crystal-ball onboarding pager (video-reference
-    /// redesign). Flip to false to fall back to the cinematic hero above; both
-    /// prior layouts remain intact.
-    static let landingUsesCrystalOnboarding = true
+    private static let remoteRollbackDefaultsKey = "simastry_companion_remote_rollback"
+
+    /// Pilot is the release default. The rollback value is hydrated from the
+    /// released pilot-persona set and cached locally so it still works during an
+    /// outage. Suspending any certified pilot row acts as the remote kill switch;
+    /// launch arguments keep QA deterministic.
+    static var experienceMode: ExperienceMode {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-SimastryExpertArchive") || companionRemoteRollbackEnabled {
+            return .expertArchive
+        }
+        if arguments.contains("-SimastryCompanionFull") {
+            return .companionFull
+        }
+        return .companionPilot
+    }
+
+    static var companionRemoteRollbackEnabled: Bool {
+        ProcessInfo.processInfo.arguments.contains("-SimastryCompanionRollback")
+            || UserDefaults.standard.bool(forKey: remoteRollbackDefaultsKey)
+    }
+
+    static func cacheCompanionRemoteRollback(_ isEnabled: Bool) {
+        UserDefaults.standard.set(isEnabled, forKey: remoteRollbackDefaultsKey)
+    }
+
+    /// Rollback and archive are separate intentions even though both leave the
+    /// companion modes. Operators may temporarily restore the preserved expert
+    /// pipeline; the explicit archive launch mode remains strictly read-only.
+    static var restoresLegacyExpertExperience: Bool {
+        companionRemoteRollbackEnabled
+            && !ProcessInfo.processInfo.arguments.contains("-SimastryExpertArchive")
+    }
+
+    /// Compatibility shim for preserved legacy surfaces. New code should branch
+    /// on `experienceMode` explicitly rather than recreating an inverted flag.
     static var expertAstrologersEnabled: Bool {
-        !ProcessInfo.processInfo.arguments.contains("-SimastryLegacyGuides")
+        restoresLegacyExpertExperience
     }
 
     static let privacyPolicyURL = URL(string: "https://simastry.com/privacy")!

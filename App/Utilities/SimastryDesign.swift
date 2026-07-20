@@ -31,6 +31,9 @@ struct SimastrySpring {
     static let bouncy = Spring(response: 0.70, dampingRatio: 0.65)
     static let grounded = Spring(response: 0.45, dampingRatio: 0.90)
     static let drift = Spring(response: 1.20, dampingRatio: 0.95)
+    /// Critically damped: settles with no overshoot. The onboarding default —
+    /// bounce is reserved for user-driven drag releases.
+    static let settle = Spring(response: 0.35, dampingRatio: 1.0)
 }
 
 /// Motion tokens for frequent interface feedback. State changes are short and

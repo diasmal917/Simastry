@@ -27,7 +27,20 @@ struct MessagesView: View {
     @State private var handledPanelRouteRequest: Int = 0
     @State private var handledPracticeRouteRequest: Int = 0
 
+    @ViewBuilder
     var body: some View {
+        if viewModel.experienceMode.isCompanionExperience {
+            PrimaryCompanionTalkView(viewModel: viewModel)
+        } else if !AppConfig.restoresLegacyExpertExperience {
+            NavigationStack {
+                ExpertArchiveView(viewModel: viewModel)
+            }
+        } else {
+            legacyBody
+        }
+    }
+
+    private var legacyBody: some View {
         NavigationStack {
             Group {
                 if !hasInboxContent {

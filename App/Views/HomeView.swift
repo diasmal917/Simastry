@@ -393,13 +393,17 @@ struct HomeView: View {
                     case .onboardingInsight:
                         OnboardingInsightView(viewModel: viewModel)
                     case .companionSetup:
-                        if AppConfig.expertAstrologersEnabled {
+                        if viewModel.experienceMode.isCompanionExperience {
+                            PrimaryCompanionChooserView(viewModel: viewModel)
+                        } else if AppConfig.expertAstrologersEnabled {
                             expertSetupRedirect
                         } else {
                             CompanionSetupView(viewModel: viewModel)
                         }
                     case .soulCreation:
-                        if AppConfig.expertAstrologersEnabled {
+                        if viewModel.experienceMode.isCompanionExperience {
+                            PrimaryCompanionChooserView(viewModel: viewModel)
+                        } else if AppConfig.expertAstrologersEnabled {
                             expertSetupRedirect
                         } else {
                             SoulCreationView(viewModel: viewModel)
@@ -548,7 +552,18 @@ struct HomeView: View {
         #endif
     }
 
+    @ViewBuilder
     private var homeContent: some View {
+        if viewModel.experienceMode.isCompanionExperience {
+            CompanionHomeView(viewModel: viewModel)
+        } else if !AppConfig.restoresLegacyExpertExperience {
+            ExpertArchiveView(viewModel: viewModel)
+        } else {
+            legacyHomeContent
+        }
+    }
+
+    private var legacyHomeContent: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 14) {
                 // The floating header now reserves its own space via

@@ -739,7 +739,7 @@ struct CompanionsView: View {
         let level = RelationshipLevel.from(messageCount: companion.conversationCount)
         guard let nextThreshold = level.nextThreshold,
               let nextLevel = RelationshipLevel(rawValue: level.rawValue + 1) else {
-            return "Soulbound"
+            return "Deep trust"
         }
 
         let remaining = max(nextThreshold - companion.conversationCount, 0)

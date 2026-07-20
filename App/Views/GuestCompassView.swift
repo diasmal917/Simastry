@@ -169,7 +169,7 @@ struct GuestCompassView: View {
             .accessibilityIdentifier("guestCompass.keepButton")
 
             SecondaryButton(title: localization.string("guestCompass.chartButton")) {
-                viewModel.continueToBirthDetails(after: .predict)
+                viewModel.continueGuestIntoSetupFlow()
             }
             .frame(maxWidth: .infinity)
         }

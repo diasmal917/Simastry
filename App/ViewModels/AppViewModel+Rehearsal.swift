@@ -10,7 +10,7 @@ extension AppViewModel {
         try await runRehearsalTurn(session: session, mode: "partner")
     }
 
-    /// The coaching specialist's note on the user's latest draft.
+    /// The primary companion's note on the user's latest draft.
     func rehearsalCoachNote(for session: RehearsalSession) async throws -> String {
         try await runRehearsalTurn(session: session, mode: "coach")
     }
@@ -28,14 +28,38 @@ extension AppViewModel {
         guard isAuthenticated, supabase.canInvokeCompanionReply else {
             throw RehearsalError.signedOut
         }
-        guard canSendMessage() else {
-            showUpsell = true
-            throw RehearsalError.messageLimit(dailyMessageLimit)
+        guard companionPivotState.syncConsent else {
+            throw RehearsalError.privateSyncRequired
+        }
+        if let blocked = session.messages
+            .filter({ $0.role == .user })
+            .map({ ConversationPrivacyService().prepare($0.content) })
+            .first(where: { !$0.canProceed }) {
+            throw RehearsalError.safety(
+                blocked.blockingMessage ?? "This rehearsal cannot be processed safely."
+            )
+        }
+        try await syncCompanionPilotDataNow(includePrivateRecords: true)
+        if !experienceMode.isCompanionExperience {
+            guard canSendMessage() else {
+                showUpsell = true
+                throw RehearsalError.messageLimit(dailyMessageLimit)
+            }
         }
 
-        let body = RehearsalRequestBody(session: session, mode: mode)
+        let body = RehearsalRequestBody(
+            session: session,
+            mode: mode,
+            userSunSign: userSunSign,
+            userMoonSign: userMoonSign,
+            userRisingSign: userRisingSign,
+            guidanceStyle: .stored
+        )
         let text = try await supabase.invokeConversationRehearsal(request: body)
-        await consumeMessage()
+        if !experienceMode.isCompanionExperience {
+            await consumeMessage()
+        }
+        analytics.track(.rehearsalTurnCompleted, params: ["mode": mode])
         return text
     }
 }
@@ -43,6 +67,8 @@ extension AppViewModel {
 nonisolated enum RehearsalError: LocalizedError {
     case signedOut
     case messageLimit(Int)
+    case privateSyncRequired
+    case safety(String)
 
     var errorDescription: String? {
         switch self {
@@ -50,6 +76,10 @@ nonisolated enum RehearsalError: LocalizedError {
             "Sign in to use Practice."
         case .messageLimit(let limit):
             "You've used all \(limit) messages today. Upgrade for unlimited rehearsals."
+        case .privateSyncRequired:
+            "Turn on private sync in Companion memory before rehearsing with a saved person."
+        case .safety(let message):
+            message
         }
     }
 }

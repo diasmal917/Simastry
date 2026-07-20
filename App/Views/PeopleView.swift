@@ -29,6 +29,7 @@ struct PeopleView: View {
     @State private var activeSheet: PeopleSheet?
     @State private var navigationPath = NavigationPath()
     @State private var handledTeamReadRouteRequest: Int = 0
+    @State private var handledAddPersonRouteRequest: Int = 0
     @State private var pendingChartUploadPerson: RelationshipPerson?
 
     private var filteredPeople: [RelationshipPerson] {
@@ -71,7 +72,9 @@ struct PeopleView: View {
                         searchAndFilterSection
                             .id("people.searchSection")
 
-                        discoveryEntry
+                        if AppConfig.socialDiscoveryEnabled {
+                            discoveryEntry
+                        }
 
                         // The hero is a home-state element (it reads the
                         // unfiltered roster), so hide it while a search or
@@ -150,6 +153,9 @@ struct PeopleView: View {
                 .onChange(of: viewModel.teamReadRouteRequest) {
                     presentRoutesIfRequested()
                 }
+                .onChange(of: viewModel.peopleAddPersonRouteRequest) {
+                    presentRoutesIfRequested()
+                }
                 .onChange(of: activeSheet?.id) {
                     guard activeSheet == nil, let person = pendingChartUploadPerson else { return }
                     pendingChartUploadPerson = nil
@@ -224,6 +230,10 @@ struct PeopleView: View {
         if viewModel.teamReadRouteRequest > handledTeamReadRouteRequest {
             handledTeamReadRouteRequest = viewModel.teamReadRouteRequest
             activeSheet = .teamRead
+        }
+        if viewModel.peopleAddPersonRouteRequest > handledAddPersonRouteRequest {
+            handledAddPersonRouteRequest = viewModel.peopleAddPersonRouteRequest
+            activeSheet = .addPerson
         }
     }
 
@@ -523,6 +533,7 @@ struct RelationshipPersonDetailView: View {
     @State private var showDeleteConfirmation: Bool = false
     @State private var showCoupleRead: Bool = false
     @State private var showPracticeHub: Bool = false
+    @State private var showOutcome: Bool = false
 
     private var currentPerson: RelationshipPerson {
         viewModel.relationshipPeople.first { $0.id == person.id } ?? person
@@ -673,8 +684,19 @@ struct RelationshipPersonDetailView: View {
                 tint: SimastryColor.gold
             ) {
                 viewModel.decodeDraftSign = currentPerson.sunSign
+                viewModel.decodeDraftPersonId = currentPerson.id
                 viewModel.selectedTab = .today
                 viewModel.decodeRouteRequest += 1
+            }
+
+            simulationRoomRow(
+                title: "Record what happened",
+                subtitle: "Log only the offline outcome you observed, so your companion can follow up honestly.",
+                icon: "checkmark.bubble.fill",
+                tint: SimastryColor.sageGreen,
+                identifier: "people.detail.outcomeButton"
+            ) {
+                showOutcome = true
             }
         }
         .padding(16)
@@ -684,6 +706,9 @@ struct RelationshipPersonDetailView: View {
             // The coached Practice hub, pre-targeted at this person — the
             // same experience the Talk practice row opens (spec §5).
             RehearsalRoomView(viewModel: viewModel, prefilledPerson: currentPerson)
+        }
+        .sheet(isPresented: $showOutcome) {
+            CommunicationOutcomeSheet(viewModel: viewModel, person: currentPerson)
         }
     }
 
@@ -1004,7 +1029,6 @@ struct RelationshipPersonDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header
-                ExpertChartImportSection(viewModel: viewModel, subject: .person(currentPerson))
                 howToTalkSection
                 predictReplyButton
                 situationSection
@@ -1178,6 +1202,20 @@ struct RelationshipPersonDetailView: View {
                     }
                     .padding(12)
                     .background(SimastryColor.amber.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    if let companion = viewModel.primaryCompanionPersona {
+                        Button {
+                            HapticManager.buttonPress()
+                            viewModel.openPrimaryCompanion(
+                                withDraft: "Help me adapt this Communication Guide to my real situation with \(currentPerson.displayName). What context should I add before we choose one next move?"
+                            )
+                        } label: {
+                            Label("Adapt this with \(companion.displayName)", systemImage: "bubble.left.and.sparkles")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(SimastryPrimaryButtonStyle())
+                        .accessibilityIdentifier("people.detail.adaptGuideWithCompanion")
+                    }
                 }
                 .padding(16)
                 .glossyCard(cornerRadius: 20)

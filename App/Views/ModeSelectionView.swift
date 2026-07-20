@@ -15,11 +15,11 @@ struct ModeSelectionView: View {
 
                     OnboardingProgressView(
                         eyebrow: "Begin",
-                        title: AppConfig.expertAstrologersEnabled ? "Choose your path" : "Choose your first guide",
+                        title: progressTitle,
                         subtitle: onboardingSubtitle,
                         step: 1,
                         totalSteps: 3,
-                        labels: AppConfig.expertAstrologersEnabled ? ["Path", "Chart", "Experts"] : ["Path", "Signs", "Guide"]
+                        labels: progressLabels
                     )
                     .padding(.horizontal, 20)
                     .opacity(appeared ? 1 : 0)
@@ -37,7 +37,7 @@ struct ModeSelectionView: View {
                             mode: .simulateAnyone,
                             icon: SimastryIcon.predict,
                             accent: SimastryColor.risingViolet,
-                            badge: "Pro",
+                            badge: viewModel.experienceMode.isCompanionExperience ? nil : "Pro",
                             delay: 0.1
                         )
 
@@ -86,18 +86,16 @@ struct ModeSelectionView: View {
                     .foregroundStyle(SimastryColor.gold)
             }
 
-            Text(AppConfig.expertAstrologersEnabled
-                ? "Choose a path, calculate your chart signals, and bring your question to five expert AI astrologers."
-                : "Choose a path, calculate your big three, and turn Sun, Moon, and Rising into a communication type.")
+            Text(valueSummary)
                 .font(SimastryFont.bodySmall)
                 .foregroundStyle(SimastryColor.mutedSilver)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
-                pill("Pick a path")
-                pill(AppConfig.expertAstrologersEnabled ? "Calculate chart" : "Calculate signs")
-                pill(AppConfig.expertAstrologersEnabled ? "Meet experts" : "Meet your guide")
+                pill(viewModel.experienceMode.isCompanionExperience ? "Pick a focus" : "Pick a path")
+                pill(viewModel.experienceMode.isCompanionExperience ? "Add chart context" : (AppConfig.expertAstrologersEnabled ? "Calculate chart" : "Calculate signs"))
+                pill(viewModel.experienceMode.isCompanionExperience ? "Choose companion" : (AppConfig.expertAstrologersEnabled ? "Meet experts" : "Meet your guide"))
             }
         }
         .padding(18)
@@ -122,6 +120,11 @@ struct ModeSelectionView: View {
     }
 
     private var onboardingSubtitle: String {
+        if viewModel.experienceMode.isCompanionExperience {
+            return viewModel.hasCompletedSigns
+                ? "Your chart context is ready. Choose what kind of real-world communication help you want first."
+                : "Start with the conversation you want help with. We'll add chart context, then recommend three certified companions."
+        }
         if AppConfig.expertAstrologersEnabled {
             return viewModel.hasCompletedSigns
                 ? "Your chart signals are ready. Start with expert astrologers, reply guidance, or a future read."
@@ -130,6 +133,25 @@ struct ModeSelectionView: View {
         return viewModel.hasCompletedSigns
             ? "Your chart signals are ready. Pick the voice that should translate them into message guidance."
             : "Start with the kind of guidance you want. We'll calculate your communication type next."
+    }
+
+    private var progressTitle: String {
+        if viewModel.experienceMode.isCompanionExperience { return "What do you need help with?" }
+        return AppConfig.expertAstrologersEnabled ? "Choose your path" : "Choose your first guide"
+    }
+
+    private var progressLabels: [String] {
+        if viewModel.experienceMode.isCompanionExperience { return ["Focus", "Chart", "Companion"] }
+        return AppConfig.expertAstrologersEnabled ? ["Path", "Chart", "Experts"] : ["Path", "Signs", "Guide"]
+    }
+
+    private var valueSummary: String {
+        if viewModel.experienceMode.isCompanionExperience {
+            return "Choose a communication goal, add chart context, then select one certified AI companion."
+        }
+        return AppConfig.expertAstrologersEnabled
+            ? "Choose a path, calculate your chart signals, and bring your question to five expert AI astrologers."
+            : "Choose a path, calculate your big three, and turn Sun, Moon, and Rising into a communication type."
     }
 
     @ViewBuilder
@@ -220,6 +242,13 @@ struct ModeSelectionView: View {
     }
 
     private func modeTitle(_ mode: CompanionMode) -> String {
+        if viewModel.experienceMode.isCompanionExperience {
+            switch mode {
+            case .simulateAnyone: return "Practice a conversation"
+            case .soulmate: return "Understand someone"
+            case .bestie: return "Decode a message"
+            }
+        }
         guard AppConfig.expertAstrologersEnabled else { return mode.displayName }
         switch mode {
         case .simulateAnyone:
@@ -232,6 +261,13 @@ struct ModeSelectionView: View {
     }
 
     private func modeSubtitle(_ mode: CompanionMode) -> String {
+        if viewModel.experienceMode.isCompanionExperience {
+            switch mode {
+            case .simulateAnyone: return "Rehearse what to say to a real person"
+            case .soulmate: return "Use chart context without pretending to read minds"
+            case .bestie: return "Explore tone, possible subtext, and grounded replies"
+            }
+        }
         guard AppConfig.expertAstrologersEnabled else { return mode.subtitle }
         switch mode {
         case .simulateAnyone:
@@ -244,6 +280,16 @@ struct ModeSelectionView: View {
     }
 
     private func modeSupportText(_ mode: CompanionMode) -> String {
+        if viewModel.experienceMode.isCompanionExperience {
+            switch mode {
+            case .simulateAnyone:
+                return "Prepare for a conversation, try different wording, and take the useful version offline."
+            case .soulmate:
+                return "Bring in a saved person and the actual situation for a transparent communication read."
+            case .bestie:
+                return "Redact a real message, compare interpretations, and draft a reply in your own voice."
+            }
+        }
         if AppConfig.expertAstrologersEnabled {
             switch mode {
             case .simulateAnyone:

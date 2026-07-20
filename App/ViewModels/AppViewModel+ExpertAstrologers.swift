@@ -62,6 +62,21 @@ extension AppViewModel {
         UserDefaults.standard.removeObject(forKey: Self.specialistConversationIdsKey)
     }
 
+    /// Deletes the untouched expert records only after the archive's explicit
+    /// confirmation. A remote failure leaves the local archive intact so the
+    /// user never receives a false deletion success.
+    @discardableResult
+    func deleteExpertArchive() async throws -> Bool {
+        let storageCleanupConfirmed: Bool
+        if isAuthenticated {
+            storageCleanupConfirmed = try await supabase.deleteCurrentUserExpertArchive()
+        } else {
+            storageCleanupConfirmed = true
+        }
+        clearExpertAstrologerState()
+        return storageCleanupConfirmed
+    }
+
     func refreshExpertAstrologerStateFromRemote() async {
         guard isAuthenticated else { return }
         #if DEBUG

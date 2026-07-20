@@ -13,15 +13,23 @@ struct ContentView: View {
             Group {
                 switch viewModel.currentScreen {
                 case .landing:
-                    LandingView(viewModel: viewModel)
-                case .ageGate:
-                    AgeGateView(viewModel: viewModel)
+                    WelcomeView(viewModel: viewModel)
                 case .firstPrediction:
                     GuestCompassView(viewModel: viewModel)
-                case .birthDetails:
-                    BirthDetailsView(viewModel: viewModel)
+                case .onboarding:
+                    // Expert modes run the same goal and chart steps; the
+                    // flow hands them to the preserved expert read after.
+                    OnboardingFlowView(viewModel: viewModel)
                 case .firstExpertRead:
-                    FirstExpertReadView(viewModel: viewModel)
+                    if viewModel.experienceMode.isCompanionExperience {
+                        // The companion setup owns its own chooser now; this
+                        // preserved case only ever hosts the expert modes.
+                        OnboardingFlowView(viewModel: viewModel)
+                    } else if AppConfig.restoresLegacyExpertExperience {
+                        FirstExpertReadView(viewModel: viewModel)
+                    } else {
+                        ExpertArchiveOnboardingView(viewModel: viewModel)
+                    }
                 case .signUp:
                     SignUpView(viewModel: viewModel)
                 case .signIn:
@@ -137,9 +145,9 @@ struct ContentView: View {
 
     private var showsFloatingOnboardingLanguageMenu: Bool {
         switch viewModel.currentScreen {
-        case .landing, .ageGate, .firstPrediction, .birthDetails, .firstExpertRead, .signIn, .signUp:
+        case .landing, .firstPrediction, .firstExpertRead, .signIn, .signUp:
             true
-        case .loading, .home:
+        case .onboarding, .loading, .home:
             false
         }
     }

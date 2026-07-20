@@ -1,14 +1,18 @@
 import SwiftUI
 
-/// Compass's quick decoder for a frequent moment: paste the one
-/// message you just received and get the tone, the subtext by their sign —
-/// and what NOT to read into it. Fully on-device.
+/// Decode uses owner-scoped People context for semantic analysis when the
+/// secure service is available. Its deterministic sign templates remain as a
+/// clearly labeled on-device fallback.
 struct DecodeTextView: View {
     @Bindable var viewModel: AppViewModel
 
     @State private var messageText: String = ""
     @State private var theirSign: ZodiacSign?
+    @State private var selectedPersonId: UUID?
     @State private var decoded: Bool = false
+    @State private var semanticResult: CompanionDecodeResult?
+    @State private var isDecoding = false
+    @State private var usedOfflineFallback = false
     @State private var privacyBlockMessage: String?
     @State private var copiedReplyIndex: Int?
 
@@ -40,9 +44,10 @@ struct DecodeTextView: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 inputCard
+                personPicker
                 signPicker
 
-                GoldButton("Decode it", isEnabled: canDecode) {
+                GoldButton(isDecoding ? "Decoding…" : "Decode it", isEnabled: canDecode && !isDecoding) {
                     decode()
                 }
 
@@ -58,7 +63,7 @@ struct DecodeTextView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
-                Text("Decoded on this iPhone — the message is never sent or stored.")
+                Text(privacyFooter)
                     .font(SimastryFont.captionSmall)
                     .foregroundStyle(SimastryColor.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -75,10 +80,23 @@ struct DecodeTextView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .accessibilityIdentifier("decode.screen")
         .animation(.spring(SimastrySpring.smooth), value: decoded)
-        .onChange(of: messageText) { decoded = false; privacyBlockMessage = nil }
-        .onChange(of: theirSign) { decoded = false }
+        .onChange(of: messageText) { resetResult() }
+        .onChange(of: theirSign) { resetResult() }
+        .onChange(of: selectedPersonId) {
+            resetResult()
+            if let selectedPersonId,
+               let person = viewModel.relationshipPeople.first(where: { $0.id == selectedPersonId }) {
+                theirSign = person.sunSign
+            }
+        }
         .onAppear {
             // Person-page handoff: arrive with their sign already selected.
+            if let personId = viewModel.decodeDraftPersonId,
+               let person = viewModel.relationshipPeople.first(where: { $0.id == personId }) {
+                selectedPersonId = personId
+                theirSign = person.sunSign
+                viewModel.decodeDraftPersonId = nil
+            }
             if let handoffSign = viewModel.decodeDraftSign {
                 theirSign = handoffSign
                 viewModel.decodeDraftSign = nil
@@ -92,6 +110,16 @@ struct DecodeTextView: View {
             }
             #endif
         }
+    }
+
+    private var privacyFooter: String {
+        if semanticResult != nil {
+            return "Redacted before secure analysis. The message was not persisted."
+        }
+        if usedOfflineFallback {
+            return "Offline fallback — decoded on this iPhone and never sent or stored."
+        }
+        return "Choose a saved person for secure semantic analysis. Without one, Decode uses the labeled on-device fallback."
     }
 
     private var header: some View {
@@ -132,6 +160,32 @@ struct DecodeTextView: View {
                             .allowsHitTesting(false)
                     }
                 }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard(cornerRadius: 20)
+    }
+
+    private var personPicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("PERSON · PRIVATE")
+                .font(SimastryFont.overline)
+                .foregroundStyle(SimastryColor.textSecondary)
+                .tracking(1.3)
+
+            Picker("Person", selection: $selectedPersonId) {
+                Text("No saved person — offline fallback").tag(UUID?.none)
+                ForEach(viewModel.relationshipPeople) { person in
+                    Text(person.displayName).tag(Optional(person.id))
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(SimastryColor.gold)
+
+            Text("The server authorizes this People ID for your account; a name or zodiac sign alone is never used as identity.")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -179,12 +233,59 @@ struct DecodeTextView: View {
             return
         }
         HapticManager.signConfirmed()
-        decoded = true
+        privacyBlockMessage = nil
+        semanticResult = nil
+        usedOfflineFallback = false
+
+        guard let selectedPersonId,
+              viewModel.primaryCompanionPersona != nil else {
+            usedOfflineFallback = true
+            decoded = true
+            viewModel.analytics.track(.companionDecodeOfflineFallback, params: ["reason": "no_saved_person"])
+            return
+        }
+
+        isDecoding = true
+        Task {
+            defer { isDecoding = false }
+            do {
+                let result = try await viewModel.semanticDecode(
+                    message: prepared.redactedText,
+                    personId: selectedPersonId
+                )
+                guard result.messagePersisted == false else {
+                    throw SupabaseServiceError.invalidFunctionResponse
+                }
+                semanticResult = result
+                decoded = true
+            } catch {
+                usedOfflineFallback = true
+                decoded = true
+                viewModel.analytics.track(.companionDecodeOfflineFallback, params: ["reason": "live_unavailable"])
+                privacyBlockMessage = "Live semantic analysis was unavailable. Showing the labeled on-device sign template instead."
+            }
+        }
+    }
+
+    private func resetResult() {
+        decoded = false
+        semanticResult = nil
+        usedOfflineFallback = false
+        privacyBlockMessage = nil
     }
 
     // MARK: - Results
 
+    @ViewBuilder
     private func resultStack(sign: ZodiacSign) -> some View {
+        if let semanticResult {
+            semanticResultStack(semanticResult, sign: sign)
+        } else {
+            offlineResultStack(sign: sign)
+        }
+    }
+
+    private func offlineResultStack(sign: ZodiacSign) -> some View {
         let element = sign.element.rawValue
         let subtextLines = AstrologyTemplates.decodeSubtext[element] ?? []
         let dontLines = AstrologyTemplates.decodeDontReadInto[element] ?? []
@@ -292,6 +393,82 @@ struct DecodeTextView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
             }
+        }
+    }
+
+    private func semanticResultStack(_ result: CompanionDecodeResult, sign: ZodiacSign) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Text("SEMANTIC TONE")
+                    .font(SimastryFont.overline)
+                    .foregroundStyle(SimastryColor.textSecondary)
+                    .tracking(1.3)
+                Text(result.tone)
+                    .font(SimastryFont.labelLarge)
+                    .foregroundStyle(SimastryColor.midnight)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(SimastryGradient.gold, in: Capsule())
+                Spacer()
+                ZodiacIconView(sign: sign, size: 24, showsGlow: false)
+            }
+            .padding(16)
+            .heroGlass(sign.color, cornerRadius: 20)
+
+            decodeCard(
+                title: "ONE LIKELY READING",
+                icon: "text.magnifyingglass",
+                tint: SimastryColor.celestialBlue,
+                body: result.likelyMeaning
+            )
+            decodeCard(
+                title: "A PLAUSIBLE ALTERNATIVE",
+                icon: "arrow.triangle.branch",
+                tint: SimastryColor.risingViolet,
+                body: result.plausibleAlternative
+            )
+            decodeCard(
+                title: "WHAT NOT TO ASSUME",
+                icon: "heart.slash.circle.fill",
+                tint: SimastryColor.amber,
+                body: result.whatNotToAssume
+            )
+
+            if !result.replyDrafts.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("REPLY DRAFTS")
+                        .font(SimastryFont.overline)
+                        .foregroundStyle(SimastryColor.textSecondary)
+                        .tracking(1.3)
+                    ForEach(Array(result.replyDrafts.prefix(3).enumerated()), id: \.offset) { index, reply in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(reply)
+                                .font(.system(.footnote, design: .serif))
+                                .foregroundStyle(SimastryColor.offWhite.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 6)
+                            Button {
+                                UIPasteboard.general.string = reply
+                                copiedReplyIndex = index
+                            } label: {
+                                Image(systemName: copiedReplyIndex == index ? "checkmark" : "doc.on.doc")
+                                    .foregroundStyle(SimastryColor.gold)
+                                    .padding(7)
+                                    .background(SimastryColor.gold.opacity(0.12), in: Circle())
+                            }
+                            .accessibilityLabel(copiedReplyIndex == index ? "Reply copied" : "Copy this reply")
+                        }
+                        .padding(10)
+                        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .padding(16)
+                .surfaceCard(cornerRadius: 20, accent: SimastryColor.gold.opacity(0.6))
+            }
+
+            Text("AI analysis · persona v\(result.personaVersion) · \(result.modelVersion)")
+                .font(SimastryFont.captionSmall)
+                .foregroundStyle(SimastryColor.textTertiary)
         }
     }
 

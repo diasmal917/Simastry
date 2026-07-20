@@ -3,6 +3,12 @@ import MapKit
 
 struct BirthDetailsView: View {
     @Bindable var viewModel: AppViewModel
+    /// Back from the first step. The setup flow pops its navigation path;
+    /// legacy hosts fall back to the landing screen.
+    var onExit: (() -> Void)? = nil
+    /// Called after a successful calculation. The setup flow continues to the
+    /// chart summary; legacy hosts fall back to the preserved expert screen.
+    var onCalculated: (() -> Void)? = nil
     @ObservedObject private var localization = LocalizationManager.shared
     @State private var currentStep: Int = 0
     @State private var isCalculating: Bool = false
@@ -50,7 +56,9 @@ struct BirthDetailsView: View {
 
     var body: some View {
         ZStack {
-            CelestialBackground()
+            // The setup flow's still ink surface — no drifting wallpaper or
+            // dust motes during onboarding.
+            SimastryColor.pureBlack.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 header
@@ -95,14 +103,32 @@ struct BirthDetailsView: View {
                     GoldButton(currentStep == totalSteps - 1 ? localization.string("birth.reveal") : localization.string("birth.continue"), isEnabled: canAdvance) {
                         advanceStep()
                     }
+                    .accessibilityIdentifier("birth.continueButton")
                     .padding(.horizontal, 24)
                     .padding(.bottom, 50)
                 }
             }
         }
         .onAppear {
+            // Everything entered before an interruption comes back: the
+            // staged values survive navigation and relaunch.
             if let staged = viewModel.onboardingDisplayName, displayName.isEmpty {
                 displayName = staged
+            }
+            if let staged = viewModel.onboardingBirthday {
+                birthday = staged
+            }
+            if let staged = viewModel.onboardingBirthTime {
+                birthTime = staged
+            }
+            if let staged = viewModel.onboardingBirthplace, birthplace.isEmpty {
+                birthplace = staged
+            }
+            if viewModel.onboardingBirthday != nil {
+                birthTimePrecision = viewModel.onboardingBirthTimePrecision
+                if let staged = viewModel.onboardingBirthTimeUncertaintyMinutes {
+                    approximateUncertaintyMinutes = staged
+                }
             }
         }
         .toolbar {
@@ -133,6 +159,8 @@ struct BirthDetailsView: View {
                         withAnimation(stateAnimation) {
                             currentStep -= 1
                         }
+                    } else if let onExit {
+                        onExit()
                     } else {
                         withAnimation(stateAnimation) {
                             viewModel.currentScreen = .landing
@@ -145,7 +173,11 @@ struct BirthDetailsView: View {
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(currentStep > 0 ? localization.string("common.previousStep") : localization.string("common.backToLanding"))
+                .accessibilityLabel(
+                    currentStep > 0
+                        ? localization.string("common.previousStep")
+                        : localization.string(onExit != nil ? "common.back" : "common.backToLanding")
+                )
 
                 Spacer()
             }
@@ -532,9 +564,14 @@ struct BirthDetailsView: View {
                 viewModel.stageOnboardingBirthChart(chart, record: record)
 
                 isCalculating = false
-                withAnimation(stateAnimation) {
-                    // Deliver the five-expert first read before asking to sign up.
-                    viewModel.currentScreen = .firstExpertRead
+                if let onCalculated {
+                    onCalculated()
+                } else {
+                    withAnimation(stateAnimation) {
+                        // Preserved legacy host: the expert-mode read follows
+                        // the calculation directly.
+                        viewModel.currentScreen = .firstExpertRead
+                    }
                 }
             }
         }
