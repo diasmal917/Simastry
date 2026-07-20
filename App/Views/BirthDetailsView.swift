@@ -25,6 +25,7 @@ struct BirthDetailsView: View {
     @State private var approximateUncertaintyMinutes: Int = 60
     @State private var showSuggestions: Bool = false
     @State private var selectedFromSuggestion: Bool = false
+    @State private var didRestoreDraft: Bool = false
     @StateObject private var locationCompleter = LocationSearchCompleter()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var birthplaceFocused: Bool
@@ -110,27 +111,47 @@ struct BirthDetailsView: View {
             }
         }
         .onAppear {
-            // Everything entered before an interruption comes back: the
-            // staged values survive navigation and relaunch.
-            if let staged = viewModel.onboardingDisplayName, displayName.isEmpty {
-                displayName = staged
-            }
-            if let staged = viewModel.onboardingBirthday {
-                birthday = staged
-            }
-            if let staged = viewModel.onboardingBirthTime {
-                birthTime = staged
-            }
-            if let staged = viewModel.onboardingBirthplace, birthplace.isEmpty {
-                birthplace = staged
-            }
-            if viewModel.onboardingBirthday != nil {
-                birthTimePrecision = viewModel.onboardingBirthTimePrecision
-                if let staged = viewModel.onboardingBirthTimeUncertaintyMinutes {
-                    approximateUncertaintyMinutes = staged
+            guard !didRestoreDraft else { return }
+            // Prefer the exact persisted form (including the current substep),
+            // then fall back to the VM's legacy in-process staging values.
+            if let draft = viewModel.onboardingProgress.birthDetailsDraft {
+                currentStep = min(max(draft.step, 0), totalSteps - 1)
+                displayName = draft.displayName
+                birthday = draft.birthday
+                birthTime = draft.birthTime
+                birthplace = draft.birthplace
+                birthTimePrecision = draft.birthTimePrecision
+                approximateUncertaintyMinutes = draft.approximateUncertaintyMinutes
+            } else {
+                if let staged = viewModel.onboardingDisplayName, displayName.isEmpty {
+                    displayName = staged
+                }
+                if let staged = viewModel.onboardingBirthday {
+                    birthday = staged
+                }
+                if let staged = viewModel.onboardingBirthTime {
+                    birthTime = staged
+                }
+                if let staged = viewModel.onboardingBirthplace, birthplace.isEmpty {
+                    birthplace = staged
+                }
+                if viewModel.onboardingBirthday != nil {
+                    birthTimePrecision = viewModel.onboardingBirthTimePrecision
+                    if let staged = viewModel.onboardingBirthTimeUncertaintyMinutes {
+                        approximateUncertaintyMinutes = staged
+                    }
                 }
             }
+            didRestoreDraft = true
+            persistDraft()
         }
+        .onChange(of: currentStep) { _, _ in persistDraft() }
+        .onChange(of: displayName) { _, _ in persistDraft() }
+        .onChange(of: birthday) { _, _ in persistDraft() }
+        .onChange(of: birthTime) { _, _ in persistDraft() }
+        .onChange(of: birthplace) { _, _ in persistDraft() }
+        .onChange(of: birthTimePrecision) { _, _ in persistDraft() }
+        .onChange(of: approximateUncertaintyMinutes) { _, _ in persistDraft() }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -479,6 +500,19 @@ struct BirthDetailsView: View {
         birthplaceFocused = false
     }
 
+    private func persistDraft() {
+        guard didRestoreDraft, onCalculated != nil else { return }
+        viewModel.stageOnboardingBirthDetails(
+            step: currentStep,
+            displayName: displayName,
+            birthday: birthday,
+            birthTime: birthTime,
+            birthplace: birthplace,
+            precision: birthTimePrecision,
+            uncertaintyMinutes: approximateUncertaintyMinutes
+        )
+    }
+
     private var privacyNote: some View {
         HStack(spacing: 8) {
             Image(systemName: "lock.shield.fill")
@@ -527,6 +561,7 @@ struct BirthDetailsView: View {
             viewModel.onboardingBirthplace = trimmedBirthplace
             viewModel.onboardingBirthTimePrecision = birthTimePrecision
             viewModel.onboardingBirthTimeUncertaintyMinutes = uncertaintyMinutes
+            persistDraft()
 
             Task {
                 guard let location = await birthplaceGeocodingService.resolve(trimmedBirthplace) else {

@@ -53,7 +53,7 @@
         "properties": {
           "CFBundleDisplayName": "Simastry",
           "CFBundleShortVersionString": "1.0",
-          "CFBundleVersion": "3",
+          "CFBundleVersion": "4",
           "CFBundleURLTypes": [
             {
               "CFBundleTypeRole": "Editor",
@@ -80,7 +80,7 @@
       "settings": {
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
-        "CURRENT_PROJECT_VERSION": "3",
+        "CURRENT_PROJECT_VERSION": "4",
         "CODE_SIGN_STYLE": "Automatic",
         "DEVELOPMENT_TEAM": "A6PP462J72",
         "MARKETING_VERSION": "1.0",
@@ -159,7 +159,7 @@
         "properties": {
           "CFBundleDisplayName": "Simastry",
           "CFBundleShortVersionString": "1.0",
-          "CFBundleVersion": "3",
+          "CFBundleVersion": "4",
           "NSExtension": {
             "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
           }
@@ -178,7 +178,7 @@
         "CODE_SIGN_STYLE": "Automatic",
         "DEVELOPMENT_TEAM": "A6PP462J72",
         "MARKETING_VERSION": "1.0",
-        "CURRENT_PROJECT_VERSION": "3",
+        "CURRENT_PROJECT_VERSION": "4",
         "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.97a916bd-b131-48aa-a70e-082a3526b819.widgets",
         "PRODUCT_NAME": "$(TARGET_NAME)",
         "SWIFT_VERSION": "5.0",

@@ -166,13 +166,10 @@ final class SimastrySmokeUITests: XCTestCase {
     func testSetupFlowChartEntryEmbedsBirthDetailsAndPreservesBack() throws {
         launchSeededApp(arguments: ["-SimastryPreviewScreen", "birthDetails"])
 
-        // The guest chart continuation resumes at the optional-chart step.
-        let addChart = app.buttons["onboarding.chart.add"]
-        XCTAssertTrue(addChart.waitForExistence(timeout: 10), "Expected the optional chart step")
-        addChart.tap()
-
+        // An interrupted chart form resumes at the exact saved subflow rather
+        // than asking the chart question again.
         let nameField = app.textFields["birth.name"]
-        XCTAssertTrue(nameField.waitForExistence(timeout: 6), "Expected the existing birth-details steps")
+        XCTAssertTrue(nameField.waitForExistence(timeout: 10), "Expected the resumed birth-details steps")
         focusAndType(nameField, text: "Maya")
 
         // The continue button sits under the raised keyboard; dismiss via the
@@ -189,7 +186,45 @@ final class SimastrySmokeUITests: XCTestCase {
 
         // Backing out of the first step returns to the chart choice.
         app.buttons["Back"].firstMatch.tap()
+        let addChart = app.buttons["onboarding.chart.add"]
         XCTAssertTrue(addChart.waitForExistence(timeout: 6), "Expected to return to the chart choice")
+    }
+
+    func testOnboardingPersonEditorIsManualOnlyAndRequiresAnExplicitSign() throws {
+        launchSeededApp(arguments: ["-SimastryPreviewScreen", "onboardingStyle"])
+
+        let words = app.buttons["onboarding.style.find_the_words"]
+        XCTAssertTrue(words.waitForExistence(timeout: 10))
+        words.tap()
+
+        let chooseIsolde = app.buttons["onboarding.companion.choose.libra-isolde"]
+        XCTAssertTrue(reveal(chooseIsolde, maxSwipes: 4))
+        chooseIsolde.tap()
+
+        let addPerson = app.buttons["onboarding.person.add"]
+        XCTAssertTrue(addPerson.waitForExistence(timeout: 6))
+        addPerson.tap()
+
+        let name = app.textFields["onboarding.person.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 6))
+        XCTAssertFalse(app.buttons["people.addPerson.importContactsButton"].exists)
+        XCTAssertFalse(element("people.addPerson.photoPicker").exists)
+
+        let save = element("onboarding.person.save")
+        XCTAssertFalse(save.isEnabled, "A name alone must never fabricate a zodiac sign")
+        focusAndType(name, text: "Sam")
+        XCTAssertFalse(save.isEnabled, "The Sun sign must be an explicit choice")
+
+        let signMenu = element("onboarding.person.sunSign")
+        XCTAssertTrue(signMenu.exists)
+        signMenu.tap()
+        let aries = app.buttons["Aries"]
+        XCTAssertTrue(aries.waitForExistence(timeout: 4))
+        aries.tap()
+
+        XCTAssertTrue(save.isEnabled)
+        save.tap()
+        XCTAssertTrue(app.staticTexts["Create your account"].waitForExistence(timeout: 8))
     }
 
     func testRehearsalRoomRunsAPracticeTurn() throws {

@@ -102,14 +102,29 @@ nonisolated enum OnboardingSupportStyle: String, CaseIterable, Codable, Identifi
 
 // MARK: - Persisted progress
 
+/// The editable birth-details draft. This is deliberately separate from the
+/// calculated natal chart: it only lets an interrupted anonymous setup resume
+/// at the exact field it left, and is cleared on skip or successful
+/// calculation.
+nonisolated struct OnboardingBirthDetailsDraft: Codable, Equatable, Sendable {
+    var step: Int
+    var displayName: String
+    var birthday: Date
+    var birthTime: Date
+    var birthplace: String
+    var birthTimePrecision: BirthTimePrecision
+    var approximateUncertaintyMinutes: Int
+}
+
 /// Everything needed to resume an interrupted setup. Stored as JSON in
 /// UserDefaults; cleared when the first task launches (or on sign-out /
-/// account deletion). Never contains birth data — the chart pipeline keeps
-/// its own staged storage.
+/// account deletion). Birth data here is only an unfinished local form draft;
+/// the calculated chart remains in its existing staged chart pipeline.
 nonisolated struct OnboardingProgress: Codable, Equatable, Sendable {
     enum Stage: String, Codable, Sendable {
         case goal
         case chart
+        case birthDetails
         case supportStyle
         case companion
         case person
@@ -119,9 +134,17 @@ nonisolated struct OnboardingProgress: Codable, Equatable, Sendable {
     var goal: OnboardingGoal?
     var supportStyle: OnboardingSupportStyle?
     var chartDecided: Bool = false
+    var birthDetailsInProgress: Bool = false
+    var birthDetailsDraft: OnboardingBirthDetailsDraft?
+    /// Kept for backwards-compatible decoding only. Routing and task
+    /// consumption require `companionID` (or reconstruct it from an actual
+    /// primary relationship); this Boolean is never sufficient evidence.
     var companionChosen: Bool = false
+    var companionID: CompanionPersonaID?
     var personId: UUID?
     var personDecided: Bool = false
+    var personDraft: RelationshipPerson?
+    var completionTracked: Bool = false
 
     var hasStarted: Bool {
         goal != nil
@@ -130,11 +153,72 @@ nonisolated struct OnboardingProgress: Codable, Equatable, Sendable {
     /// The step the flow should resume at.
     var resumeStage: Stage {
         guard goal != nil else { return .goal }
-        if !chartDecided { return .chart }
+        if !chartDecided {
+            return birthDetailsInProgress ? .birthDetails : .chart
+        }
         if supportStyle == nil { return .supportStyle }
-        if !companionChosen { return .companion }
+        if companionID == nil { return .companion }
         if goal?.involvesAPerson == true && !personDecided { return .person }
         return .account
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case goal
+        case supportStyle
+        case chartDecided
+        case birthDetailsInProgress
+        case birthDetailsDraft
+        case companionChosen
+        case companionID
+        case personId
+        case personDecided
+        case personDraft
+        case completionTracked
+    }
+
+    init(
+        goal: OnboardingGoal? = nil,
+        supportStyle: OnboardingSupportStyle? = nil,
+        chartDecided: Bool = false,
+        birthDetailsInProgress: Bool = false,
+        birthDetailsDraft: OnboardingBirthDetailsDraft? = nil,
+        companionChosen: Bool = false,
+        companionID: CompanionPersonaID? = nil,
+        personId: UUID? = nil,
+        personDecided: Bool = false,
+        personDraft: RelationshipPerson? = nil,
+        completionTracked: Bool = false
+    ) {
+        self.goal = goal
+        self.supportStyle = supportStyle
+        self.chartDecided = chartDecided
+        self.birthDetailsInProgress = birthDetailsInProgress
+        self.birthDetailsDraft = birthDetailsDraft
+        self.companionChosen = companionChosen
+        self.companionID = companionID
+        self.personId = personId
+        self.personDecided = personDecided
+        self.personDraft = personDraft
+        self.completionTracked = completionTracked
+    }
+
+    /// Explicit decoding keeps v1 progress written before these fields existed
+    /// resumable. In particular, a legacy `companionChosen == true` does not
+    /// fabricate an identity; the view model may recover the exact ID only
+    /// from a real persisted primary relationship.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        goal = try values.decodeIfPresent(OnboardingGoal.self, forKey: .goal)
+        supportStyle = try values.decodeIfPresent(OnboardingSupportStyle.self, forKey: .supportStyle)
+        chartDecided = try values.decodeIfPresent(Bool.self, forKey: .chartDecided) ?? false
+        birthDetailsInProgress = try values.decodeIfPresent(Bool.self, forKey: .birthDetailsInProgress) ?? false
+        birthDetailsDraft = try values.decodeIfPresent(OnboardingBirthDetailsDraft.self, forKey: .birthDetailsDraft)
+        companionChosen = try values.decodeIfPresent(Bool.self, forKey: .companionChosen) ?? false
+        companionID = try values.decodeIfPresent(CompanionPersonaID.self, forKey: .companionID)
+        personId = try values.decodeIfPresent(UUID.self, forKey: .personId)
+        personDecided = try values.decodeIfPresent(Bool.self, forKey: .personDecided) ?? false
+        personDraft = try values.decodeIfPresent(RelationshipPerson.self, forKey: .personDraft)
+        completionTracked = try values.decodeIfPresent(Bool.self, forKey: .completionTracked) ?? false
     }
 }
 

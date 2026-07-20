@@ -3,6 +3,7 @@ import XCTest
 
 /// The setup flow's model layer: resume stages, support-style calibration,
 /// recommendation gating, and persisted progress round-trips.
+@MainActor
 final class OnboardingFlowTests: XCTestCase {
     private var defaults: UserDefaults!
 
@@ -34,6 +35,12 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertEqual(progress.resumeStage, .companion)
 
         progress.companionChosen = true
+        XCTAssertEqual(
+            progress.resumeStage, .companion,
+            "The legacy Boolean alone must never stand in for an exact identity"
+        )
+
+        progress.companionID = .amara
         XCTAssertEqual(progress.resumeStage, .person, "Person goals ask who this is about")
 
         progress.personDecided = true
@@ -46,6 +53,7 @@ final class OnboardingFlowTests: XCTestCase {
         progress.chartDecided = true
         progress.supportStyle = .thinkItThrough
         progress.companionChosen = true
+        progress.companionID = .theo
 
         XCTAssertEqual(
             progress.resumeStage, .account,
@@ -54,16 +62,93 @@ final class OnboardingFlowTests: XCTestCase {
     }
 
     func testProgressRoundTripsThroughPersistence() {
+        let person = makePerson(name: "Mina", sign: .virgo)
+        let birthday = Date(timeIntervalSince1970: 631_152_000)
         var progress = OnboardingProgress()
         progress.goal = .understandSomeone
         progress.supportStyle = .tellMeStraight
-        progress.chartDecided = true
-        progress.personId = UUID()
+        progress.birthDetailsInProgress = true
+        progress.birthDetailsDraft = OnboardingBirthDetailsDraft(
+            step: 2,
+            displayName: "Alex",
+            birthday: birthday,
+            birthTime: birthday.addingTimeInterval(43_200),
+            birthplace: "Bangkok",
+            birthTimePrecision: .approximate,
+            approximateUncertaintyMinutes: 60
+        )
+        progress.companionChosen = true
+        progress.companionID = .isolde
+        progress.personId = person.id
+        progress.personDecided = true
+        progress.personDraft = person
 
         OnboardingProgressStore.save(progress, defaults: defaults)
         let restored = OnboardingProgressStore.load(defaults: defaults)
 
         XCTAssertEqual(restored, progress, "An interrupted setup must resume with identical state")
+    }
+
+    func testPartialBirthDetailsResumeAtExactStep() {
+        var progress = OnboardingProgress()
+        progress.goal = .clarityToday
+        progress.birthDetailsInProgress = true
+        progress.birthDetailsDraft = OnboardingBirthDetailsDraft(
+            step: 3,
+            displayName: "Ari",
+            birthday: Date(timeIntervalSince1970: 631_152_000),
+            birthTime: Date(timeIntervalSince1970: 631_195_200),
+            birthplace: "Lisbon",
+            birthTimePrecision: .unknown,
+            approximateUncertaintyMinutes: 120
+        )
+
+        XCTAssertEqual(progress.resumeStage, .birthDetails)
+        OnboardingProgressStore.save(progress, defaults: defaults)
+        XCTAssertEqual(OnboardingProgressStore.load(defaults: defaults), progress)
+    }
+
+    func testLegacyProgressDecodesWithoutFabricatingCompanionIdentity() throws {
+        let legacyJSON = """
+        {
+          "goal": "decode_message",
+          "supportStyle": "tell_me_straight",
+          "chartDecided": true,
+          "companionChosen": true,
+          "personDecided": false
+        }
+        """.data(using: .utf8)!
+
+        let progress = try JSONDecoder().decode(OnboardingProgress.self, from: legacyJSON)
+
+        XCTAssertTrue(progress.companionChosen)
+        XCTAssertNil(progress.companionID)
+        XCTAssertNil(progress.birthDetailsDraft)
+        XCTAssertEqual(progress.resumeStage, .companion)
+    }
+
+    func testChangingGoalResetsEveryLaterDecision() {
+        let viewModel = AppViewModel()
+        let person = makePerson(name: "Rin", sign: .leo)
+        var progress = OnboardingProgress()
+        progress.goal = .prepareConversation
+        progress.chartDecided = true
+        progress.supportStyle = .findTheWords
+        progress.companionChosen = true
+        progress.companionID = .zev
+        progress.personId = person.id
+        progress.personDecided = true
+        progress.personDraft = person
+        viewModel.onboardingProgress = progress
+
+        viewModel.selectOnboardingGoal(.clarityToday)
+
+        XCTAssertEqual(viewModel.onboardingProgress.goal, .clarityToday)
+        XCTAssertFalse(viewModel.onboardingProgress.chartDecided)
+        XCTAssertNil(viewModel.onboardingProgress.supportStyle)
+        XCTAssertNil(viewModel.onboardingProgress.companionID)
+        XCTAssertFalse(viewModel.onboardingProgress.personDecided)
+        XCTAssertNil(viewModel.onboardingProgress.personDraft)
     }
 
     func testClearRemovesPersistedProgress() {
@@ -189,5 +274,24 @@ final class OnboardingFlowTests: XCTestCase {
                 )
             }
         }
+    }
+
+    private func makePerson(name: String, sign: ZodiacSign) -> RelationshipPerson {
+        RelationshipPerson(
+            id: UUID(),
+            name: name,
+            privateLabel: nil,
+            relationshipType: .other,
+            birthDate: nil,
+            birthTime: nil,
+            birthPlace: nil,
+            sunSign: sign,
+            moonSign: nil,
+            risingSign: nil,
+            notes: nil,
+            imageData: nil,
+            isChartCalculated: false,
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
     }
 }

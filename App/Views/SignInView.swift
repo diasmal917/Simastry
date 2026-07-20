@@ -9,6 +9,7 @@ struct SignInView: View {
     @State private var isAuthenticating: Bool = false
     @State private var appeared: Bool = false
     @FocusState private var focusedField: Field?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Field: Hashable {
         case email, password
@@ -22,10 +23,8 @@ struct SignInView: View {
             VStack(spacing: 0) {
                 HStack {
                     Button {
-                        HapticManager.buttonPress()
-                        withAnimation(.spring(SimastrySpring.smooth)) {
-                            viewModel.currentScreen = .landing
-                        }
+                        focusedField = nil
+                        navigateBack()
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(SimastryFont.labelLarge)
@@ -33,7 +32,7 @@ struct SignInView: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(localization.string("common.backToLanding"))
+                    .accessibilityLabel(localization.string("common.back"))
 
                     Spacer()
                 }
@@ -114,6 +113,17 @@ struct SignInView: View {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button(localization.string("common.done")) { focusedField = nil }
+            }
+        }
+    }
+
+    private func navigateBack() {
+        let destination: AppScreen = viewModel.onboardingProgress.hasStarted ? .signUp : .landing
+        if reduceMotion {
+            viewModel.currentScreen = destination
+        } else {
+            withAnimation(.spring(SimastrySpring.smooth)) {
+                viewModel.currentScreen = destination
             }
         }
     }

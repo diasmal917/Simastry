@@ -672,16 +672,119 @@ class AppViewModel {
     }
 
     func selectOnboardingGoal(_ goal: OnboardingGoal) {
+        if let previousGoal = onboardingProgress.goal, previousGoal != goal {
+            // Later answers were made in the context of the old goal. Keep an
+            // already-calculated chart intact, but require every subsequent
+            // onboarding decision to be made again rather than silently
+            // carrying a stale companion/person route forward.
+            onboardingProgress.chartDecided = false
+            onboardingProgress.birthDetailsInProgress = false
+            onboardingProgress.birthDetailsDraft = nil
+            onboardingProgress.supportStyle = nil
+            onboardingProgress.companionChosen = false
+            onboardingProgress.companionID = nil
+            onboardingProgress.personId = nil
+            onboardingProgress.personDecided = false
+            onboardingProgress.personDraft = nil
+            onboardingProgress.completionTracked = false
+        }
         onboardingProgress.goal = goal
         analytics.track(.onboardingGoalSelected, key: "goal", value: goal.rawValue)
     }
 
+    func beginOnboardingBirthDetails() {
+        onboardingProgress.birthDetailsInProgress = true
+        onboardingProgress.chartDecided = false
+    }
+
+    func stageOnboardingBirthDetails(
+        step: Int,
+        displayName: String,
+        birthday: Date,
+        birthTime: Date,
+        birthplace: String,
+        precision: BirthTimePrecision,
+        uncertaintyMinutes: Int
+    ) {
+        let draft = OnboardingBirthDetailsDraft(
+            step: min(max(step, 0), 3),
+            displayName: displayName,
+            birthday: birthday,
+            birthTime: birthTime,
+            birthplace: birthplace,
+            birthTimePrecision: precision,
+            approximateUncertaintyMinutes: uncertaintyMinutes
+        )
+        onboardingProgress.birthDetailsInProgress = true
+        onboardingProgress.birthDetailsDraft = draft
+
+        // Mirror the form into the existing view-model staging properties so
+        // navigation within this process and a JSON-backed relaunch use the
+        // same source values.
+        onboardingDisplayName = displayName
+        onboardingBirthday = birthday
+        onboardingBirthTime = precision.requiresBirthTime ? birthTime : nil
+        onboardingBirthplace = birthplace
+        onboardingBirthTimePrecision = precision
+        onboardingBirthTimeUncertaintyMinutes = precision == .approximate ? uncertaintyMinutes : nil
+    }
+
+    func restoreOnboardingBirthDetailsForResume() {
+        guard let draft = onboardingProgress.birthDetailsDraft else { return }
+        onboardingDisplayName = draft.displayName
+        onboardingBirthday = draft.birthday
+        onboardingBirthTime = draft.birthTimePrecision.requiresBirthTime ? draft.birthTime : nil
+        onboardingBirthplace = draft.birthplace
+        onboardingBirthTimePrecision = draft.birthTimePrecision
+        onboardingBirthTimeUncertaintyMinutes = draft.birthTimePrecision == .approximate
+            ? draft.approximateUncertaintyMinutes
+            : nil
+    }
+
     func recordOnboardingChartDecision(added: Bool) {
+        if !added {
+            skipOnboardingChart()
+            return
+        }
         onboardingProgress.chartDecided = true
-        analytics.track(added ? .onboardingChartAdded : .onboardingChartSkipped)
+        onboardingProgress.birthDetailsInProgress = false
+        onboardingProgress.birthDetailsDraft = nil
+        analytics.track(.onboardingChartAdded)
+    }
+
+    /// Skipping is allowed to discard only an anonymous, unfinished chart.
+    /// An authenticated user's loaded chart is account data and is never
+    /// cleared by an onboarding choice.
+    func skipOnboardingChart() {
+        if !isAuthenticated {
+            userSunSign = nil
+            userMoonSign = nil
+            userRisingSign = nil
+            natalChartRecord = nil
+            birthChartProvenance = .generalLens
+            onboardingDisplayName = nil
+            onboardingBirthday = nil
+            onboardingBirthTime = nil
+            onboardingBirthplace = nil
+            onboardingBirthTimePrecision = .exact
+            onboardingBirthTimeUncertaintyMinutes = nil
+            expertManualAstrologyData.userDoesNotKnowBirthTime = false
+            clearPendingOnboardingChart()
+        }
+        onboardingProgress.birthDetailsInProgress = false
+        onboardingProgress.birthDetailsDraft = nil
+        onboardingProgress.chartDecided = true
+        analytics.track(.onboardingChartSkipped)
     }
 
     func selectOnboardingSupportStyle(_ style: OnboardingSupportStyle) {
+        if let previousStyle = onboardingProgress.supportStyle, previousStyle != style {
+            onboardingProgress.companionChosen = false
+            onboardingProgress.companionID = nil
+            onboardingProgress.personId = nil
+            onboardingProgress.personDecided = false
+            onboardingProgress.personDraft = nil
+        }
         onboardingProgress.supportStyle = style
         analytics.track(.onboardingSupportStyleSelected, key: "style", value: style.rawValue)
     }
@@ -704,8 +807,11 @@ class AppViewModel {
     /// still shows the calculated Sun/Moon/Rising. Post-auth restore stays in
     /// `loadProfile()`.
     func restoreOnboardingChartForResume() {
-        guard !isAuthenticated, !hasCompletedSigns else { return }
-        _ = restorePendingOnboardingChart()
+        if !isAuthenticated, !hasCompletedSigns {
+            _ = restorePendingOnboardingChart()
+        }
+        restoreOnboardingBirthDetailsForResume()
+        _ = reconstructOnboardingSelections()
     }
 
     /// The explicit "Choose <name>" press during setup. Seeds the support
@@ -713,25 +819,126 @@ class AppViewModel {
     func chooseOnboardingCompanion(_ personaID: CompanionPersonaID) {
         choosePrimaryCompanion(personaID, seeding: onboardingProgress.supportStyle?.seededPreferences)
         onboardingProgress.companionChosen = true
+        onboardingProgress.companionID = personaID
         analytics.track(.onboardingPrimaryChosen, key: "companion", value: personaID.rawValue)
     }
 
     func recordOnboardingPerson(_ personId: UUID?) {
         onboardingProgress.personId = personId
+        onboardingProgress.personDraft = personId.flatMap { id in
+            relationshipPeople.first { $0.id == id }
+        }
         onboardingProgress.personDecided = true
+    }
+
+    func saveOnboardingPersonDraft(_ person: RelationshipPerson) {
+        if relationshipPeople.contains(where: { $0.id == person.id }) {
+            updateRelationshipPerson(person)
+        } else {
+            addRelationshipPerson(person)
+        }
+        onboardingProgress.personId = person.id
+        onboardingProgress.personDraft = person
+        onboardingProgress.personDecided = true
+    }
+
+    /// Repairs the exact onboarding identities after local/server hydration.
+    /// Legacy progress may recover a missing companion ID from an actual
+    /// certified primary relationship, never from its old Boolean alone.
+    @discardableResult
+    func reconstructOnboardingSelections() -> Bool {
+        guard onboardingProgress.hasStarted else { return false }
+
+        if onboardingProgress.companionID == nil,
+           onboardingProgress.companionChosen,
+           let persistedPrimary = primaryCompanionRelationship,
+           CompanionPersonaRegistry.pilotIDs.contains(persistedPrimary.companionId) {
+            onboardingProgress.companionID = persistedPrimary.companionId
+        }
+
+        if let companionID = onboardingProgress.companionID,
+           CompanionPersonaRegistry.pilotIDs.contains(companionID) {
+            onboardingProgress.companionChosen = true
+            if primaryCompanionRelationship?.companionId != companionID {
+                choosePrimaryCompanion(
+                    companionID,
+                    seeding: onboardingProgress.supportStyle?.seededPreferences
+                )
+            }
+        } else {
+            onboardingProgress.companionID = nil
+            onboardingProgress.companionChosen = false
+            return false
+        }
+
+        if onboardingProgress.goal?.involvesAPerson == true,
+           onboardingProgress.personDecided,
+           let personId = onboardingProgress.personId {
+            if let storedPerson = relationshipPeople.first(where: { $0.id == personId }) {
+                onboardingProgress.personDraft = storedPerson
+            } else if let draft = onboardingProgress.personDraft,
+                      draft.id == personId,
+                      !draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                addRelationshipPerson(draft)
+            } else {
+                onboardingProgress.personId = nil
+                onboardingProgress.personDraft = nil
+                onboardingProgress.personDecided = false
+                return false
+            }
+        }
+
+        return onboardingProgress.resumeStage == .account
+    }
+
+    /// Called by the sign-up back button. Invalidating exactly the last
+    /// editable answer prevents `.account` resume from immediately sending the
+    /// user back to sign-up in a loop, while preserving every earlier answer.
+    func reopenOnboardingBeforeAccount() {
+        guard onboardingProgress.hasStarted else {
+            currentScreen = isAgeVerified ? .firstPrediction : .landing
+            return
+        }
+
+        if onboardingProgress.goal?.involvesAPerson == true,
+           onboardingProgress.personDecided {
+            onboardingProgress.personDecided = false
+        } else {
+            onboardingProgress.companionChosen = false
+            onboardingProgress.companionID = nil
+        }
+        withAnimation(SimastryMotion.stateChange) {
+            currentScreen = .onboarding
+        }
+    }
+
+    @discardableResult
+    private func trackOnboardingCompletionIfNeeded() -> Bool {
+        guard onboardingProgress.hasStarted,
+              !onboardingProgress.completionTracked,
+              onboardingProgress.resumeStage == .account else {
+            return false
+        }
+        onboardingProgress.completionTracked = true
+        analytics.track(.onboardingCompleted)
+        ReviewPromptService.shared.recordPositiveAction()
+        return true
     }
 
     /// The flow's final transition: authenticated users enter the product
     /// immediately; guests are asked to sign in exactly when the server-backed
     /// companion becomes necessary.
     func finishOnboardingFlow() {
+        guard reconstructOnboardingSelections() else {
+            withAnimation(SimastryMotion.stateChange) {
+                currentScreen = .onboarding
+            }
+            return
+        }
         if isAuthenticated {
             syncHomeSetupPhase()
             withAnimation(SimastryMotion.stateChange) {
                 currentScreen = .home
-            }
-            if homeSetupPhase == .complete {
-                analytics.track(.onboardingCompleted)
             }
             consumeOnboardingFirstTaskIfReady()
         } else {
@@ -747,29 +954,33 @@ class AppViewModel {
     @discardableResult
     func consumeOnboardingFirstTaskIfReady() -> Bool {
         guard currentScreen == .home,
-              onboardingProgress.companionChosen,
               let goal = onboardingProgress.goal else {
+            return false
+        }
+        guard reconstructOnboardingSelections() else {
+            currentScreen = .onboarding
             return false
         }
 
         let personId = onboardingProgress.personId
-        onboardingProgress = OnboardingProgress()
-        OnboardingProgressStore.clear()
-        // The legacy intent must not re-route on a later launch.
-        clearFirstReadOnboardingIntent()
+        _ = trackOnboardingCompletionIfNeeded()
         analytics.track(.onboardingFirstTaskStarted, key: "goal", value: goal.rawValue)
 
         switch goal {
         case .prepareConversation:
-            pendingRehearsalPersonId = personId
-            openPractice()
+            if let personId {
+                pendingRehearsalPersonId = personId
+                openPractice()
+            } else {
+                openPrimaryCompanion(
+                    withDraft: "I want to prepare for a conversation. Help me get clear on what I want to say."
+                )
+            }
         case .understandSomeone:
             homeSetupPhase = .complete
             selectedTab = .people
             if let personId {
                 peopleDetailRequestPersonId = personId
-            } else {
-                peopleAddPersonRouteRequest += 1
             }
         case .decodeMessage:
             homeSetupPhase = .complete
@@ -778,6 +989,11 @@ class AppViewModel {
         case .clarityToday:
             openPredict()
         }
+
+        onboardingProgress = OnboardingProgress()
+        OnboardingProgressStore.clear()
+        // The legacy intent must not re-route on a later launch.
+        clearFirstReadOnboardingIntent()
         return true
     }
 
@@ -2120,15 +2336,30 @@ class AppViewModel {
         await loadCompanions()
         claimCompanionStateForAuthenticatedUser()
         await refreshCompanionPilotStateFromServer()
+        let hasInterruptedOnboarding = onboardingProgress.hasStarted
+        let onboardingIsReady = hasInterruptedOnboarding
+            ? reconstructOnboardingSelections()
+            : false
         scheduleCompanionPilotSync()
         loadSavedGuides()
         loadProfileImage()
         syncHomeSetupPhase()
         selectedTab = .today
+
+        // Authentication may hydrate a different or incomplete remote state.
+        // Resume the exact missing decision before any first-task route is
+        // consumed; the persisted goal and earlier answers remain untouched.
+        if hasInterruptedOnboarding, !onboardingIsReady {
+            currentScreen = .onboarding
+            Task { @MainActor in
+                await refreshPostLaunchSurfaces()
+            }
+            return
+        }
+
         currentScreen = .home
-        if homeSetupPhase == .complete {
-            analytics.track(.onboardingCompleted)
-            ReviewPromptService.shared.recordPositiveAction()
+        if hasInterruptedOnboarding, onboardingIsReady {
+            _ = trackOnboardingCompletionIfNeeded()
         }
 
         // Resolve any pending deep link from the virality funnel
@@ -4028,6 +4259,7 @@ extension AppViewModel {
             resetStagedOnboardingIdentityForPreview()
             var progress = OnboardingProgress()
             progress.goal = .clarityToday
+            progress.birthDetailsInProgress = true
             onboardingProgress = progress
             currentScreen = .onboarding
             return true

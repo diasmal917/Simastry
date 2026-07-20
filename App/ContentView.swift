@@ -258,43 +258,22 @@ struct BreathingCelestialGlow: View {
     }
 }
 
-/// Full-screen cold-start launch: the static brand wordmark over a calm
-/// zodiac-column illustration, with a timeout/retry fallback if the session check stalls.
+/// Full-screen cold-start launch: restrained ink, wordmark, and native progress,
+/// with a timeout/retry fallback if the session check stalls.
 struct SimastryLaunchView: View {
     var onRetry: (() -> Void)?
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var appeared = false
     @State private var showTimeoutFallback = false
+    @State private var retryAttempt = 0
 
     var body: some View {
         ZStack {
             SimastryColor.pureBlack.ignoresSafeArea()
 
-            CosmicDriftImage(animated: !reduceMotion, imageName: "LoadingZodiacColumns")
-                .ignoresSafeArea()
-                .overlay {
-                    LinearGradient(
-                        colors: [
-                            .black.opacity(0.18),
-                            .black.opacity(0.08),
-                            .black.opacity(0.42)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
-                }
-
-            CosmicDustLayer(animated: !reduceMotion, moteCount: 22)
-                .ignoresSafeArea()
-
             VStack(spacing: 22) {
-                SimastryWordmark(font: .system(size: 28, weight: .bold).italic())
+                SimastryWordmark(font: .system(size: 28, weight: .bold).italic(), sparkles: false)
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
-                    .shadow(color: SimastryColor.gold.opacity(0.18), radius: 14, y: 5)
-                    .padding(.top, 88)
 
                 Spacer()
 
@@ -302,26 +281,33 @@ struct SimastryLaunchView: View {
                     if showTimeoutFallback {
                         timeoutFallback
                     } else {
-                        Text("Preparing your session…")
-                            .font(SimastryFont.caption)
-                            .foregroundStyle(SimastryColor.mutedSilver)
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .tint(SimastryColor.gold)
+                                .controlSize(.regular)
+                                .accessibilityLabel("Preparing your Simastry session")
+
+                            Text("Preparing your session…")
+                                .font(SimastryFont.caption)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                                .accessibilityHidden(true)
+                        }
+                        .accessibilityElement(children: .contain)
                     }
                 }
                 .transition(.opacity)
-                .padding(.bottom, 46)
+                .frame(minHeight: 116, alignment: .bottom)
             }
+            .padding(.top, 96)
+            .padding(.bottom, 38)
             .padding(.horizontal, 28)
-            .opacity(appeared ? 1 : 0)
         }
-        .onAppear {
-            withAnimation(.easeOut(duration: reduceMotion ? 0.01 : 0.4)) { appeared = true }
-        }
-        .task {
+        .task(id: retryAttempt) {
             try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
             withAnimation(.easeOut(duration: 0.3)) { showTimeoutFallback = true }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Loading Simastry")
+        .accessibilityElement(children: .contain)
     }
 
     private var timeoutFallback: some View {
@@ -335,8 +321,8 @@ struct SimastryLaunchView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if let onRetry {
-                Button(action: onRetry) {
+            if onRetry != nil {
+                Button(action: retry) {
                     Text("Try again")
                         .font(SimastryFont.labelMedium)
                         .foregroundStyle(SimastryColor.offWhite)
@@ -346,10 +332,21 @@ struct SimastryLaunchView: View {
                 }
                 .buttonStyle(SpringPressStyle())
                 .padding(.top, 4)
+                .accessibilityLabel("Try loading again")
+                .accessibilityHint("Checks your Simastry session again")
                 .accessibilityIdentifier("loading.retryButton")
             }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func retry() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            showTimeoutFallback = false
+        }
+        retryAttempt += 1
+        onRetry?()
     }
 }
 

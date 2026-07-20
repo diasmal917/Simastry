@@ -39,9 +39,12 @@ struct OnboardingFlowView: View {
         case .chartChoice:
             OnboardingChartChoiceStep(
                 viewModel: viewModel,
-                onAddChart: { path.append(.birthDetails) },
+                onAddChart: {
+                    viewModel.beginOnboardingBirthDetails()
+                    path.append(.birthDetails)
+                },
                 onSkip: {
-                    viewModel.recordOnboardingChartDecision(added: false)
+                    viewModel.skipOnboardingChart()
                     advanceAfterChart()
                 }
             )
@@ -65,10 +68,10 @@ struct OnboardingFlowView: View {
             }
         case .companion:
             CompanionChoiceView(viewModel: viewModel) {
-                if viewModel.onboardingProgress.goal?.involvesAPerson == true {
+                if viewModel.onboardingProgress.goal?.involvesAPerson == true,
+                   !viewModel.onboardingProgress.personDecided {
                     path.append(.person)
                 } else {
-                    viewModel.recordOnboardingPerson(nil)
                     viewModel.finishOnboardingFlow()
                 }
             }
@@ -104,6 +107,8 @@ struct OnboardingFlowView: View {
             path = []
         case .chart:
             path = [.chartChoice]
+        case .birthDetails:
+            path = [.chartChoice, .birthDetails]
         case .supportStyle:
             path = [.chartChoice, .supportStyle]
         case .companion:
@@ -449,7 +454,29 @@ private struct OnboardingPersonStep: View {
     @Bindable var viewModel: AppViewModel
     let onContinue: () -> Void
 
-    @State private var showAddPerson = false
+    @State private var showPersonEditor = false
+
+    private var skipTitle: String {
+        switch viewModel.onboardingProgress.goal {
+        case .prepareConversation:
+            "Practice without choosing a person"
+        case .understandSomeone:
+            "I'll add someone later"
+        default:
+            "Not about someone specific"
+        }
+    }
+
+    private var skipSubtitle: String {
+        switch viewModel.onboardingProgress.goal {
+        case .prepareConversation:
+            "Start with what you want to say."
+        case .understandSomeone:
+            "Open People without creating a profile."
+        default:
+            "You can add people whenever you like."
+        }
+    }
 
     var body: some View {
         OnboardingStepScaffold(
@@ -463,12 +490,12 @@ private struct OnboardingPersonStep: View {
                     systemImage: "person.badge.plus",
                     accessibilityID: "onboarding.person.add"
                 ) {
-                    showAddPerson = true
+                    showPersonEditor = true
                 }
 
                 OnboardingSelectionRow(
-                    title: "Not about someone specific",
-                    subtitle: "You can add people whenever you like.",
+                    title: skipTitle,
+                    subtitle: skipSubtitle,
                     systemImage: "arrow.right",
                     accessibilityID: "onboarding.person.skip"
                 ) {
@@ -477,21 +504,169 @@ private struct OnboardingPersonStep: View {
                 }
             }
         }
-        .sheet(
-            isPresented: $showAddPerson,
-            onDismiss: {
-                // Continue only when a person was actually saved; a cancelled
-                // sheet returns to the question.
-                if viewModel.onboardingProgress.personDecided {
-                    onContinue()
-                }
-            }
-        ) {
-            AddRelationshipPersonView(viewModel: viewModel) { person, _ in
-                viewModel.recordOnboardingPerson(person.id)
+        .sheet(isPresented: $showPersonEditor) {
+            OnboardingPersonEditor(
+                initialPerson: viewModel.onboardingProgress.personDraft
+            ) { person in
+                viewModel.saveOnboardingPersonDraft(person)
+                showPersonEditor = false
+                onContinue()
             }
             .preferredColorScheme(.dark)
         }
         .accessibilityIdentifier("onboarding.personStep")
+    }
+}
+
+/// A deliberately small onboarding editor. It asks only for what the
+/// Communication Guide needs, never Contacts, photos, birth data, or inferred
+/// signs. The user must choose the Sun sign explicitly.
+private struct OnboardingPersonEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var sunSign: ZodiacSign?
+    @State private var relationshipType: RelationshipType
+    private let existingID: UUID?
+    private let onSave: (RelationshipPerson) -> Void
+
+    init(
+        initialPerson: RelationshipPerson?,
+        onSave: @escaping (RelationshipPerson) -> Void
+    ) {
+        existingID = initialPerson?.id
+        _name = State(initialValue: initialPerson?.name ?? "")
+        _sunSign = State(initialValue: initialPerson?.sunSign)
+        _relationshipType = State(initialValue: initialPerson?.relationshipType ?? .other)
+        self.onSave = onSave
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSave: Bool {
+        !trimmedName.isEmpty && sunSign != nil
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                SimastryColor.pureBlack.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Add a person")
+                                .font(.system(.largeTitle, weight: .bold))
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .accessibilityAddTraits(.isHeader)
+                            Text("Just enough context to begin. You can add or remove details later.")
+                                .font(.body)
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Name")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                            TextField("Name", text: $name)
+                                .textContentType(.name)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled()
+                                .padding(.horizontal, 16)
+                                .frame(minHeight: 52)
+                                .foregroundStyle(SimastryColor.offWhite)
+                                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .accessibilityIdentifier("onboarding.person.name")
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Sun sign")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                            Menu {
+                                ForEach(ZodiacSign.allCases) { sign in
+                                    Button(sign.displayName) { sunSign = sign }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(sunSign?.displayName ?? "Choose a Sun sign")
+                                        .foregroundStyle(sunSign == nil ? SimastryColor.mutedSilver : SimastryColor.offWhite)
+                                    Spacer()
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(SimastryColor.gold)
+                                }
+                                .padding(.horizontal, 16)
+                                .frame(maxWidth: .infinity, minHeight: 52)
+                                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .accessibilityIdentifier("onboarding.person.sunSign")
+                            Text("Choose this yourself—Simastry won't guess or fabricate it.")
+                                .font(.footnote)
+                                .foregroundStyle(SimastryColor.textTertiary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Relationship (optional)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(SimastryColor.mutedSilver)
+                            Picker("Relationship", selection: $relationshipType) {
+                                ForEach(RelationshipType.allCases) { type in
+                                    Text(type.rawValue).tag(type)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(SimastryColor.offWhite)
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                            .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .accessibilityIdentifier("onboarding.person.relationship")
+                        }
+
+                        Button {
+                            guard let sunSign else { return }
+                            HapticManager.buttonPress()
+                            onSave(
+                                RelationshipPerson(
+                                    id: existingID ?? UUID(),
+                                    name: trimmedName,
+                                    privateLabel: nil,
+                                    relationshipType: relationshipType,
+                                    birthDate: nil,
+                                    birthTime: nil,
+                                    birthPlace: nil,
+                                    sunSign: sunSign,
+                                    moonSign: nil,
+                                    risingSign: nil,
+                                    notes: nil,
+                                    imageData: nil,
+                                    isChartCalculated: false,
+                                    updatedAt: .now
+                                )
+                            )
+                        } label: {
+                            Text("Save person")
+                                .font(.headline)
+                                .foregroundStyle(canSave ? Color.black : SimastryColor.mutedSilver)
+                                .frame(maxWidth: .infinity, minHeight: 52)
+                                .background(canSave ? Color.white : Color.white.opacity(0.08), in: Capsule())
+                        }
+                        .disabled(!canSave)
+                        .buttonStyle(SpringPressStyle())
+                        .accessibilityIdentifier("onboarding.person.save")
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 24)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
     }
 }

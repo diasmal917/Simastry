@@ -1,7 +1,7 @@
 # Simastry Companion Pilot — Fable Review Packet
 
-Status: implementation review, closed-pilot scope  
-Cast exposed: Amara, Theo, Isolde, Zev  
+Status: implementation review, closed-pilot scope
+Cast exposed: Amara, Theo, Isolde, Zev
 Product promise: one emotionally warm AI ally who helps the user communicate better with real people offline
 
 ## Review boundaries
